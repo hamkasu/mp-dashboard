@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, timestamp } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -14,6 +14,8 @@ export const mps = pgTable("mps", {
   gender: text("gender").notNull(),
   title: text("title"),
   role: text("role"),
+  swornInDate: timestamp("sworn_in_date").notNull(),
+  monthlySalary: integer("monthly_salary").notNull(),
 });
 
 export const insertMpSchema = createInsertSchema(mps).omit({
