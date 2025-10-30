@@ -15,7 +15,8 @@ export const mps = pgTable("mps", {
   title: text("title"),
   role: text("role"),
   swornInDate: timestamp("sworn_in_date").notNull(),
-  monthlySalary: integer("monthly_salary").notNull(),
+  mpAllowance: integer("mp_allowance").notNull(),
+  ministerSalary: integer("minister_salary").notNull().default(0),
 });
 
 export const insertMpSchema = createInsertSchema(mps).omit({
