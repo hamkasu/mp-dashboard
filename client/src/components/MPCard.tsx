@@ -1,9 +1,10 @@
-import { MapPin, UserCircle } from "lucide-react";
+import { MapPin, UserCircle, Wallet } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import type { Mp } from "@shared/schema";
 import { Link } from "wouter";
+import { calculateTotalSalary, formatCurrency } from "@/lib/utils";
 
 interface MPCardProps {
   mp: Mp;
@@ -31,6 +32,7 @@ export function MPCard({ mp }: MPCardProps) {
     .toUpperCase();
 
   const partyColor = PARTY_COLORS[mp.party] || "bg-muted text-muted-foreground";
+  const totalSalary = calculateTotalSalary(mp.swornInDate, mp.monthlySalary);
 
   return (
     <Link href={`/mp/${mp.id}`}>
@@ -79,6 +81,16 @@ export function MPCard({ mp }: MPCardProps) {
               <div className="flex-1 min-w-0">
                 <p className="font-medium line-clamp-1">{mp.constituency}</p>
                 <p className="text-xs text-muted-foreground">{mp.state}</p>
+              </div>
+            </div>
+            
+            <div className="flex items-start gap-2">
+              <Wallet className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold text-green-600 dark:text-green-400">
+                  {formatCurrency(totalSalary)}
+                </p>
+                <p className="text-xs text-muted-foreground">Total earned</p>
               </div>
             </div>
             
