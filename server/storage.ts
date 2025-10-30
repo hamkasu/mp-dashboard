@@ -50,7 +50,13 @@ export class MemStorage implements IStorage {
 
   async createMp(insertMp: InsertMp): Promise<Mp> {
     const id = randomUUID();
-    const mp: Mp = { ...insertMp, id };
+    const mp: Mp = { 
+      ...insertMp, 
+      id,
+      photoUrl: insertMp.photoUrl ?? null,
+      title: insertMp.title ?? null,
+      role: insertMp.role ?? null
+    };
     this.mps.set(id, mp);
     return mp;
   }
@@ -746,7 +752,13 @@ export class MemStorage implements IStorage {
 
     allMps.forEach((mpData) => {
       const id = randomUUID();
-      const mp: Mp = { ...mpData, id };
+      const mp: Mp = { 
+        ...mpData, 
+        id,
+        photoUrl: mpData.photoUrl ?? null,
+        title: mpData.title ?? null,
+        role: mpData.role ?? null
+      };
       this.mps.set(id, mp);
     });
   }
