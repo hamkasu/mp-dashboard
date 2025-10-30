@@ -56,6 +56,8 @@ export class MemStorage implements IStorage {
   }
 
   private seedMps() {
+    const swornInDate = new Date("2022-12-19");
+    
     const mpsData: InsertMp[] = [
       // PARLIMEN (Speaker)
       {
@@ -68,6 +70,8 @@ export class MemStorage implements IStorage {
         gender: "Male",
         title: "Tan Sri Dato' (Dr.)",
         role: "Speaker",
+        swornInDate,
+        monthlySalary: 30000,
       },
       
       // EKSEKUTIF (Cabinet)
@@ -81,6 +85,8 @@ export class MemStorage implements IStorage {
         gender: "Male",
         title: "YAB Dato' Seri",
         role: "Prime Minister",
+        swornInDate,
+        monthlySalary: 50000,
       },
       {
         name: "Ahmad Zahid bin Hamidi",
@@ -92,6 +98,8 @@ export class MemStorage implements IStorage {
         gender: "Male",
         title: "YAB Dato' Seri Dr.",
         role: "Deputy Prime Minister",
+        swornInDate,
+        monthlySalary: 40000,
       },
       {
         name: "Fadillah bin Haji Yusof",
@@ -103,6 +111,8 @@ export class MemStorage implements IStorage {
         gender: "Male",
         title: "YAB Datuk Amar Haji",
         role: "Deputy Prime Minister",
+        swornInDate,
+        monthlySalary: 40000,
       },
       {
         name: "Loke Siew Fook",
@@ -114,6 +124,8 @@ export class MemStorage implements IStorage {
         gender: "Male",
         title: "YB Tuan",
         role: "Minister of Transport",
+        swornInDate,
+        monthlySalary: 30000,
       },
       {
         name: "Mohamad bin Sabu",
@@ -125,6 +137,8 @@ export class MemStorage implements IStorage {
         gender: "Male",
         title: "YB Datuk Seri Haji",
         role: "Minister of Agriculture",
+        swornInDate,
+        monthlySalary: 30000,
       },
       {
         name: "Nga Kor Ming",
@@ -136,6 +150,8 @@ export class MemStorage implements IStorage {
         gender: "Male",
         title: "YB Tuan",
         role: "Minister of Local Government",
+        swornInDate,
+        monthlySalary: 30000,
       },
       {
         name: "Mohamad bin Haji Hasan",
@@ -147,6 +163,8 @@ export class MemStorage implements IStorage {
         gender: "Male",
         title: "YB Dato' Seri Utama Haji",
         role: "Minister of Rural Development",
+        swornInDate,
+        monthlySalary: 30000,
       },
       {
         name: "Alexander Nanta Linggi",
@@ -158,6 +176,8 @@ export class MemStorage implements IStorage {
         gender: "Male",
         title: "YB Dato Sri",
         role: "Minister of Domestic Trade",
+        swornInDate,
+        monthlySalary: 30000,
       },
       {
         name: "Mohamed Khaled bin Nordin",
@@ -169,6 +189,8 @@ export class MemStorage implements IStorage {
         gender: "Male",
         title: "YB Dato' Seri Haji",
         role: "Minister of Higher Education",
+        swornInDate,
+        monthlySalary: 30000,
       },
       {
         name: "Chang Lih Kang",
@@ -180,6 +202,8 @@ export class MemStorage implements IStorage {
         gender: "Male",
         title: "YB Tuan",
         role: "Minister of Science",
+        swornInDate,
+        monthlySalary: 30000,
       },
       {
         name: "Nancy binti Shukri",
@@ -191,6 +215,8 @@ export class MemStorage implements IStorage {
         gender: "Female",
         title: "YB Dato' Sri Hajah",
         role: "Minister of Tourism",
+        swornInDate,
+        monthlySalary: 30000,
       },
       {
         name: "Azalina binti Othman Said",
@@ -202,6 +228,8 @@ export class MemStorage implements IStorage {
         gender: "Female",
         title: "YB Dato' Sri",
         role: "Minister in Prime Minister's Department",
+        swornInDate,
+        monthlySalary: 30000,
       },
       {
         name: "Ewon Benedick",
@@ -213,6 +241,8 @@ export class MemStorage implements IStorage {
         gender: "Male",
         title: "YB Datuk",
         role: "Minister of Natural Resources",
+        swornInDate,
+        monthlySalary: 30000,
       },
       {
         name: "Tiong King Sing",
@@ -224,6 +254,8 @@ export class MemStorage implements IStorage {
         gender: "Male",
         title: "YB Dato Sri",
         role: "Minister of Tourism",
+        swornInDate,
+        monthlySalary: 30000,
       },
       {
         name: "Ahmad Fahmi bin Mohamed Fadzil",
@@ -235,6 +267,8 @@ export class MemStorage implements IStorage {
         gender: "Male",
         title: "YB Datuk",
         role: "Minister of Communications",
+        swornInDate,
+        monthlySalary: 30000,
       },
       {
         name: "Fadhlina binti Sidek",
@@ -246,6 +280,8 @@ export class MemStorage implements IStorage {
         gender: "Female",
         title: "YB Puan",
         role: "Minister of Education",
+        swornInDate,
+        monthlySalary: 30000,
       },
       {
         name: "Aaron Ago anak Dagang",
@@ -257,6 +293,8 @@ export class MemStorage implements IStorage {
         gender: "Male",
         title: "YB Datuk",
         role: "Deputy Minister",
+        swornInDate,
+        monthlySalary: 22000,
       },
       {
         name: "Hannah Yeoh Tseow Suan",
@@ -268,6 +306,8 @@ export class MemStorage implements IStorage {
         gender: "Female",
         title: "YB Puan",
         role: "Minister of Youth and Sports",
+        swornInDate,
+        monthlySalary: 30000,
       },
       {
         name: "Zaliha binti Mustafa",
@@ -279,6 +319,8 @@ export class MemStorage implements IStorage {
         gender: "Female",
         title: "YB Datuk Seri Dr.",
         role: "Minister of Women",
+        swornInDate,
+        monthlySalary: 30000,
       },
       {
         name: "Armizan bin Mohd Ali",
@@ -290,6 +332,8 @@ export class MemStorage implements IStorage {
         gender: "Male",
         title: "YB Datuk",
         role: "Member of Parliament",
+        swornInDate,
+        monthlySalary: 16000,
       },
       {
         name: "Johari bin Abdul Ghani",
@@ -301,6 +345,8 @@ export class MemStorage implements IStorage {
         gender: "Male",
         title: "YB Datuk Seri",
         role: "Minister of Plantation Industries",
+        swornInDate,
+        monthlySalary: 30000,
       },
       {
         name: "Gobind Singh Deo",
@@ -312,6 +358,8 @@ export class MemStorage implements IStorage {
         gender: "Male",
         title: "YB Tuan",
         role: "Minister of Digital",
+        swornInDate,
+        monthlySalary: 30000,
       },
       {
         name: "Dzulkefly bin Ahmad",
@@ -323,6 +371,8 @@ export class MemStorage implements IStorage {
         gender: "Male",
         title: "YB Datuk Seri Haji Dr.",
         role: "Minister of Health",
+        swornInDate,
+        monthlySalary: 30000,
       },
       {
         name: "Sim Chee Keong",
@@ -334,6 +384,8 @@ export class MemStorage implements IStorage {
         gender: "Male",
         title: "YB Tuan",
         role: "Member of Parliament",
+        swornInDate,
+        monthlySalary: 16000,
       },
       {
         name: "Ahmad bin Haji Maslan",
@@ -345,6 +397,8 @@ export class MemStorage implements IStorage {
         gender: "Male",
         title: "YB Datuk Seri Haji",
         role: "Deputy Minister of Finance",
+        swornInDate,
+        monthlySalary: 22000,
       },
       {
         name: "Rubiah binti Wang",
@@ -356,6 +410,8 @@ export class MemStorage implements IStorage {
         gender: "Female",
         title: "YB Datuk Hajah",
         role: "Member of Parliament",
+        swornInDate,
+        monthlySalary: 16000,
       },
       {
         name: "Hasbi bin Haji Habibollah",
@@ -367,6 +423,8 @@ export class MemStorage implements IStorage {
         gender: "Male",
         title: "YB Datuk Haji",
         role: "Member of Parliament",
+        swornInDate,
+        monthlySalary: 16000,
       },
       {
         name: "Chan Foong Hin",
@@ -378,6 +436,8 @@ export class MemStorage implements IStorage {
         gender: "Male",
         title: "YB Datuk",
         role: "Deputy Minister",
+        swornInDate,
+        monthlySalary: 22000,
       },
       {
         name: "Hanifah Hajar Taib",
@@ -389,6 +449,8 @@ export class MemStorage implements IStorage {
         gender: "Female",
         title: "YB Dato Hajjah",
         role: "Member of Parliament",
+        swornInDate,
+        monthlySalary: 16000,
       },
       {
         name: "Akmal Nasrullah bin Mohd Nasir",
@@ -400,6 +462,8 @@ export class MemStorage implements IStorage {
         gender: "Male",
         title: "YB Tuan Haji",
         role: "Member of Parliament",
+        swornInDate,
+        monthlySalary: 16000,
       },
       {
         name: "Adly bin Zahari",
@@ -411,6 +475,8 @@ export class MemStorage implements IStorage {
         gender: "Male",
         title: "YB Tuan Haji",
         role: "Member of Parliament",
+        swornInDate,
+        monthlySalary: 16000,
       },
       {
         name: "Abdul Rahman bin Haji Mohamad",
@@ -422,6 +488,8 @@ export class MemStorage implements IStorage {
         gender: "Male",
         title: "YB Dato' Sri Haji",
         role: "Minister of Defense",
+        swornInDate,
+        monthlySalary: 30000,
       },
       {
         name: "Shamsul Anuar bin Haji Nasarah",
@@ -433,6 +501,8 @@ export class MemStorage implements IStorage {
         gender: "Male",
         title: "YB Datuk Seri Dr.",
         role: "Minister of Energy",
+        swornInDate,
+        monthlySalary: 30000,
       },
       {
         name: "Liew Chin Tong",
@@ -444,6 +514,8 @@ export class MemStorage implements IStorage {
         gender: "Male",
         title: "YB Tuan",
         role: "Deputy Minister of Defense",
+        swornInDate,
+        monthlySalary: 22000,
       },
       {
         name: "Mohammad Yusof bin Apdal",
@@ -455,6 +527,8 @@ export class MemStorage implements IStorage {
         gender: "Male",
         title: "YB Dato'",
         role: "Member of Parliament",
+        swornInDate,
+        monthlySalary: 16000,
       },
       {
         name: "Arthur Joseph Kurup",
@@ -466,6 +540,8 @@ export class MemStorage implements IStorage {
         gender: "Male",
         title: "YB Dato' Sri",
         role: "Member of Parliament",
+        swornInDate,
+        monthlySalary: 16000,
       },
       {
         name: "Ramli bin Dato' Mohd Nor",
@@ -477,6 +553,8 @@ export class MemStorage implements IStorage {
         gender: "Male",
         title: "YB Dato' Dr.",
         role: "Member of Parliament",
+        swornInDate,
+        monthlySalary: 16000,
       },
       {
         name: "Alice Lau Kiong Yieng",
@@ -488,6 +566,8 @@ export class MemStorage implements IStorage {
         gender: "Female",
         title: "YB Puan",
         role: "Member of Parliament",
+        swornInDate,
+        monthlySalary: 16000,
       },
       {
         name: "Syed Ibrahim Syed Noh",
@@ -499,6 +579,8 @@ export class MemStorage implements IStorage {
         gender: "Male",
         title: "YB Tuan",
         role: "Member of Parliament",
+        swornInDate,
+        monthlySalary: 16000,
       },
       {
         name: "Nurul Izzah Anwar",
@@ -510,6 +592,8 @@ export class MemStorage implements IStorage {
         gender: "Female",
         title: "YB Puan",
         role: "Member of Parliament",
+        swornInDate,
+        monthlySalary: 16000,
       },
       {
         name: "Fahmi Fadzil",
@@ -521,6 +605,8 @@ export class MemStorage implements IStorage {
         gender: "Male",
         title: "YB",
         role: "Member of Parliament",
+        swornInDate,
+        monthlySalary: 16000,
       },
       {
         name: "Siti Zailah Mohd Yusoff",
@@ -532,6 +618,8 @@ export class MemStorage implements IStorage {
         gender: "Female",
         title: "YB Puan",
         role: "Member of Parliament",
+        swornInDate,
+        monthlySalary: 16000,
       },
       {
         name: "Wan Saifuldin Wan Jan",
@@ -543,6 +631,8 @@ export class MemStorage implements IStorage {
         gender: "Male",
         title: "YB Datuk Dr.",
         role: "Member of Parliament",
+        swornInDate,
+        monthlySalary: 16000,
       },
       {
         name: "Nik Nazmi Nik Ahmad",
@@ -554,6 +644,8 @@ export class MemStorage implements IStorage {
         gender: "Male",
         title: "YB",
         role: "Minister of Natural Resources",
+        swornInDate,
+        monthlySalary: 30000,
       },
       {
         name: "Dayang Noor Faizah binti Awang Haji Hassan",
@@ -565,6 +657,8 @@ export class MemStorage implements IStorage {
         gender: "Female",
         title: "YB Puan",
         role: "Member of Parliament",
+        swornInDate,
+        monthlySalary: 16000,
       },
       {
         name: "Shahidan Kassim",
@@ -576,6 +670,8 @@ export class MemStorage implements IStorage {
         gender: "Male",
         title: "YB Tan Sri Dato' Seri",
         role: "Member of Parliament",
+        swornInDate,
+        monthlySalary: 16000,
       },
       {
         name: "Fuziah Salleh",
@@ -587,6 +683,8 @@ export class MemStorage implements IStorage {
         gender: "Female",
         title: "YB Puan",
         role: "Deputy Minister of Health",
+        swornInDate,
+        monthlySalary: 22000,
       },
       {
         name: "Wong Kah Woh",
@@ -598,6 +696,8 @@ export class MemStorage implements IStorage {
         gender: "Male",
         title: "YB",
         role: "Member of Parliament",
+        swornInDate,
+        monthlySalary: 16000,
       },
       {
         name: "Teo Nie Ching",
@@ -609,11 +709,13 @@ export class MemStorage implements IStorage {
         gender: "Female",
         title: "YB",
         role: "Deputy Minister",
+        swornInDate,
+        monthlySalary: 22000,
       },
     ];
 
     // Add additional MPs to reach 222 total
-    const additionalMps: Partial<InsertMp>[] = [];
+    const additionalMps: InsertMp[] = [];
     const states = ["Johor", "Kedah", "Kelantan", "Melaka", "Negeri Sembilan", "Pahang", "Pulau Pinang", "Perak", "Perlis", "Selangor", "Terengganu", "Sabah", "Sarawak", "Kuala Lumpur", "Labuan", "Putrajaya"];
     const parties = ["PH", "BN", "GPS", "GRS", "PN", "WARISAN", "MUDA", "BEBAS"];
     const genders = ["Male", "Female"];
@@ -634,6 +736,8 @@ export class MemStorage implements IStorage {
         gender: genders[i % 2],
         title: "YB",
         role: "Member of Parliament",
+        swornInDate,
+        monthlySalary: 16000,
       });
     }
 
@@ -642,7 +746,7 @@ export class MemStorage implements IStorage {
 
     allMps.forEach((mpData) => {
       const id = randomUUID();
-      const mp: Mp = { ...mpData as InsertMp, id };
+      const mp: Mp = { ...mpData, id };
       this.mps.set(id, mp);
     });
   }
