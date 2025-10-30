@@ -1,12 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
 import { useRoute, Link } from "wouter";
-import { ArrowLeft, MapPin, UserCircle, Flag, FileText } from "lucide-react";
+import { ArrowLeft, MapPin, UserCircle, Flag, FileText, Wallet, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import type { Mp } from "@shared/schema";
+import { calculateTotalSalary, formatCurrency } from "@/lib/utils";
+import { format } from "date-fns";
 
 const PARTY_COLORS: Record<string, string> = {
   PH: "bg-chart-1 text-white",
@@ -75,6 +77,8 @@ export default function MPProfile() {
     .toUpperCase();
 
   const partyColor = PARTY_COLORS[mp.party] || "bg-muted text-muted-foreground";
+  const totalSalary = calculateTotalSalary(mp.swornInDate, mp.monthlySalary);
+  const formattedSwornInDate = format(new Date(mp.swornInDate), "MMMM d, yyyy");
 
   return (
     <div className="min-h-screen bg-background">
@@ -217,6 +221,36 @@ export default function MPProfile() {
                 <div>
                   <p className="text-sm text-muted-foreground">State/Territory</p>
                   <p className="font-semibold">{mp.state}</p>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="md:col-span-2">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Wallet className="h-5 w-5" />
+                  Salary Information
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="grid md:grid-cols-3 gap-4">
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-1">Sworn In Date</p>
+                    <div className="flex items-center gap-2">
+                      <Calendar className="h-4 w-4 text-muted-foreground" />
+                      <p className="font-semibold">{formattedSwornInDate}</p>
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-1">Monthly Salary</p>
+                    <p className="font-semibold text-lg">{formatCurrency(mp.monthlySalary)}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-1">Total Earned to Date</p>
+                    <p className="font-bold text-2xl text-green-600 dark:text-green-400">
+                      {formatCurrency(totalSalary)}
+                    </p>
+                  </div>
                 </div>
               </CardContent>
             </Card>
