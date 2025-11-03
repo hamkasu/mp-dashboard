@@ -58,7 +58,11 @@ export class MemStorage implements IStorage {
       role: insertMp.role ?? null,
       ministerSalary: insertMp.ministerSalary ?? 0,
       daysAttended: insertMp.daysAttended ?? 0,
-      totalParliamentDays: insertMp.totalParliamentDays ?? 0
+      totalParliamentDays: insertMp.totalParliamentDays ?? 0,
+      entertainmentAllowance: insertMp.entertainmentAllowance ?? 2500,
+      handphoneAllowance: insertMp.handphoneAllowance ?? 2000,
+      computerAllowance: insertMp.computerAllowance ?? 6000,
+      dressWearAllowance: insertMp.dressWearAllowance ?? 1000,
     };
     this.mps.set(id, mp);
     return mp;
@@ -352,7 +356,11 @@ export class MemStorage implements IStorage {
         role: mpData.role ?? null,
         ministerSalary: mpData.ministerSalary ?? 0,
         daysAttended: attendance.daysAttended,
-        totalParliamentDays: attendance.totalParliamentDays
+        totalParliamentDays: attendance.totalParliamentDays,
+        entertainmentAllowance: 2500,
+        handphoneAllowance: 2000,
+        computerAllowance: 6000,
+        dressWearAllowance: 1000,
       };
       this.mps.set(id, mp);
     });

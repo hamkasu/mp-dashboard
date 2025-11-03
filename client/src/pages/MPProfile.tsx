@@ -319,6 +319,68 @@ export default function MPProfile() {
             <Card className="md:col-span-2">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
+                  <Wallet className="h-5 w-5" />
+                  Miscellaneous Allowances
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">
+                    Monthly Allowances
+                  </h3>
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div className="flex justify-between items-center p-3 bg-muted/50 rounded-lg">
+                      <span className="text-sm font-medium">Entertainment Allowance</span>
+                      <span className="font-bold" data-testid="text-entertainment-allowance">
+                        {formatCurrency(mp.entertainmentAllowance)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center p-3 bg-muted/50 rounded-lg">
+                      <span className="text-sm font-medium">Handphone Allowance</span>
+                      <span className="font-bold" data-testid="text-handphone-allowance">
+                        {formatCurrency(mp.handphoneAllowance)}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="mt-3 flex justify-between items-center p-3 bg-green-100 dark:bg-green-900/20 rounded-lg">
+                    <span className="text-sm font-semibold">Total Monthly</span>
+                    <span className="font-bold text-green-600 dark:text-green-400" data-testid="text-total-monthly-misc">
+                      {formatCurrency(mp.entertainmentAllowance + mp.handphoneAllowance)}
+                    </span>
+                  </div>
+                </div>
+                <Separator />
+                <div>
+                  <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">
+                    Yearly Allowances
+                  </h3>
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div className="flex justify-between items-center p-3 bg-muted/50 rounded-lg">
+                      <span className="text-sm font-medium">Computer Allowance</span>
+                      <span className="font-bold" data-testid="text-computer-allowance">
+                        {formatCurrency(mp.computerAllowance)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center p-3 bg-muted/50 rounded-lg">
+                      <span className="text-sm font-medium">Dress Wear Allowance</span>
+                      <span className="font-bold" data-testid="text-dresswear-allowance">
+                        {formatCurrency(mp.dressWearAllowance)}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="mt-3 flex justify-between items-center p-3 bg-green-100 dark:bg-green-900/20 rounded-lg">
+                    <span className="text-sm font-semibold">Total Yearly</span>
+                    <span className="font-bold text-green-600 dark:text-green-400" data-testid="text-total-yearly-misc">
+                      {formatCurrency(mp.computerAllowance + mp.dressWearAllowance)}
+                    </span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="md:col-span-2">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
                   <Calendar className="h-5 w-5" />
                   Yearly Allowance Breakdown
                 </CardTitle>
