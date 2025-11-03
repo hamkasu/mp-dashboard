@@ -46,3 +46,23 @@ export const insertUserSchema = createInsertSchema(users).pick({
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
+
+export const courtCases = pgTable("court_cases", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  mpId: varchar("mp_id").notNull().references(() => mps.id),
+  caseNumber: text("case_number").notNull(),
+  title: text("title").notNull(),
+  courtLevel: text("court_level").notNull(),
+  status: text("status").notNull(),
+  filingDate: timestamp("filing_date").notNull(),
+  outcome: text("outcome"),
+  charges: text("charges").notNull(),
+  documentLinks: text("document_links").array(),
+});
+
+export const insertCourtCaseSchema = createInsertSchema(courtCases).omit({
+  id: true,
+});
+
+export type InsertCourtCase = z.infer<typeof insertCourtCaseSchema>;
+export type CourtCase = typeof courtCases.$inferSelect;

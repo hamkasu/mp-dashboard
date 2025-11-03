@@ -1,4 +1,4 @@
-import { type User, type InsertUser, type Mp, type InsertMp } from "@shared/schema";
+import { type User, type InsertUser, type Mp, type InsertMp, type CourtCase, type InsertCourtCase } from "@shared/schema";
 import { randomUUID } from "crypto";
 
 export interface IStorage {
@@ -11,16 +11,27 @@ export interface IStorage {
   getMp(id: string): Promise<Mp | undefined>;
   getAllMps(): Promise<Mp[]>;
   createMp(mp: InsertMp): Promise<Mp>;
+  
+  // Court Case methods
+  getCourtCase(id: string): Promise<CourtCase | undefined>;
+  getCourtCasesByMpId(mpId: string): Promise<CourtCase[]>;
+  getAllCourtCases(): Promise<CourtCase[]>;
+  createCourtCase(courtCase: InsertCourtCase): Promise<CourtCase>;
+  updateCourtCase(id: string, courtCase: Partial<InsertCourtCase>): Promise<CourtCase | undefined>;
+  deleteCourtCase(id: string): Promise<boolean>;
 }
 
 export class MemStorage implements IStorage {
   private users: Map<string, User>;
   private mps: Map<string, Mp>;
+  private courtCases: Map<string, CourtCase>;
 
   constructor() {
     this.users = new Map();
     this.mps = new Map();
+    this.courtCases = new Map();
     this.seedMps();
+    this.seedCourtCases();
   }
 
   async getUser(id: string): Promise<User | undefined> {
@@ -366,6 +377,112 @@ export class MemStorage implements IStorage {
       };
       this.mps.set(id, mp);
     });
+  }
+
+  async getCourtCase(id: string): Promise<CourtCase | undefined> {
+    return this.courtCases.get(id);
+  }
+
+  async getCourtCasesByMpId(mpId: string): Promise<CourtCase[]> {
+    return Array.from(this.courtCases.values()).filter(
+      (courtCase) => courtCase.mpId === mpId
+    );
+  }
+
+  async getAllCourtCases(): Promise<CourtCase[]> {
+    return Array.from(this.courtCases.values());
+  }
+
+  async createCourtCase(insertCourtCase: InsertCourtCase): Promise<CourtCase> {
+    const id = randomUUID();
+    const courtCase: CourtCase = {
+      ...insertCourtCase,
+      id,
+      outcome: insertCourtCase.outcome ?? null,
+      documentLinks: insertCourtCase.documentLinks ?? null,
+    };
+    this.courtCases.set(id, courtCase);
+    return courtCase;
+  }
+
+  async updateCourtCase(id: string, updates: Partial<InsertCourtCase>): Promise<CourtCase | undefined> {
+    const existing = this.courtCases.get(id);
+    if (!existing) return undefined;
+
+    const updated: CourtCase = {
+      ...existing,
+      ...updates,
+    };
+    this.courtCases.set(id, updated);
+    return updated;
+  }
+
+  async deleteCourtCase(id: string): Promise<boolean> {
+    return this.courtCases.delete(id);
+  }
+
+  private seedCourtCases() {
+    const mpsArray = Array.from(this.mps.values());
+    
+    const ahmadZahidMp = mpsArray.find(mp => mp.name === "Ahmad Zahid Hamidi");
+    if (ahmadZahidMp) {
+      this.createCourtCase({
+        mpId: ahmadZahidMp.id,
+        caseNumber: "PP-45-272-11/2018",
+        title: "Public Prosecutor v Ahmad Zahid Hamidi - 47 Corruption Charges",
+        courtLevel: "High Court",
+        status: "Ongoing",
+        filingDate: new Date("2018-10-19"),
+        outcome: null,
+        charges: "47 charges of criminal breach of trust, corruption and money laundering involving Yayasan Akalbudi funds totaling RM114 million",
+        documentLinks: ["https://www.kehakiman.gov.my"],
+      });
+    }
+
+    const limGuanEngMp = mpsArray.find(mp => mp.name === "Lim Guan Eng");
+    if (limGuanEngMp) {
+      this.createCourtCase({
+        mpId: limGuanEngMp.id,
+        caseNumber: "CR-45-88-06/2018",
+        title: "Public Prosecutor v Lim Guan Eng - Tunnel Project Corruption",
+        courtLevel: "High Court",
+        status: "Completed",
+        filingDate: new Date("2018-07-04"),
+        outcome: "Acquitted on all charges (2024)",
+        charges: "Corruption charges related to the undersea tunnel project in Penang",
+        documentLinks: null,
+      });
+    }
+
+    const syedSaddiqMp = mpsArray.find(mp => mp.name === "Syed Saddiq Syed Abdul Rahman");
+    if (syedSaddiqMp) {
+      this.createCourtCase({
+        mpId: syedSaddiqMp.id,
+        caseNumber: "PP-45-119-09/2021",
+        title: "Public Prosecutor v Syed Saddiq - CBT and Money Laundering",
+        courtLevel: "High Court",
+        status: "Ongoing",
+        filingDate: new Date("2021-07-22"),
+        outcome: null,
+        charges: "Criminal breach of trust, misappropriation of funds and money laundering involving RM1.12 million",
+        documentLinks: null,
+      });
+    }
+
+    const muhyiddinMp = mpsArray.find(mp => mp.name === "Muhyiddin Yassin");
+    if (muhyiddinMp) {
+      this.createCourtCase({
+        mpId: muhyiddinMp.id,
+        caseNumber: "PP-45-308-08/2022",
+        title: "Public Prosecutor v Muhyiddin Yassin - Power Abuse",
+        courtLevel: "High Court",
+        status: "Ongoing",
+        filingDate: new Date("2022-08-26"),
+        outcome: null,
+        charges: "4 charges of abuse of power and 2 charges of money laundering involving RM232.5 million in connection with Bersatu Covid-19 aid programs",
+        documentLinks: null,
+      });
+    }
   }
 }
 

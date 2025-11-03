@@ -1,12 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
 import { useRoute, Link } from "wouter";
-import { ArrowLeft, MapPin, UserCircle, Flag, FileText, Wallet, Calendar } from "lucide-react";
+import { ArrowLeft, MapPin, UserCircle, Flag, FileText, Wallet, Calendar, Scale, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
-import type { Mp } from "@shared/schema";
+import type { Mp, CourtCase } from "@shared/schema";
 import { calculateTotalSalary, calculateYearlyBreakdown, formatCurrency } from "@/lib/utils";
 import { format } from "date-fns";
 
@@ -41,6 +41,11 @@ export default function MPProfile() {
 
   const { data: mp, isLoading } = useQuery<Mp>({
     queryKey: ["/api/mps", mpId],
+    enabled: !!mpId,
+  });
+
+  const { data: courtCases = [], isLoading: isLoadingCourtCases } = useQuery<CourtCase[]>({
+    queryKey: [`/api/mps/${mpId}/court-cases`],
     enabled: !!mpId,
   });
 
@@ -448,6 +453,159 @@ export default function MPProfile() {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Court Cases Section */}
+            {(isLoadingCourtCases || courtCases.length > 0) && (
+              <Card className="md:col-span-2">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Scale className="h-5 w-5" />
+                    Court Cases
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {isLoadingCourtCases ? (
+                    <div className="space-y-3">
+                      <div className="h-20 bg-muted animate-pulse rounded" />
+                      <div className="h-20 bg-muted animate-pulse rounded" />
+                    </div>
+                  ) : courtCases.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <Scale className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                      <p>No court cases on record for this MP.</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {/* Ongoing Cases */}
+                      {courtCases.filter(c => c.status === "Ongoing").length > 0 && (
+                        <div>
+                          <h4 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide mb-3">
+                            Ongoing Cases ({courtCases.filter(c => c.status === "Ongoing").length})
+                          </h4>
+                          <div className="space-y-3">
+                            {courtCases
+                              .filter(c => c.status === "Ongoing")
+                              .map((courtCase) => (
+                                <div
+                                  key={courtCase.id}
+                                  className="border rounded-lg p-4 hover:bg-muted/30 transition-colors"
+                                  data-testid={`court-case-${courtCase.id}`}
+                                >
+                                  <div className="flex items-start justify-between gap-4 mb-2">
+                                    <div className="flex-1">
+                                      <div className="flex items-center gap-2 mb-1">
+                                        <Badge variant="destructive" data-testid={`badge-status-${courtCase.id}`}>
+                                          {courtCase.status}
+                                        </Badge>
+                                        <Badge variant="outline" data-testid={`badge-court-${courtCase.id}`}>
+                                          {courtCase.courtLevel}
+                                        </Badge>
+                                      </div>
+                                      <h5 className="font-semibold mb-1" data-testid={`text-case-title-${courtCase.id}`}>
+                                        {courtCase.title}
+                                      </h5>
+                                      <p className="text-sm text-muted-foreground mb-2" data-testid={`text-case-number-${courtCase.id}`}>
+                                        Case No: {courtCase.caseNumber}
+                                      </p>
+                                    </div>
+                                  </div>
+                                  <p className="text-sm mb-2" data-testid={`text-charges-${courtCase.id}`}>
+                                    <span className="font-medium">Charges: </span>
+                                    {courtCase.charges}
+                                  </p>
+                                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                                    <span data-testid={`text-filing-date-${courtCase.id}`}>
+                                      Filed: {format(new Date(courtCase.filingDate), "MMM d, yyyy")}
+                                    </span>
+                                    {courtCase.documentLinks && courtCase.documentLinks.length > 0 && (
+                                      <a
+                                        href={courtCase.documentLinks[0]}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="flex items-center gap-1 text-primary hover:underline"
+                                        data-testid={`link-documents-${courtCase.id}`}
+                                      >
+                                        View Documents
+                                        <ExternalLink className="h-3 w-3" />
+                                      </a>
+                                    )}
+                                  </div>
+                                </div>
+                              ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Completed Cases */}
+                      {courtCases.filter(c => c.status === "Completed").length > 0 && (
+                        <div>
+                          {courtCases.filter(c => c.status === "Ongoing").length > 0 && <Separator className="my-4" />}
+                          <h4 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide mb-3">
+                            Completed Cases ({courtCases.filter(c => c.status === "Completed").length})
+                          </h4>
+                          <div className="space-y-3">
+                            {courtCases
+                              .filter(c => c.status === "Completed")
+                              .map((courtCase) => (
+                                <div
+                                  key={courtCase.id}
+                                  className="border rounded-lg p-4 hover:bg-muted/30 transition-colors"
+                                  data-testid={`court-case-${courtCase.id}`}
+                                >
+                                  <div className="flex items-start justify-between gap-4 mb-2">
+                                    <div className="flex-1">
+                                      <div className="flex items-center gap-2 mb-1">
+                                        <Badge variant="secondary" data-testid={`badge-status-${courtCase.id}`}>
+                                          {courtCase.status}
+                                        </Badge>
+                                        <Badge variant="outline" data-testid={`badge-court-${courtCase.id}`}>
+                                          {courtCase.courtLevel}
+                                        </Badge>
+                                      </div>
+                                      <h5 className="font-semibold mb-1" data-testid={`text-case-title-${courtCase.id}`}>
+                                        {courtCase.title}
+                                      </h5>
+                                      <p className="text-sm text-muted-foreground mb-2" data-testid={`text-case-number-${courtCase.id}`}>
+                                        Case No: {courtCase.caseNumber}
+                                      </p>
+                                    </div>
+                                  </div>
+                                  <p className="text-sm mb-2" data-testid={`text-charges-${courtCase.id}`}>
+                                    <span className="font-medium">Charges: </span>
+                                    {courtCase.charges}
+                                  </p>
+                                  {courtCase.outcome && (
+                                    <p className="text-sm mb-2 font-medium text-green-600 dark:text-green-400" data-testid={`text-outcome-${courtCase.id}`}>
+                                      Outcome: {courtCase.outcome}
+                                    </p>
+                                  )}
+                                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                                    <span data-testid={`text-filing-date-${courtCase.id}`}>
+                                      Filed: {format(new Date(courtCase.filingDate), "MMM d, yyyy")}
+                                    </span>
+                                    {courtCase.documentLinks && courtCase.documentLinks.length > 0 && (
+                                      <a
+                                        href={courtCase.documentLinks[0]}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="flex items-center gap-1 text-primary hover:underline"
+                                        data-testid={`link-documents-${courtCase.id}`}
+                                      >
+                                        View Documents
+                                        <ExternalLink className="h-3 w-3" />
+                                      </a>
+                                    )}
+                                  </div>
+                                </div>
+                              ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
           </div>
         </div>
       </div>
