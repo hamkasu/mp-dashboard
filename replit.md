@@ -8,18 +8,19 @@ The application is built as a full-stack solution with a React frontend and Expr
 
 ## Recent Changes
 
-### November 3, 2025 - Miscellaneous Allowances Feature
-- **Added miscellaneous allowance tracking** based on official parliament data
-- **Schema updates**: Added four new allowance fields to MPs table:
-  - `entertainmentAllowance`: RM 2,500/month for entertainment expenses
-  - `handphoneAllowance`: RM 2,000/month for mobile phone expenses
-  - `computerAllowance`: RM 6,000/year for computer equipment
-  - `dressWearAllowance`: RM 1,000/year for formal attire
+### November 3, 2025 - Comprehensive Allowance Information Table
+- **Implemented comprehensive allowance tracking** displaying all MP allowances in a single organized table
+- **Schema updates**: Added `parliamentSittingAllowance` field (RM 400 per day attended) to MPs table
+- **Profile page enhancement**: Replaced individual allowance cards with unified "Allowance Information" table showing:
+  - Base MP Allowance (RM 16,000/month)
+  - Minister Salary (if applicable, varies by position)
+  - Entertainment Allowance (RM 2,500/month)
+  - Handphone Allowance (RM 2,000/month)
+  - Parliament Sitting Attendance (RM 400/day × days attended)
+  - Computer Allowance (RM 6,000/year)
+  - Dress Wear Allowance (RM 1,000/year)
 - **Data source**: Members of Parliament (Remuneration) Act 1980 and official parliament sources
-- **Profile page enhancement**: New "Miscellaneous Allowances" card displaying:
-  - Monthly allowances section with individual breakdown and total
-  - Yearly allowances section with individual breakdown and total
-  - Color-coded totals matching existing design system
+- **UX improvement**: Clean table layout with allowance type, frequency, and amount columns for easy comprehension
 - **Full type safety**: All allowance fields properly typed in schema with default values
 
 ### November 3, 2025 - Attendance Tracking System
@@ -71,7 +72,7 @@ Preferred communication style: Simple, everyday language.
   - Shows total earned since sworn in
   - Features year-by-year allowance breakdown table
   - Attendance section with color-coded days attended/total days display
-  - Miscellaneous allowances card showing monthly (entertainment, handphone) and yearly (computer, dress wear) allowances
+  - Allowance Information table showing all compensation types including base allowance, minister salary, miscellaneous allowances (entertainment, handphone, computer, dress wear), and parliament sitting attendance allowance
 - Not Found (`/404`): Error handling page
 
 **State Management Strategy**:
@@ -125,6 +126,7 @@ Preferred communication style: Simple, everyday language.
 - `totalParliamentDays`: Total number of parliament sitting days (required, defaults to 0)
 - `entertainmentAllowance`: Monthly entertainment allowance in MYR (required, defaults to 2500)
 - `handphoneAllowance`: Monthly handphone allowance in MYR (required, defaults to 2000)
+- `parliamentSittingAllowance`: Daily parliament sitting attendance allowance in MYR (required, defaults to 400)
 - `computerAllowance`: Yearly computer allowance in MYR (required, defaults to 6000)
 - `dressWearAllowance`: Yearly dress wear allowance in MYR (required, defaults to 1000)
 
