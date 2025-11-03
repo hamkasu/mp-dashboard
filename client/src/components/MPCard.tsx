@@ -32,7 +32,9 @@ export function MPCard({ mp }: MPCardProps) {
     .toUpperCase();
 
   const partyColor = PARTY_COLORS[mp.party] || "bg-muted text-muted-foreground";
-  const totalSalary = calculateTotalSalary(mp.swornInDate, mp.monthlySalary);
+  const monthlySalary = mp.mpAllowance + mp.ministerSalary;
+  const yearlySalary = monthlySalary * 12;
+  const totalSalary = calculateTotalSalary(mp.swornInDate, monthlySalary);
 
   return (
     <Link href={`/mp/${mp.id}`}>
@@ -86,11 +88,23 @@ export function MPCard({ mp }: MPCardProps) {
             
             <div className="flex items-start gap-2">
               <Wallet className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
-              <div className="flex-1 min-w-0">
-                <p className="font-semibold text-green-600 dark:text-green-400">
-                  {formatCurrency(totalSalary)}
-                </p>
-                <p className="text-xs text-muted-foreground">Total earned</p>
+              <div className="flex-1 min-w-0 space-y-1">
+                <div>
+                  <p className="font-semibold text-green-600 dark:text-green-400" data-testid={`text-total-earned-${mp.id}`}>
+                    {formatCurrency(totalSalary)}
+                  </p>
+                  <p className="text-xs text-muted-foreground">Total earned</p>
+                </div>
+                <div className="grid grid-cols-2 gap-2 pt-1 border-t border-muted">
+                  <div>
+                    <p className="font-medium" data-testid={`text-monthly-allowance-${mp.id}`}>{formatCurrency(monthlySalary)}</p>
+                    <p className="text-xs text-muted-foreground">Monthly</p>
+                  </div>
+                  <div>
+                    <p className="font-medium" data-testid={`text-yearly-allowance-${mp.id}`}>{formatCurrency(yearlySalary)}</p>
+                    <p className="text-xs text-muted-foreground">Yearly</p>
+                  </div>
+                </div>
               </div>
             </div>
             
