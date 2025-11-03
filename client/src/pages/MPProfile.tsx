@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import type { Mp } from "@shared/schema";
-import { calculateTotalSalary, formatCurrency } from "@/lib/utils";
+import { calculateTotalSalary, calculateYearlyBreakdown, formatCurrency } from "@/lib/utils";
 import { format } from "date-fns";
 
 const PARTY_COLORS: Record<string, string> = {
@@ -81,6 +81,7 @@ export default function MPProfile() {
   const yearlySalary = monthlySalary * 12;
   const totalSalary = calculateTotalSalary(mp.swornInDate, monthlySalary);
   const formattedSwornInDate = format(new Date(mp.swornInDate), "MMMM d, yyyy");
+  const yearlyBreakdown = calculateYearlyBreakdown(mp.swornInDate, monthlySalary);
 
   return (
     <div className="min-h-screen bg-background">
@@ -260,6 +261,59 @@ export default function MPProfile() {
                       </p>
                     </div>
                   </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="md:col-span-2">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Calendar className="h-5 w-5" />
+                  Yearly Allowance Breakdown
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="overflow-x-auto">
+                  <table className="w-full" data-testid="table-yearly-breakdown">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-left py-3 px-4 font-semibold text-sm text-muted-foreground">Year</th>
+                        <th className="text-right py-3 px-4 font-semibold text-sm text-muted-foreground">Months Served</th>
+                        <th className="text-right py-3 px-4 font-semibold text-sm text-muted-foreground">Amount Earned</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {yearlyBreakdown.map((item, index) => (
+                        <tr 
+                          key={item.year} 
+                          className="border-b last:border-0 hover:bg-muted/50 transition-colors"
+                          data-testid={`row-year-${item.year}`}
+                        >
+                          <td className="py-3 px-4 font-medium" data-testid={`text-year-${item.year}`}>
+                            {item.year}
+                            {index === yearlyBreakdown.length - 1 && (
+                              <span className="ml-2 text-xs text-muted-foreground">(Current)</span>
+                            )}
+                          </td>
+                          <td className="text-right py-3 px-4" data-testid={`text-months-${item.year}`}>
+                            {item.monthsServed} {item.monthsServed === 1 ? 'month' : 'months'}
+                          </td>
+                          <td className="text-right py-3 px-4 font-semibold text-green-600 dark:text-green-400" data-testid={`text-amount-${item.year}`}>
+                            {formatCurrency(item.amount)}
+                          </td>
+                        </tr>
+                      ))}
+                      <tr className="bg-muted/30">
+                        <td className="py-3 px-4 font-bold">Total</td>
+                        <td className="text-right py-3 px-4 font-bold">
+                          {yearlyBreakdown.reduce((sum, item) => sum + item.monthsServed, 0)} months
+                        </td>
+                        <td className="text-right py-3 px-4 font-bold text-lg text-green-600 dark:text-green-400" data-testid="text-total-breakdown">
+                          {formatCurrency(yearlyBreakdown.reduce((sum, item) => sum + item.amount, 0))}
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
                 </div>
               </CardContent>
             </Card>
