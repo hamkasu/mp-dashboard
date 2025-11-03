@@ -528,6 +528,60 @@ export class MemStorage implements IStorage {
         ],
       });
     }
+
+    const bungMoktarMp = mpsArray.find(mp => mp.name === "Bung Moktar Radin");
+    if (bungMoktarMp) {
+      this.createCourtCase({
+        mpId: bungMoktarMp.id,
+        caseNumber: "PP-45-308-05/2019",
+        title: "Public Prosecutor v Bung Moktar Radin - Corruption",
+        courtLevel: "Sessions Court",
+        status: "Ongoing",
+        filingDate: new Date("2019-05-03"),
+        outcome: null,
+        charges: "3 charges of corruption involving RM2.8 million related to Felcra investment in Public Mutual unit trusts. Ordered to enter defence after Court of Appeal overturned acquittal in November 2024.",
+        documentLinks: [
+          "https://www.thestar.com.my/news/nation/2025/05/22/appellate-court-dismisses-final-review-bid-by-bung-moktar-wife-over-graft-case",
+          "https://www.bernama.com/en/news.php?id=2364505"
+        ],
+      });
+    }
+
+    if (limGuanEngMp && muhyiddinMp) {
+      this.createCourtCase({
+        mpId: limGuanEngMp.id,
+        caseNumber: "CIVIL-LGE-MY-2023",
+        title: "Lim Guan Eng v Muhyiddin Yassin - Defamation (Civil)",
+        courtLevel: "High Court (Civil)",
+        status: "Completed",
+        filingDate: new Date("2023-03-27"),
+        outcome: "Won - RM1.35 million awarded",
+        charges: "Defamation lawsuit over Facebook posts alleging Lim misused power to revoke tax-exempt status of Yayasan Albukhary. Judgment awarded RM1.35 million plus RM50,000 costs in November 2024.",
+        documentLinks: [
+          "https://www.malaymail.com/news/malaysia/2024/12/18/guan-eng-seeks-interest-on-rm135m-defamation-damages-from-muhyiddin/160309",
+          "https://www.usnews.com/news/world/articles/2024-11-08/malaysias-troubled-ex-pm-ordered-to-pay-300-000-to-politician-over-defamatory-remarks"
+        ],
+      });
+    }
+
+    const mahathirMp = mpsArray.find(mp => mp.name === "Mahathir Mohamad");
+    const anwarMp = mpsArray.find(mp => mp.name === "Anwar Ibrahim");
+    if (mahathirMp && anwarMp) {
+      this.createCourtCase({
+        mpId: mahathirMp.id,
+        caseNumber: "CIVIL-MM-AI-2023",
+        title: "Mahathir Mohamad v Anwar Ibrahim - Defamation (Civil)",
+        courtLevel: "High Court (Civil)",
+        status: "Ongoing",
+        filingDate: new Date("2023-05-03"),
+        outcome: null,
+        charges: "RM150 million defamation lawsuit claiming Anwar accused Mahathir of enriching himself and family during 22+ years as Prime Minister. Case ongoing as of October 2025.",
+        documentLinks: [
+          "https://www.thestar.com.my/news/nation/2025/10/21/dr-m039s-defamation-suit-proceedings-against-pm-postponed-to-oct-23",
+          "https://www.benarnews.org/english/news/malaysian/libel-lawsuit-05052023104557.html"
+        ],
+      });
+    }
   }
 }
 
