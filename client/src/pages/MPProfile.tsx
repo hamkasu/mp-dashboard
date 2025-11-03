@@ -77,7 +77,9 @@ export default function MPProfile() {
     .toUpperCase();
 
   const partyColor = PARTY_COLORS[mp.party] || "bg-muted text-muted-foreground";
-  const totalSalary = calculateTotalSalary(mp.swornInDate, mp.monthlySalary);
+  const monthlySalary = mp.mpAllowance + mp.ministerSalary;
+  const yearlySalary = monthlySalary * 12;
+  const totalSalary = calculateTotalSalary(mp.swornInDate, monthlySalary);
   const formattedSwornInDate = format(new Date(mp.swornInDate), "MMMM d, yyyy");
 
   return (
@@ -233,7 +235,7 @@ export default function MPProfile() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <div className="grid md:grid-cols-3 gap-4">
+                <div className="grid gap-4">
                   <div>
                     <p className="text-sm text-muted-foreground mb-1">Sworn In Date</p>
                     <div className="flex items-center gap-2">
@@ -241,15 +243,22 @@ export default function MPProfile() {
                       <p className="font-semibold">{formattedSwornInDate}</p>
                     </div>
                   </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground mb-1">Monthly Salary</p>
-                    <p className="font-semibold text-lg">{formatCurrency(mp.monthlySalary)}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground mb-1">Total Earned to Date</p>
-                    <p className="font-bold text-2xl text-green-600 dark:text-green-400">
-                      {formatCurrency(totalSalary)}
-                    </p>
+                  <Separator />
+                  <div className="grid md:grid-cols-3 gap-4">
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">Monthly Allowance</p>
+                      <p className="font-semibold text-lg" data-testid="text-monthly-salary">{formatCurrency(monthlySalary)}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">Yearly Allowance</p>
+                      <p className="font-semibold text-lg" data-testid="text-yearly-salary">{formatCurrency(yearlySalary)}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">Total Earned to Date</p>
+                      <p className="font-bold text-2xl text-green-600 dark:text-green-400" data-testid="text-total-earned">
+                        {formatCurrency(totalSalary)}
+                      </p>
+                    </div>
                   </div>
                 </div>
               </CardContent>
