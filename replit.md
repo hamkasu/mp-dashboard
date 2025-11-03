@@ -29,7 +29,10 @@ Preferred communication style: Simple, everyday language.
 
 **Key Pages**:
 - Home (`/`): Dashboard with MP grid, filters, search, and statistics
-- MP Profile (`/mp/:id`): Detailed individual MP information
+- MP Profile (`/mp/:id`): Detailed individual MP information with salary breakdown
+  - Displays monthly and yearly allowance
+  - Shows total earned since sworn in
+  - Features year-by-year allowance breakdown table
 - Not Found (`/404`): Error handling page
 
 **State Management Strategy**:
@@ -76,6 +79,9 @@ Preferred communication style: Simple, everyday language.
 - `gender`: Gender (required)
 - `title`: Honorific title (optional)
 - `role`: Parliamentary role (optional)
+- `swornInDate`: Date MP was sworn into office (required)
+- `mpAllowance`: Monthly MP base allowance in MYR (required)
+- `ministerSalary`: Additional monthly salary if MP holds ministerial position (required, defaults to 0)
 
 **User Schema** (`users` table):
 - `id`: UUID primary key (auto-generated)
@@ -111,9 +117,15 @@ Preferred communication style: Simple, everyday language.
 
 ### Utilities
 - **clsx** & **tailwind-merge**: CSS class management
-- **date-fns**: Date manipulation
+- **date-fns**: Date manipulation and formatting
 - **Wouter**: Lightweight routing
 - **Lucide React**: Icon library
+
+### Key Features
+- **Salary Calculations**: Utility functions to calculate total earned and yearly breakdowns
+  - `calculateTotalSalary`: Computes total earnings from sworn-in date to present
+  - `calculateYearlyBreakdown`: Distributes earnings across calendar years for detailed analysis
+  - `formatCurrency`: Formats amounts in Malaysian Ringgit (MYR)
 
 ### Development Tools
 - **Replit Plugins**: Development banner, cartographer, runtime error overlay
