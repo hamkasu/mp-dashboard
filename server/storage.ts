@@ -440,6 +440,21 @@ export class MemStorage implements IStorage {
           "https://www.thestar.com.my/news/nation/2022/01/24/yayasan-akalbudi-trial-zahid-ordered-to-enter-defence-on-47-charges-of-corruption"
         ],
       });
+
+      this.createCourtCase({
+        mpId: ahmadZahidMp.id,
+        caseNumber: "PP-45-194-08/2018",
+        title: "Public Prosecutor v Ahmad Zahid Hamidi - VLN Foreign Visa System",
+        courtLevel: "High Court",
+        status: "Completed",
+        filingDate: new Date("2018-10-12"),
+        outcome: "Acquitted on all 40 charges (Sept 2022), AG withdrew appeals (Dec 2024)",
+        charges: "40 charges of corruption involving RM42 million in bribes from Ultra Kirana Sdn Bhd related to the Foreign Visa System (VLN) contract extension",
+        documentLinks: [
+          "https://www.thestar.com.my/news/nation/2024/12/12/agc-withdraws-appeals-against-zahid039s-acquittal-on-40-graft-charges-linked-to-vln",
+          "https://theedgemalaysia.com/article/zahid-acquitted-all-charges-vln-case-0"
+        ],
+      });
     }
 
     const limGuanEngMp = mpsArray.find(mp => mp.name === "Lim Guan Eng");
