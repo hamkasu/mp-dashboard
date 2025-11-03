@@ -8,6 +8,15 @@ The application is built as a full-stack solution with a React frontend and Expr
 
 ## Recent Changes
 
+### November 3, 2025 - Attendance Tracking System
+- **Implemented comprehensive attendance tracking** for all 222 MPs
+- **Schema updates**: Added `daysAttended` and `totalParliamentDays` fields to MPs table
+- **Realistic sample data**: Generated attendance records with 65 total sitting days, distributed realistically (50-98% attendance range)
+- **Color-coded display**: Visual indicators on MP cards and profiles (green ≥85%, yellow 70-84%, red <70%)
+- **Sorting functionality**: Added "Best Attendance" and "Worst Attendance" sort options
+- **Dashboard statistics**: New "Avg Attendance" card showing overall parliament attendance (84.8%)
+- **Profile page enhancement**: Detailed attendance section showing days attended out of total days
+
 ### November 3, 2025 - Complete Data Update
 - **Updated all 222 MPs** with accurate data from the 15th Malaysian Parliament (GE15)
 - **Data sources**: Cross-referenced Wikipedia (Members of Dewan Rakyat 15th Parliament, Anwar Ibrahim cabinet), Free Malaysia Today GE15 results, and official government sources
@@ -39,11 +48,15 @@ Preferred communication style: Simple, everyday language.
 - Component library configured via `components.json` with "new-york" style
 
 **Key Pages**:
-- Home (`/`): Dashboard with MP grid, filters, search, and statistics
-- MP Profile (`/mp/:id`): Detailed individual MP information with salary breakdown
+- Home (`/`): Dashboard with MP grid, filters, search, statistics, and attendance tracking
+  - 5 statistics cards: Total MPs, Party Breakdown, Gender Diversity, State Coverage, Avg Attendance
+  - Sort options: Name (A-Z), Best Attendance, Worst Attendance
+  - Color-coded attendance display on MP cards
+- MP Profile (`/mp/:id`): Detailed individual MP information with salary and attendance details
   - Displays monthly and yearly allowance
   - Shows total earned since sworn in
   - Features year-by-year allowance breakdown table
+  - Attendance section with color-coded days attended/total days display
 - Not Found (`/404`): Error handling page
 
 **State Management Strategy**:
@@ -63,9 +76,9 @@ Preferred communication style: Simple, everyday language.
 
 **API Design**:
 - RESTful endpoints under `/api` prefix
-- `GET /api/mps` - Retrieve all MPs
-- `GET /api/mps/:id` - Retrieve single MP by ID
-- `GET /api/stats` - Aggregate statistics (party breakdown, gender breakdown, state count)
+- `GET /api/mps` - Retrieve all MPs with attendance data
+- `GET /api/mps/:id` - Retrieve single MP by ID with attendance data
+- `GET /api/stats` - Aggregate statistics (party breakdown, gender breakdown, state count, average attendance rate)
 
 **Development Setup**:
 - Vite dev server integration in middleware mode
@@ -93,6 +106,8 @@ Preferred communication style: Simple, everyday language.
 - `swornInDate`: Date MP was sworn into office (required)
 - `mpAllowance`: Monthly MP base allowance in MYR (required)
 - `ministerSalary`: Additional monthly salary if MP holds ministerial position (required, defaults to 0)
+- `daysAttended`: Number of days MP attended parliament (required, defaults to 0)
+- `totalParliamentDays`: Total number of parliament sitting days (required, defaults to 0)
 
 **User Schema** (`users` table):
 - `id`: UUID primary key (auto-generated)
