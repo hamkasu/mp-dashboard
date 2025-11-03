@@ -510,6 +510,24 @@ export class MemStorage implements IStorage {
         ],
       });
     }
+
+    const ismailSabriMp = mpsArray.find(mp => mp.name === "Ismail Sabri Yaakob");
+    if (ismailSabriMp) {
+      this.createCourtCase({
+        mpId: ismailSabriMp.id,
+        caseNumber: "SPRM-ISY-2025",
+        title: "SPRM Investigation - Ismail Sabri Yaakob - Corruption and Money Laundering",
+        courtLevel: "SPRM Investigation",
+        status: "Ongoing",
+        filingDate: new Date("2024-12-11"),
+        outcome: null,
+        charges: "Under SPRM investigation for corruption and money laundering related to RM700 million 'Keluarga Malaysia' promotional campaign. Named as suspect in March 2025. Raids uncovered RM170 million cash and 16 gold bars.",
+        documentLinks: [
+          "https://www.malaymail.com/news/malaysia/2025/03/02/macc-probes-former-pm-ismail-sabri-over-corruption-money-laundering-claims-raids-uncover-rm170m-in-cash/168465",
+          "https://www.scmp.com/week-asia/politics/article/3300839/malaysian-ex-pm-ismail-sabri-now-suspect-corruption-probe"
+        ],
+      });
+    }
   }
 }
 
