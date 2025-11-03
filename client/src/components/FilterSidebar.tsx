@@ -2,16 +2,21 @@ import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+
+type SortOption = "name" | "attendance-best" | "attendance-worst";
 
 interface FilterSidebarProps {
   parties: { party: string; count: number }[];
   states: string[];
   selectedParties: string[];
   selectedStates: string[];
+  sortBy: SortOption;
   onPartyToggle: (party: string) => void;
   onStateToggle: (state: string) => void;
+  onSortChange: (sort: SortOption) => void;
   onClearFilters: () => void;
   isMobile?: boolean;
   onClose?: () => void;
@@ -22,8 +27,10 @@ export function FilterSidebar({
   states,
   selectedParties,
   selectedStates,
+  sortBy,
   onPartyToggle,
   onStateToggle,
+  onSortChange,
   onClearFilters,
   isMobile,
   onClose,
@@ -46,6 +53,35 @@ export function FilterSidebar({
 
       <ScrollArea className="flex-1">
         <div className="p-4 md:p-6 space-y-6">
+          {/* Sort Options */}
+          <div className="space-y-3">
+            <h3 className="text-sm font-medium uppercase tracking-wide">
+              Sort By
+            </h3>
+            <RadioGroup value={sortBy} onValueChange={(value) => onSortChange(value as SortOption)}>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="name" id="sort-name" data-testid="radio-sort-name" />
+                <Label htmlFor="sort-name" className="text-sm font-normal cursor-pointer">
+                  Name (A-Z)
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="attendance-best" id="sort-attendance-best" data-testid="radio-sort-attendance-best" />
+                <Label htmlFor="sort-attendance-best" className="text-sm font-normal cursor-pointer">
+                  Best Attendance
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="attendance-worst" id="sort-attendance-worst" data-testid="radio-sort-attendance-worst" />
+                <Label htmlFor="sort-attendance-worst" className="text-sm font-normal cursor-pointer">
+                  Worst Attendance
+                </Label>
+              </div>
+            </RadioGroup>
+          </div>
+
+          <Separator />
+
           {/* Party Filters */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">

@@ -62,11 +62,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Calculate unique states
       const uniqueStates = new Set(mps.map((mp) => mp.state));
 
+      // Calculate average attendance
+      const totalDaysAttended = mps.reduce((sum, mp) => sum + mp.daysAttended, 0);
+      const totalPossibleDays = mps.reduce((sum, mp) => sum + mp.totalParliamentDays, 0);
+      const averageAttendanceRate = totalPossibleDays > 0 
+        ? (totalDaysAttended / totalPossibleDays) * 100 
+        : 0;
+
       res.json({
         totalMps: mps.length,
         partyBreakdown: partyBreakdown.sort((a, b) => b.count - a.count),
         genderBreakdown,
         stateCount: uniqueStates.size,
+        averageAttendanceRate: Math.round(averageAttendanceRate * 10) / 10,
       });
     } catch (error) {
       console.error("Error calculating stats:", error);

@@ -1,4 +1,4 @@
-import { Users, Flag, UserCircle, MapPin } from "lucide-react";
+import { Users, Flag, UserCircle, MapPin, Calendar } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface Statistics {
@@ -6,6 +6,7 @@ interface Statistics {
   partyBreakdown: { party: string; count: number }[];
   genderBreakdown: { gender: string; count: number }[];
   stateCount: number;
+  averageAttendanceRate?: number;
 }
 
 interface StatisticsCardsProps {
@@ -16,8 +17,8 @@ interface StatisticsCardsProps {
 export function StatisticsCards({ stats, isLoading }: StatisticsCardsProps) {
   if (isLoading) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-        {[1, 2, 3, 4].map((i) => (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 md:gap-6">
+        {[1, 2, 3, 4, 5].map((i) => (
           <Card key={i} className="animate-pulse">
             <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
               <div className="h-4 w-20 bg-muted rounded" />
@@ -39,9 +40,16 @@ export function StatisticsCards({ stats, isLoading }: StatisticsCardsProps) {
 
   const femaleCount = stats.genderBreakdown.find((g) => g.gender === "Female")?.count || 0;
   const femalePercentage = ((femaleCount / stats.totalMps) * 100).toFixed(1);
+  
+  const attendanceRate = stats.averageAttendanceRate || 0;
+  const getAttendanceColor = (rate: number) => {
+    if (rate >= 85) return "text-green-600 dark:text-green-400";
+    if (rate >= 70) return "text-yellow-600 dark:text-yellow-400";
+    return "text-red-600 dark:text-red-400";
+  };
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 md:gap-6">
       <Card data-testid="card-total-mps">
         <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">Total MPs</CardTitle>
@@ -95,6 +103,32 @@ export function StatisticsCards({ stats, isLoading }: StatisticsCardsProps) {
           <p className="text-xs text-muted-foreground mt-1">
             States & Territories
           </p>
+        </CardContent>
+      </Card>
+
+      <Card data-testid="card-attendance">
+        <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">Avg Attendance</CardTitle>
+          <Calendar className="h-4 w-4 text-muted-foreground" />
+        </CardHeader>
+        <CardContent>
+          {stats.averageAttendanceRate !== undefined ? (
+            <>
+              <div className={`text-3xl md:text-4xl font-bold ${getAttendanceColor(attendanceRate)}`} data-testid="text-avg-attendance">
+                {attendanceRate.toFixed(1)}%
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Parliament attendance
+              </p>
+            </>
+          ) : (
+            <>
+              <div className="text-3xl md:text-4xl font-bold text-muted-foreground">—</div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Loading...
+              </p>
+            </>
+          )}
         </CardContent>
       </Card>
     </div>

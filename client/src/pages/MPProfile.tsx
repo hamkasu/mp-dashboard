@@ -23,6 +23,18 @@ const PARTY_COLORS: Record<string, string> = {
   BEBAS: "bg-destructive text-destructive-foreground",
 };
 
+function getAttendanceColor(attendanceRate: number): string {
+  if (attendanceRate >= 85) return "text-green-600 dark:text-green-400";
+  if (attendanceRate >= 70) return "text-yellow-600 dark:text-yellow-400";
+  return "text-red-600 dark:text-red-400";
+}
+
+function getAttendanceLabel(attendanceRate: number): string {
+  if (attendanceRate >= 85) return "Excellent";
+  if (attendanceRate >= 70) return "Good";
+  return "Needs Improvement";
+}
+
 export default function MPProfile() {
   const [, params] = useRoute("/mp/:id");
   const mpId = params?.id;
@@ -82,6 +94,12 @@ export default function MPProfile() {
   const totalSalary = calculateTotalSalary(mp.swornInDate, monthlySalary);
   const formattedSwornInDate = format(new Date(mp.swornInDate), "MMMM d, yyyy");
   const yearlyBreakdown = calculateYearlyBreakdown(mp.swornInDate, monthlySalary);
+  
+  const attendanceRate = mp.totalParliamentDays > 0 
+    ? (mp.daysAttended / mp.totalParliamentDays) * 100 
+    : 0;
+  const attendanceColor = getAttendanceColor(attendanceRate);
+  const attendanceLabel = getAttendanceLabel(attendanceRate);
 
   return (
     <div className="min-h-screen bg-background">
@@ -179,6 +197,39 @@ export default function MPProfile() {
 
           {/* Additional Information Cards */}
           <div className="grid md:grid-cols-2 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Calendar className="h-5 w-5" />
+                  Parliament Attendance
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div>
+                  <p className="text-sm text-muted-foreground mb-2">Attendance Record</p>
+                  <p className={`text-3xl font-bold ${attendanceColor}`} data-testid="text-attendance-fraction">
+                    {mp.daysAttended}/{mp.totalParliamentDays}
+                  </p>
+                  <p className="text-sm text-muted-foreground mt-1">days attended</p>
+                </div>
+                <Separator />
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Attendance Rate</p>
+                    <p className={`text-xl font-semibold ${attendanceColor}`} data-testid="text-attendance-rate">
+                      {attendanceRate.toFixed(1)}%
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Performance</p>
+                    <p className={`text-xl font-semibold ${attendanceColor}`} data-testid="text-attendance-label">
+                      {attendanceLabel}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">

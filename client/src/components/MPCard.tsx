@@ -1,4 +1,4 @@
-import { MapPin, UserCircle, Wallet } from "lucide-react";
+import { MapPin, UserCircle, Wallet, Calendar } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -23,6 +23,12 @@ const PARTY_COLORS: Record<string, string> = {
   BEBAS: "bg-destructive text-destructive-foreground",
 };
 
+function getAttendanceColor(attendanceRate: number): string {
+  if (attendanceRate >= 85) return "text-green-600 dark:text-green-400";
+  if (attendanceRate >= 70) return "text-yellow-600 dark:text-yellow-400";
+  return "text-red-600 dark:text-red-400";
+}
+
 export function MPCard({ mp }: MPCardProps) {
   const initials = mp.name
     .split(" ")
@@ -35,6 +41,11 @@ export function MPCard({ mp }: MPCardProps) {
   const monthlySalary = mp.mpAllowance + mp.ministerSalary;
   const yearlySalary = monthlySalary * 12;
   const totalSalary = calculateTotalSalary(mp.swornInDate, monthlySalary);
+  
+  const attendanceRate = mp.totalParliamentDays > 0 
+    ? (mp.daysAttended / mp.totalParliamentDays) * 100 
+    : 0;
+  const attendanceColor = getAttendanceColor(attendanceRate);
 
   return (
     <Link href={`/mp/${mp.id}`}>
@@ -105,6 +116,16 @@ export function MPCard({ mp }: MPCardProps) {
                     <p className="text-xs text-muted-foreground">Yearly</p>
                   </div>
                 </div>
+              </div>
+            </div>
+            
+            <div className="flex items-start gap-2">
+              <Calendar className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
+              <div className="flex-1 min-w-0">
+                <p className={`font-semibold ${attendanceColor}`} data-testid={`text-attendance-${mp.id}`}>
+                  {mp.daysAttended}/{mp.totalParliamentDays} days
+                </p>
+                <p className="text-xs text-muted-foreground">Parliament attendance</p>
               </div>
             </div>
             

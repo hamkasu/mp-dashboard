@@ -7,10 +7,13 @@ import { MPGrid } from "@/components/MPGrid";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import type { Mp } from "@shared/schema";
 
+type SortOption = "name" | "attendance-best" | "attendance-worst";
+
 export default function Home() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedParties, setSelectedParties] = useState<string[]>([]);
   const [selectedStates, setSelectedStates] = useState<string[]>([]);
+  const [sortBy, setSortBy] = useState<SortOption>("name");
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
 
   const { data: mps = [], isLoading: mpsLoading } = useQuery<Mp[]>({
@@ -22,15 +25,16 @@ export default function Home() {
     partyBreakdown: { party: string; count: number }[];
     genderBreakdown: { gender: string; count: number }[];
     stateCount: number;
+    averageAttendanceRate?: number;
   }>({
     queryKey: ["/api/stats"],
   });
 
   const isLoading = mpsLoading || statsLoading;
 
-  // Filter MPs
+  // Filter and sort MPs
   const filteredMps = useMemo(() => {
-    return mps.filter((mp) => {
+    let filtered = mps.filter((mp) => {
       const matchesSearch =
         searchQuery === "" ||
         mp.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -44,7 +48,26 @@ export default function Home() {
 
       return matchesSearch && matchesParty && matchesState;
     });
-  }, [mps, searchQuery, selectedParties, selectedStates]);
+
+    // Apply sorting
+    if (sortBy === "attendance-best") {
+      filtered = [...filtered].sort((a, b) => {
+        const rateA = a.totalParliamentDays > 0 ? (a.daysAttended / a.totalParliamentDays) : 0;
+        const rateB = b.totalParliamentDays > 0 ? (b.daysAttended / b.totalParliamentDays) : 0;
+        return rateB - rateA;
+      });
+    } else if (sortBy === "attendance-worst") {
+      filtered = [...filtered].sort((a, b) => {
+        const rateA = a.totalParliamentDays > 0 ? (a.daysAttended / a.totalParliamentDays) : 0;
+        const rateB = b.totalParliamentDays > 0 ? (b.daysAttended / b.totalParliamentDays) : 0;
+        return rateA - rateB;
+      });
+    } else {
+      filtered = [...filtered].sort((a, b) => a.name.localeCompare(b.name));
+    }
+
+    return filtered;
+  }, [mps, searchQuery, selectedParties, selectedStates, sortBy]);
 
   const availableStates = useMemo(() => {
     const states = Array.from(new Set(mps.map((mp) => mp.state)));
@@ -95,8 +118,10 @@ export default function Home() {
             states={availableStates}
             selectedParties={selectedParties}
             selectedStates={selectedStates}
+            sortBy={sortBy}
             onPartyToggle={handlePartyToggle}
             onStateToggle={handleStateToggle}
+            onSortChange={setSortBy}
             onClearFilters={handleClearFilters}
           />
         </aside>
@@ -109,8 +134,10 @@ export default function Home() {
               states={availableStates}
               selectedParties={selectedParties}
               selectedStates={selectedStates}
+              sortBy={sortBy}
               onPartyToggle={handlePartyToggle}
               onStateToggle={handleStateToggle}
+              onSortChange={setSortBy}
               onClearFilters={handleClearFilters}
               isMobile
               onClose={() => setMobileFiltersOpen(false)}

@@ -56,10 +56,29 @@ export class MemStorage implements IStorage {
       photoUrl: insertMp.photoUrl ?? null,
       title: insertMp.title ?? null,
       role: insertMp.role ?? null,
-      ministerSalary: insertMp.ministerSalary ?? 0
+      ministerSalary: insertMp.ministerSalary ?? 0,
+      daysAttended: insertMp.daysAttended ?? 0,
+      totalParliamentDays: insertMp.totalParliamentDays ?? 0
     };
     this.mps.set(id, mp);
     return mp;
+  }
+
+  private generateAttendance(): { daysAttended: number; totalParliamentDays: number } {
+    const totalParliamentDays = 65;
+    const random = Math.random();
+    
+    let attendanceRate: number;
+    if (random < 0.65) {
+      attendanceRate = 0.85 + Math.random() * 0.13;
+    } else if (random < 0.90) {
+      attendanceRate = 0.70 + Math.random() * 0.15;
+    } else {
+      attendanceRate = 0.50 + Math.random() * 0.20;
+    }
+    
+    const daysAttended = Math.floor(totalParliamentDays * attendanceRate);
+    return { daysAttended, totalParliamentDays };
   }
 
   private seedMps() {
@@ -324,13 +343,16 @@ export class MemStorage implements IStorage {
 
     mpsData.forEach((mpData) => {
       const id = randomUUID();
+      const attendance = this.generateAttendance();
       const mp: Mp = { 
         ...mpData, 
         id,
         photoUrl: mpData.photoUrl ?? null,
         title: mpData.title ?? null,
         role: mpData.role ?? null,
-        ministerSalary: mpData.ministerSalary ?? 0
+        ministerSalary: mpData.ministerSalary ?? 0,
+        daysAttended: attendance.daysAttended,
+        totalParliamentDays: attendance.totalParliamentDays
       };
       this.mps.set(id, mp);
     });

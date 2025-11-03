@@ -17,6 +17,8 @@ export const mps = pgTable("mps", {
   swornInDate: timestamp("sworn_in_date").notNull(),
   mpAllowance: integer("mp_allowance").notNull(),
   ministerSalary: integer("minister_salary").notNull().default(0),
+  daysAttended: integer("days_attended").notNull().default(0),
+  totalParliamentDays: integer("total_parliament_days").notNull().default(0),
 });
 
 export const insertMpSchema = createInsertSchema(mps).omit({
