@@ -30,3 +30,57 @@ export function formatCurrency(amount: number): string {
     maximumFractionDigits: 0,
   }).format(amount);
 }
+
+export interface YearlyBreakdown {
+  year: number;
+  monthsServed: number;
+  amount: number;
+}
+
+export function calculateYearlyBreakdown(swornInDate: Date | string, monthlySalary: number): YearlyBreakdown[] {
+  const swornIn = new Date(swornInDate);
+  const now = new Date();
+  const breakdown: YearlyBreakdown[] = [];
+  
+  const startYear = swornIn.getFullYear();
+  const currentYear = now.getFullYear();
+  
+  for (let year = startYear; year <= currentYear; year++) {
+    let monthsServed = 0;
+    
+    if (year === startYear && year === currentYear) {
+      // Same year - calculate months from sworn in to now
+      monthsServed = now.getMonth() - swornIn.getMonth();
+      if (now.getDate() >= swornIn.getDate()) {
+        monthsServed += 1;
+      }
+    } else if (year === startYear) {
+      // First year - calculate months from sworn in to end of year
+      monthsServed = 12 - swornIn.getMonth();
+      if (swornIn.getDate() > 1) {
+        monthsServed -= 1;
+      }
+      monthsServed += 1; // Include the month they were sworn in
+    } else if (year === currentYear) {
+      // Current year - calculate months from start of year to now
+      monthsServed = now.getMonth() + 1;
+      if (now.getDate() < swornIn.getDate()) {
+        monthsServed -= 1;
+      }
+    } else {
+      // Full year
+      monthsServed = 12;
+    }
+    
+    monthsServed = Math.max(0, monthsServed);
+    const amount = monthsServed * monthlySalary;
+    
+    breakdown.push({
+      year,
+      monthsServed,
+      amount,
+    });
+  }
+  
+  return breakdown;
+}
