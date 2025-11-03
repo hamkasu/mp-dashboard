@@ -435,7 +435,10 @@ export class MemStorage implements IStorage {
         filingDate: new Date("2018-10-19"),
         outcome: null,
         charges: "47 charges of criminal breach of trust, corruption and money laundering involving Yayasan Akalbudi funds totaling RM114 million",
-        documentLinks: ["https://www.kehakiman.gov.my"],
+        documentLinks: [
+          "https://www.thestar.com.my/news/nation/2023/09/04/high-court-grants-zahid-discharge-not-amounting-to-acquittal-in-yab-case",
+          "https://www.thestar.com.my/news/nation/2022/01/24/yayasan-akalbudi-trial-zahid-ordered-to-enter-defence-on-47-charges-of-corruption"
+        ],
       });
     }
 
@@ -446,11 +449,14 @@ export class MemStorage implements IStorage {
         caseNumber: "CR-45-88-06/2018",
         title: "Public Prosecutor v Lim Guan Eng - Tunnel Project Corruption",
         courtLevel: "High Court",
-        status: "Completed",
-        filingDate: new Date("2018-07-04"),
-        outcome: "Acquitted on all charges (2024)",
-        charges: "Corruption charges related to the undersea tunnel project in Penang",
-        documentLinks: null,
+        status: "Ongoing",
+        filingDate: new Date("2020-08-06"),
+        outcome: null,
+        charges: "Corruption charges related to soliciting 10% profit and receiving RM3.3 million in bribes for the RM6.3 billion Penang undersea tunnel project",
+        documentLinks: [
+          "https://www.nst.com.my/amp/news/nation/2025/10/1304477/guan-eng-used-businessman-secure-penang-undersea-tunnel-project-court",
+          "https://www.thestar.com.my/news/nation/2024/07/12/undersea-tunnel-case-guan-eng-submits-representation-to-drop-corruption-charges"
+        ],
       });
     }
 
@@ -461,11 +467,14 @@ export class MemStorage implements IStorage {
         caseNumber: "PP-45-119-09/2021",
         title: "Public Prosecutor v Syed Saddiq - CBT and Money Laundering",
         courtLevel: "High Court",
-        status: "Ongoing",
+        status: "Completed",
         filingDate: new Date("2021-07-22"),
-        outcome: null,
-        charges: "Criminal breach of trust, misappropriation of funds and money laundering involving RM1.12 million",
-        documentLinks: null,
+        outcome: "Acquitted by Court of Appeal on all charges (June 25, 2025)",
+        charges: "Criminal breach of trust, misappropriation of funds and money laundering involving RM1.2 million from Armada Bersatu funds",
+        documentLinks: [
+          "https://www.thestar.com.my/news/nation/2025/06/25/syed-saddiq-acquitted",
+          "https://www.thestar.com.my/news/nation/2023/11/09/syed-saddiq-guilty-on-all-four-charges-high-court-rules"
+        ],
       });
     }
 
@@ -477,10 +486,13 @@ export class MemStorage implements IStorage {
         title: "Public Prosecutor v Muhyiddin Yassin - Power Abuse",
         courtLevel: "High Court",
         status: "Ongoing",
-        filingDate: new Date("2022-08-26"),
+        filingDate: new Date("2023-03-10"),
         outcome: null,
-        charges: "4 charges of abuse of power and 2 charges of money laundering involving RM232.5 million in connection with Bersatu Covid-19 aid programs",
-        documentLinks: null,
+        charges: "4 charges of abuse of power and 3 charges of money laundering involving RM427.5 million in connection with Jana Wibawa programme",
+        documentLinks: [
+          "https://www.nst.com.my/news/crime-courts/2025/01/1161671/updated-muhyiddins-seven-power-abuse-money-laundering-cases-be",
+          "https://www.nst.com.my/news/crime-courts/2024/09/1104233/muhyiddins-four-abuse-power-charges-over-jana-wibawa-maintained"
+        ],
       });
     }
   }
