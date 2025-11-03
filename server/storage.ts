@@ -1,4 +1,4 @@
-import { type User, type InsertUser, type Mp, type InsertMp, type CourtCase, type InsertCourtCase } from "@shared/schema";
+import { type User, type InsertUser, type Mp, type InsertMp, type CourtCase, type InsertCourtCase, type SprmInvestigation, type InsertSprmInvestigation } from "@shared/schema";
 import { randomUUID } from "crypto";
 
 export interface IStorage {
@@ -19,19 +19,30 @@ export interface IStorage {
   createCourtCase(courtCase: InsertCourtCase): Promise<CourtCase>;
   updateCourtCase(id: string, courtCase: Partial<InsertCourtCase>): Promise<CourtCase | undefined>;
   deleteCourtCase(id: string): Promise<boolean>;
+  
+  // SPRM Investigation methods
+  getSprmInvestigation(id: string): Promise<SprmInvestigation | undefined>;
+  getSprmInvestigationsByMpId(mpId: string): Promise<SprmInvestigation[]>;
+  getAllSprmInvestigations(): Promise<SprmInvestigation[]>;
+  createSprmInvestigation(investigation: InsertSprmInvestigation): Promise<SprmInvestigation>;
+  updateSprmInvestigation(id: string, investigation: Partial<InsertSprmInvestigation>): Promise<SprmInvestigation | undefined>;
+  deleteSprmInvestigation(id: string): Promise<boolean>;
 }
 
 export class MemStorage implements IStorage {
   private users: Map<string, User>;
   private mps: Map<string, Mp>;
   private courtCases: Map<string, CourtCase>;
+  private sprmInvestigations: Map<string, SprmInvestigation>;
 
   constructor() {
     this.users = new Map();
     this.mps = new Map();
     this.courtCases = new Map();
+    this.sprmInvestigations = new Map();
     this.seedMps();
     this.seedCourtCases();
+    this.seedSprmInvestigations();
   }
 
   async getUser(id: string): Promise<User | undefined> {
@@ -51,50 +62,12 @@ export class MemStorage implements IStorage {
     return user;
   }
 
-  private calculateInvestigationStatus(mpId: string): string {
-    const mpCourtCases = Array.from(this.courtCases.values()).filter(
-      (courtCase) => courtCase.mpId === mpId
-    );
-    
-    if (mpCourtCases.length === 0) {
-      return "Clear";
-    }
-    
-    const hasSPRMInvestigation = mpCourtCases.some(
-      (courtCase) => courtCase.courtLevel === "SPRM Investigation" && courtCase.status === "Ongoing"
-    );
-    
-    if (hasSPRMInvestigation) {
-      return "Under SPRM Investigation";
-    }
-    
-    const hasOngoingCases = mpCourtCases.some(
-      (courtCase) => courtCase.status === "Ongoing"
-    );
-    
-    if (hasOngoingCases) {
-      return "Under Investigation";
-    }
-    
-    return "Clear";
-  }
-
   async getMp(id: string): Promise<Mp | undefined> {
-    const mp = this.mps.get(id);
-    if (mp) {
-      return {
-        ...mp,
-        investigationStatus: this.calculateInvestigationStatus(id),
-      };
-    }
-    return undefined;
+    return this.mps.get(id);
   }
 
   async getAllMps(): Promise<Mp[]> {
-    return Array.from(this.mps.values()).map((mp) => ({
-      ...mp,
-      investigationStatus: this.calculateInvestigationStatus(mp.id),
-    }));
+    return Array.from(this.mps.values());
   }
 
   async createMp(insertMp: InsertMp): Promise<Mp> {
@@ -113,7 +86,6 @@ export class MemStorage implements IStorage {
       computerAllowance: insertMp.computerAllowance ?? 6000,
       dressWearAllowance: insertMp.dressWearAllowance ?? 1000,
       parliamentSittingAllowance: insertMp.parliamentSittingAllowance ?? 400,
-      investigationStatus: insertMp.investigationStatus ?? "Clear",
     };
     this.mps.set(id, mp);
     return mp;
@@ -413,7 +385,6 @@ export class MemStorage implements IStorage {
         computerAllowance: 6000,
         dressWearAllowance: 1000,
         parliamentSittingAllowance: 400,
-        investigationStatus: "Clear",
       };
       this.mps.set(id, mp);
     });
@@ -551,24 +522,6 @@ export class MemStorage implements IStorage {
       });
     }
 
-    const ismailSabriMp = mpsArray.find(mp => mp.name === "Ismail Sabri Yaakob");
-    if (ismailSabriMp) {
-      this.createCourtCase({
-        mpId: ismailSabriMp.id,
-        caseNumber: "SPRM-ISY-2025",
-        title: "SPRM Investigation - Ismail Sabri Yaakob - Corruption and Money Laundering",
-        courtLevel: "SPRM Investigation",
-        status: "Ongoing",
-        filingDate: new Date("2024-12-11"),
-        outcome: null,
-        charges: "Under SPRM investigation for corruption and money laundering related to RM700 million 'Keluarga Malaysia' promotional campaign. Named as suspect in March 2025. Raids uncovered RM170 million cash and 16 gold bears.",
-        documentLinks: [
-          "https://www.malaymail.com/news/malaysia/2025/03/02/macc-probes-former-pm-ismail-sabri-over-corruption-money-laundering-claims-raids-uncover-rm170m-in-cash/168465",
-          "https://www.scmp.com/week-asia/politics/article/3300839/malaysian-ex-pm-ismail-sabri-now-suspect-corruption-probe"
-        ],
-      });
-    }
-
     const bungMoktarMp = mpsArray.find(mp => mp.name === "Bung Moktar Radin");
     if (bungMoktarMp) {
       this.createCourtCase({
@@ -620,6 +573,67 @@ export class MemStorage implements IStorage {
           "https://www.thestar.com.my/news/nation/2025/10/21/dr-m039s-defamation-suit-proceedings-against-pm-postponed-to-oct-23",
           "https://www.benarnews.org/english/news/malaysian/libel-lawsuit-05052023104557.html"
         ],
+      });
+    }
+  }
+
+  async getSprmInvestigation(id: string): Promise<SprmInvestigation | undefined> {
+    return this.sprmInvestigations.get(id);
+  }
+
+  async getSprmInvestigationsByMpId(mpId: string): Promise<SprmInvestigation[]> {
+    return Array.from(this.sprmInvestigations.values()).filter(
+      (investigation) => investigation.mpId === mpId
+    );
+  }
+
+  async getAllSprmInvestigations(): Promise<SprmInvestigation[]> {
+    return Array.from(this.sprmInvestigations.values());
+  }
+
+  async createSprmInvestigation(insertInvestigation: InsertSprmInvestigation): Promise<SprmInvestigation> {
+    const id = randomUUID();
+    const investigation: SprmInvestigation = {
+      ...insertInvestigation,
+      id,
+      caseNumber: insertInvestigation.caseNumber ?? null,
+      endDate: insertInvestigation.endDate ?? null,
+      outcome: insertInvestigation.outcome ?? null,
+    };
+    this.sprmInvestigations.set(id, investigation);
+    return investigation;
+  }
+
+  async updateSprmInvestigation(id: string, updates: Partial<InsertSprmInvestigation>): Promise<SprmInvestigation | undefined> {
+    const existing = this.sprmInvestigations.get(id);
+    if (!existing) return undefined;
+
+    const updated: SprmInvestigation = {
+      ...existing,
+      ...updates,
+    };
+    this.sprmInvestigations.set(id, updated);
+    return updated;
+  }
+
+  async deleteSprmInvestigation(id: string): Promise<boolean> {
+    return this.sprmInvestigations.delete(id);
+  }
+
+  private seedSprmInvestigations() {
+    const mpsArray = Array.from(this.mps.values());
+    
+    const ismailSabriMp = mpsArray.find(mp => mp.name === "Ismail Sabri Yaakob");
+    if (ismailSabriMp) {
+      this.createSprmInvestigation({
+        mpId: ismailSabriMp.id,
+        caseNumber: "SPRM-ISY-2025",
+        title: "SPRM Investigation - Corruption and Money Laundering",
+        status: "Ongoing",
+        startDate: new Date("2024-12-11"),
+        endDate: null,
+        outcome: null,
+        charges: "Under SPRM investigation for corruption and money laundering related to RM700 million 'Keluarga Malaysia' promotional campaign. Named as suspect in March 2025. Raids uncovered RM170 million cash and 16 gold bears.",
       });
     }
   }

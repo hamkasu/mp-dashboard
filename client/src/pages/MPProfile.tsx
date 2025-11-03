@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
-import type { Mp, CourtCase } from "@shared/schema";
+import type { Mp, CourtCase, SprmInvestigation } from "@shared/schema";
 import { calculateTotalSalary, calculateYearlyBreakdown, formatCurrency } from "@/lib/utils";
 import { format } from "date-fns";
 
@@ -46,6 +46,11 @@ export default function MPProfile() {
 
   const { data: courtCases = [], isLoading: isLoadingCourtCases } = useQuery<CourtCase[]>({
     queryKey: [`/api/mps/${mpId}/court-cases`],
+    enabled: !!mpId,
+  });
+
+  const { data: sprmInvestigations = [], isLoading: isLoadingSprmInvestigations } = useQuery<SprmInvestigation[]>({
+    queryKey: [`/api/mps/${mpId}/sprm-investigations`],
     enabled: !!mpId,
   });
 
@@ -160,12 +165,6 @@ export default function MPProfile() {
                   <Badge variant="outline" className="text-base px-3 py-1 font-mono">
                     {mp.parliamentCode}
                   </Badge>
-                  {mp.investigationStatus && mp.investigationStatus !== "Clear" && (
-                    <Badge variant="destructive" className="text-base px-3 py-1 flex items-center gap-2">
-                      <AlertTriangle className="h-4 w-4" />
-                      {mp.investigationStatus}
-                    </Badge>
-                  )}
                 </div>
               </div>
 
@@ -600,6 +599,137 @@ export default function MPProfile() {
                                         View Documents
                                         <ExternalLink className="h-3 w-3" />
                                       </a>
+                                    )}
+                                  </div>
+                                </div>
+                              ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* SPRM Investigations Section */}
+            {(isLoadingSprmInvestigations || sprmInvestigations.length > 0) && (
+              <Card className="md:col-span-2 border-red-200 dark:border-red-900 bg-red-50/20 dark:bg-red-950/10">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-red-900 dark:text-red-100">
+                    <AlertTriangle className="h-5 w-5" />
+                    SPRM Investigations
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {isLoadingSprmInvestigations ? (
+                    <div className="space-y-3">
+                      <div className="h-20 bg-muted animate-pulse rounded" />
+                    </div>
+                  ) : sprmInvestigations.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <AlertTriangle className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                      <p>No SPRM investigations on record for this MP.</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {/* Ongoing Investigations */}
+                      {sprmInvestigations.filter(i => i.status === "Ongoing").length > 0 && (
+                        <div>
+                          <h4 className="font-semibold text-sm text-red-900 dark:text-red-100 uppercase tracking-wide mb-3">
+                            Ongoing Investigations ({sprmInvestigations.filter(i => i.status === "Ongoing").length})
+                          </h4>
+                          <div className="space-y-3">
+                            {sprmInvestigations
+                              .filter(i => i.status === "Ongoing")
+                              .map((investigation) => (
+                                <div
+                                  key={investigation.id}
+                                  className="border border-red-200 dark:border-red-900 rounded-lg p-4 bg-white dark:bg-background"
+                                  data-testid={`sprm-investigation-${investigation.id}`}
+                                >
+                                  <div className="flex items-start justify-between gap-4 mb-2">
+                                    <div className="flex-1">
+                                      <div className="flex items-center gap-2 mb-1">
+                                        <Badge variant="destructive" data-testid={`badge-status-${investigation.id}`}>
+                                          {investigation.status}
+                                        </Badge>
+                                        {investigation.caseNumber && (
+                                          <Badge variant="outline" data-testid={`badge-case-number-${investigation.id}`}>
+                                            {investigation.caseNumber}
+                                          </Badge>
+                                        )}
+                                      </div>
+                                      <h5 className="font-semibold mb-1" data-testid={`text-investigation-title-${investigation.id}`}>
+                                        {investigation.title}
+                                      </h5>
+                                    </div>
+                                  </div>
+                                  <p className="text-sm mb-2" data-testid={`text-investigation-charges-${investigation.id}`}>
+                                    <span className="font-medium">Allegations: </span>
+                                    {investigation.charges}
+                                  </p>
+                                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                                    <span data-testid={`text-start-date-${investigation.id}`}>
+                                      Started: {format(new Date(investigation.startDate), "MMM d, yyyy")}
+                                    </span>
+                                  </div>
+                                </div>
+                              ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Completed Investigations */}
+                      {sprmInvestigations.filter(i => i.status === "Completed").length > 0 && (
+                        <div>
+                          {sprmInvestigations.filter(i => i.status === "Ongoing").length > 0 && <Separator className="my-4" />}
+                          <h4 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide mb-3">
+                            Completed Investigations ({sprmInvestigations.filter(i => i.status === "Completed").length})
+                          </h4>
+                          <div className="space-y-3">
+                            {sprmInvestigations
+                              .filter(i => i.status === "Completed")
+                              .map((investigation) => (
+                                <div
+                                  key={investigation.id}
+                                  className="border rounded-lg p-4 hover:bg-muted/30 transition-colors"
+                                  data-testid={`sprm-investigation-${investigation.id}`}
+                                >
+                                  <div className="flex items-start justify-between gap-4 mb-2">
+                                    <div className="flex-1">
+                                      <div className="flex items-center gap-2 mb-1">
+                                        <Badge variant="secondary" data-testid={`badge-status-${investigation.id}`}>
+                                          {investigation.status}
+                                        </Badge>
+                                        {investigation.caseNumber && (
+                                          <Badge variant="outline" data-testid={`badge-case-number-${investigation.id}`}>
+                                            {investigation.caseNumber}
+                                          </Badge>
+                                        )}
+                                      </div>
+                                      <h5 className="font-semibold mb-1" data-testid={`text-investigation-title-${investigation.id}`}>
+                                        {investigation.title}
+                                      </h5>
+                                    </div>
+                                  </div>
+                                  <p className="text-sm mb-2" data-testid={`text-investigation-charges-${investigation.id}`}>
+                                    <span className="font-medium">Allegations: </span>
+                                    {investigation.charges}
+                                  </p>
+                                  {investigation.outcome && (
+                                    <p className="text-sm mb-2 font-medium text-green-600 dark:text-green-400" data-testid={`text-outcome-${investigation.id}`}>
+                                      Outcome: {investigation.outcome}
+                                    </p>
+                                  )}
+                                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                                    <span data-testid={`text-start-date-${investigation.id}`}>
+                                      Started: {format(new Date(investigation.startDate), "MMM d, yyyy")}
+                                    </span>
+                                    {investigation.endDate && (
+                                      <span data-testid={`text-end-date-${investigation.id}`}>
+                                        Completed: {format(new Date(investigation.endDate), "MMM d, yyyy")}
+                                      </span>
                                     )}
                                   </div>
                                 </div>

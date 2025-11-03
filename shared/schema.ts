@@ -24,7 +24,6 @@ export const mps = pgTable("mps", {
   computerAllowance: integer("computer_allowance").notNull().default(6000),
   dressWearAllowance: integer("dress_wear_allowance").notNull().default(1000),
   parliamentSittingAllowance: integer("parliament_sitting_allowance").notNull().default(400),
-  investigationStatus: text("investigation_status").notNull().default("Clear"),
 });
 
 export const insertMpSchema = createInsertSchema(mps).omit({
@@ -67,3 +66,25 @@ export const insertCourtCaseSchema = createInsertSchema(courtCases).omit({
 
 export type InsertCourtCase = z.infer<typeof insertCourtCaseSchema>;
 export type CourtCase = typeof courtCases.$inferSelect;
+
+export const sprmInvestigations = pgTable("sprm_investigations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  mpId: varchar("mp_id").notNull().references(() => mps.id),
+  caseNumber: text("case_number"),
+  title: text("title").notNull(),
+  status: text("status").notNull(),
+  startDate: timestamp("start_date").notNull(),
+  endDate: timestamp("end_date"),
+  outcome: text("outcome"),
+  charges: text("charges").notNull(),
+});
+
+export const insertSprmInvestigationSchema = createInsertSchema(sprmInvestigations).omit({
+  id: true,
+});
+
+export const updateSprmInvestigationSchema = insertSprmInvestigationSchema.omit({ mpId: true }).partial();
+
+export type InsertSprmInvestigation = z.infer<typeof insertSprmInvestigationSchema>;
+export type UpdateSprmInvestigation = z.infer<typeof updateSprmInvestigationSchema>;
+export type SprmInvestigation = typeof sprmInvestigations.$inferSelect;

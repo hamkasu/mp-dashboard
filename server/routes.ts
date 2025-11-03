@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { z } from "zod";
-import { insertCourtCaseSchema } from "@shared/schema";
+import { insertCourtCaseSchema, insertSprmInvestigationSchema, updateSprmInvestigationSchema } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Get all MPs
@@ -173,6 +173,99 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting court case:", error);
       res.status(500).json({ error: "Failed to delete court case" });
+    }
+  });
+
+  // Get all SPRM investigations
+  app.get("/api/sprm-investigations", async (_req, res) => {
+    try {
+      const investigations = await storage.getAllSprmInvestigations();
+      res.json(investigations);
+    } catch (error) {
+      console.error("Error fetching SPRM investigations:", error);
+      res.status(500).json({ error: "Failed to fetch SPRM investigations" });
+    }
+  });
+
+  // Get SPRM investigations by MP ID
+  app.get("/api/mps/:id/sprm-investigations", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const investigations = await storage.getSprmInvestigationsByMpId(id);
+      res.json(investigations);
+    } catch (error) {
+      console.error("Error fetching SPRM investigations:", error);
+      res.status(500).json({ error: "Failed to fetch SPRM investigations" });
+    }
+  });
+
+  // Get single SPRM investigation by ID
+  app.get("/api/sprm-investigations/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const investigation = await storage.getSprmInvestigation(id);
+      
+      if (!investigation) {
+        return res.status(404).json({ error: "SPRM investigation not found" });
+      }
+      
+      res.json(investigation);
+    } catch (error) {
+      console.error("Error fetching SPRM investigation:", error);
+      res.status(500).json({ error: "Failed to fetch SPRM investigation" });
+    }
+  });
+
+  // Create a new SPRM investigation
+  app.post("/api/sprm-investigations", async (req, res) => {
+    try {
+      const validatedData = insertSprmInvestigationSchema.parse(req.body);
+      const investigation = await storage.createSprmInvestigation(validatedData);
+      res.status(201).json(investigation);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid data", details: error.errors });
+      }
+      console.error("Error creating SPRM investigation:", error);
+      res.status(500).json({ error: "Failed to create SPRM investigation" });
+    }
+  });
+
+  // Update an SPRM investigation
+  app.patch("/api/sprm-investigations/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const validatedData = updateSprmInvestigationSchema.parse(req.body);
+      const investigation = await storage.updateSprmInvestigation(id, validatedData);
+      
+      if (!investigation) {
+        return res.status(404).json({ error: "SPRM investigation not found" });
+      }
+      
+      res.json(investigation);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid data", details: error.errors });
+      }
+      console.error("Error updating SPRM investigation:", error);
+      res.status(500).json({ error: "Failed to update SPRM investigation" });
+    }
+  });
+
+  // Delete an SPRM investigation
+  app.delete("/api/sprm-investigations/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const deleted = await storage.deleteSprmInvestigation(id);
+      
+      if (!deleted) {
+        return res.status(404).json({ error: "SPRM investigation not found" });
+      }
+      
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting SPRM investigation:", error);
+      res.status(500).json({ error: "Failed to delete SPRM investigation" });
     }
   });
 
