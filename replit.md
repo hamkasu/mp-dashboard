@@ -8,6 +8,20 @@ The application is built as a full-stack solution with a React frontend and Expr
 
 ## Recent Changes
 
+### November 3, 2025 - Miscellaneous Allowances Feature
+- **Added miscellaneous allowance tracking** based on official parliament data
+- **Schema updates**: Added four new allowance fields to MPs table:
+  - `entertainmentAllowance`: RM 2,500/month for entertainment expenses
+  - `handphoneAllowance`: RM 2,000/month for mobile phone expenses
+  - `computerAllowance`: RM 6,000/year for computer equipment
+  - `dressWearAllowance`: RM 1,000/year for formal attire
+- **Data source**: Members of Parliament (Remuneration) Act 1980 and official parliament sources
+- **Profile page enhancement**: New "Miscellaneous Allowances" card displaying:
+  - Monthly allowances section with individual breakdown and total
+  - Yearly allowances section with individual breakdown and total
+  - Color-coded totals matching existing design system
+- **Full type safety**: All allowance fields properly typed in schema with default values
+
 ### November 3, 2025 - Attendance Tracking System
 - **Implemented comprehensive attendance tracking** for all 222 MPs
 - **Schema updates**: Added `daysAttended` and `totalParliamentDays` fields to MPs table
@@ -57,6 +71,7 @@ Preferred communication style: Simple, everyday language.
   - Shows total earned since sworn in
   - Features year-by-year allowance breakdown table
   - Attendance section with color-coded days attended/total days display
+  - Miscellaneous allowances card showing monthly (entertainment, handphone) and yearly (computer, dress wear) allowances
 - Not Found (`/404`): Error handling page
 
 **State Management Strategy**:
@@ -108,6 +123,10 @@ Preferred communication style: Simple, everyday language.
 - `ministerSalary`: Additional monthly salary if MP holds ministerial position (required, defaults to 0)
 - `daysAttended`: Number of days MP attended parliament (required, defaults to 0)
 - `totalParliamentDays`: Total number of parliament sitting days (required, defaults to 0)
+- `entertainmentAllowance`: Monthly entertainment allowance in MYR (required, defaults to 2500)
+- `handphoneAllowance`: Monthly handphone allowance in MYR (required, defaults to 2000)
+- `computerAllowance`: Yearly computer allowance in MYR (required, defaults to 6000)
+- `dressWearAllowance`: Yearly dress wear allowance in MYR (required, defaults to 1000)
 
 **User Schema** (`users` table):
 - `id`: UUID primary key (auto-generated)
