@@ -40,41 +40,39 @@ export interface YearlyBreakdown {
 export function calculateYearlyBreakdown(swornInDate: Date | string, monthlySalary: number): YearlyBreakdown[] {
   const swornIn = new Date(swornInDate);
   const now = new Date();
-  const breakdown: YearlyBreakdown[] = [];
   
-  const startYear = swornIn.getFullYear();
-  const currentYear = now.getFullYear();
-  
-  for (let year = startYear; year <= currentYear; year++) {
-    let monthsServed = 0;
-    
-    if (year === startYear && year === currentYear) {
-      // Same year - calculate months from sworn in to now
-      monthsServed = now.getMonth() - swornIn.getMonth();
-      if (now.getDate() >= swornIn.getDate()) {
-        monthsServed += 1;
-      }
-    } else if (year === startYear) {
-      // First year - calculate months from sworn in to end of year
-      monthsServed = 12 - swornIn.getMonth();
-      if (swornIn.getDate() > 1) {
-        monthsServed -= 1;
-      }
-      monthsServed += 1; // Include the month they were sworn in
-    } else if (year === currentYear) {
-      // Current year - calculate months from start of year to now
-      monthsServed = now.getMonth() + 1;
-      if (now.getDate() < swornIn.getDate()) {
-        monthsServed -= 1;
-      }
-    } else {
-      // Full year
-      monthsServed = 12;
+  // First, calculate the total months served using the same logic as calculateTotalSalary
+  const totalMonths = (() => {
+    const yearsDiff = now.getFullYear() - swornIn.getFullYear();
+    const monthsDiff = now.getMonth() - swornIn.getMonth();
+    let total = yearsDiff * 12 + monthsDiff;
+    if (now.getDate() < swornIn.getDate()) {
+      total -= 1;
     }
+    return Math.max(0, total);
+  })();
+  
+  // Now distribute these months across years
+  const yearCounts = new Map<number, number>();
+  
+  // Iterate through each completed month and assign it to a year
+  const currentDate = new Date(swornIn);
+  for (let i = 0; i < totalMonths; i++) {
+    const year = currentDate.getFullYear();
+    yearCounts.set(year, (yearCounts.get(year) || 0) + 1);
     
-    monthsServed = Math.max(0, monthsServed);
+    // Move to next month
+    currentDate.setMonth(currentDate.getMonth() + 1);
+  }
+  
+  // Convert to array of breakdown objects
+  const breakdown: YearlyBreakdown[] = [];
+  const startYear = swornIn.getFullYear();
+  const endYear = now.getFullYear();
+  
+  for (let year = startYear; year <= endYear; year++) {
+    const monthsServed = yearCounts.get(year) || 0;
     const amount = monthsServed * monthlySalary;
-    
     breakdown.push({
       year,
       monthsServed,
