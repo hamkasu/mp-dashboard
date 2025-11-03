@@ -8,6 +8,20 @@ The application is built as a full-stack solution with a React frontend and Expr
 
 ## Recent Changes
 
+### November 3, 2025 - SPRM Investigation Status Tracking
+- **Implemented automatic investigation status tracking** for MPs based on their court cases
+- **Schema updates**: Added `investigationStatus` field to MPs table (default: "Clear")
+- **Dynamic calculation**: Investigation status is automatically computed from court case data:
+  - "Under SPRM Investigation" - MPs with ongoing SPRM Investigation cases (e.g., Ismail Sabri Yaakob)
+  - "Under Investigation" - MPs with any other ongoing court cases (e.g., Ahmad Zahid, Lim Guan Eng, Muhyiddin, Bung Moktar)
+  - "Clear" - MPs with no ongoing cases or no cases at all
+- **UI enhancements**: Visual investigation badges displayed across the application:
+  - MP grid cards show red "Under Investigation" or "Under SPRM Investigation" badges
+  - "MPs with Court Cases" section includes investigation status badges
+  - MP profile pages display investigation status prominently with alert icon
+- **Automatic updates**: Status updates dynamically whenever court cases are added, modified, or deleted
+- **UX features**: Red destructive badges with warning icon for high visibility, only shown for MPs under investigation
+
 ### November 3, 2025 - Court Cases Tracking System
 - **Implemented comprehensive court case tracking** for MPs with legal proceedings
 - **Schema updates**: New `courtCases` table with fields for case number, title, court level, status, filing date, outcome, charges, and document links
@@ -156,6 +170,7 @@ Preferred communication style: Simple, everyday language.
 - `parliamentSittingAllowance`: Daily parliament sitting attendance allowance in MYR (required, defaults to 400)
 - `computerAllowance`: Yearly computer allowance in MYR (required, defaults to 6000)
 - `dressWearAllowance`: Yearly dress wear allowance in MYR (required, defaults to 1000)
+- `investigationStatus`: Investigation status based on court cases - "Clear", "Under Investigation", or "Under SPRM Investigation" (required, defaults to "Clear", dynamically calculated)
 
 **User Schema** (`users` table):
 - `id`: UUID primary key (auto-generated)
