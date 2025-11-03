@@ -63,6 +63,7 @@ export class MemStorage implements IStorage {
       handphoneAllowance: insertMp.handphoneAllowance ?? 2000,
       computerAllowance: insertMp.computerAllowance ?? 6000,
       dressWearAllowance: insertMp.dressWearAllowance ?? 1000,
+      parliamentSittingAllowance: insertMp.parliamentSittingAllowance ?? 400,
     };
     this.mps.set(id, mp);
     return mp;
@@ -361,6 +362,7 @@ export class MemStorage implements IStorage {
         handphoneAllowance: 2000,
         computerAllowance: 6000,
         dressWearAllowance: 1000,
+        parliamentSittingAllowance: 400,
       };
       this.mps.set(id, mp);
     });

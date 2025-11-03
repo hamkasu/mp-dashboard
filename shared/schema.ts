@@ -23,6 +23,7 @@ export const mps = pgTable("mps", {
   handphoneAllowance: integer("handphone_allowance").notNull().default(2000),
   computerAllowance: integer("computer_allowance").notNull().default(6000),
   dressWearAllowance: integer("dress_wear_allowance").notNull().default(1000),
+  parliamentSittingAllowance: integer("parliament_sitting_allowance").notNull().default(400),
 });
 
 export const insertMpSchema = createInsertSchema(mps).omit({
