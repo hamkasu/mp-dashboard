@@ -1,4 +1,4 @@
-import { MapPin, UserCircle, Wallet, Calendar, AlertTriangle } from "lucide-react";
+import { MapPin, UserCircle, Wallet, Calendar } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -86,16 +86,6 @@ export function MPCard({ mp }: MPCardProps) {
             <Badge className={partyColor} data-testid={`badge-party-${mp.id}`}>
               {mp.party}
             </Badge>
-            {mp.investigationStatus && mp.investigationStatus !== "Clear" && (
-              <Badge 
-                variant="destructive" 
-                className="flex items-center gap-1"
-                data-testid={`badge-investigation-${mp.id}`}
-              >
-                <AlertTriangle className="h-3 w-3" />
-                {mp.investigationStatus}
-              </Badge>
-            )}
           </div>
 
           <div className="space-y-1 text-sm">
