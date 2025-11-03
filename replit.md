@@ -8,6 +8,26 @@ The application is built as a full-stack solution with a React frontend and Expr
 
 ## Recent Changes
 
+### November 3, 2025 - Court Cases Tracking System
+- **Implemented comprehensive court case tracking** for MPs with legal proceedings
+- **Schema updates**: New `courtCases` table with fields for case number, title, court level, status, filing date, outcome, charges, and document links
+- **Backend API**: Full CRUD REST API endpoints for managing court cases
+  - GET /api/court-cases - Retrieve all court cases
+  - GET /api/mps/:id/court-cases - Get court cases by MP
+  - GET /api/court-cases/:id - Get single court case
+  - POST /api/court-cases - Create new court case
+  - PATCH /api/court-cases/:id - Update court case
+  - DELETE /api/court-cases/:id - Delete court case
+- **Profile page integration**: Court cases section on MP profiles displaying:
+  - Ongoing cases (red "Ongoing" badge)
+  - Completed cases (grey "Completed" badge) with outcomes
+  - Case numbers, filing dates, charges, and court levels
+  - Links to court documents where available
+  - Empty state message for MPs without court cases
+- **Sample data**: Seeded 4 notable Malaysian political court cases including Ahmad Zahid Hamidi (47 corruption charges), Lim Guan Eng (tunnel project - acquitted), Syed Saddiq (CBT and money laundering), and Muhyiddin Yassin (power abuse)
+- **Data sources**: Manual research based on Malaysian court records and news sources
+- **UX features**: Loading skeletons, status-based grouping, professional legal information display
+
 ### November 3, 2025 - Comprehensive Allowance Information Table
 - **Implemented comprehensive allowance tracking** displaying all MP allowances in a single organized table
 - **Schema updates**: Added `parliamentSittingAllowance` field (RM 400 per day attended) to MPs table
@@ -73,6 +93,7 @@ Preferred communication style: Simple, everyday language.
   - Features year-by-year allowance breakdown table
   - Attendance section with color-coded days attended/total days display
   - Allowance Information table showing all compensation types including base allowance, minister salary, miscellaneous allowances (entertainment, handphone, computer, dress wear), and parliament sitting attendance allowance
+  - Court Cases section showing ongoing and completed legal proceedings with status badges, filing dates, charges, and document links
 - Not Found (`/404`): Error handling page
 
 **State Management Strategy**:
@@ -95,6 +116,12 @@ Preferred communication style: Simple, everyday language.
 - `GET /api/mps` - Retrieve all MPs with attendance data
 - `GET /api/mps/:id` - Retrieve single MP by ID with attendance data
 - `GET /api/stats` - Aggregate statistics (party breakdown, gender breakdown, state count, average attendance rate)
+- `GET /api/court-cases` - Retrieve all court cases
+- `GET /api/mps/:id/court-cases` - Get court cases by MP
+- `GET /api/court-cases/:id` - Get single court case
+- `POST /api/court-cases` - Create new court case
+- `PATCH /api/court-cases/:id` - Update court case
+- `DELETE /api/court-cases/:id` - Delete court case
 
 **Development Setup**:
 - Vite dev server integration in middleware mode
@@ -134,6 +161,18 @@ Preferred communication style: Simple, everyday language.
 - `id`: UUID primary key (auto-generated)
 - `username`: Unique username (required)
 - `password`: Hashed password (required)
+
+**Court Case Schema** (`courtCases` table):
+- `id`: UUID primary key (auto-generated)
+- `mpId`: Foreign key reference to MPs table (required)
+- `caseNumber`: Official court case number (required)
+- `title`: Case title/description (required)
+- `courtLevel`: Court level - Federal/High/Magistrate (required)
+- `status`: Case status - Ongoing/Completed (required)
+- `filingDate`: Date case was filed (required)
+- `outcome`: Case outcome if completed (optional)
+- `charges`: Description of charges/allegations (required)
+- `documentLinks`: Array of URLs to court documents (optional)
 
 ## External Dependencies
 
