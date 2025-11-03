@@ -5,7 +5,12 @@ import { StatisticsCards } from "@/components/StatisticsCards";
 import { FilterSidebar } from "@/components/FilterSidebar";
 import { MPGrid } from "@/components/MPGrid";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
-import type { Mp } from "@shared/schema";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Scale, ExternalLink } from "lucide-react";
+import { Link } from "wouter";
+import type { Mp, CourtCase } from "@shared/schema";
 
 type SortOption = "name" | "attendance-best" | "attendance-worst";
 
@@ -28,6 +33,10 @@ export default function Home() {
     averageAttendanceRate?: number;
   }>({
     queryKey: ["/api/stats"],
+  });
+
+  const { data: courtCases = [], isLoading: courtCasesLoading } = useQuery<CourtCase[]>({
+    queryKey: ["/api/court-cases"],
   });
 
   const isLoading = mpsLoading || statsLoading;
@@ -73,6 +82,13 @@ export default function Home() {
     const states = Array.from(new Set(mps.map((mp) => mp.state)));
     return states.sort();
   }, [mps]);
+
+  const mpsWithCourtCases = useMemo(() => {
+    if (!courtCases.length || !mps.length) return [];
+    
+    const mpIdsWithCases = new Set(courtCases.map(c => c.mpId));
+    return mps.filter(mp => mpIdsWithCases.has(mp.id));
+  }, [mps, courtCases]);
 
   const defaultStats = {
     totalMps: 0,
@@ -157,6 +173,64 @@ export default function Home() {
                 Browse all {filteredMps.length} of {(stats || defaultStats).totalMps} MPs from Dewan Rakyat
               </p>
             </div>
+
+            {/* Court Cases Section */}
+            {!courtCasesLoading && mpsWithCourtCases.length > 0 && (
+              <Card className="border-red-200 dark:border-red-900 bg-red-50/50 dark:bg-red-950/20" data-testid="court-cases-section">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-red-900 dark:text-red-100">
+                    <Scale className="h-5 w-5" />
+                    MPs with Court Cases
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                    {mpsWithCourtCases.map((mp) => {
+                      const mpCases = courtCases.filter(c => c.mpId === mp.id);
+                      const ongoingCount = mpCases.filter(c => c.status === "Ongoing").length;
+                      const completedCount = mpCases.filter(c => c.status === "Completed").length;
+                      
+                      return (
+                        <Link key={mp.id} href={`/mp/${mp.id}`} data-testid={`court-case-mp-${mp.id}`}>
+                          <div className="group cursor-pointer rounded-lg border bg-card p-4 hover:bg-accent transition-colors">
+                            <div className="flex items-start gap-3">
+                              <Avatar className="h-12 w-12 shrink-0">
+                                <AvatarImage src={mp.photoUrl || undefined} alt={mp.name} />
+                                <AvatarFallback className="bg-primary/10 text-primary font-semibold">
+                                  {mp.name.split(" ").map(n => n[0]).join("").slice(0, 2)}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div className="flex-1 min-w-0">
+                                <h4 className="font-semibold text-sm mb-1 group-hover:text-primary transition-colors truncate">
+                                  {mp.name}
+                                </h4>
+                                <p className="text-xs text-muted-foreground mb-2">{mp.party}</p>
+                                <div className="flex flex-wrap gap-1">
+                                  {ongoingCount > 0 && (
+                                    <Badge variant="destructive" className="text-xs" data-testid={`badge-ongoing-${mp.id}`}>
+                                      {ongoingCount} Ongoing
+                                    </Badge>
+                                  )}
+                                  {completedCount > 0 && (
+                                    <Badge variant="secondary" className="text-xs" data-testid={`badge-completed-${mp.id}`}>
+                                      {completedCount} Completed
+                                    </Badge>
+                                  )}
+                                </div>
+                              </div>
+                              <ExternalLink className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors shrink-0" />
+                            </div>
+                          </div>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-4">
+                    Click on any MP to view detailed court case information with links to news articles from The Star and New Straits Times.
+                  </p>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Statistics */}
             <StatisticsCards stats={stats || defaultStats} isLoading={isLoading} />
