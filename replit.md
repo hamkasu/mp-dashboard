@@ -6,6 +6,17 @@ This is a web application that provides a comprehensive dashboard for viewing Ma
 
 The application is built as a full-stack solution with a React frontend and Express backend, designed to present government data in an accessible, professional manner following Material Design principles and Government Digital Service standards.
 
+## Recent Changes
+
+### November 3, 2025 - Complete Data Update
+- **Updated all 222 MPs** with accurate data from the 15th Malaysian Parliament (GE15)
+- **Data sources**: Cross-referenced Wikipedia (Members of Dewan Rakyat 15th Parliament, Anwar Ibrahim cabinet), Free Malaysia Today GE15 results, and official government sources
+- **Ministerial roles verified**: All cabinet ministers, deputy ministers, and their salaries verified against the official Anwar Ibrahim Unity Government cabinet composition
+- **Corrected 12 ministerial role errors** including fixing incorrect minister assignments and ensuring all non-ministerial MPs properly marked as backbenchers
+- **Party distribution**: Now accurately reflects GE15 results - PH (82), PN (73), BN (30), GPS (23), GRS (6), WARISAN (3), IND (2), MUDA (1), KDM (1), PBM (1)
+- **Gender diversity**: Updated to realistic 31 female MPs (14.0%)
+- **Salary structure verified**: PM (RM34,000), Deputy PMs (RM24,000), Cabinet Ministers (RM14,000), Deputy Ministers (RM6,000), Backbenchers (RM0)
+
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.
