@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useRoute, Link } from "wouter";
-import { ArrowLeft, MapPin, UserCircle, Flag, FileText, Wallet, Calendar, Scale, ExternalLink } from "lucide-react";
+import { ArrowLeft, MapPin, UserCircle, Flag, FileText, Wallet, Calendar, Scale, ExternalLink, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -160,6 +160,12 @@ export default function MPProfile() {
                   <Badge variant="outline" className="text-base px-3 py-1 font-mono">
                     {mp.parliamentCode}
                   </Badge>
+                  {mp.investigationStatus && mp.investigationStatus !== "Clear" && (
+                    <Badge variant="destructive" className="text-base px-3 py-1 flex items-center gap-2">
+                      <AlertTriangle className="h-4 w-4" />
+                      {mp.investigationStatus}
+                    </Badge>
+                  )}
                 </div>
               </div>
 

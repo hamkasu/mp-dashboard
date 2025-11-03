@@ -8,7 +8,7 @@ import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Scale, ExternalLink } from "lucide-react";
+import { Scale, ExternalLink, AlertTriangle } from "lucide-react";
 import { Link } from "wouter";
 import type { Mp, CourtCase } from "@shared/schema";
 
@@ -204,7 +204,15 @@ export default function Home() {
                                 <h4 className="font-semibold text-sm mb-1 group-hover:text-primary transition-colors truncate">
                                   {mp.name}
                                 </h4>
-                                <p className="text-xs text-muted-foreground mb-2">{mp.party}</p>
+                                <div className="flex items-center gap-2 mb-2">
+                                  <p className="text-xs text-muted-foreground">{mp.party}</p>
+                                  {mp.investigationStatus && mp.investigationStatus !== "Clear" && (
+                                    <Badge variant="destructive" className="text-xs flex items-center gap-1">
+                                      <AlertTriangle className="h-2.5 w-2.5" />
+                                      {mp.investigationStatus}
+                                    </Badge>
+                                  )}
+                                </div>
                                 <div className="flex flex-wrap gap-1">
                                   {ongoingCount > 0 && (
                                     <Badge variant="destructive" className="text-xs" data-testid={`badge-ongoing-${mp.id}`}>
