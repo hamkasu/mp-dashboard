@@ -1,6 +1,5 @@
 import axios from 'axios';
 import * as cheerio from 'cheerio';
-import type { Result } from 'pdf-parse';
 
 const pdfParse = require('pdf-parse');
 
