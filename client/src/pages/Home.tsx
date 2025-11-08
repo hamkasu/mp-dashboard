@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Header } from "@/components/Header";
 import { StatisticsCards } from "@/components/StatisticsCards";
@@ -8,9 +8,10 @@ import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Scale, ExternalLink, AlertTriangle } from "lucide-react";
+import { Scale, ExternalLink, AlertTriangle, Eye } from "lucide-react";
 import { Link } from "wouter";
 import type { Mp, CourtCase, SprmInvestigation } from "@shared/schema";
+import { apiRequest } from "@/lib/queryClient";
 
 type SortOption = "name" | "attendance-best" | "attendance-worst";
 
@@ -42,6 +43,14 @@ export default function Home() {
   const { data: sprmInvestigations = [], isLoading: sprmInvestigationsLoading } = useQuery<SprmInvestigation[]>({
     queryKey: ["/api/sprm-investigations"],
   });
+  
+  const { data: pageViewData } = useQuery<{ count: number }>({
+    queryKey: ["/api/page-views", "home"],
+  });
+  
+  useEffect(() => {
+    apiRequest("POST", "/api/page-views", { page: "home" });
+  }, []);
 
   const isLoading = mpsLoading || statsLoading;
 
@@ -177,9 +186,17 @@ export default function Home() {
           <div className="space-y-6 md:space-y-8">
             {/* Page Title */}
             <div>
-              <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-2">
-                Members of Parliament
-              </h2>
+              <div className="flex flex-wrap items-center gap-3 mb-2">
+                <h2 className="text-3xl md:text-4xl font-bold tracking-tight">
+                  Members of Parliament
+                </h2>
+                {pageViewData && (
+                  <div className="flex items-center gap-1.5 text-sm text-muted-foreground" data-testid="page-view-count">
+                    <Eye className="w-4 h-4" />
+                    <span>{pageViewData.count.toLocaleString()} views</span>
+                  </div>
+                )}
+              </div>
               <p className="text-muted-foreground">
                 Browse all {filteredMps.length} of {(stats || defaultStats).totalMps} MPs from Dewan Rakyat
               </p>

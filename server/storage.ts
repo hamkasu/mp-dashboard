@@ -1,7 +1,7 @@
-import { type User, type InsertUser, type Mp, type InsertMp, type CourtCase, type InsertCourtCase, type SprmInvestigation, type InsertSprmInvestigation, type LegislativeProposal, type InsertLegislativeProposal, type DebateParticipation, type InsertDebateParticipation, type ParliamentaryQuestion, type InsertParliamentaryQuestion, type HansardRecord, type InsertHansardRecord, type UpdateHansardRecord } from "@shared/schema";
+import { type User, type InsertUser, type Mp, type InsertMp, type CourtCase, type InsertCourtCase, type SprmInvestigation, type InsertSprmInvestigation, type LegislativeProposal, type InsertLegislativeProposal, type DebateParticipation, type InsertDebateParticipation, type ParliamentaryQuestion, type InsertParliamentaryQuestion, type HansardRecord, type InsertHansardRecord, type UpdateHansardRecord, type PageView } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
-import { mps, users, courtCases, sprmInvestigations, legislativeProposals, debateParticipations, parliamentaryQuestions, hansardRecords } from "@shared/schema";
+import { mps, users, courtCases, sprmInvestigations, legislativeProposals, debateParticipations, parliamentaryQuestions, hansardRecords, pageViews } from "@shared/schema";
 import { eq, sql } from "drizzle-orm";
 
 export interface IStorage {
@@ -62,6 +62,10 @@ export interface IStorage {
   createHansardRecord(record: InsertHansardRecord): Promise<HansardRecord>;
   updateHansardRecord(id: string, record: UpdateHansardRecord): Promise<HansardRecord | undefined>;
   deleteHansardRecord(id: string): Promise<boolean>;
+  
+  // Page View methods
+  incrementPageView(page: string): Promise<number>;
+  getPageViewCount(page: string): Promise<number>;
 }
 
 export class MemStorage implements IStorage {
@@ -861,6 +865,20 @@ export class MemStorage implements IStorage {
   async deleteHansardRecord(id: string): Promise<boolean> {
     return this.hansardRecords.delete(id);
   }
+  
+  // Page View methods
+  private pageViewCounts: Map<string, number> = new Map();
+  
+  async incrementPageView(page: string): Promise<number> {
+    const current = this.pageViewCounts.get(page) || 0;
+    const newCount = current + 1;
+    this.pageViewCounts.set(page, newCount);
+    return newCount;
+  }
+  
+  async getPageViewCount(page: string): Promise<number> {
+    return this.pageViewCounts.get(page) || 0;
+  }
 
   private seedHansardRecords() {
     const mpsArray = Array.from(this.mps.values());
@@ -1388,6 +1406,34 @@ export class DbStorage implements IStorage {
   async deleteHansardRecord(id: string): Promise<boolean> {
     const result = await db.delete(hansardRecords).where(eq(hansardRecords.id, id)).returning();
     return result.length > 0;
+  }
+  
+  // Page View methods
+  async incrementPageView(page: string): Promise<number> {
+    const existing = await db.select().from(pageViews).where(eq(pageViews.page, page));
+    
+    if (existing.length > 0) {
+      const updated = await db
+        .update(pageViews)
+        .set({ 
+          viewCount: sql`${pageViews.viewCount} + 1`,
+          lastViewed: sql`NOW()`
+        })
+        .where(eq(pageViews.page, page))
+        .returning();
+      return updated[0].viewCount;
+    } else {
+      const created = await db
+        .insert(pageViews)
+        .values({ page, viewCount: 1 })
+        .returning();
+      return created[0].viewCount;
+    }
+  }
+  
+  async getPageViewCount(page: string): Promise<number> {
+    const result = await db.select().from(pageViews).where(eq(pageViews.page, page));
+    return result.length > 0 ? result[0].viewCount : 0;
   }
 }
 

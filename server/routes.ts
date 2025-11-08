@@ -696,6 +696,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Increment page view count
+  app.post("/api/page-views", async (req, res) => {
+    try {
+      const { page } = req.body;
+      if (!page) {
+        return res.status(400).json({ error: "Page name is required" });
+      }
+      const count = await storage.incrementPageView(page);
+      res.json({ count });
+    } catch (error) {
+      console.error("Error incrementing page view:", error);
+      res.status(500).json({ error: "Failed to increment page view" });
+    }
+  });
+
+  // Get page view count
+  app.get("/api/page-views/:page", async (req, res) => {
+    try {
+      const { page } = req.params;
+      const count = await storage.getPageViewCount(page);
+      res.json({ count });
+    } catch (error) {
+      console.error("Error fetching page view count:", error);
+      res.status(500).json({ error: "Failed to fetch page view count" });
+    }
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;

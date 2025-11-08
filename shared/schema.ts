@@ -209,3 +209,18 @@ export const updateHansardRecordSchema = insertHansardRecordSchema.partial();
 export type InsertHansardRecord = z.infer<typeof insertHansardRecordSchema>;
 export type UpdateHansardRecord = z.infer<typeof updateHansardRecordSchema>;
 export type HansardRecord = typeof hansardRecords.$inferSelect;
+
+export const pageViews = pgTable("page_views", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  page: text("page").notNull(),
+  viewCount: integer("view_count").notNull().default(0),
+  lastViewed: timestamp("last_viewed").notNull().default(sql`NOW()`),
+});
+
+export const insertPageViewSchema = createInsertSchema(pageViews).omit({
+  id: true,
+  lastViewed: true,
+});
+
+export type InsertPageView = z.infer<typeof insertPageViewSchema>;
+export type PageView = typeof pageViews.$inferSelect;
