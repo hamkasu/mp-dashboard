@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,20 +13,24 @@ export default function HansardPage() {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
 
-  const { data: allRecords, isLoading } = useQuery<HansardRecord[]>({
-    queryKey: ["/api/hansard-records"],
-  });
+  const queryParams = useMemo(() => {
+    const params = new URLSearchParams();
+    if (searchQuery) params.set("query", searchQuery);
+    if (startDate) params.set("startDate", startDate);
+    if (endDate) params.set("endDate", endDate);
+    return params.toString();
+  }, [searchQuery, startDate, endDate]);
 
-  const filteredRecords = allRecords?.filter(record => {
-    const matchesSearch = !searchQuery || 
-      record.transcript.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      record.topics.some(topic => topic.toLowerCase().includes(searchQuery.toLowerCase())) ||
-      record.sessionNumber.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    const matchesStartDate = !startDate || new Date(record.sessionDate) >= new Date(startDate);
-    const matchesEndDate = !endDate || new Date(record.sessionDate) <= new Date(endDate);
-    
-    return matchesSearch && matchesStartDate && matchesEndDate;
+  const { data: filteredRecords, isLoading } = useQuery<HansardRecord[]>({
+    queryKey: ["/api/hansard-records/search", queryParams],
+    queryFn: async () => {
+      const url = queryParams 
+        ? `/api/hansard-records/search?${queryParams}`
+        : "/api/hansard-records/search";
+      const response = await fetch(url);
+      if (!response.ok) throw new Error("Failed to fetch Hansard records");
+      return response.json();
+    },
   });
 
   if (isLoading) {

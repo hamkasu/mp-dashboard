@@ -18,40 +18,63 @@ export class HansardScraper {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
   };
 
-  async getHansardListForParliament15(maxPages: number = 50): Promise<HansardMetadata[]> {
-    const hansards: HansardMetadata[] = [];
+  async getHansardListForParliament15(maxRecords: number = 100): Promise<HansardMetadata[]> {
+    const allHansards: HansardMetadata[] = [];
+    let pageNum = 1;
     
     try {
-      const url = `${this.baseUrl}/hansard-dewan-rakyat.html?uweb=dr&lang=bm`;
-      const response = await axios.get(url, { headers: this.headers });
-      const $ = cheerio.load(response.data);
-      
-      $('a[href*=".pdf"]').each((_, element) => {
-        const href = $(element).attr('href');
-        if (href && href.includes('.pdf')) {
-          const pdfUrl = href.startsWith('http') ? href : `${this.baseUrl}${href}`;
-          const text = $(element).text().trim();
-          
-          const dateMatch = text.match(/(\d{1,2})\s+([\w]+)\s+(\d{4})/);
-          if (dateMatch) {
-            const sessionDate = this.parseMalayDate(text);
-            if (sessionDate) {
-              hansards.push({
-                sessionNumber: `DR.${sessionDate.getDate()}.${sessionDate.getMonth() + 1}.${sessionDate.getFullYear()}`,
-                sessionDate,
-                parliamentTerm: '15th Parliament',
-                sitting: this.determineSitting(sessionDate),
-                pdfUrl
-              });
+      while (allHansards.length < maxRecords) {
+        const url = pageNum === 1 
+          ? `${this.baseUrl}/hansard-dewan-rakyat.html?uweb=dr&lang=bm`
+          : `${this.baseUrl}/hansard-dewan-rakyat.html?uweb=dr&lang=bm&page=${pageNum}`;
+        
+        console.log(`Fetching page ${pageNum}...`);
+        const response = await axios.get(url, { headers: this.headers, timeout: 30000 });
+        const $ = cheerio.load(response.data);
+        const pageHansards: HansardMetadata[] = [];
+        
+        $('a[href*=".pdf"]').each((_, element) => {
+          const href = $(element).attr('href');
+          if (href && href.includes('.pdf')) {
+            const pdfUrl = href.startsWith('http') ? href : `${this.baseUrl}${href}`;
+            const text = $(element).text().trim();
+            
+            const dateMatch = text.match(/(\d{1,2})\s+([\w]+)\s+(\d{4})/);
+            if (dateMatch) {
+              const sessionDate = this.parseMalayDate(text);
+              if (sessionDate) {
+                pageHansards.push({
+                  sessionNumber: `DR.${sessionDate.getDate()}.${sessionDate.getMonth() + 1}.${sessionDate.getFullYear()}`,
+                  sessionDate,
+                  parliamentTerm: '15th Parliament',
+                  sitting: this.determineSitting(sessionDate),
+                  pdfUrl
+                });
+              }
             }
           }
+        });
+        
+        if (pageHansards.length === 0) {
+          console.log(`No more records found on page ${pageNum}`);
+          break;
         }
-      });
+        
+        allHansards.push(...pageHansards);
+        console.log(`Found ${pageHansards.length} records on page ${pageNum} (total: ${allHansards.length})`);
+        
+        if (allHansards.length >= maxRecords) {
+          break;
+        }
+        
+        pageNum++;
+        await this.delay(2000);
+      }
       
-      return hansards.slice(0, maxPages);
+      return allHansards.slice(0, maxRecords);
     } catch (error) {
       console.error('Error fetching Hansard list:', error);
-      return [];
+      return allHansards;
     }
   }
 
