@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import Home from "@/pages/Home";
 import MPProfile from "@/pages/MPProfile";
 import ParliamentaryActivity from "@/pages/ParliamentaryActivity";
+import Hansard from "@/pages/Hansard";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -14,6 +15,7 @@ function Router() {
       <Route path="/" component={Home} />
       <Route path="/mp/:id" component={MPProfile} />
       <Route path="/activity" component={ParliamentaryActivity} />
+      <Route path="/hansard" component={Hansard} />
       <Route component={NotFound} />
     </Switch>
   );
