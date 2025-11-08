@@ -656,6 +656,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Search Hansard records
+  app.get("/api/hansard-records/search", async (req, res) => {
+    try {
+      const { query, startDate, endDate, sessionNumber } = req.query;
+      let records = await storage.getAllHansardRecords();
+      
+      if (query && typeof query === 'string') {
+        const searchTerm = query.toLowerCase();
+        records = records.filter(record => 
+          record.transcript.toLowerCase().includes(searchTerm) ||
+          record.topics.some((topic: string) => topic.toLowerCase().includes(searchTerm)) ||
+          record.sessionNumber.toLowerCase().includes(searchTerm)
+        );
+      }
+      
+      if (startDate && typeof startDate === 'string') {
+        records = records.filter(record => 
+          new Date(record.sessionDate) >= new Date(startDate)
+        );
+      }
+      
+      if (endDate && typeof endDate === 'string') {
+        records = records.filter(record => 
+          new Date(record.sessionDate) <= new Date(endDate)
+        );
+      }
+      
+      if (sessionNumber && typeof sessionNumber === 'string') {
+        records = records.filter(record => 
+          record.sessionNumber.toLowerCase().includes(sessionNumber.toLowerCase())
+        );
+      }
+      
+      res.json(records);
+    } catch (error) {
+      console.error("Error searching Hansard records:", error);
+      res.status(500).json({ error: "Failed to search Hansard records" });
+    }
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;

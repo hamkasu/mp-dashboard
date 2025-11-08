@@ -6,7 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import Home from "@/pages/Home";
 import MPProfile from "@/pages/MPProfile";
 import ParliamentaryActivity from "@/pages/ParliamentaryActivity";
-import Hansard from "@/pages/Hansard";
+import Hansard from "@/pages/hansard";
 import NotFound from "@/pages/not-found";
 
 function Router() {
