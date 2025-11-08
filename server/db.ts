@@ -1,15 +1,15 @@
 import * as schema from "@shared/schema";
-import { drizzle } from "drizzle-orm/neon-serverless";
-import { Pool, neonConfig } from "@neondatabase/serverless";
-import ws from "ws";
+import { drizzle } from "drizzle-orm/node-postgres";
+import { Pool } from "pg";
 
 if (!process.env.DATABASE_URL) {
   throw new Error("DATABASE_URL must be set. Did you forget to provision the database?");
 }
 
-// Configure WebSocket for Node.js environment (required for neon-serverless)
-neonConfig.webSocketConstructor = ws;
+// Use standard PostgreSQL driver (compatible with Railway, Heroku, etc.)
+const pool = new Pool({ 
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.NODE_ENV === "production" ? { rejectUnauthorized: false } : false
+});
 
-// Use Neon WebSocket driver for full transaction and .returning() support
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 export const db = drizzle({ client: pool, schema });
