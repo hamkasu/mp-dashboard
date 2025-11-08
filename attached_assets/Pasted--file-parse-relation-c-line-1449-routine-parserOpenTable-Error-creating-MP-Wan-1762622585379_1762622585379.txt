@@ -1,0 +1,114 @@
+  file: 'parse_relation.c',
+  line: '1449',
+  routine: 'parserOpenTable'
+}
+Error creating MP Wan Hassan Ramli: error: relation "mps" does not exist
+    at /app/node_modules/pg-pool/index.js:45:11
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async file:///app/node_modules/drizzle-orm/node-postgres/session.js:83:22
+    at async DbStorage.createMp (file:///app/dist/index.js:1128:20)
+    at async file:///app/node_modules/drizzle-orm/node-postgres/session.js:83:22
+    at async seedDatabase (file:///app/dist/index.js:1466:21)
+    at async file:///app/dist/index.js:2562:7 {
+  length: 102,
+  severity: 'ERROR',
+  code: '42P01',
+    at /app/node_modules/pg-pool/index.js:45:11
+  detail: undefined,
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+  hint: undefined,
+    at async file:///app/node_modules/drizzle-orm/node-postgres/session.js:83:22
+    at async DbStorage.createMp (file:///app/dist/index.js:1128:20)
+  position: '13',
+    at async seedDatabase (file:///app/dist/index.js:1466:21)
+    at async DbStorage.createMp (file:///app/dist/index.js:1128:20)
+  internalPosition: undefined,
+    at async file:///app/dist/index.js:2562:7 {
+    at async seedDatabase (file:///app/dist/index.js:1466:21)
+  internalQuery: undefined,
+  length: 102,
+    at async file:///app/dist/index.js:2562:7 {
+  severity: 'ERROR',
+  length: 102,
+  code: '42P01',
+  severity: 'ERROR',
+  detail: undefined,
+  code: '42P01',
+  hint: undefined,
+  detail: undefined,
+  position: '13',
+  hint: undefined,
+  internalPosition: undefined,
+  position: '13',
+  internalQuery: undefined,
+  internalPosition: undefined,
+  where: undefined,
+  internalQuery: undefined,
+  schema: undefined,
+  where: undefined,
+  table: undefined,
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  internalQuery: undefined,
+  constraint: undefined,
+  where: undefined,
+  code: '42P01',
+  file: 'parse_relation.c',
+  line: '1449',
+  schema: undefined,
+  detail: undefined,
+  routine: 'parserOpenTable'
+  hint: undefined,
+    at async seedDatabase (file:///app/dist/index.js:1466:21)
+}
+  position: '13',
+    at async file:///app/dist/index.js:2562:7 {
+Error creating MP Rosol Wahid: error: relation "mps" does not exist
+  column: undefined,
+  internalPosition: undefined,
+    at /app/node_modules/pg-pool/index.js:45:11
+  dataType: undefined,
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+  constraint: undefined,
+  file: 'parse_relation.c',
+  line: '1449',
+  routine: 'parserOpenTable'
+}
+Error creating MP Che Alias Hamid: error: relation "mps" does not exist
+  length: 102,
+    at /app/node_modules/pg-pool/index.js:45:11
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+  severity: 'ERROR',
+    at async file:///app/node_modules/drizzle-orm/node-postgres/session.js:83:22
+    at async DbStorage.createMp (file:///app/dist/index.js:1128:20)
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'parse_relation.c',
+  line: '1449',
+  routine: 'parserOpenTable'
+}
+Error creating MP Siti Mastura Mohamad: error: relation "mps" does not exist
+    at /app/node_modules/pg-pool/index.js:45:11
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async file:///app/node_modules/drizzle-orm/node-postgres/session.js:83:22
+    at async DbStorage.createMp (file:///app/dist/index.js:1128:20)
+    at async seedDatabase (file:///app/dist/index.js:1466:21)
+    at async file:///app/dist/index.js:2562:7 {
+    at async DbStorage.createMp (file:///app/dist/index.js:1128:20)
+  internalQuery: undefined,
+    at async seedDatabase (file:///app/dist/index.js:1466:21)
+    at async file:///app/dist/index.js:2562:7 {
+  code: '42P01',
+  length: 102,
+  detail: undefined,
+  severity: 'ERROR',
+  code: '42P01',
+  hint: undefined,
+  length: 102,
+  detail: undefined,
+  position: '13',
+  severity: 'ERROR',
