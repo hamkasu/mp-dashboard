@@ -39,8 +39,8 @@ export class HansardScraper {
     try {
       while (allHansards.size < maxRecords) {
         const url = pageNum === 1 
-          ? `${this.baseUrl}/hansard-dewan-rakyat.html?uweb=dr&lang=bm`
-          : `${this.baseUrl}/hansard-dewan-rakyat.html?uweb=dr&lang=bm&page=${pageNum}`;
+          ? `${this.baseUrl}/hansard-dewan-rakyat.html?uweb=dr&lang=bm&arkib=yes`
+          : `${this.baseUrl}/hansard-dewan-rakyat.html?uweb=dr&lang=bm&arkib=yes&page=${pageNum}`;
         
         console.log(`Fetching page ${pageNum}...`);
         const response = await axios.get(url, { headers: this.headers, timeout: 30000, httpsAgent });
