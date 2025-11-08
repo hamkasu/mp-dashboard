@@ -1,7 +1,7 @@
-import { type User, type InsertUser, type Mp, type InsertMp, type CourtCase, type InsertCourtCase, type SprmInvestigation, type InsertSprmInvestigation, type LegislativeProposal, type InsertLegislativeProposal, type DebateParticipation, type InsertDebateParticipation, type ParliamentaryQuestion, type InsertParliamentaryQuestion } from "@shared/schema";
+import { type User, type InsertUser, type Mp, type InsertMp, type CourtCase, type InsertCourtCase, type SprmInvestigation, type InsertSprmInvestigation, type LegislativeProposal, type InsertLegislativeProposal, type DebateParticipation, type InsertDebateParticipation, type ParliamentaryQuestion, type InsertParliamentaryQuestion, type HansardRecord, type InsertHansardRecord, type UpdateHansardRecord } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
-import { mps, users, courtCases, sprmInvestigations, legislativeProposals, debateParticipations, parliamentaryQuestions } from "@shared/schema";
+import { mps, users, courtCases, sprmInvestigations, legislativeProposals, debateParticipations, parliamentaryQuestions, hansardRecords } from "@shared/schema";
 import { eq } from "drizzle-orm";
 
 export interface IStorage {
@@ -54,6 +54,14 @@ export interface IStorage {
   createParliamentaryQuestion(question: InsertParliamentaryQuestion): Promise<ParliamentaryQuestion>;
   updateParliamentaryQuestion(id: string, question: Partial<InsertParliamentaryQuestion>): Promise<ParliamentaryQuestion | undefined>;
   deleteParliamentaryQuestion(id: string): Promise<boolean>;
+  
+  // Hansard Record methods
+  getHansardRecord(id: string): Promise<HansardRecord | undefined>;
+  getAllHansardRecords(): Promise<HansardRecord[]>;
+  getHansardRecordsBySessionNumber(sessionNumber: string): Promise<HansardRecord[]>;
+  createHansardRecord(record: InsertHansardRecord): Promise<HansardRecord>;
+  updateHansardRecord(id: string, record: UpdateHansardRecord): Promise<HansardRecord | undefined>;
+  deleteHansardRecord(id: string): Promise<boolean>;
 }
 
 export class MemStorage implements IStorage {

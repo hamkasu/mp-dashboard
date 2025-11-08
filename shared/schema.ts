@@ -148,3 +148,63 @@ export const insertParliamentaryQuestionSchema = createInsertSchema(parliamentar
 
 export type InsertParliamentaryQuestion = z.infer<typeof insertParliamentaryQuestionSchema>;
 export type ParliamentaryQuestion = typeof parliamentaryQuestions.$inferSelect;
+
+export interface HansardSpeaker {
+  mpId: string;
+  mpName: string;
+  speakingOrder: number;
+  duration?: number;
+}
+
+export interface HansardVoteRecord {
+  voteType: string;
+  motion: string;
+  result: string;
+  yesCount: number;
+  noCount: number;
+  abstainCount: number;
+  timestamp?: string;
+}
+
+export const hansardRecords = pgTable("hansard_records", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  sessionNumber: text("session_number").notNull(),
+  sessionDate: timestamp("session_date").notNull(),
+  parliamentTerm: text("parliament_term").notNull(),
+  sitting: text("sitting").notNull(),
+  transcript: text("transcript").notNull(),
+  pdfLinks: jsonb("pdf_links").$type<string[]>().notNull().default(sql`'[]'`),
+  topics: jsonb("topics").$type<string[]>().notNull().default(sql`'[]'`),
+  speakers: jsonb("speakers").$type<HansardSpeaker[]>().notNull().default(sql`'[]'`),
+  voteRecords: jsonb("vote_records").$type<HansardVoteRecord[]>().notNull().default(sql`'[]'`),
+  createdAt: timestamp("created_at").notNull().default(sql`NOW()`),
+});
+
+export const insertHansardRecordSchema = createInsertSchema(hansardRecords).omit({
+  id: true,
+  createdAt: true,
+}).extend({
+  pdfLinks: z.array(z.string()).default([]),
+  topics: z.array(z.string()).default([]),
+  speakers: z.array(z.object({
+    mpId: z.string(),
+    mpName: z.string(),
+    speakingOrder: z.number(),
+    duration: z.number().optional(),
+  })).default([]),
+  voteRecords: z.array(z.object({
+    voteType: z.string(),
+    motion: z.string(),
+    result: z.string(),
+    yesCount: z.number(),
+    noCount: z.number(),
+    abstainCount: z.number(),
+    timestamp: z.string().optional(),
+  })).default([]),
+});
+
+export const updateHansardRecordSchema = insertHansardRecordSchema.partial();
+
+export type InsertHansardRecord = z.infer<typeof insertHansardRecordSchema>;
+export type UpdateHansardRecord = z.infer<typeof updateHansardRecordSchema>;
+export type HansardRecord = typeof hansardRecords.$inferSelect;
