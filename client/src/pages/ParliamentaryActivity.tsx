@@ -8,10 +8,10 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { FileText, MessageSquare, HelpCircle, Plus, Search, ExternalLink } from "lucide-react";
+import { FileText, MessageSquare, HelpCircle, Plus, Search, ExternalLink, Scale, AlertTriangle } from "lucide-react";
 import { Link } from "wouter";
 import { format } from "date-fns";
-import type { Mp, LegislativeProposal, DebateParticipation, ParliamentaryQuestion } from "@shared/schema";
+import type { Mp, LegislativeProposal, DebateParticipation, ParliamentaryQuestion, CourtCase, SprmInvestigation } from "@shared/schema";
 
 export default function ParliamentaryActivity() {
   const [globalSearch, setGlobalSearch] = useState("");
@@ -33,6 +33,14 @@ export default function ParliamentaryActivity() {
 
   const { data: parliamentaryQuestions = [], isLoading: questionsLoading } = useQuery<ParliamentaryQuestion[]>({
     queryKey: ["/api/parliamentary-questions"],
+  });
+
+  const { data: courtCases = [], isLoading: courtCasesLoading } = useQuery<CourtCase[]>({
+    queryKey: ["/api/court-cases"],
+  });
+
+  const { data: sprmInvestigations = [], isLoading: sprmLoading } = useQuery<SprmInvestigation[]>({
+    queryKey: ["/api/sprm-investigations"],
   });
 
   const getMpById = (id: string) => mps.find(mp => mp.id === id);
@@ -65,6 +73,28 @@ export default function ParliamentaryActivity() {
       mp?.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       question.ministry.toLowerCase().includes(searchQuery.toLowerCase()) ||
       question.topic.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  });
+
+  const filteredCourtCases = courtCases.filter(courtCase => {
+    if (!searchQuery) return true;
+    const mp = getMpById(courtCase.mpId);
+    return (
+      courtCase.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      courtCase.caseNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      mp?.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      courtCase.charges.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  });
+
+  const filteredSprmInvestigations = sprmInvestigations.filter(investigation => {
+    if (!searchQuery) return true;
+    const mp = getMpById(investigation.mpId);
+    return (
+      investigation.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (investigation.caseNumber && investigation.caseNumber.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      mp?.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      investigation.charges.toLowerCase().includes(searchQuery.toLowerCase())
     );
   });
 
@@ -119,7 +149,7 @@ export default function ParliamentaryActivity() {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-5 gap-2">
             <TabsTrigger value="legislation" data-testid="tab-legislation">
               <FileText className="w-4 h-4 mr-2" />
               Legislation ({filteredProposals.length})
@@ -131,6 +161,14 @@ export default function ParliamentaryActivity() {
             <TabsTrigger value="questions" data-testid="tab-questions">
               <HelpCircle className="w-4 h-4 mr-2" />
               Questions ({filteredQuestions.length})
+            </TabsTrigger>
+            <TabsTrigger value="court-cases" data-testid="tab-court-cases">
+              <Scale className="w-4 h-4 mr-2" />
+              Court Cases ({filteredCourtCases.length})
+            </TabsTrigger>
+            <TabsTrigger value="sprm" data-testid="tab-sprm">
+              <AlertTriangle className="w-4 h-4 mr-2" />
+              SPRM ({filteredSprmInvestigations.length})
             </TabsTrigger>
           </TabsList>
 
@@ -358,6 +396,163 @@ export default function ParliamentaryActivity() {
                           View Hansard
                         </Button>
                       )}
+                    </CardContent>
+                  </Card>
+                );
+              })
+            )}
+          </TabsContent>
+
+          <TabsContent value="court-cases" className="space-y-4">
+            {courtCasesLoading ? (
+              <Card>
+                <CardContent className="p-6">
+                  <p className="text-center text-muted-foreground">Loading court cases...</p>
+                </CardContent>
+              </Card>
+            ) : filteredCourtCases.length === 0 ? (
+              <Card>
+                <CardContent className="p-6">
+                  <p className="text-center text-muted-foreground">
+                    {searchQuery ? "No court cases found matching your search." : "No court cases yet."}
+                  </p>
+                </CardContent>
+              </Card>
+            ) : (
+              filteredCourtCases.map((courtCase) => {
+                const mp = getMpById(courtCase.mpId);
+                return (
+                  <Card key={courtCase.id} data-testid={`card-court-case-${courtCase.id}`} className="hover-elevate">
+                    <CardHeader>
+                      <div className="flex flex-wrap items-start justify-between gap-4">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex flex-wrap items-center gap-2 mb-2">
+                            <Badge variant="outline" className={getStatusColor(courtCase.status)}>
+                              {courtCase.status}
+                            </Badge>
+                            <Badge variant="secondary">{courtCase.courtLevel}</Badge>
+                          </div>
+                          <CardTitle className="text-xl mb-2">{courtCase.title}</CardTitle>
+                          <CardDescription>Case #{courtCase.caseNumber}</CardDescription>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {mp && (
+                        <Link href={`/mp/${mp.id}`}>
+                          <div className="flex items-center gap-3 hover-elevate p-3 rounded-md cursor-pointer">
+                            <Avatar>
+                              <AvatarImage src={mp.photoUrl || undefined} />
+                              <AvatarFallback>{mp.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+                            </Avatar>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium">{mp.name}</p>
+                              <p className="text-sm text-muted-foreground">{mp.constituency}, {mp.state}</p>
+                            </div>
+                          </div>
+                        </Link>
+                      )}
+                      
+                      <div className="space-y-2">
+                        <p className="text-sm font-medium">Charges:</p>
+                        <p className="text-sm text-muted-foreground">{courtCase.charges}</p>
+                      </div>
+
+                      {courtCase.outcome && (
+                        <div className="space-y-2 bg-muted p-4 rounded-md">
+                          <p className="text-sm font-medium">Outcome:</p>
+                          <p className="text-sm text-muted-foreground">{courtCase.outcome}</p>
+                        </div>
+                      )}
+
+                      <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+                        <div>
+                          <span className="font-medium">Filed:</span>{" "}
+                          {format(new Date(courtCase.filingDate), "dd MMM yyyy")}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })
+            )}
+          </TabsContent>
+
+          <TabsContent value="sprm" className="space-y-4">
+            {sprmLoading ? (
+              <Card>
+                <CardContent className="p-6">
+                  <p className="text-center text-muted-foreground">Loading SPRM investigations...</p>
+                </CardContent>
+              </Card>
+            ) : filteredSprmInvestigations.length === 0 ? (
+              <Card>
+                <CardContent className="p-6">
+                  <p className="text-center text-muted-foreground">
+                    {searchQuery ? "No SPRM investigations found matching your search." : "No SPRM investigations yet."}
+                  </p>
+                </CardContent>
+              </Card>
+            ) : (
+              filteredSprmInvestigations.map((investigation) => {
+                const mp = getMpById(investigation.mpId);
+                return (
+                  <Card key={investigation.id} data-testid={`card-sprm-${investigation.id}`} className="hover-elevate">
+                    <CardHeader>
+                      <div className="flex flex-wrap items-start justify-between gap-4">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex flex-wrap items-center gap-2 mb-2">
+                            <Badge variant="outline" className={getStatusColor(investigation.status)}>
+                              {investigation.status}
+                            </Badge>
+                            {investigation.caseNumber && (
+                              <Badge variant="secondary">Case #{investigation.caseNumber}</Badge>
+                            )}
+                          </div>
+                          <CardTitle className="text-xl mb-2">{investigation.title}</CardTitle>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {mp && (
+                        <Link href={`/mp/${mp.id}`}>
+                          <div className="flex items-center gap-3 hover-elevate p-3 rounded-md cursor-pointer">
+                            <Avatar>
+                              <AvatarImage src={mp.photoUrl || undefined} />
+                              <AvatarFallback>{mp.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+                            </Avatar>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium">{mp.name}</p>
+                              <p className="text-sm text-muted-foreground">{mp.constituency}, {mp.state}</p>
+                            </div>
+                          </div>
+                        </Link>
+                      )}
+                      
+                      <div className="space-y-2">
+                        <p className="text-sm font-medium">Allegations:</p>
+                        <p className="text-sm text-muted-foreground">{investigation.charges}</p>
+                      </div>
+
+                      {investigation.outcome && (
+                        <div className="space-y-2 bg-muted p-4 rounded-md">
+                          <p className="text-sm font-medium">Outcome:</p>
+                          <p className="text-sm text-muted-foreground">{investigation.outcome}</p>
+                        </div>
+                      )}
+
+                      <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+                        <div>
+                          <span className="font-medium">Started:</span>{" "}
+                          {format(new Date(investigation.startDate), "dd MMM yyyy")}
+                        </div>
+                        {investigation.endDate && (
+                          <div>
+                            <span className="font-medium">Ended:</span>{" "}
+                            {format(new Date(investigation.endDate), "dd MMM yyyy")}
+                          </div>
+                        )}
+                      </div>
                     </CardContent>
                   </Card>
                 );
