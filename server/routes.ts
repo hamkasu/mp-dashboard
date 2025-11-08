@@ -2,7 +2,14 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { z } from "zod";
-import { insertCourtCaseSchema, insertSprmInvestigationSchema, updateSprmInvestigationSchema } from "@shared/schema";
+import { 
+  insertCourtCaseSchema, 
+  insertSprmInvestigationSchema, 
+  updateSprmInvestigationSchema,
+  insertLegislativeProposalSchema,
+  insertDebateParticipationSchema,
+  insertParliamentaryQuestionSchema
+} from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Get all MPs
@@ -266,6 +273,291 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting SPRM investigation:", error);
       res.status(500).json({ error: "Failed to delete SPRM investigation" });
+    }
+  });
+
+  // ========== Legislative Proposals Routes ==========
+  
+  // Get all legislative proposals
+  app.get("/api/legislative-proposals", async (_req, res) => {
+    try {
+      const proposals = await storage.getAllLegislativeProposals();
+      res.json(proposals);
+    } catch (error) {
+      console.error("Error fetching legislative proposals:", error);
+      res.status(500).json({ error: "Failed to fetch legislative proposals" });
+    }
+  });
+
+  // Get legislative proposals by MP ID
+  app.get("/api/mps/:id/legislative-proposals", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const proposals = await storage.getLegislativeProposalsByMpId(id);
+      res.json(proposals);
+    } catch (error) {
+      console.error("Error fetching legislative proposals:", error);
+      res.status(500).json({ error: "Failed to fetch legislative proposals" });
+    }
+  });
+
+  // Get single legislative proposal by ID
+  app.get("/api/legislative-proposals/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const proposal = await storage.getLegislativeProposal(id);
+      
+      if (!proposal) {
+        return res.status(404).json({ error: "Legislative proposal not found" });
+      }
+      
+      res.json(proposal);
+    } catch (error) {
+      console.error("Error fetching legislative proposal:", error);
+      res.status(500).json({ error: "Failed to fetch legislative proposal" });
+    }
+  });
+
+  // Create a new legislative proposal
+  app.post("/api/legislative-proposals", async (req, res) => {
+    try {
+      const validatedData = insertLegislativeProposalSchema.parse(req.body);
+      const proposal = await storage.createLegislativeProposal(validatedData);
+      res.status(201).json(proposal);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid data", details: error.errors });
+      }
+      console.error("Error creating legislative proposal:", error);
+      res.status(500).json({ error: "Failed to create legislative proposal" });
+    }
+  });
+
+  // Update a legislative proposal
+  app.patch("/api/legislative-proposals/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const validatedData = insertLegislativeProposalSchema.partial().parse(req.body);
+      const proposal = await storage.updateLegislativeProposal(id, validatedData);
+      
+      if (!proposal) {
+        return res.status(404).json({ error: "Legislative proposal not found" });
+      }
+      
+      res.json(proposal);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid data", details: error.errors });
+      }
+      console.error("Error updating legislative proposal:", error);
+      res.status(500).json({ error: "Failed to update legislative proposal" });
+    }
+  });
+
+  // Delete a legislative proposal
+  app.delete("/api/legislative-proposals/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const deleted = await storage.deleteLegislativeProposal(id);
+      
+      if (!deleted) {
+        return res.status(404).json({ error: "Legislative proposal not found" });
+      }
+      
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting legislative proposal:", error);
+      res.status(500).json({ error: "Failed to delete legislative proposal" });
+    }
+  });
+
+  // ========== Debate Participation Routes ==========
+  
+  // Get all debate participations
+  app.get("/api/debate-participations", async (_req, res) => {
+    try {
+      const participations = await storage.getAllDebateParticipations();
+      res.json(participations);
+    } catch (error) {
+      console.error("Error fetching debate participations:", error);
+      res.status(500).json({ error: "Failed to fetch debate participations" });
+    }
+  });
+
+  // Get debate participations by MP ID
+  app.get("/api/mps/:id/debate-participations", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const participations = await storage.getDebateParticipationsByMpId(id);
+      res.json(participations);
+    } catch (error) {
+      console.error("Error fetching debate participations:", error);
+      res.status(500).json({ error: "Failed to fetch debate participations" });
+    }
+  });
+
+  // Get single debate participation by ID
+  app.get("/api/debate-participations/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const participation = await storage.getDebateParticipation(id);
+      
+      if (!participation) {
+        return res.status(404).json({ error: "Debate participation not found" });
+      }
+      
+      res.json(participation);
+    } catch (error) {
+      console.error("Error fetching debate participation:", error);
+      res.status(500).json({ error: "Failed to fetch debate participation" });
+    }
+  });
+
+  // Create a new debate participation
+  app.post("/api/debate-participations", async (req, res) => {
+    try {
+      const validatedData = insertDebateParticipationSchema.parse(req.body);
+      const participation = await storage.createDebateParticipation(validatedData);
+      res.status(201).json(participation);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid data", details: error.errors });
+      }
+      console.error("Error creating debate participation:", error);
+      res.status(500).json({ error: "Failed to create debate participation" });
+    }
+  });
+
+  // Update a debate participation
+  app.patch("/api/debate-participations/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const validatedData = insertDebateParticipationSchema.partial().parse(req.body);
+      const participation = await storage.updateDebateParticipation(id, validatedData);
+      
+      if (!participation) {
+        return res.status(404).json({ error: "Debate participation not found" });
+      }
+      
+      res.json(participation);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid data", details: error.errors });
+      }
+      console.error("Error updating debate participation:", error);
+      res.status(500).json({ error: "Failed to update debate participation" });
+    }
+  });
+
+  // Delete a debate participation
+  app.delete("/api/debate-participations/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const deleted = await storage.deleteDebateParticipation(id);
+      
+      if (!deleted) {
+        return res.status(404).json({ error: "Debate participation not found" });
+      }
+      
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting debate participation:", error);
+      res.status(500).json({ error: "Failed to delete debate participation" });
+    }
+  });
+
+  // ========== Parliamentary Questions Routes ==========
+  
+  // Get all parliamentary questions
+  app.get("/api/parliamentary-questions", async (_req, res) => {
+    try {
+      const questions = await storage.getAllParliamentaryQuestions();
+      res.json(questions);
+    } catch (error) {
+      console.error("Error fetching parliamentary questions:", error);
+      res.status(500).json({ error: "Failed to fetch parliamentary questions" });
+    }
+  });
+
+  // Get parliamentary questions by MP ID
+  app.get("/api/mps/:id/parliamentary-questions", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const questions = await storage.getParliamentaryQuestionsByMpId(id);
+      res.json(questions);
+    } catch (error) {
+      console.error("Error fetching parliamentary questions:", error);
+      res.status(500).json({ error: "Failed to fetch parliamentary questions" });
+    }
+  });
+
+  // Get single parliamentary question by ID
+  app.get("/api/parliamentary-questions/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const question = await storage.getParliamentaryQuestion(id);
+      
+      if (!question) {
+        return res.status(404).json({ error: "Parliamentary question not found" });
+      }
+      
+      res.json(question);
+    } catch (error) {
+      console.error("Error fetching parliamentary question:", error);
+      res.status(500).json({ error: "Failed to fetch parliamentary question" });
+    }
+  });
+
+  // Create a new parliamentary question
+  app.post("/api/parliamentary-questions", async (req, res) => {
+    try {
+      const validatedData = insertParliamentaryQuestionSchema.parse(req.body);
+      const question = await storage.createParliamentaryQuestion(validatedData);
+      res.status(201).json(question);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid data", details: error.errors });
+      }
+      console.error("Error creating parliamentary question:", error);
+      res.status(500).json({ error: "Failed to create parliamentary question" });
+    }
+  });
+
+  // Update a parliamentary question
+  app.patch("/api/parliamentary-questions/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const validatedData = insertParliamentaryQuestionSchema.partial().parse(req.body);
+      const question = await storage.updateParliamentaryQuestion(id, validatedData);
+      
+      if (!question) {
+        return res.status(404).json({ error: "Parliamentary question not found" });
+      }
+      
+      res.json(question);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid data", details: error.errors });
+      }
+      console.error("Error updating parliamentary question:", error);
+      res.status(500).json({ error: "Failed to update parliamentary question" });
+    }
+  });
+
+  // Delete a parliamentary question
+  app.delete("/api/parliamentary-questions/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const deleted = await storage.deleteParliamentaryQuestion(id);
+      
+      if (!deleted) {
+        return res.status(404).json({ error: "Parliamentary question not found" });
+      }
+      
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting parliamentary question:", error);
+      res.status(500).json({ error: "Failed to delete parliamentary question" });
     }
   });
 
