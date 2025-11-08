@@ -57,7 +57,7 @@ export const courtCases = pgTable("court_cases", {
   filingDate: timestamp("filing_date").notNull(),
   outcome: text("outcome"),
   charges: text("charges").notNull(),
-  documentLinks: jsonb("document_links").$type<string[]>().notNull().default(sql`'[]'`),
+  documentLinks: jsonb("document_links").$type<string[]>().notNull().default(sql`'[]'::jsonb`),
 });
 
 export const insertCourtCaseSchema = createInsertSchema(courtCases).omit({
@@ -79,7 +79,7 @@ export const sprmInvestigations = pgTable("sprm_investigations", {
   endDate: timestamp("end_date"),
   outcome: text("outcome"),
   charges: text("charges").notNull(),
-  documentLinks: jsonb("document_links").$type<string[]>().notNull().default(sql`'[]'`),
+  documentLinks: jsonb("document_links").$type<string[]>().notNull().default(sql`'[]'::jsonb`),
 });
 
 export const insertSprmInvestigationSchema = createInsertSchema(sprmInvestigations).omit({
@@ -173,10 +173,10 @@ export const hansardRecords = pgTable("hansard_records", {
   parliamentTerm: text("parliament_term").notNull(),
   sitting: text("sitting").notNull(),
   transcript: text("transcript").notNull(),
-  pdfLinks: jsonb("pdf_links").$type<string[]>().notNull().default(sql`'[]'`),
-  topics: jsonb("topics").$type<string[]>().notNull().default(sql`'[]'`),
-  speakers: jsonb("speakers").$type<HansardSpeaker[]>().notNull().default(sql`'[]'`),
-  voteRecords: jsonb("vote_records").$type<HansardVoteRecord[]>().notNull().default(sql`'[]'`),
+  pdfLinks: jsonb("pdf_links").$type<string[]>().notNull().default(sql`'[]'::jsonb`),
+  topics: jsonb("topics").$type<string[]>().notNull().default(sql`'[]'::jsonb`),
+  speakers: jsonb("speakers").$type<HansardSpeaker[]>().notNull().default(sql`'[]'::jsonb`),
+  voteRecords: jsonb("vote_records").$type<HansardVoteRecord[]>().notNull().default(sql`'[]'::jsonb`),
   createdAt: timestamp("created_at").notNull().default(sql`NOW()`),
 });
 
