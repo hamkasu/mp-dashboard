@@ -7,10 +7,11 @@ This web application provides a comprehensive dashboard for Malaysian Members of
 ## Recent Changes
 
 **November 8, 2025**:
-- ✅ Created Hansard Records browsing page at `/hansard`
-- ✅ Added search functionality for sessions, topics, speakers, and content
-- ✅ Implemented session number filtering
-- ✅ Added collapsible sections for speakers, vote records, and transcripts
+- ✅ Built complete Hansard scraper utility (`server/hansard-scraper.ts`) to download and extract PDFs from parlimen.gov.my
+- ✅ Implemented automatic pagination to fetch all Parliament 15 records across multiple pages
+- ✅ Created scraping command (`server/scrape-hansard.ts`) to batch download all Hansard PDFs and store full text in database
+- ✅ Built Hansard browsing page at `/hansard` with server-side search by keyword, date range, and session number
+- ✅ Added backend search API (`/api/hansard-records/search`) with multi-criteria filtering
 - ✅ Integrated Hansard navigation tab in header
 - ✅ Migrated to PostgreSQL database with Neon
 - ✅ Successfully seeded database with 222 MPs and related data
@@ -70,7 +71,20 @@ Preferred communication style: Simple, everyday language.
 - **Statistics**: `GET /api/stats` (party, gender, state, attendance rate).
 - **Court Cases**: `GET /api/court-cases`, `GET /api/mps/:id/court-cases`, `GET /api/court-cases/:id`, `POST /api/court-cases`, `PATCH /api/court-cases/:id`, `DELETE /api/court-cases/:id`.
 - **SPRM Investigations**: `GET /api/sprm-investigations`, `GET /api/mps/:id/sprm-investigations`, `GET /api/sprm-investigations/:id`, `POST /api/sprm-investigations`, `PATCH /api/sprm-investigations/:id`, `DELETE /api/sprm-investigations/:id`.
-- **Hansard Records**: `GET /api/hansard-records`, `GET /api/hansard-records/:id`, `GET /api/hansard-records/session/:sessionNumber`, `POST /api/hansard-records`, `PATCH /api/hansard-records/:id`, `DELETE /api/hansard-records/:id`.
+- **Hansard Records**: 
+  - `GET /api/hansard-records/search?query=&startDate=&endDate=&sessionNumber=` (server-side search with filters)
+  - `GET /api/hansard-records` (all records)
+  - `GET /api/hansard-records/:id` (single record)
+  - `GET /api/hansard-records/session/:sessionNumber` (by session)
+  - `POST /api/hansard-records`, `PATCH /api/hansard-records/:id`, `DELETE /api/hansard-records/:id`
+
+**Hansard Scraper**:
+- Web scraper utility (`server/hansard-scraper.ts`) downloads PDFs from https://www.parlimen.gov.my/hansard-dewan-rakyat.html
+- Automatically paginates through all available pages to fetch complete Parliament 15 dataset
+- Extracts full text from PDFs using pdf-parse library
+- Batch scraping command: `tsx server/scrape-hansard.ts` downloads up to 20 Hansard records
+- Stores full transcript text, PDF links, topics, speakers, and vote records in database
+- 2-second delay between requests to be respectful to parliament.gov.my servers
 
 **Development & Production**:
 - Vite dev server with HMR for rapid development.
