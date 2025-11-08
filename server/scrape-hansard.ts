@@ -1,11 +1,11 @@
 import { HansardScraper } from './hansard-scraper';
-import { dbStorage } from './storage';
+import { storage } from './storage';
 
 async function scrapeAndStoreHansard() {
   const scraper = new HansardScraper();
   
   console.log('Fetching Hansard list for 15th Parliament...');
-  const hansardList = await scraper.getHansardListForParliament15(20);
+  const hansardList = await scraper.getHansardListForParliament15(200);
   
   console.log(`Found ${hansardList.length} Hansard records to process`);
   
@@ -15,7 +15,7 @@ async function scrapeAndStoreHansard() {
   for (const metadata of hansardList) {
     console.log(`\nProcessing ${metadata.sessionNumber} (${metadata.sessionDate.toISOString().split('T')[0]})...`);
     
-    const existingRecords = await dbStorage.getHansardRecordsBySessionNumber(metadata.sessionNumber);
+    const existingRecords = await storage.getHansardRecordsBySessionNumber(metadata.sessionNumber);
     if (existingRecords.length > 0) {
       console.log(`  ✓ Already exists, skipping`);
       continue;
@@ -32,7 +32,7 @@ async function scrapeAndStoreHansard() {
     try {
       const topics = extractTopics(transcript);
       
-      await dbStorage.createHansardRecord({
+      await storage.createHansardRecord({
         sessionNumber: metadata.sessionNumber,
         sessionDate: metadata.sessionDate,
         parliamentTerm: metadata.parliamentTerm,
