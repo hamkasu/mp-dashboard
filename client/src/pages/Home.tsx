@@ -8,9 +8,9 @@ import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Scale, ExternalLink } from "lucide-react";
+import { Scale, ExternalLink, AlertTriangle } from "lucide-react";
 import { Link } from "wouter";
-import type { Mp, CourtCase } from "@shared/schema";
+import type { Mp, CourtCase, SprmInvestigation } from "@shared/schema";
 
 type SortOption = "name" | "attendance-best" | "attendance-worst";
 
@@ -37,6 +37,10 @@ export default function Home() {
 
   const { data: courtCases = [], isLoading: courtCasesLoading } = useQuery<CourtCase[]>({
     queryKey: ["/api/court-cases"],
+  });
+
+  const { data: sprmInvestigations = [], isLoading: sprmInvestigationsLoading } = useQuery<SprmInvestigation[]>({
+    queryKey: ["/api/sprm-investigations"],
   });
 
   const isLoading = mpsLoading || statsLoading;
@@ -89,6 +93,13 @@ export default function Home() {
     const mpIdsWithCases = new Set(courtCases.map(c => c.mpId));
     return mps.filter(mp => mpIdsWithCases.has(mp.id));
   }, [mps, courtCases]);
+
+  const mpsWithSprmInvestigations = useMemo(() => {
+    if (!sprmInvestigations.length || !mps.length) return [];
+    
+    const mpIdsWithInvestigations = new Set(sprmInvestigations.map(i => i.mpId));
+    return mps.filter(mp => mpIdsWithInvestigations.has(mp.id));
+  }, [mps, sprmInvestigations]);
 
   const defaultStats = {
     totalMps: 0,
@@ -173,6 +184,66 @@ export default function Home() {
                 Browse all {filteredMps.length} of {(stats || defaultStats).totalMps} MPs from Dewan Rakyat
               </p>
             </div>
+
+            {/* SPRM Investigations Section */}
+            {!sprmInvestigationsLoading && mpsWithSprmInvestigations.length > 0 && (
+              <Card className="border-red-200 dark:border-red-900 bg-red-50/50 dark:bg-red-950/20" data-testid="sprm-investigations-section">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-red-900 dark:text-red-100">
+                    <AlertTriangle className="h-5 w-5" />
+                    MPs with SPRM Investigations
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                    {mpsWithSprmInvestigations.map((mp) => {
+                      const mpInvestigations = sprmInvestigations.filter(i => i.mpId === mp.id);
+                      const ongoingCount = mpInvestigations.filter(i => i.status === "Ongoing").length;
+                      const completedCount = mpInvestigations.filter(i => i.status === "Completed").length;
+                      
+                      return (
+                        <Link key={mp.id} href={`/mp/${mp.id}`} data-testid={`sprm-investigation-mp-${mp.id}`}>
+                          <div className="group cursor-pointer rounded-lg border bg-card p-4 hover:bg-accent transition-colors">
+                            <div className="flex items-start gap-3">
+                              <Avatar className="h-12 w-12 shrink-0">
+                                <AvatarImage src={mp.photoUrl || undefined} alt={mp.name} />
+                                <AvatarFallback className="bg-primary/10 text-primary font-semibold">
+                                  {mp.name.split(" ").map(n => n[0]).join("").slice(0, 2)}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div className="flex-1 min-w-0">
+                                <h4 className="font-semibold text-sm mb-1 group-hover:text-primary transition-colors truncate">
+                                  {mp.name}
+                                </h4>
+                                <div className="flex items-center gap-2 mb-2">
+                                  <p className="text-xs text-muted-foreground">{mp.party}</p>
+                                </div>
+                                <div className="flex flex-wrap gap-1">
+                                  {ongoingCount > 0 && (
+                                    <Badge variant="destructive" className="text-xs" data-testid={`badge-sprm-ongoing-${mp.id}`}>
+                                      {ongoingCount} Ongoing
+                                    </Badge>
+                                  )}
+                                  {completedCount > 0 && (
+                                    <Badge variant="secondary" className="text-xs" data-testid={`badge-sprm-completed-${mp.id}`}>
+                                      {completedCount} Completed
+                                    </Badge>
+                                  )}
+                                </div>
+                              </div>
+                              <ExternalLink className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors shrink-0" />
+                            </div>
+                          </div>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-4">
+                    Click on any MP to view detailed SPRM investigation information.
+                  </p>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Court Cases Section */}
             {!courtCasesLoading && mpsWithCourtCases.length > 0 && (
