@@ -1,17 +1,20 @@
 import { useState, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Search, FileText, Calendar, Download } from "lucide-react";
+import { Search, FileText, Calendar, Download, Sparkles, CheckCircle } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { queryClient, apiRequest } from "@/lib/queryClient";
 import type { HansardRecord } from "@shared/schema";
 
 export default function HansardPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const { toast } = useToast();
 
   const queryParams = useMemo(() => {
     const params = new URLSearchParams();
@@ -31,6 +34,35 @@ export default function HansardPage() {
       if (!response.ok) throw new Error("Failed to fetch Hansard records");
       return response.json();
     },
+  });
+
+  const summarizeMutation = useMutation({
+    mutationFn: async (recordId: string) => {
+      const response = await fetch(`/api/hansard-records/${recordId}/summarize`, {
+        method: "POST",
+        body: JSON.stringify({ maxLength: 500, language: "en" }),
+        headers: { "Content-Type": "application/json" }
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to generate summary");
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/hansard-records/search"] });
+      toast({
+        title: "Summary Generated",
+        description: "The Hansard record has been successfully summarized."
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Summarization Failed",
+        description: error.message || "Failed to generate summary. Please try again.",
+        variant: "destructive"
+      });
+    }
   });
 
   if (isLoading) {
@@ -159,9 +191,37 @@ export default function HansardPage() {
                   ))}
                 </div>
               )}
-              <p className="text-sm text-muted-foreground line-clamp-3">
-                {record.transcript.substring(0, 300)}...
-              </p>
+              
+              {record.summary ? (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400" />
+                    <span className="text-sm font-medium text-green-600 dark:text-green-400">AI Summary</span>
+                  </div>
+                  <Card className="bg-muted/50">
+                    <CardContent className="pt-4">
+                      <p className="text-sm">{record.summary}</p>
+                    </CardContent>
+                  </Card>
+                </div>
+              ) : (
+                <>
+                  <p className="text-sm text-muted-foreground line-clamp-3">
+                    {record.transcript.substring(0, 300)}...
+                  </p>
+                  <Button
+                    data-testid={`button-summarize-${record.id}`}
+                    variant="outline"
+                    size="sm"
+                    onClick={() => summarizeMutation.mutate(record.id)}
+                    disabled={summarizeMutation.isPending}
+                  >
+                    <Sparkles className="w-4 h-4 mr-2" />
+                    {summarizeMutation.isPending ? "Generating Summary..." : "Summarize with AI"}
+                  </Button>
+                </>
+              )}
+              
               {record.speakers && record.speakers.length > 0 && (
                 <div className="text-sm">
                   <span className="font-medium">Speakers: </span>

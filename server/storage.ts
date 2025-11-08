@@ -845,6 +845,9 @@ export class MemStorage implements IStorage {
     const record: HansardRecord = {
       ...insertRecord,
       id,
+      summary: insertRecord.summary ?? null,
+      summaryLanguage: insertRecord.summaryLanguage ?? null,
+      summarizedAt: null,
       createdAt: new Date(),
     };
     this.hansardRecords.set(id, record);

@@ -13,6 +13,7 @@ import {
   updateHansardRecordSchema
 } from "@shared/schema";
 import { HansardScraper } from "./hansard-scraper";
+import { summarizeHansardTranscript } from "./services/gemini";
 
 function extractTopics(transcript: string): string[] {
   const topics: Set<string> = new Set();
@@ -701,6 +702,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       console.error("Error updating Hansard record:", error);
       res.status(500).json({ error: "Failed to update Hansard record" });
+    }
+  });
+
+  // Summarize a Hansard record using AI
+  app.post("/api/hansard-records/:id/summarize", async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      const schema = z.object({
+        maxLength: z.number().min(100).max(1000).default(500),
+        language: z.enum(["en", "ms", "zh"]).default("en")
+      });
+      
+      const validatedData = schema.parse(req.body);
+      
+      const record = await storage.getHansardRecord(id);
+      if (!record) {
+        return res.status(404).json({ error: "Hansard record not found" });
+      }
+      
+      if (record.summary) {
+        return res.status(200).json({ 
+          message: "Summary already exists", 
+          record 
+        });
+      }
+      
+      const languageMap = { en: "English", ms: "Malay", zh: "Chinese" };
+      const summary = await summarizeHansardTranscript(record.transcript, {
+        maxLength: validatedData.maxLength,
+        language: languageMap[validatedData.language]
+      });
+      
+      const updatedRecord = await storage.updateHansardRecord(id, {
+        summary,
+        summaryLanguage: validatedData.language
+      });
+      
+      res.json(updatedRecord);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid data", details: error.errors });
+      }
+      console.error("Error summarizing Hansard record:", error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Failed to summarize Hansard record" 
+      });
     }
   });
 

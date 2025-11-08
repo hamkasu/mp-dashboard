@@ -173,6 +173,9 @@ export const hansardRecords = pgTable("hansard_records", {
   parliamentTerm: text("parliament_term").notNull(),
   sitting: text("sitting").notNull(),
   transcript: text("transcript").notNull(),
+  summary: text("summary"),
+  summaryLanguage: text("summary_language").default("en"),
+  summarizedAt: timestamp("summarized_at"),
   pdfLinks: jsonb("pdf_links").$type<string[]>().notNull().default(sql`'[]'::jsonb`),
   topics: jsonb("topics").$type<string[]>().notNull().default(sql`'[]'::jsonb`),
   speakers: jsonb("speakers").$type<HansardSpeaker[]>().notNull().default(sql`'[]'::jsonb`),
@@ -183,8 +186,11 @@ export const hansardRecords = pgTable("hansard_records", {
 export const insertHansardRecordSchema = createInsertSchema(hansardRecords).omit({
   id: true,
   createdAt: true,
+  summarizedAt: true,
 }).extend({
   sessionDate: z.coerce.date(),
+  summary: z.string().nullable().optional(),
+  summaryLanguage: z.string().nullable().optional(),
   pdfLinks: z.array(z.string()).default([]),
   topics: z.array(z.string()).default([]),
   speakers: z.array(z.object({
