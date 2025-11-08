@@ -41,9 +41,10 @@ Preferred communication style: Simple, everyday language.
 - Express.js with TypeScript (ESM modules)
 
 **Data Layer**:
-- In-memory storage for development.
-- Drizzle ORM for database schema definition.
-- PostgreSQL ready via Neon serverless driver.
+- In-memory storage (MemStorage) for development with automatic seed data.
+- Drizzle ORM schema definitions ready for PostgreSQL migration.
+- DbStorage class available for PostgreSQL deployment via Neon serverless driver.
+- All CRUD operations work consistently across both storage implementations.
 
 **API Design (RESTful)**:
 - **MPs**: `GET /api/mps`, `GET /api/mps/:id` (includes attendance data).
@@ -52,8 +53,10 @@ Preferred communication style: Simple, everyday language.
 - **SPRM Investigations**: `GET /api/sprm-investigations`, `GET /api/mps/:id/sprm-investigations`, `GET /api/sprm-investigations/:id`, `POST /api/sprm-investigations`, `PATCH /api/sprm-investigations/:id`, `DELETE /api/sprm-investigations/:id`.
 
 **Development & Production**:
-- Vite dev server with HMR.
+- Vite dev server with HMR for rapid development.
 - Frontend built to `dist/public`, backend bundled with esbuild to `dist/index.js` for production.
+- In-memory storage for development ensures fast iteration without database setup complexity.
+- Production can use DbStorage with PostgreSQL for persistent data storage.
 
 ### Data Models
 

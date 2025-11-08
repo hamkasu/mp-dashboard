@@ -1,5 +1,8 @@
 import { type User, type InsertUser, type Mp, type InsertMp, type CourtCase, type InsertCourtCase, type SprmInvestigation, type InsertSprmInvestigation, type LegislativeProposal, type InsertLegislativeProposal, type DebateParticipation, type InsertDebateParticipation, type ParliamentaryQuestion, type InsertParliamentaryQuestion } from "@shared/schema";
 import { randomUUID } from "crypto";
+import { db } from "./db";
+import { mps, users, courtCases, sprmInvestigations, legislativeProposals, debateParticipations, parliamentaryQuestions } from "@shared/schema";
+import { eq } from "drizzle-orm";
 
 export interface IStorage {
   // User methods
@@ -899,4 +902,280 @@ export class MemStorage implements IStorage {
   }
 }
 
+// Database storage implementation using Drizzle ORM
+export class DbStorage implements IStorage {
+  // User methods
+  async getUser(id: string): Promise<User | undefined> {
+    const result = await db.select().from(users).where(eq(users.id, id));
+    return result[0];
+  }
+
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    const result = await db.select().from(users).where(eq(users.username, username));
+    return result[0];
+  }
+
+  async createUser(user: InsertUser): Promise<User> {
+    const result = await db.insert(users).values(user).returning();
+    return result[0];
+  }
+
+  // MP methods
+  async getMp(id: string): Promise<Mp | undefined> {
+    const result = await db.select().from(mps).where(eq(mps.id, id));
+    return result[0];
+  }
+
+  async getAllMps(): Promise<Mp[]> {
+    const result = await db.select().from(mps);
+    return result || [];
+  }
+
+  async createMp(mp: InsertMp): Promise<Mp> {
+    const result = await db.insert(mps).values(mp).returning();
+    return result[0];
+  }
+
+  // Court Case methods
+  async getCourtCase(id: string): Promise<CourtCase | undefined> {
+    const result = await db.select().from(courtCases).where(eq(courtCases.id, id));
+    return result[0];
+  }
+
+  async getCourtCasesByMpId(mpId: string): Promise<CourtCase[]> {
+    return await db.select().from(courtCases).where(eq(courtCases.mpId, mpId));
+  }
+
+  async getAllCourtCases(): Promise<CourtCase[]> {
+    const result = await db.select().from(courtCases);
+    return result || [];
+  }
+
+  async createCourtCase(courtCase: InsertCourtCase): Promise<CourtCase> {
+    const result = await db.insert(courtCases).values(courtCase).returning();
+    return result[0];
+  }
+
+  async updateCourtCase(id: string, updates: Partial<InsertCourtCase>): Promise<CourtCase | undefined> {
+    const result = await db.update(courtCases).set(updates).where(eq(courtCases.id, id)).returning();
+    return result[0];
+  }
+
+  async deleteCourtCase(id: string): Promise<boolean> {
+    const result = await db.delete(courtCases).where(eq(courtCases.id, id)).returning();
+    return result.length > 0;
+  }
+
+  // SPRM Investigation methods
+  async getSprmInvestigation(id: string): Promise<SprmInvestigation | undefined> {
+    const result = await db.select().from(sprmInvestigations).where(eq(sprmInvestigations.id, id));
+    return result[0];
+  }
+
+  async getSprmInvestigationsByMpId(mpId: string): Promise<SprmInvestigation[]> {
+    return await db.select().from(sprmInvestigations).where(eq(sprmInvestigations.mpId, mpId));
+  }
+
+  async getAllSprmInvestigations(): Promise<SprmInvestigation[]> {
+    const result = await db.select().from(sprmInvestigations);
+    return result || [];
+  }
+
+  async createSprmInvestigation(investigation: InsertSprmInvestigation): Promise<SprmInvestigation> {
+    const result = await db.insert(sprmInvestigations).values(investigation).returning();
+    return result[0];
+  }
+
+  async updateSprmInvestigation(id: string, updates: Partial<InsertSprmInvestigation>): Promise<SprmInvestigation | undefined> {
+    const result = await db.update(sprmInvestigations).set(updates).where(eq(sprmInvestigations.id, id)).returning();
+    return result[0];
+  }
+
+  async deleteSprmInvestigation(id: string): Promise<boolean> {
+    const result = await db.delete(sprmInvestigations).where(eq(sprmInvestigations.id, id)).returning();
+    return result.length > 0;
+  }
+
+  // Legislative Proposal methods
+  async getLegislativeProposal(id: string): Promise<LegislativeProposal | undefined> {
+    const result = await db.select().from(legislativeProposals).where(eq(legislativeProposals.id, id));
+    return result[0];
+  }
+
+  async getLegislativeProposalsByMpId(mpId: string): Promise<LegislativeProposal[]> {
+    return await db.select().from(legislativeProposals).where(eq(legislativeProposals.mpId, mpId));
+  }
+
+  async getAllLegislativeProposals(): Promise<LegislativeProposal[]> {
+    const result = await db.select().from(legislativeProposals);
+    return result || [];
+  }
+
+  async createLegislativeProposal(proposal: InsertLegislativeProposal): Promise<LegislativeProposal> {
+    const result = await db.insert(legislativeProposals).values(proposal).returning();
+    return result[0];
+  }
+
+  async updateLegislativeProposal(id: string, updates: Partial<InsertLegislativeProposal>): Promise<LegislativeProposal | undefined> {
+    const result = await db.update(legislativeProposals).set(updates).where(eq(legislativeProposals.id, id)).returning();
+    return result[0];
+  }
+
+  async deleteLegislativeProposal(id: string): Promise<boolean> {
+    const result = await db.delete(legislativeProposals).where(eq(legislativeProposals.id, id)).returning();
+    return result.length > 0;
+  }
+
+  // Debate Participation methods
+  async getDebateParticipation(id: string): Promise<DebateParticipation | undefined> {
+    const result = await db.select().from(debateParticipations).where(eq(debateParticipations.id, id));
+    return result[0];
+  }
+
+  async getDebateParticipationsByMpId(mpId: string): Promise<DebateParticipation[]> {
+    return await db.select().from(debateParticipations).where(eq(debateParticipations.mpId, mpId));
+  }
+
+  async getAllDebateParticipations(): Promise<DebateParticipation[]> {
+    const result = await db.select().from(debateParticipations);
+    return result || [];
+  }
+
+  async createDebateParticipation(participation: InsertDebateParticipation): Promise<DebateParticipation> {
+    const result = await db.insert(debateParticipations).values(participation).returning();
+    return result[0];
+  }
+
+  async updateDebateParticipation(id: string, updates: Partial<InsertDebateParticipation>): Promise<DebateParticipation | undefined> {
+    const result = await db.update(debateParticipations).set(updates).where(eq(debateParticipations.id, id)).returning();
+    return result[0];
+  }
+
+  async deleteDebateParticipation(id: string): Promise<boolean> {
+    const result = await db.delete(debateParticipations).where(eq(debateParticipations.id, id)).returning();
+    return result.length > 0;
+  }
+
+  // Parliamentary Question methods
+  async getParliamentaryQuestion(id: string): Promise<ParliamentaryQuestion | undefined> {
+    const result = await db.select().from(parliamentaryQuestions).where(eq(parliamentaryQuestions.id, id));
+    return result[0];
+  }
+
+  async getParliamentaryQuestionsByMpId(mpId: string): Promise<ParliamentaryQuestion[]> {
+    return await db.select().from(parliamentaryQuestions).where(eq(parliamentaryQuestions.mpId, mpId));
+  }
+
+  async getAllParliamentaryQuestions(): Promise<ParliamentaryQuestion[]> {
+    const result = await db.select().from(parliamentaryQuestions);
+    return result || [];
+  }
+
+  async createParliamentaryQuestion(question: InsertParliamentaryQuestion): Promise<ParliamentaryQuestion> {
+    const result = await db.insert(parliamentaryQuestions).values(question).returning();
+    return result[0];
+  }
+
+  async updateParliamentaryQuestion(id: string, updates: Partial<InsertParliamentaryQuestion>): Promise<ParliamentaryQuestion | undefined> {
+    const result = await db.update(parliamentaryQuestions).set(updates).where(eq(parliamentaryQuestions.id, id)).returning();
+    return result[0];
+  }
+
+  async deleteParliamentaryQuestion(id: string): Promise<boolean> {
+    const result = await db.delete(parliamentaryQuestions).where(eq(parliamentaryQuestions.id, id)).returning();
+    return result.length > 0;
+  }
+}
+
+// Helper function to seed the database with initial data from MemStorage
+export async function seedDatabase() {
+  const memStorage = new MemStorage();
+  const dbStorage = new DbStorage();
+  
+  // Check if database is already seeded
+  try {
+    const existingMps = await dbStorage.getAllMps();
+    if (existingMps && existingMps.length > 0) {
+      console.log("Database already seeded, skipping...");
+      return;
+    }
+  } catch (error) {
+    console.log("Database not yet seeded, proceeding with seed...");
+  }
+  
+  // Seed MPs and keep track of ID mapping
+  const allMps = await memStorage.getAllMps();
+  const mpIdMap = new Map<string, string>();
+  
+  console.log(`Seeding ${allMps.length} MPs...`);
+  for (const mp of allMps) {
+    const { id: oldId, ...mpData } = mp;
+    try {
+      const newMp = await dbStorage.createMp(mpData);
+      if (!newMp || !newMp.id) {
+        console.error(`Failed to create MP: ${mp.name} - returned undefined or no ID`);
+        continue;
+      }
+      mpIdMap.set(oldId, newMp.id);
+    } catch (error) {
+      console.error(`Error creating MP ${mp.name}:`, error);
+    }
+  }
+  console.log(`Successfully seeded ${mpIdMap.size} MPs`);
+  
+  // Seed court cases with updated MP IDs
+  const allCourtCases = await memStorage.getAllCourtCases();
+  for (const courtCase of allCourtCases) {
+    const { id, mpId, ...caseData } = courtCase;
+    const newMpId = mpIdMap.get(mpId);
+    if (newMpId) {
+      await dbStorage.createCourtCase({ ...caseData, mpId: newMpId });
+    }
+  }
+  
+  // Seed SPRM investigations with updated MP IDs
+  const allInvestigations = await memStorage.getAllSprmInvestigations();
+  for (const investigation of allInvestigations) {
+    const { id, mpId, ...invData } = investigation;
+    const newMpId = mpIdMap.get(mpId);
+    if (newMpId) {
+      await dbStorage.createSprmInvestigation({ ...invData, mpId: newMpId });
+    }
+  }
+  
+  // Seed legislative proposals with updated MP IDs
+  const allProposals = await memStorage.getAllLegislativeProposals();
+  for (const proposal of allProposals) {
+    const { id, mpId, ...propData } = proposal;
+    const newMpId = mpIdMap.get(mpId);
+    if (newMpId) {
+      await dbStorage.createLegislativeProposal({ ...propData, mpId: newMpId });
+    }
+  }
+  
+  // Seed debate participations with updated MP IDs
+  const allDebates = await memStorage.getAllDebateParticipations();
+  for (const debate of allDebates) {
+    const { id, mpId, ...debateData } = debate;
+    const newMpId = mpIdMap.get(mpId);
+    if (newMpId) {
+      await dbStorage.createDebateParticipation({ ...debateData, mpId: newMpId });
+    }
+  }
+  
+  // Seed parliamentary questions with updated MP IDs
+  const allQuestions = await memStorage.getAllParliamentaryQuestions();
+  for (const question of allQuestions) {
+    const { id, mpId, ...qData } = question;
+    const newMpId = mpIdMap.get(mpId);
+    if (newMpId) {
+      await dbStorage.createParliamentaryQuestion({ ...qData, mpId: newMpId });
+    }
+  }
+  
+  console.log("Database seeded successfully!");
+}
+
+// Use MemStorage for development - all data in memory with seed data included
+// DbStorage is available for PostgreSQL when needed for production
 export const storage = new MemStorage();
