@@ -4,8 +4,8 @@ import { storage } from './storage';
 async function scrapeAndStoreHansard() {
   const scraper = new HansardScraper();
   
-  console.log('Fetching Hansard list for 15th Parliament...');
-  const hansardList = await scraper.getHansardListForParliament15(200);
+  console.log('Fetching ALL Hansard records for 15th Parliament...');
+  const hansardList = await scraper.getHansardListForParliament15(1000);
   
   console.log(`Found ${hansardList.length} Hansard records to process`);
   
