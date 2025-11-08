@@ -89,3 +89,58 @@ export const updateSprmInvestigationSchema = insertSprmInvestigationSchema.omit(
 export type InsertSprmInvestigation = z.infer<typeof insertSprmInvestigationSchema>;
 export type UpdateSprmInvestigation = z.infer<typeof updateSprmInvestigationSchema>;
 export type SprmInvestigation = typeof sprmInvestigations.$inferSelect;
+
+export const legislativeProposals = pgTable("legislative_proposals", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  mpId: varchar("mp_id").notNull().references(() => mps.id),
+  title: text("title").notNull(),
+  type: text("type").notNull(),
+  dateProposed: timestamp("date_proposed").notNull(),
+  status: text("status").notNull(),
+  description: text("description").notNull(),
+  hansardReference: text("hansard_reference"),
+  outcome: text("outcome"),
+});
+
+export const insertLegislativeProposalSchema = createInsertSchema(legislativeProposals).omit({
+  id: true,
+});
+
+export type InsertLegislativeProposal = z.infer<typeof insertLegislativeProposalSchema>;
+export type LegislativeProposal = typeof legislativeProposals.$inferSelect;
+
+export const debateParticipations = pgTable("debate_participations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  mpId: varchar("mp_id").notNull().references(() => mps.id),
+  topic: text("topic").notNull(),
+  date: timestamp("date").notNull(),
+  contribution: text("contribution").notNull(),
+  hansardReference: text("hansard_reference"),
+  position: text("position"),
+});
+
+export const insertDebateParticipationSchema = createInsertSchema(debateParticipations).omit({
+  id: true,
+});
+
+export type InsertDebateParticipation = z.infer<typeof insertDebateParticipationSchema>;
+export type DebateParticipation = typeof debateParticipations.$inferSelect;
+
+export const parliamentaryQuestions = pgTable("parliamentary_questions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  mpId: varchar("mp_id").notNull().references(() => mps.id),
+  questionText: text("question_text").notNull(),
+  dateAsked: timestamp("date_asked").notNull(),
+  ministry: text("ministry").notNull(),
+  topic: text("topic").notNull(),
+  answerStatus: text("answer_status").notNull(),
+  hansardReference: text("hansard_reference"),
+  answerText: text("answer_text"),
+});
+
+export const insertParliamentaryQuestionSchema = createInsertSchema(parliamentaryQuestions).omit({
+  id: true,
+});
+
+export type InsertParliamentaryQuestion = z.infer<typeof insertParliamentaryQuestionSchema>;
+export type ParliamentaryQuestion = typeof parliamentaryQuestions.$inferSelect;
