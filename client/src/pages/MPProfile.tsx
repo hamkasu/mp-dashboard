@@ -1,13 +1,15 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useRoute, Link } from "wouter";
-import { ArrowLeft, MapPin, UserCircle, Flag, FileText, Wallet, Calendar, Scale, ExternalLink, AlertTriangle, Info } from "lucide-react";
+import { ArrowLeft, MapPin, UserCircle, Flag, FileText, Wallet, Calendar, Scale, ExternalLink, AlertTriangle, Info, MessageSquare, HelpCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import type { Mp, CourtCase, SprmInvestigation } from "@shared/schema";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import type { Mp, CourtCase, SprmInvestigation, LegislativeProposal, DebateParticipation, ParliamentaryQuestion } from "@shared/schema";
 import { calculateTotalSalary, calculateYearlyBreakdown, formatCurrency, getPublicationName } from "@/lib/utils";
 import { format } from "date-fns";
 
@@ -54,6 +56,23 @@ export default function MPProfile() {
     queryKey: [`/api/mps/${mpId}/sprm-investigations`],
     enabled: !!mpId,
   });
+
+  const { data: legislativeProposals = [], isLoading: isLoadingProposals } = useQuery<LegislativeProposal[]>({
+    queryKey: [`/api/mps/${mpId}/legislative-proposals`],
+    enabled: !!mpId,
+  });
+
+  const { data: debateParticipations = [], isLoading: isLoadingDebates } = useQuery<DebateParticipation[]>({
+    queryKey: [`/api/mps/${mpId}/debate-participations`],
+    enabled: !!mpId,
+  });
+
+  const { data: parliamentaryQuestions = [], isLoading: isLoadingQuestions } = useQuery<ParliamentaryQuestion[]>({
+    queryKey: [`/api/mps/${mpId}/parliamentary-questions`],
+    enabled: !!mpId,
+  });
+
+  const [activityTab, setActivityTab] = useState("legislation");
 
   if (isLoading) {
     return (
@@ -813,6 +832,166 @@ export default function MPProfile() {
                         </div>
                       )}
                     </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Parliamentary Activity Section */}
+            {(isLoadingProposals || isLoadingDebates || isLoadingQuestions || 
+              legislativeProposals.length > 0 || debateParticipations.length > 0 || parliamentaryQuestions.length > 0) && (
+              <Card className="md:col-span-2">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <FileText className="h-5 w-5" />
+                    Parliamentary Activity
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {isLoadingProposals && isLoadingDebates && isLoadingQuestions ? (
+                    <div className="space-y-3">
+                      <div className="h-20 bg-muted animate-pulse rounded" />
+                    </div>
+                  ) : (
+                    <Tabs value={activityTab} onValueChange={setActivityTab}>
+                      <TabsList className="grid w-full grid-cols-3">
+                        <TabsTrigger value="legislation" data-testid="tab-activity-legislation">
+                          <FileText className="w-4 h-4 mr-2" />
+                          Legislation ({legislativeProposals.length})
+                        </TabsTrigger>
+                        <TabsTrigger value="debates" data-testid="tab-activity-debates">
+                          <MessageSquare className="w-4 h-4 mr-2" />
+                          Debates ({debateParticipations.length})
+                        </TabsTrigger>
+                        <TabsTrigger value="questions" data-testid="tab-activity-questions">
+                          <HelpCircle className="w-4 h-4 mr-2" />
+                          Questions ({parliamentaryQuestions.length})
+                        </TabsTrigger>
+                      </TabsList>
+
+                      <TabsContent value="legislation" className="mt-4 space-y-3">
+                        {legislativeProposals.length === 0 ? (
+                          <div className="text-center py-8 text-muted-foreground">
+                            <FileText className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                            <p>No legislative proposals on record for this MP.</p>
+                          </div>
+                        ) : (
+                          legislativeProposals.map((proposal) => (
+                            <div
+                              key={proposal.id}
+                              data-testid={`activity-proposal-${proposal.id}`}
+                              className="border rounded-lg p-4 hover:bg-muted/30 transition-colors"
+                            >
+                              <div className="flex items-start justify-between gap-4 mb-2">
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <Badge variant="outline">{proposal.status}</Badge>
+                                    <Badge variant="secondary">{proposal.type}</Badge>
+                                  </div>
+                                  <h5 className="font-semibold mb-1">{proposal.title}</h5>
+                                  <p className="text-sm text-muted-foreground mb-2">
+                                    {proposal.description}
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="text-xs text-muted-foreground mb-2">
+                                <span>Proposed: {format(new Date(proposal.dateProposed), "MMM d, yyyy")}</span>
+                              </div>
+                              {proposal.outcome && (
+                                <p className="text-sm mb-2">
+                                  <span className="font-medium">Outcome: </span>
+                                  {proposal.outcome}
+                                </p>
+                              )}
+                              {proposal.hansardReference && (
+                                <p className="text-xs text-muted-foreground">
+                                  <span className="font-medium">Hansard: </span>
+                                  {proposal.hansardReference}
+                                </p>
+                              )}
+                            </div>
+                          ))
+                        )}
+                      </TabsContent>
+
+                      <TabsContent value="debates" className="mt-4 space-y-3">
+                        {debateParticipations.length === 0 ? (
+                          <div className="text-center py-8 text-muted-foreground">
+                            <MessageSquare className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                            <p>No debate participations on record for this MP.</p>
+                          </div>
+                        ) : (
+                          debateParticipations.map((debate) => (
+                            <div
+                              key={debate.id}
+                              data-testid={`activity-debate-${debate.id}`}
+                              className="border rounded-lg p-4 hover:bg-muted/30 transition-colors"
+                            >
+                              <h5 className="font-semibold mb-1">{debate.topic}</h5>
+                              <div className="text-xs text-muted-foreground mb-2">
+                                <span>{format(new Date(debate.date), "MMM d, yyyy")}</span>
+                              </div>
+                              <p className="text-sm text-muted-foreground mb-2">
+                                {debate.contribution}
+                              </p>
+                              {debate.position && (
+                                <Badge variant="outline" className="mb-2">{debate.position}</Badge>
+                              )}
+                              {debate.hansardReference && (
+                                <p className="text-xs text-muted-foreground">
+                                  <span className="font-medium">Hansard: </span>
+                                  {debate.hansardReference}
+                                </p>
+                              )}
+                            </div>
+                          ))
+                        )}
+                      </TabsContent>
+
+                      <TabsContent value="questions" className="mt-4 space-y-3">
+                        {parliamentaryQuestions.length === 0 ? (
+                          <div className="text-center py-8 text-muted-foreground">
+                            <HelpCircle className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                            <p>No parliamentary questions on record for this MP.</p>
+                          </div>
+                        ) : (
+                          parliamentaryQuestions.map((question) => (
+                            <div
+                              key={question.id}
+                              data-testid={`activity-question-${question.id}`}
+                              className="border rounded-lg p-4 hover:bg-muted/30 transition-colors"
+                            >
+                              <div className="flex items-center gap-2 mb-1">
+                                <Badge variant="outline">{question.answerStatus}</Badge>
+                                <Badge variant="secondary">{question.ministry}</Badge>
+                              </div>
+                              <h5 className="font-semibold mb-1">{question.topic}</h5>
+                              <div className="text-xs text-muted-foreground mb-2">
+                                <span>Asked: {format(new Date(question.dateAsked), "MMM d, yyyy")}</span>
+                              </div>
+                              <p className="text-sm mb-2">
+                                <span className="font-medium">Question: </span>
+                                {question.questionText}
+                              </p>
+                              {question.answerText && (
+                                <div className="bg-muted p-3 rounded-md mb-2">
+                                  <p className="text-sm">
+                                    <span className="font-medium">Answer: </span>
+                                    {question.answerText}
+                                  </p>
+                                </div>
+                              )}
+                              {question.hansardReference && (
+                                <p className="text-xs text-muted-foreground">
+                                  <span className="font-medium">Hansard: </span>
+                                  {question.hansardReference}
+                                </p>
+                              )}
+                            </div>
+                          ))
+                        )}
+                      </TabsContent>
+                    </Tabs>
                   )}
                 </CardContent>
               </Card>

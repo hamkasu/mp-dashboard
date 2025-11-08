@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import Home from "@/pages/Home";
 import MPProfile from "@/pages/MPProfile";
+import ParliamentaryActivity from "@/pages/ParliamentaryActivity";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -12,6 +13,7 @@ function Router() {
     <Switch>
       <Route path="/" component={Home} />
       <Route path="/mp/:id" component={MPProfile} />
+      <Route path="/activity" component={ParliamentaryActivity} />
       <Route component={NotFound} />
     </Switch>
   );

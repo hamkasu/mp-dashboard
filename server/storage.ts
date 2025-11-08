@@ -1176,6 +1176,5 @@ export async function seedDatabase() {
   console.log("Database seeded successfully!");
 }
 
-// Use MemStorage for development - all data in memory with seed data included
-// DbStorage is available for PostgreSQL when needed for production
-export const storage = new MemStorage();
+// Use DbStorage if DATABASE_URL is configured, otherwise use MemStorage
+export const storage = process.env.DATABASE_URL ? new DbStorage() : new MemStorage();

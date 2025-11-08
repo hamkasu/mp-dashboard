@@ -1,6 +1,7 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { seedDatabase } from "./storage";
 
 const app = express();
 
@@ -47,6 +48,16 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Seed database before starting server (only if using DbStorage)
+  if (process.env.DATABASE_URL) {
+    try {
+      await seedDatabase();
+      log("Database seeded successfully");
+    } catch (error) {
+      log("Warning: Database seeding failed:", error);
+    }
+  }
+
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
