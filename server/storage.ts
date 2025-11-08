@@ -943,7 +943,13 @@ export class DbStorage implements IStorage {
   }
 
   async getCourtCasesByMpId(mpId: string): Promise<CourtCase[]> {
-    return await db.select().from(courtCases).where(eq(courtCases.mpId, mpId));
+    try {
+      const result = await db.select().from(courtCases).where(eq(courtCases.mpId, mpId));
+      return result ?? [];
+    } catch (error) {
+      console.error("Error in getCourtCasesByMpId:", error);
+      return [];
+    }
   }
 
   async getAllCourtCases(): Promise<CourtCase[]> {
@@ -978,7 +984,13 @@ export class DbStorage implements IStorage {
   }
 
   async getSprmInvestigationsByMpId(mpId: string): Promise<SprmInvestigation[]> {
-    return await db.select().from(sprmInvestigations).where(eq(sprmInvestigations.mpId, mpId));
+    try {
+      const result = await db.select().from(sprmInvestigations).where(eq(sprmInvestigations.mpId, mpId));
+      return result ?? [];
+    } catch (error) {
+      console.error("Error in getSprmInvestigationsByMpId:", error);
+      return [];
+    }
   }
 
   async getAllSprmInvestigations(): Promise<SprmInvestigation[]> {
@@ -1013,7 +1025,13 @@ export class DbStorage implements IStorage {
   }
 
   async getLegislativeProposalsByMpId(mpId: string): Promise<LegislativeProposal[]> {
-    return await db.select().from(legislativeProposals).where(eq(legislativeProposals.mpId, mpId));
+    try {
+      const result = await db.select().from(legislativeProposals).where(eq(legislativeProposals.mpId, mpId));
+      return result ?? [];
+    } catch (error) {
+      console.error("Error in getLegislativeProposalsByMpId:", error);
+      return [];
+    }
   }
 
   async getAllLegislativeProposals(): Promise<LegislativeProposal[]> {
@@ -1048,7 +1066,13 @@ export class DbStorage implements IStorage {
   }
 
   async getDebateParticipationsByMpId(mpId: string): Promise<DebateParticipation[]> {
-    return await db.select().from(debateParticipations).where(eq(debateParticipations.mpId, mpId));
+    try {
+      const result = await db.select().from(debateParticipations).where(eq(debateParticipations.mpId, mpId));
+      return result ?? [];
+    } catch (error) {
+      console.error("Error in getDebateParticipationsByMpId:", error);
+      return [];
+    }
   }
 
   async getAllDebateParticipations(): Promise<DebateParticipation[]> {
@@ -1083,7 +1107,13 @@ export class DbStorage implements IStorage {
   }
 
   async getParliamentaryQuestionsByMpId(mpId: string): Promise<ParliamentaryQuestion[]> {
-    return await db.select().from(parliamentaryQuestions).where(eq(parliamentaryQuestions.mpId, mpId));
+    try {
+      const result = await db.select().from(parliamentaryQuestions).where(eq(parliamentaryQuestions.mpId, mpId));
+      return result ?? [];
+    } catch (error) {
+      console.error("Error in getParliamentaryQuestionsByMpId:", error);
+      return [];
+    }
   }
 
   async getAllParliamentaryQuestions(): Promise<ParliamentaryQuestion[]> {

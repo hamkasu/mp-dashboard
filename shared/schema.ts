@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, timestamp, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -57,11 +57,13 @@ export const courtCases = pgTable("court_cases", {
   filingDate: timestamp("filing_date").notNull(),
   outcome: text("outcome"),
   charges: text("charges").notNull(),
-  documentLinks: text("document_links").array().default(sql`'{}'`),
+  documentLinks: jsonb("document_links").$type<string[]>().notNull().default(sql`'[]'`),
 });
 
 export const insertCourtCaseSchema = createInsertSchema(courtCases).omit({
   id: true,
+}).extend({
+  documentLinks: z.array(z.string()).default([]),
 });
 
 export type InsertCourtCase = z.infer<typeof insertCourtCaseSchema>;
@@ -77,11 +79,13 @@ export const sprmInvestigations = pgTable("sprm_investigations", {
   endDate: timestamp("end_date"),
   outcome: text("outcome"),
   charges: text("charges").notNull(),
-  documentLinks: text("document_links").array().default(sql`'{}'`),
+  documentLinks: jsonb("document_links").$type<string[]>().notNull().default(sql`'[]'`),
 });
 
 export const insertSprmInvestigationSchema = createInsertSchema(sprmInvestigations).omit({
   id: true,
+}).extend({
+  documentLinks: z.array(z.string()).default([]),
 });
 
 export const updateSprmInvestigationSchema = insertSprmInvestigationSchema.omit({ mpId: true }).partial();
