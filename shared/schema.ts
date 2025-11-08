@@ -184,6 +184,7 @@ export const insertHansardRecordSchema = createInsertSchema(hansardRecords).omit
   id: true,
   createdAt: true,
 }).extend({
+  sessionDate: z.coerce.date(),
   pdfLinks: z.array(z.string()).default([]),
   topics: z.array(z.string()).default([]),
   speakers: z.array(z.object({

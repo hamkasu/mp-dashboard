@@ -2,7 +2,7 @@ import { type User, type InsertUser, type Mp, type InsertMp, type CourtCase, typ
 import { randomUUID } from "crypto";
 import { db } from "./db";
 import { mps, users, courtCases, sprmInvestigations, legislativeProposals, debateParticipations, parliamentaryQuestions, hansardRecords } from "@shared/schema";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 
 export interface IStorage {
   // User methods
@@ -1264,14 +1264,72 @@ export class DbStorage implements IStorage {
   
   // Hansard Record methods
   async getHansardRecord(id: string): Promise<HansardRecord | undefined> {
-    const result = await db.select().from(hansardRecords).where(eq(hansardRecords.id, id));
-    return result[0];
+    // Use raw SQL to work around Neon driver's broken timestamp deserialization
+    const result = await db.execute(sql`
+      SELECT 
+        id,
+        session_number,
+        to_char(session_date, 'YYYY-MM-DD"T"HH24:MI:SS"Z"') as session_date,
+        parliament_term,
+        sitting,
+        transcript,
+        pdf_links,
+        topics,
+        speakers,
+        vote_records,
+        created_at
+      FROM hansard_records
+      WHERE id = ${id}
+    `);
+    if (!result.rows || result.rows.length === 0) return undefined;
+    const row: any = result.rows[0];
+    return {
+      id: row.id,
+      sessionNumber: row.session_number,
+      sessionDate: row.session_date,
+      parliamentTerm: row.parliament_term,
+      sitting: row.sitting,
+      transcript: row.transcript,
+      pdfLinks: row.pdf_links,
+      topics: row.topics,
+      speakers: row.speakers,
+      voteRecords: row.vote_records,
+      createdAt: row.created_at,
+    } as unknown as HansardRecord;
   }
   
   async getAllHansardRecords(): Promise<HansardRecord[]> {
     try {
-      const result = await db.select().from(hansardRecords);
-      return result || [];
+      // Use raw SQL to work around Neon driver's broken timestamp deserialization
+      const result = await db.execute(sql`
+        SELECT 
+          id,
+          session_number,
+          to_char(session_date, 'YYYY-MM-DD"T"HH24:MI:SS"Z"') as session_date,
+          parliament_term,
+          sitting,
+          transcript,
+          pdf_links,
+          topics,
+          speakers,
+          vote_records,
+          created_at
+        FROM hansard_records
+        ORDER BY session_date DESC
+      `);
+      return result.rows.map((row: any) => ({
+        id: row.id,
+        sessionNumber: row.session_number,
+        sessionDate: row.session_date,
+        parliamentTerm: row.parliament_term,
+        sitting: row.sitting,
+        transcript: row.transcript,
+        pdfLinks: row.pdf_links,
+        topics: row.topics,
+        speakers: row.speakers,
+        voteRecords: row.vote_records,
+        createdAt: row.created_at,
+      })) as unknown as HansardRecord[];
     } catch (error) {
       console.error("Error in getAllHansardRecords:", error);
       return [];
@@ -1279,8 +1337,42 @@ export class DbStorage implements IStorage {
   }
   
   async getHansardRecordsBySessionNumber(sessionNumber: string): Promise<HansardRecord[]> {
-    const result = await db.select().from(hansardRecords).where(eq(hansardRecords.sessionNumber, sessionNumber));
-    return result || [];
+    try {
+      // Use raw SQL to work around Neon driver's broken timestamp deserialization
+      const result = await db.execute(sql`
+        SELECT 
+          id,
+          session_number,
+          to_char(session_date, 'YYYY-MM-DD"T"HH24:MI:SS"Z"') as session_date,
+          parliament_term,
+          sitting,
+          transcript,
+          pdf_links,
+          topics,
+          speakers,
+          vote_records,
+          created_at
+        FROM hansard_records
+        WHERE session_number = ${sessionNumber}
+        ORDER BY session_date DESC
+      `);
+      return result.rows.map((row: any) => ({
+        id: row.id,
+        sessionNumber: row.session_number,
+        sessionDate: row.session_date,
+        parliamentTerm: row.parliament_term,
+        sitting: row.sitting,
+        transcript: row.transcript,
+        pdfLinks: row.pdf_links,
+        topics: row.topics,
+        speakers: row.speakers,
+        voteRecords: row.vote_records,
+        createdAt: row.created_at,
+      })) as unknown as HansardRecord[];
+    } catch (error) {
+      console.error("Error in getHansardRecordsBySessionNumber:", error);
+      return [];
+    }
   }
   
   async createHansardRecord(record: InsertHansardRecord): Promise<HansardRecord> {
