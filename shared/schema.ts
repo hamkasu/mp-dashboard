@@ -57,7 +57,7 @@ export const courtCases = pgTable("court_cases", {
   filingDate: timestamp("filing_date").notNull(),
   outcome: text("outcome"),
   charges: text("charges").notNull(),
-  documentLinks: text("document_links").array(),
+  documentLinks: text("document_links").array().default(sql`'{}'`),
 });
 
 export const insertCourtCaseSchema = createInsertSchema(courtCases).omit({
@@ -77,7 +77,7 @@ export const sprmInvestigations = pgTable("sprm_investigations", {
   endDate: timestamp("end_date"),
   outcome: text("outcome"),
   charges: text("charges").notNull(),
-  documentLinks: text("document_links").array(),
+  documentLinks: text("document_links").array().default(sql`'{}'`),
 });
 
 export const insertSprmInvestigationSchema = createInsertSchema(sprmInvestigations).omit({

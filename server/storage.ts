@@ -928,7 +928,7 @@ export class DbStorage implements IStorage {
 
   async getAllMps(): Promise<Mp[]> {
     const result = await db.select().from(mps);
-    return result || [];
+    return result ?? [];
   }
 
   async createMp(mp: InsertMp): Promise<Mp> {
@@ -947,8 +947,13 @@ export class DbStorage implements IStorage {
   }
 
   async getAllCourtCases(): Promise<CourtCase[]> {
-    const result = await db.select().from(courtCases);
-    return result || [];
+    try {
+      const result = await db.select().from(courtCases);
+      return result ?? [];
+    } catch (error) {
+      console.error("Error in getAllCourtCases:", error);
+      return [];
+    }
   }
 
   async createCourtCase(courtCase: InsertCourtCase): Promise<CourtCase> {
@@ -977,8 +982,13 @@ export class DbStorage implements IStorage {
   }
 
   async getAllSprmInvestigations(): Promise<SprmInvestigation[]> {
-    const result = await db.select().from(sprmInvestigations);
-    return result || [];
+    try {
+      const result = await db.select().from(sprmInvestigations);
+      return result ?? [];
+    } catch (error) {
+      console.error("Error in getAllSprmInvestigations:", error);
+      return [];
+    }
   }
 
   async createSprmInvestigation(investigation: InsertSprmInvestigation): Promise<SprmInvestigation> {
@@ -1007,8 +1017,13 @@ export class DbStorage implements IStorage {
   }
 
   async getAllLegislativeProposals(): Promise<LegislativeProposal[]> {
-    const result = await db.select().from(legislativeProposals);
-    return result || [];
+    try {
+      const result = await db.select().from(legislativeProposals);
+      return result ?? [];
+    } catch (error) {
+      console.error("Error in getAllLegislativeProposals:", error);
+      return [];
+    }
   }
 
   async createLegislativeProposal(proposal: InsertLegislativeProposal): Promise<LegislativeProposal> {
@@ -1037,8 +1052,13 @@ export class DbStorage implements IStorage {
   }
 
   async getAllDebateParticipations(): Promise<DebateParticipation[]> {
-    const result = await db.select().from(debateParticipations);
-    return result || [];
+    try {
+      const result = await db.select().from(debateParticipations);
+      return result ?? [];
+    } catch (error) {
+      console.error("Error in getAllDebateParticipations:", error);
+      return [];
+    }
   }
 
   async createDebateParticipation(participation: InsertDebateParticipation): Promise<DebateParticipation> {
@@ -1067,8 +1087,13 @@ export class DbStorage implements IStorage {
   }
 
   async getAllParliamentaryQuestions(): Promise<ParliamentaryQuestion[]> {
-    const result = await db.select().from(parliamentaryQuestions);
-    return result || [];
+    try {
+      const result = await db.select().from(parliamentaryQuestions);
+      return result ?? [];
+    } catch (error) {
+      console.error("Error in getAllParliamentaryQuestions:", error);
+      return [];
+    }
   }
 
   async createParliamentaryQuestion(question: InsertParliamentaryQuestion): Promise<ParliamentaryQuestion> {
