@@ -72,6 +72,7 @@ export class MemStorage implements IStorage {
   private legislativeProposals: Map<string, LegislativeProposal>;
   private debateParticipations: Map<string, DebateParticipation>;
   private parliamentaryQuestions: Map<string, ParliamentaryQuestion>;
+  private hansardRecords: Map<string, HansardRecord>;
 
   constructor() {
     this.users = new Map();
@@ -81,12 +82,14 @@ export class MemStorage implements IStorage {
     this.legislativeProposals = new Map();
     this.debateParticipations = new Map();
     this.parliamentaryQuestions = new Map();
+    this.hansardRecords = new Map();
     this.seedMps();
     this.seedCourtCases();
     this.seedSprmInvestigations();
     this.seedLegislativeProposals();
     this.seedDebateParticipations();
     this.seedParliamentaryQuestions();
+    this.seedHansardRecords();
   }
 
   async getUser(id: string): Promise<User | undefined> {
@@ -816,6 +819,116 @@ export class MemStorage implements IStorage {
   async deleteParliamentaryQuestion(id: string): Promise<boolean> {
     return this.parliamentaryQuestions.delete(id);
   }
+  
+  // Hansard Record methods
+  async getHansardRecord(id: string): Promise<HansardRecord | undefined> {
+    return this.hansardRecords.get(id);
+  }
+  
+  async getAllHansardRecords(): Promise<HansardRecord[]> {
+    return Array.from(this.hansardRecords.values());
+  }
+  
+  async getHansardRecordsBySessionNumber(sessionNumber: string): Promise<HansardRecord[]> {
+    return Array.from(this.hansardRecords.values()).filter(
+      record => record.sessionNumber === sessionNumber
+    );
+  }
+  
+  async createHansardRecord(insertRecord: InsertHansardRecord): Promise<HansardRecord> {
+    const id = randomUUID();
+    const record: HansardRecord = {
+      ...insertRecord,
+      id,
+      createdAt: new Date(),
+    };
+    this.hansardRecords.set(id, record);
+    return record;
+  }
+  
+  async updateHansardRecord(id: string, updates: UpdateHansardRecord): Promise<HansardRecord | undefined> {
+    const existing = this.hansardRecords.get(id);
+    if (!existing) return undefined;
+    
+    const updated: HansardRecord = {
+      ...existing,
+      ...updates,
+    };
+    this.hansardRecords.set(id, updated);
+    return updated;
+  }
+  
+  async deleteHansardRecord(id: string): Promise<boolean> {
+    return this.hansardRecords.delete(id);
+  }
+
+  private seedHansardRecords() {
+    const mpsArray = Array.from(this.mps.values());
+    
+    const anwarMp = mpsArray.find(mp => mp.name === "Anwar Ibrahim");
+    const rafizMp = mpsArray.find(mp => mp.name === "Rafizi Ramli");
+    const ahmadZahidMp = mpsArray.find(mp => mp.name === "Ahmad Zahid Hamidi");
+    
+    this.createHansardRecord({
+      sessionNumber: "DR.11.04.2022",
+      sessionDate: new Date("2022-04-11"),
+      parliamentTerm: "15th Parliament",
+      sitting: "First Session",
+      transcript: "The Dewan Rakyat proceeded with the second reading of the Constitution (Amendment) Bill 2022, commonly known as the Anti-Hopping Bill. The Yang Berhormat Prime Minister Dato' Seri Anwar Ibrahim presented the bill, explaining that this constitutional amendment aims to strengthen democratic principles by preventing elected representatives from switching political allegiances mid-term. The bill received strong bipartisan support with extensive debate on the mechanisms of implementation and impact on parliamentary democracy.",
+      pdfLinks: ["https://hansard.parliament.gov.my/files/DR-11042022.pdf"],
+      topics: ["Anti-Hopping Bill", "Constitutional Amendment", "Democratic Reform", "Party Loyalty"],
+      speakers: [
+        ...(anwarMp ? [{
+          mpId: anwarMp.id,
+          mpName: anwarMp.name,
+          speakingOrder: 1,
+          duration: 45,
+        }] : []),
+        ...(ahmadZahidMp ? [{
+          mpId: ahmadZahidMp.id,
+          mpName: ahmadZahidMp.name,
+          speakingOrder: 2,
+          duration: 30,
+        }] : []),
+      ],
+      voteRecords: [{
+        voteType: "Second Reading",
+        motion: "Constitution (Amendment) Bill 2022",
+        result: "Passed",
+        yesCount: 209,
+        noCount: 11,
+        abstainCount: 2,
+        timestamp: "2022-04-11T16:30:00Z",
+      }],
+    });
+    
+    this.createHansardRecord({
+      sessionNumber: "DR.13.10.2023",
+      sessionDate: new Date("2023-10-13"),
+      parliamentTerm: "15th Parliament",
+      sitting: "Third Session",
+      transcript: "The Dewan Rakyat debated Budget 2024 with focus on economic reforms, subsidy rationalization, and fiscal sustainability. The Minister of Economy YB Rafizi Ramli presented the government's comprehensive economic plan including the PADU (Central Database Hub) initiative for targeted subsidy distribution. Extensive discussions covered inflation control, digital economy development, and social safety net programs.",
+      pdfLinks: ["https://hansard.parliament.gov.my/files/DR-13102023.pdf"],
+      topics: ["Budget 2024", "Economic Reform", "Subsidy Rationalization", "PADU Database", "Digital Economy"],
+      speakers: [
+        ...(rafizMp ? [{
+          mpId: rafizMp.id,
+          mpName: rafizMp.name,
+          speakingOrder: 1,
+          duration: 60,
+        }] : []),
+      ],
+      voteRecords: [{
+        voteType: "Budget Approval",
+        motion: "Budget 2024 - Economic Development",
+        result: "Passed",
+        yesCount: 148,
+        noCount: 74,
+        abstainCount: 0,
+        timestamp: "2023-10-13T18:45:00Z",
+      }],
+    });
+  }
 
   private seedLegislativeProposals() {
     const mpsArray = Array.from(this.mps.values());
@@ -1148,6 +1261,42 @@ export class DbStorage implements IStorage {
     const result = await db.delete(parliamentaryQuestions).where(eq(parliamentaryQuestions.id, id)).returning();
     return result.length > 0;
   }
+  
+  // Hansard Record methods
+  async getHansardRecord(id: string): Promise<HansardRecord | undefined> {
+    const result = await db.select().from(hansardRecords).where(eq(hansardRecords.id, id));
+    return result[0];
+  }
+  
+  async getAllHansardRecords(): Promise<HansardRecord[]> {
+    try {
+      const result = await db.select().from(hansardRecords);
+      return result || [];
+    } catch (error) {
+      console.error("Error in getAllHansardRecords:", error);
+      return [];
+    }
+  }
+  
+  async getHansardRecordsBySessionNumber(sessionNumber: string): Promise<HansardRecord[]> {
+    const result = await db.select().from(hansardRecords).where(eq(hansardRecords.sessionNumber, sessionNumber));
+    return result || [];
+  }
+  
+  async createHansardRecord(record: InsertHansardRecord): Promise<HansardRecord> {
+    const result = await db.insert(hansardRecords).values(record).returning();
+    return result[0];
+  }
+  
+  async updateHansardRecord(id: string, record: UpdateHansardRecord): Promise<HansardRecord | undefined> {
+    const result = await db.update(hansardRecords).set(record).where(eq(hansardRecords.id, id)).returning();
+    return result[0];
+  }
+  
+  async deleteHansardRecord(id: string): Promise<boolean> {
+    const result = await db.delete(hansardRecords).where(eq(hansardRecords.id, id)).returning();
+    return result.length > 0;
+  }
 }
 
 // Helper function to seed the database with initial data from MemStorage
@@ -1234,6 +1383,23 @@ export async function seedDatabase() {
     if (newMpId) {
       await dbStorage.createParliamentaryQuestion({ ...qData, mpId: newMpId });
     }
+  }
+  
+  // Seed Hansard records (update MP IDs in speakers)
+  const allHansardRecords = await memStorage.getAllHansardRecords();
+  for (const record of allHansardRecords) {
+    const { id, createdAt, ...recordData } = record;
+    
+    // Update MP IDs in speakers array
+    const updatedSpeakers = recordData.speakers.map(speaker => {
+      const newMpId = mpIdMap.get(speaker.mpId);
+      return newMpId ? { ...speaker, mpId: newMpId } : speaker;
+    });
+    
+    await dbStorage.createHansardRecord({
+      ...recordData,
+      speakers: updatedSpeakers,
+    });
   }
   
   console.log("Database seeded successfully!");
