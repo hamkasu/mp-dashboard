@@ -1,5 +1,6 @@
-import { Users, Flag, UserCircle, MapPin, Calendar } from "lucide-react";
+import { Users, Flag, UserCircle, MapPin, Calendar, Info } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface Statistics {
   totalMps: number;
@@ -108,7 +109,21 @@ export function StatisticsCards({ stats, isLoading }: StatisticsCardsProps) {
 
       <Card data-testid="card-attendance">
         <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Avg Attendance</CardTitle>
+          <div className="flex items-center gap-1">
+            <CardTitle className="text-sm font-medium">Avg Attendance</CardTitle>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button data-testid="button-avg-attendance-info">
+                  <Info className="h-3 w-3 text-muted-foreground" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent className="max-w-xs">
+                <p className="text-sm">
+                  Average attendance rate across all MPs, calculated from parliamentary sitting days attended vs. total sitting days.
+                </p>
+              </TooltipContent>
+            </Tooltip>
+          </div>
           <Calendar className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
@@ -119,6 +134,9 @@ export function StatisticsCards({ stats, isLoading }: StatisticsCardsProps) {
               </div>
               <p className="text-xs text-muted-foreground mt-1">
                 Parliament attendance
+              </p>
+              <p className="text-xs text-muted-foreground italic mt-2" data-testid="text-avg-attendance-source">
+                Source: Parliament Records
               </p>
             </>
           ) : (

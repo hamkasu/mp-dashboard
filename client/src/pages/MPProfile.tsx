@@ -1,11 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
 import { useRoute, Link } from "wouter";
-import { ArrowLeft, MapPin, UserCircle, Flag, FileText, Wallet, Calendar, Scale, ExternalLink, AlertTriangle } from "lucide-react";
+import { ArrowLeft, MapPin, UserCircle, Flag, FileText, Wallet, Calendar, Scale, ExternalLink, AlertTriangle, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { Mp, CourtCase, SprmInvestigation } from "@shared/schema";
 import { calculateTotalSalary, calculateYearlyBreakdown, formatCurrency, getPublicationName } from "@/lib/utils";
 import { format } from "date-fns";
@@ -212,6 +213,18 @@ export default function MPProfile() {
                 <CardTitle className="flex items-center gap-2">
                   <Calendar className="h-5 w-5" />
                   Parliament Attendance
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button className="ml-1" data-testid="button-attendance-info">
+                        <Info className="h-4 w-4 text-muted-foreground" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-xs">
+                      <p className="text-sm">
+                        Attendance is calculated based on parliamentary sitting days. The percentage represents days attended out of total sitting days in the current session.
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
@@ -237,6 +250,10 @@ export default function MPProfile() {
                     </p>
                   </div>
                 </div>
+                <Separator />
+                <p className="text-xs text-muted-foreground italic" data-testid="text-attendance-source">
+                  Source: Malaysian Parliament Records
+                </p>
               </CardContent>
             </Card>
 
