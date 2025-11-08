@@ -1,4 +1,4 @@
-import { type User, type InsertUser, type Mp, type InsertMp, type CourtCase, type InsertCourtCase, type SprmInvestigation, type InsertSprmInvestigation } from "@shared/schema";
+import { type User, type InsertUser, type Mp, type InsertMp, type CourtCase, type InsertCourtCase, type SprmInvestigation, type InsertSprmInvestigation, type LegislativeProposal, type InsertLegislativeProposal, type DebateParticipation, type InsertDebateParticipation, type ParliamentaryQuestion, type InsertParliamentaryQuestion } from "@shared/schema";
 import { randomUUID } from "crypto";
 
 export interface IStorage {
@@ -27,6 +27,30 @@ export interface IStorage {
   createSprmInvestigation(investigation: InsertSprmInvestigation): Promise<SprmInvestigation>;
   updateSprmInvestigation(id: string, investigation: Partial<InsertSprmInvestigation>): Promise<SprmInvestigation | undefined>;
   deleteSprmInvestigation(id: string): Promise<boolean>;
+  
+  // Legislative Proposal methods
+  getLegislativeProposal(id: string): Promise<LegislativeProposal | undefined>;
+  getLegislativeProposalsByMpId(mpId: string): Promise<LegislativeProposal[]>;
+  getAllLegislativeProposals(): Promise<LegislativeProposal[]>;
+  createLegislativeProposal(proposal: InsertLegislativeProposal): Promise<LegislativeProposal>;
+  updateLegislativeProposal(id: string, proposal: Partial<InsertLegislativeProposal>): Promise<LegislativeProposal | undefined>;
+  deleteLegislativeProposal(id: string): Promise<boolean>;
+  
+  // Debate Participation methods
+  getDebateParticipation(id: string): Promise<DebateParticipation | undefined>;
+  getDebateParticipationsByMpId(mpId: string): Promise<DebateParticipation[]>;
+  getAllDebateParticipations(): Promise<DebateParticipation[]>;
+  createDebateParticipation(participation: InsertDebateParticipation): Promise<DebateParticipation>;
+  updateDebateParticipation(id: string, participation: Partial<InsertDebateParticipation>): Promise<DebateParticipation | undefined>;
+  deleteDebateParticipation(id: string): Promise<boolean>;
+  
+  // Parliamentary Question methods
+  getParliamentaryQuestion(id: string): Promise<ParliamentaryQuestion | undefined>;
+  getParliamentaryQuestionsByMpId(mpId: string): Promise<ParliamentaryQuestion[]>;
+  getAllParliamentaryQuestions(): Promise<ParliamentaryQuestion[]>;
+  createParliamentaryQuestion(question: InsertParliamentaryQuestion): Promise<ParliamentaryQuestion>;
+  updateParliamentaryQuestion(id: string, question: Partial<InsertParliamentaryQuestion>): Promise<ParliamentaryQuestion | undefined>;
+  deleteParliamentaryQuestion(id: string): Promise<boolean>;
 }
 
 export class MemStorage implements IStorage {
@@ -34,15 +58,24 @@ export class MemStorage implements IStorage {
   private mps: Map<string, Mp>;
   private courtCases: Map<string, CourtCase>;
   private sprmInvestigations: Map<string, SprmInvestigation>;
+  private legislativeProposals: Map<string, LegislativeProposal>;
+  private debateParticipations: Map<string, DebateParticipation>;
+  private parliamentaryQuestions: Map<string, ParliamentaryQuestion>;
 
   constructor() {
     this.users = new Map();
     this.mps = new Map();
     this.courtCases = new Map();
     this.sprmInvestigations = new Map();
+    this.legislativeProposals = new Map();
+    this.debateParticipations = new Map();
+    this.parliamentaryQuestions = new Map();
     this.seedMps();
     this.seedCourtCases();
     this.seedSprmInvestigations();
+    this.seedLegislativeProposals();
+    this.seedDebateParticipations();
+    this.seedParliamentaryQuestions();
   }
 
   async getUser(id: string): Promise<User | undefined> {
@@ -640,6 +673,227 @@ export class MemStorage implements IStorage {
           "https://www.nst.com.my/news/crime-courts/2024/12/1135678/sprm-raids-ismail-sabri-home-rm170-million-cash-seized",
           "https://www.malaymail.com/news/malaysia/2025/03/15/keluarga-malaysia-campaign-under-macc-investigation/123456"
         ],
+      });
+    }
+  }
+
+  // Legislative Proposal methods
+  async getLegislativeProposal(id: string): Promise<LegislativeProposal | undefined> {
+    return this.legislativeProposals.get(id);
+  }
+
+  async getLegislativeProposalsByMpId(mpId: string): Promise<LegislativeProposal[]> {
+    return Array.from(this.legislativeProposals.values()).filter(
+      (proposal) => proposal.mpId === mpId
+    );
+  }
+
+  async getAllLegislativeProposals(): Promise<LegislativeProposal[]> {
+    return Array.from(this.legislativeProposals.values());
+  }
+
+  async createLegislativeProposal(insertProposal: InsertLegislativeProposal): Promise<LegislativeProposal> {
+    const id = randomUUID();
+    const proposal: LegislativeProposal = {
+      ...insertProposal,
+      id,
+      hansardReference: insertProposal.hansardReference ?? null,
+      outcome: insertProposal.outcome ?? null,
+    };
+    this.legislativeProposals.set(id, proposal);
+    return proposal;
+  }
+
+  async updateLegislativeProposal(id: string, updates: Partial<InsertLegislativeProposal>): Promise<LegislativeProposal | undefined> {
+    const existing = this.legislativeProposals.get(id);
+    if (!existing) return undefined;
+
+    const updated: LegislativeProposal = {
+      ...existing,
+      ...updates,
+    };
+    this.legislativeProposals.set(id, updated);
+    return updated;
+  }
+
+  async deleteLegislativeProposal(id: string): Promise<boolean> {
+    return this.legislativeProposals.delete(id);
+  }
+
+  // Debate Participation methods
+  async getDebateParticipation(id: string): Promise<DebateParticipation | undefined> {
+    return this.debateParticipations.get(id);
+  }
+
+  async getDebateParticipationsByMpId(mpId: string): Promise<DebateParticipation[]> {
+    return Array.from(this.debateParticipations.values()).filter(
+      (participation) => participation.mpId === mpId
+    );
+  }
+
+  async getAllDebateParticipations(): Promise<DebateParticipation[]> {
+    return Array.from(this.debateParticipations.values());
+  }
+
+  async createDebateParticipation(insertParticipation: InsertDebateParticipation): Promise<DebateParticipation> {
+    const id = randomUUID();
+    const participation: DebateParticipation = {
+      ...insertParticipation,
+      id,
+      hansardReference: insertParticipation.hansardReference ?? null,
+      position: insertParticipation.position ?? null,
+    };
+    this.debateParticipations.set(id, participation);
+    return participation;
+  }
+
+  async updateDebateParticipation(id: string, updates: Partial<InsertDebateParticipation>): Promise<DebateParticipation | undefined> {
+    const existing = this.debateParticipations.get(id);
+    if (!existing) return undefined;
+
+    const updated: DebateParticipation = {
+      ...existing,
+      ...updates,
+    };
+    this.debateParticipations.set(id, updated);
+    return updated;
+  }
+
+  async deleteDebateParticipation(id: string): Promise<boolean> {
+    return this.debateParticipations.delete(id);
+  }
+
+  // Parliamentary Question methods
+  async getParliamentaryQuestion(id: string): Promise<ParliamentaryQuestion | undefined> {
+    return this.parliamentaryQuestions.get(id);
+  }
+
+  async getParliamentaryQuestionsByMpId(mpId: string): Promise<ParliamentaryQuestion[]> {
+    return Array.from(this.parliamentaryQuestions.values()).filter(
+      (question) => question.mpId === mpId
+    );
+  }
+
+  async getAllParliamentaryQuestions(): Promise<ParliamentaryQuestion[]> {
+    return Array.from(this.parliamentaryQuestions.values());
+  }
+
+  async createParliamentaryQuestion(insertQuestion: InsertParliamentaryQuestion): Promise<ParliamentaryQuestion> {
+    const id = randomUUID();
+    const question: ParliamentaryQuestion = {
+      ...insertQuestion,
+      id,
+      hansardReference: insertQuestion.hansardReference ?? null,
+      answerText: insertQuestion.answerText ?? null,
+    };
+    this.parliamentaryQuestions.set(id, question);
+    return question;
+  }
+
+  async updateParliamentaryQuestion(id: string, updates: Partial<InsertParliamentaryQuestion>): Promise<ParliamentaryQuestion | undefined> {
+    const existing = this.parliamentaryQuestions.get(id);
+    if (!existing) return undefined;
+
+    const updated: ParliamentaryQuestion = {
+      ...existing,
+      ...updates,
+    };
+    this.parliamentaryQuestions.set(id, updated);
+    return updated;
+  }
+
+  async deleteParliamentaryQuestion(id: string): Promise<boolean> {
+    return this.parliamentaryQuestions.delete(id);
+  }
+
+  private seedLegislativeProposals() {
+    const mpsArray = Array.from(this.mps.values());
+    
+    const anwarMp = mpsArray.find(mp => mp.name === "Anwar Ibrahim");
+    if (anwarMp) {
+      this.createLegislativeProposal({
+        mpId: anwarMp.id,
+        title: "Anti-Hopping Bill 2022",
+        type: "Bill",
+        dateProposed: new Date("2022-04-11"),
+        status: "Passed",
+        description: "Constitutional amendment to prevent MPs from party-hopping, requiring MPs who switch parties or become independents to vacate their seats.",
+        hansardReference: "DR.11.04.2022",
+        outcome: "Passed with 2/3 majority (209 votes) on July 28, 2022. Constitution (Amendment) Act 2022 gazetted August 2022.",
+      });
+    }
+
+    const nurulIzzah = mpsArray.find(mp => mp.name === "Nurul Izzah Anwar");
+    if (nurulIzzah) {
+      this.createLegislativeProposal({
+        mpId: nurulIzzah.id,
+        title: "Anti-Sexual Harassment Bill 2024",
+        type: "Private Member's Bill",
+        dateProposed: new Date("2024-03-25"),
+        status: "Under Review",
+        description: "Comprehensive legislation to address sexual harassment in workplaces, educational institutions, and public spaces. Establishes protection mechanisms and complaint procedures.",
+        hansardReference: "DR.25.03.2024",
+        outcome: null,
+      });
+    }
+  }
+
+  private seedDebateParticipations() {
+    const mpsArray = Array.from(this.mps.values());
+    
+    const rafizMp = mpsArray.find(mp => mp.name === "Rafizi Ramli");
+    if (rafizMp) {
+      this.createDebateParticipation({
+        mpId: rafizMp.id,
+        topic: "Budget 2024 - Economic Reform and Subsidy Rationalization",
+        date: new Date("2023-10-13"),
+        contribution: "Spoke extensively on subsidy rationalization, digital economy initiatives, and targeted assistance programs. Defended government's approach to fiscal reform and PADU database implementation.",
+        hansardReference: "DR.13.10.2023",
+        position: "Supporting",
+      });
+    }
+
+    const ahmadZahidMp = mpsArray.find(mp => mp.name === "Ahmad Zahid Hamidi");
+    if (ahmadZahidMp) {
+      this.createDebateParticipation({
+        mpId: ahmadZahidMp.id,
+        topic: "Malaysia Agreement 1963 (MA63) Implementation",
+        date: new Date("2024-07-16"),
+        contribution: "Emphasized BN's commitment to implementing MA63 provisions for Sabah and Sarawak. Discussed special grants, revenue allocation, and restoration of state rights.",
+        hansardReference: "DR.16.07.2024",
+        position: "Supporting",
+      });
+    }
+  }
+
+  private seedParliamentaryQuestions() {
+    const mpsArray = Array.from(this.mps.values());
+    
+    const syedSaddiqMp = mpsArray.find(mp => mp.name === "Syed Saddiq Syed Abdul Rahman");
+    if (syedSaddiqMp) {
+      this.createParliamentaryQuestion({
+        mpId: syedSaddiqMp.id,
+        questionText: "What is the government's plan to address youth unemployment and create quality job opportunities for graduates, especially in the digital economy sector?",
+        dateAsked: new Date("2024-05-20"),
+        ministry: "Ministry of Human Resources",
+        topic: "Youth Employment and Digital Economy Jobs",
+        answerStatus: "Answered",
+        hansardReference: "DR.20.05.2024",
+        answerText: "Minister outlined initiatives including Graduate Employment Scheme, digital skills training programs, and incentives for companies hiring fresh graduates. Target of 50,000 new jobs in tech sector by 2025.",
+      });
+    }
+
+    const hannahYeohMp = mpsArray.find(mp => mp.name === "Hannah Yeoh");
+    if (hannahYeohMp) {
+      this.createParliamentaryQuestion({
+        mpId: hannahYeohMp.id,
+        questionText: "What measures is the Ministry taking to improve child protection services and prevent child abuse cases, particularly in childcare centers and schools?",
+        dateAsked: new Date("2024-06-18"),
+        ministry: "Ministry of Women, Family and Community Development",
+        topic: "Child Protection and Safety",
+        answerStatus: "Answered",
+        hansardReference: "DR.18.06.2024",
+        answerText: "Outlined enhanced screening for childcare workers, mandatory CCTV installation in centers, increased funding for welfare officers, and amendments to Child Act 2001 for stronger penalties.",
       });
     }
   }
