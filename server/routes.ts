@@ -8,7 +8,9 @@ import {
   updateSprmInvestigationSchema,
   insertLegislativeProposalSchema,
   insertDebateParticipationSchema,
-  insertParliamentaryQuestionSchema
+  insertParliamentaryQuestionSchema,
+  insertHansardRecordSchema,
+  updateHansardRecordSchema
 } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -558,6 +560,99 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting parliamentary question:", error);
       res.status(500).json({ error: "Failed to delete parliamentary question" });
+    }
+  });
+
+  // Get all Hansard records
+  app.get("/api/hansard-records", async (_req, res) => {
+    try {
+      const records = await storage.getAllHansardRecords();
+      res.json(records);
+    } catch (error) {
+      console.error("Error fetching Hansard records:", error);
+      res.status(500).json({ error: "Failed to fetch Hansard records" });
+    }
+  });
+
+  // Get single Hansard record by ID
+  app.get("/api/hansard-records/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const record = await storage.getHansardRecord(id);
+      
+      if (!record) {
+        return res.status(404).json({ error: "Hansard record not found" });
+      }
+      
+      res.json(record);
+    } catch (error) {
+      console.error("Error fetching Hansard record:", error);
+      res.status(500).json({ error: "Failed to fetch Hansard record" });
+    }
+  });
+
+  // Get Hansard records by session number
+  app.get("/api/hansard-records/session/:sessionNumber", async (req, res) => {
+    try {
+      const { sessionNumber } = req.params;
+      const records = await storage.getHansardRecordsBySessionNumber(sessionNumber);
+      res.json(records);
+    } catch (error) {
+      console.error("Error fetching Hansard records by session:", error);
+      res.status(500).json({ error: "Failed to fetch Hansard records by session" });
+    }
+  });
+
+  // Create a new Hansard record
+  app.post("/api/hansard-records", async (req, res) => {
+    try {
+      const validatedData = insertHansardRecordSchema.parse(req.body);
+      const record = await storage.createHansardRecord(validatedData);
+      res.status(201).json(record);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid data", details: error.errors });
+      }
+      console.error("Error creating Hansard record:", error);
+      res.status(500).json({ error: "Failed to create Hansard record" });
+    }
+  });
+
+  // Update a Hansard record
+  app.patch("/api/hansard-records/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const validatedData = updateHansardRecordSchema.parse(req.body);
+      const record = await storage.updateHansardRecord(id, validatedData);
+      
+      if (!record) {
+        return res.status(404).json({ error: "Hansard record not found" });
+      }
+      
+      res.json(record);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid data", details: error.errors });
+      }
+      console.error("Error updating Hansard record:", error);
+      res.status(500).json({ error: "Failed to update Hansard record" });
+    }
+  });
+
+  // Delete a Hansard record
+  app.delete("/api/hansard-records/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const deleted = await storage.deleteHansardRecord(id);
+      
+      if (!deleted) {
+        return res.status(404).json({ error: "Hansard record not found" });
+      }
+      
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting Hansard record:", error);
+      res.status(500).json({ error: "Failed to delete Hansard record" });
     }
   });
 
