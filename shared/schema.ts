@@ -77,6 +77,7 @@ export const sprmInvestigations = pgTable("sprm_investigations", {
   endDate: timestamp("end_date"),
   outcome: text("outcome"),
   charges: text("charges").notNull(),
+  documentLinks: text("document_links").array(),
 });
 
 export const insertSprmInvestigationSchema = createInsertSchema(sprmInvestigations).omit({

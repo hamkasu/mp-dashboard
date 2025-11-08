@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import type { Mp, CourtCase, SprmInvestigation } from "@shared/schema";
-import { calculateTotalSalary, calculateYearlyBreakdown, formatCurrency } from "@/lib/utils";
+import { calculateTotalSalary, calculateYearlyBreakdown, formatCurrency, getPublicationName } from "@/lib/utils";
 import { format } from "date-fns";
 
 const PARTY_COLORS: Record<string, string> = {
@@ -518,23 +518,31 @@ export default function MPProfile() {
                                     <span className="font-medium">Charges: </span>
                                     {courtCase.charges}
                                   </p>
-                                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                                  <div className="text-xs text-muted-foreground mb-2">
                                     <span data-testid={`text-filing-date-${courtCase.id}`}>
                                       Filed: {format(new Date(courtCase.filingDate), "MMM d, yyyy")}
                                     </span>
-                                    {courtCase.documentLinks && courtCase.documentLinks.length > 0 && (
-                                      <a
-                                        href={courtCase.documentLinks[0]}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="flex items-center gap-1 text-primary hover:underline"
-                                        data-testid={`link-documents-${courtCase.id}`}
-                                      >
-                                        View Documents
-                                        <ExternalLink className="h-3 w-3" />
-                                      </a>
-                                    )}
                                   </div>
+                                  {courtCase.documentLinks && courtCase.documentLinks.length > 0 && (
+                                    <div className="space-y-1">
+                                      <p className="text-xs font-medium text-muted-foreground">Sources:</p>
+                                      <div className="flex flex-wrap gap-2">
+                                        {courtCase.documentLinks.map((link, index) => (
+                                          <a
+                                            key={index}
+                                            href={link}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="flex items-center gap-1 text-xs text-primary hover:underline"
+                                            data-testid={`link-document-${courtCase.id}-${index}`}
+                                          >
+                                            {getPublicationName(link)}
+                                            <ExternalLink className="h-3 w-3" />
+                                          </a>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
                                 </div>
                               ))}
                           </div>
@@ -584,23 +592,31 @@ export default function MPProfile() {
                                       Outcome: {courtCase.outcome}
                                     </p>
                                   )}
-                                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                                  <div className="text-xs text-muted-foreground mb-2">
                                     <span data-testid={`text-filing-date-${courtCase.id}`}>
                                       Filed: {format(new Date(courtCase.filingDate), "MMM d, yyyy")}
                                     </span>
-                                    {courtCase.documentLinks && courtCase.documentLinks.length > 0 && (
-                                      <a
-                                        href={courtCase.documentLinks[0]}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="flex items-center gap-1 text-primary hover:underline"
-                                        data-testid={`link-documents-${courtCase.id}`}
-                                      >
-                                        View Documents
-                                        <ExternalLink className="h-3 w-3" />
-                                      </a>
-                                    )}
                                   </div>
+                                  {courtCase.documentLinks && courtCase.documentLinks.length > 0 && (
+                                    <div className="space-y-1">
+                                      <p className="text-xs font-medium text-muted-foreground">Sources:</p>
+                                      <div className="flex flex-wrap gap-2">
+                                        {courtCase.documentLinks.map((link, index) => (
+                                          <a
+                                            key={index}
+                                            href={link}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="flex items-center gap-1 text-xs text-primary hover:underline"
+                                            data-testid={`link-document-${courtCase.id}-${index}`}
+                                          >
+                                            {getPublicationName(link)}
+                                            <ExternalLink className="h-3 w-3" />
+                                          </a>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
                                 </div>
                               ))}
                           </div>
@@ -669,11 +685,31 @@ export default function MPProfile() {
                                     <span className="font-medium">Allegations: </span>
                                     {investigation.charges}
                                   </p>
-                                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                                  <div className="text-xs text-muted-foreground mb-2">
                                     <span data-testid={`text-start-date-${investigation.id}`}>
                                       Started: {format(new Date(investigation.startDate), "MMM d, yyyy")}
                                     </span>
                                   </div>
+                                  {investigation.documentLinks && investigation.documentLinks.length > 0 && (
+                                    <div className="space-y-1">
+                                      <p className="text-xs font-medium text-muted-foreground">Sources:</p>
+                                      <div className="flex flex-wrap gap-2">
+                                        {investigation.documentLinks.map((link, index) => (
+                                          <a
+                                            key={index}
+                                            href={link}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="flex items-center gap-1 text-xs text-primary hover:underline"
+                                            data-testid={`link-sprm-document-${investigation.id}-${index}`}
+                                          >
+                                            {getPublicationName(link)}
+                                            <ExternalLink className="h-3 w-3" />
+                                          </a>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
                                 </div>
                               ))}
                           </div>
@@ -722,16 +758,38 @@ export default function MPProfile() {
                                       Outcome: {investigation.outcome}
                                     </p>
                                   )}
-                                  <div className="flex items-center justify-between text-xs text-muted-foreground">
-                                    <span data-testid={`text-start-date-${investigation.id}`}>
-                                      Started: {format(new Date(investigation.startDate), "MMM d, yyyy")}
-                                    </span>
-                                    {investigation.endDate && (
-                                      <span data-testid={`text-end-date-${investigation.id}`}>
-                                        Completed: {format(new Date(investigation.endDate), "MMM d, yyyy")}
+                                  <div className="text-xs text-muted-foreground mb-2">
+                                    <div className="flex items-center justify-between">
+                                      <span data-testid={`text-start-date-${investigation.id}`}>
+                                        Started: {format(new Date(investigation.startDate), "MMM d, yyyy")}
                                       </span>
-                                    )}
+                                      {investigation.endDate && (
+                                        <span data-testid={`text-end-date-${investigation.id}`}>
+                                          Completed: {format(new Date(investigation.endDate), "MMM d, yyyy")}
+                                        </span>
+                                      )}
+                                    </div>
                                   </div>
+                                  {investigation.documentLinks && investigation.documentLinks.length > 0 && (
+                                    <div className="space-y-1">
+                                      <p className="text-xs font-medium text-muted-foreground">Sources:</p>
+                                      <div className="flex flex-wrap gap-2">
+                                        {investigation.documentLinks.map((link, index) => (
+                                          <a
+                                            key={index}
+                                            href={link}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="flex items-center gap-1 text-xs text-primary hover:underline"
+                                            data-testid={`link-sprm-document-${investigation.id}-${index}`}
+                                          >
+                                            {getPublicationName(link)}
+                                            <ExternalLink className="h-3 w-3" />
+                                          </a>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
                                 </div>
                               ))}
                           </div>
@@ -742,6 +800,56 @@ export default function MPProfile() {
                 </CardContent>
               </Card>
             )}
+
+            {/* Sources & References Section */}
+            {(() => {
+              const allSources = new Set<string>();
+              courtCases.forEach(c => {
+                c.documentLinks?.forEach(link => allSources.add(link));
+              });
+              sprmInvestigations.forEach(i => {
+                i.documentLinks?.forEach(link => allSources.add(link));
+              });
+              const sourcesList = Array.from(allSources);
+              
+              return sourcesList.length > 0 ? (
+                <Card className="md:col-span-2" data-testid="sources-references-section">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <FileText className="h-5 w-5" />
+                      Sources & References
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      All information on this page is sourced from the following publications and news outlets:
+                    </p>
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      {sourcesList.map((link, index) => (
+                        <a
+                          key={index}
+                          href={link}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-2 p-3 rounded-lg border hover:bg-accent transition-colors group"
+                          data-testid={`source-link-${index}`}
+                        >
+                          <ExternalLink className="h-4 w-4 text-muted-foreground group-hover:text-primary shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-sm group-hover:text-primary truncate">
+                              {getPublicationName(link)}
+                            </p>
+                            <p className="text-xs text-muted-foreground truncate">
+                              {new URL(link).hostname}
+                            </p>
+                          </div>
+                        </a>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              ) : null;
+            })()}
           </div>
         </div>
       </div>

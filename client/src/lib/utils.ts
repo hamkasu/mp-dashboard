@@ -82,3 +82,27 @@ export function calculateYearlyBreakdown(swornInDate: Date | string, monthlySala
   
   return breakdown;
 }
+
+export function getPublicationName(url: string): string {
+  try {
+    const hostname = new URL(url).hostname.toLowerCase();
+    
+    // Map common Malaysian news sources
+    if (hostname.includes('thestar.com.my')) return 'The Star';
+    if (hostname.includes('nst.com.my')) return 'New Straits Times';
+    if (hostname.includes('malaymail.com')) return 'Malay Mail';
+    if (hostname.includes('bernama.com')) return 'Bernama';
+    if (hostname.includes('freemalaysiatoday.com')) return 'Free Malaysia Today';
+    if (hostname.includes('astroawani.com')) return 'Astro Awani';
+    if (hostname.includes('malaysiakini.com')) return 'Malaysiakini';
+    if (hostname.includes('theedgemarkets.com')) return 'The Edge Markets';
+    if (hostname.includes('usnews.com')) return 'U.S. News';
+    if (hostname.includes('benarnews.org')) return 'BenarNews';
+    
+    // Default: capitalize first letter of domain
+    const domain = hostname.replace('www.', '').split('.')[0];
+    return domain.charAt(0).toUpperCase() + domain.slice(1);
+  } catch {
+    return 'External Source';
+  }
+}

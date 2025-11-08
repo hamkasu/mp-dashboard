@@ -599,6 +599,7 @@ export class MemStorage implements IStorage {
       caseNumber: insertInvestigation.caseNumber ?? null,
       endDate: insertInvestigation.endDate ?? null,
       outcome: insertInvestigation.outcome ?? null,
+      documentLinks: insertInvestigation.documentLinks ?? null,
     };
     this.sprmInvestigations.set(id, investigation);
     return investigation;
@@ -634,6 +635,11 @@ export class MemStorage implements IStorage {
         endDate: null,
         outcome: null,
         charges: "Under SPRM investigation for corruption and money laundering related to RM700 million 'Keluarga Malaysia' promotional campaign. Named as suspect in March 2025. Raids uncovered RM170 million cash and 16 gold bears.",
+        documentLinks: [
+          "https://www.thestar.com.my/news/nation/2025/03/15/ismail-sabri-named-suspect-in-sprm-probe",
+          "https://www.nst.com.my/news/crime-courts/2024/12/1135678/sprm-raids-ismail-sabri-home-rm170-million-cash-seized",
+          "https://www.malaymail.com/news/malaysia/2025/03/15/keluarga-malaysia-campaign-under-macc-investigation/123456"
+        ],
       });
     }
   }
