@@ -7,6 +7,7 @@ import Home from "@/pages/Home";
 import MPProfile from "@/pages/MPProfile";
 import ParliamentaryActivity from "@/pages/ParliamentaryActivity";
 import Hansard from "@/pages/hansard";
+import HansardAdmin from "@/pages/HansardAdmin";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -16,6 +17,7 @@ function Router() {
       <Route path="/mp/:id" component={MPProfile} />
       <Route path="/activity" component={ParliamentaryActivity} />
       <Route path="/hansard" component={Hansard} />
+      <Route path="/hansard-admin" component={HansardAdmin} />
       <Route component={NotFound} />
     </Switch>
   );

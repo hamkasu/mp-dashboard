@@ -62,6 +62,7 @@ export interface IStorage {
   createHansardRecord(record: InsertHansardRecord): Promise<HansardRecord>;
   updateHansardRecord(id: string, record: UpdateHansardRecord): Promise<HansardRecord | undefined>;
   deleteHansardRecord(id: string): Promise<boolean>;
+  deleteAllHansardRecords(): Promise<number>;
   
   // Page View methods
   incrementPageView(page: string): Promise<number>;
@@ -866,6 +867,12 @@ export class MemStorage implements IStorage {
     return this.hansardRecords.delete(id);
   }
   
+  async deleteAllHansardRecords(): Promise<number> {
+    const count = this.hansardRecords.size;
+    this.hansardRecords.clear();
+    return count;
+  }
+  
   // Page View methods
   private pageViewCounts: Map<string, number> = new Map();
   
@@ -1406,6 +1413,11 @@ export class DbStorage implements IStorage {
   async deleteHansardRecord(id: string): Promise<boolean> {
     const result = await db.delete(hansardRecords).where(eq(hansardRecords.id, id)).returning();
     return result.length > 0;
+  }
+  
+  async deleteAllHansardRecords(): Promise<number> {
+    const result = await db.delete(hansardRecords).returning();
+    return result.length;
   }
   
   // Page View methods

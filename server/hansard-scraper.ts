@@ -1,10 +1,7 @@
 import axios from 'axios';
 import * as cheerio from 'cheerio';
-import { createRequire } from 'module';
 import https from 'https';
-
-const require = createRequire(import.meta.url);
-const pdfParse = require('pdf-parse');
+import { PDFParse } from 'pdf-parse';
 
 // SECURITY NOTE: The Malaysian Parliament website (parlimen.gov.my) has SSL certificate
 // validation issues in some environments. Since we are ONLY READING public government data
@@ -123,9 +120,11 @@ export class HansardScraper {
       });
       
       const pdfBuffer = Buffer.from(response.data);
-      const data = await pdfParse(pdfBuffer);
       
-      return data.text;
+      const parser = new PDFParse({ data: pdfBuffer });
+      const result = await parser.getText();
+      
+      return result.text;
     } catch (error) {
       console.error(`Error downloading/extracting PDF ${pdfUrl}:`, error);
       return null;
