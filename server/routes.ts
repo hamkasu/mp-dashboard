@@ -744,7 +744,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const inputText = languageInstruction + record.transcript;
 
       const response = await fetch(
-        "https://api-inference.huggingface.co/models/csebuetnlp/mT5_multilingual_XLSum",
+        "https://router.huggingface.co/hf-inference/models/csebuetnlp/mT5_multilingual_XLSum",
         {
           method: "POST",
           headers: {
@@ -963,7 +963,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Use mT5 model for multilingual summarization
       const response = await fetch(
-        "https://api-inference.huggingface.co/models/csebuetnlp/mT5_multilingual_XLSum",
+        "https://router.huggingface.co/hf-inference/models/csebuetnlp/mT5_multilingual_XLSum",
         {
           method: "POST",
           headers: {
