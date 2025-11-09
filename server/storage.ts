@@ -1608,6 +1608,8 @@ export async function seedDatabase() {
   
   // Seed Hansard records (update MP IDs in speakers, attendedMpIds, and absentMpIds)
   const allHansardRecords = await memStorage.getAllHansardRecords();
+  console.log(`Seeding ${allHansardRecords.length} Hansard records...`);
+  
   for (const record of allHansardRecords) {
     const { id, createdAt, ...recordData } = record;
     
@@ -1626,6 +1628,8 @@ export async function seedDatabase() {
     const updatedAbsentMpIds = (recordData.absentMpIds || [])
       .map(oldId => mpIdMap.get(oldId))
       .filter((id): id is string => id !== undefined);
+    
+    console.log(`Seeding Hansard ${record.sessionNumber}: ${updatedAbsentMpIds.length} absent MPs, ${updatedAttendedMpIds.length} attended MPs`);
     
     await dbStorage.createHansardRecord({
       ...recordData,

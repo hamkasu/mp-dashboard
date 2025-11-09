@@ -6,6 +6,11 @@ This web application provides a comprehensive dashboard for Malaysian Members of
 
 ## Recent Changes
 
+**November 9, 2025**:
+- ✅ Added diagnostic logging to database seeding process for attendance tracking
+- ✅ Created admin endpoints `/api/admin/seed` and `/api/admin/db-status` for Railway deployment troubleshooting
+- ✅ Enhanced Hansard seeding with detailed logging of absent/attended MP counts
+
 **November 8, 2025**:
 - ✅ Built complete Hansard scraper utility (`server/hansard-scraper.ts`) to download and extract PDFs from parlimen.gov.my
 - ✅ Implemented automatic pagination to fetch all Parliament 15 records across multiple pages
@@ -151,3 +156,60 @@ Preferred communication style: Simple, everyday language.
 
 ### Session & Authentication
 - **connect-pg-simple**: PostgreSQL session store (schema defined, not fully implemented).
+
+## Deployment & Troubleshooting
+
+### Railway Deployment
+
+When deploying to Railway or other cloud platforms, the application automatically seeds the database on first startup if `DATABASE_URL` is configured. However, if attendance data is not showing up properly, follow these steps:
+
+#### Verifying Database State
+
+Check if your database has been properly seeded:
+
+```bash
+curl -H "X-Admin-Token: YOUR_ADMIN_TOKEN" https://your-app.railway.app/api/admin/db-status
+```
+
+This will return JSON showing:
+- Total MPs in database
+- Total Hansard records
+- Number of records with absent MP data
+- Sample records with attendance information
+
+#### Manual Database Seeding
+
+If the database is empty or missing attendance data, trigger a manual seed:
+
+```bash
+curl -X POST -H "X-Admin-Token: YOUR_ADMIN_TOKEN" https://your-app.railway.app/api/admin/seed
+```
+
+**Security Note**: Both admin endpoints require the `ADMIN_TOKEN` environment variable to be set. Generate a secure random token and add it to your Railway environment variables:
+
+```bash
+# Generate a secure token (example)
+openssl rand -hex 32
+
+# Add to Railway environment variables
+ADMIN_TOKEN=your_generated_token_here
+```
+
+This endpoint will:
+1. Seed all 222 MPs
+2. Seed court cases and SPRM investigations
+3. Seed Hansard records with attendance tracking
+4. Return statistics confirming successful seeding
+
+#### Common Issues
+
+**Issue**: Attendance report shows "0 MPs absent" even though sessions exist
+
+**Cause**: Database was not properly seeded with Hansard attendance data (`absentMpIds` and `attendedMpIds` arrays)
+
+**Solution**: 
+1. Check `/api/admin/db-status` to verify data state
+2. Run `/api/admin/seed` to trigger manual seeding
+3. Verify logs show "Seeding Hansard DR.XX.XX.XXXX: N absent MPs, M attended MPs"
+
+**Note**: The seeding process is idempotent - it checks for existing data and only seeds what's missing.

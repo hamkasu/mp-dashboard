@@ -1170,6 +1170,83 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin endpoint to manually trigger database seeding (for Railway/production)
+  app.post("/api/admin/seed", async (req, res) => {
+    try {
+      // Require admin token for security
+      const adminToken = req.headers['x-admin-token'];
+      if (!adminToken || adminToken !== process.env.ADMIN_TOKEN) {
+        return res.status(403).json({ error: "Unauthorized - valid admin token required" });
+      }
+      
+      if (!process.env.DATABASE_URL) {
+        return res.status(400).json({ error: "No database configured - using in-memory storage" });
+      }
+      
+      console.log("Manual seed triggered via API...");
+      await seedDatabase();
+      
+      // Get stats to verify
+      const allMps = await storage.getAllMps();
+      const hansardRecords = await storage.getAllHansardRecords();
+      const recordsWithAbsent = hansardRecords.filter(r => r.absentMpIds && r.absentMpIds.length > 0);
+      
+      const stats = {
+        totalMps: allMps.length,
+        totalHansardRecords: hansardRecords.length,
+        recordsWithAbsentData: recordsWithAbsent.length,
+        sampleAbsentCounts: recordsWithAbsent.slice(0, 3).map(r => ({
+          session: r.sessionNumber,
+          absentCount: r.absentMpIds?.length || 0,
+          attendedCount: r.attendedMpIds?.length || 0
+        }))
+      };
+      
+      console.log("Seed completed. Stats:", JSON.stringify(stats, null, 2));
+      
+      res.json({ 
+        message: "Database seeded successfully",
+        stats
+      });
+    } catch (error) {
+      console.error("Error seeding database:", error);
+      res.status(500).json({ error: "Failed to seed database", details: String(error) });
+    }
+  });
+
+  // Admin endpoint to verify database state
+  app.get("/api/admin/db-status", async (req, res) => {
+    try {
+      // Require admin token for security
+      const adminToken = req.headers['x-admin-token'];
+      if (!adminToken || adminToken !== process.env.ADMIN_TOKEN) {
+        return res.status(403).json({ error: "Unauthorized - valid admin token required" });
+      }
+      
+      const allMps = await storage.getAllMps();
+      const hansardRecords = await storage.getAllHansardRecords();
+      const recordsWithAbsent = hansardRecords.filter(r => r.absentMpIds && r.absentMpIds.length > 0);
+      
+      res.json({
+        usingDatabase: !!process.env.DATABASE_URL,
+        totalMps: allMps.length,
+        totalHansardRecords: hansardRecords.length,
+        recordsWithAbsentData: recordsWithAbsent.length,
+        sampleRecords: hansardRecords.slice(0, 2).map(r => ({
+          session: r.sessionNumber,
+          date: r.sessionDate,
+          absentMpIds: r.absentMpIds || [],
+          absentCount: r.absentMpIds?.length || 0,
+          attendedMpIds: r.attendedMpIds || [],
+          attendedCount: r.attendedMpIds?.length || 0
+        }))
+      });
+    } catch (error) {
+      console.error("Error checking database status:", error);
+      res.status(500).json({ error: "Failed to check database status", details: String(error) });
+    }
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;
