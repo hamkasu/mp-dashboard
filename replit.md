@@ -161,7 +161,11 @@ Preferred communication style: Simple, everyday language.
 
 ### Railway Deployment
 
-When deploying to Railway or other cloud platforms, the application automatically seeds the database on first startup if `DATABASE_URL` is configured. However, if attendance data is not showing up properly, follow these steps:
+When deploying to Railway or other cloud platforms, the application automatically seeds the database on first startup if `DATABASE_URL` is configured. 
+
+**✅ Automatic Fix for Stale Data**: The application now automatically detects Hansard records with `null` or `undefined` `absentMpIds` (stale data from before attendance tracking was added) and reseeds them with correct attendance data. Note: Empty arrays `[]` are preserved as they represent valid sessions with perfect attendance. Simply trigger a redeploy or restart your Railway application, and the seeding will fix itself.
+
+However, if attendance data is still not showing up properly, follow these manual troubleshooting steps:
 
 #### Verifying Database State
 

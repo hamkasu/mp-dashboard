@@ -1528,8 +1528,25 @@ export async function seedDatabase() {
     // Check if hansard records need to be seeded
     const existingHansardRecords = await dbStorage.getAllHansardRecords();
     if (existingHansardRecords && existingHansardRecords.length > 0) {
-      console.log("Database already seeded, skipping...");
-      return;
+      // Check if existing records have null/undefined absentMpIds (stale data from before this feature was added)
+      // Note: Empty arrays [] are valid (sessions with perfect attendance), so we only check for null/undefined
+      const hasStaleData = existingHansardRecords.some(record => 
+        record.absentMpIds === null || record.absentMpIds === undefined
+      );
+      
+      if (hasStaleData) {
+        console.log("⚠️  Detected Hansard records with null/undefined absentMpIds (stale data from before attendance tracking)");
+        console.log("🔄 Deleting all Hansard records to reseed with proper attendance tracking...");
+        
+        // Delete all Hansard records so we can reseed with correct attendance data
+        for (const record of existingHansardRecords) {
+          await dbStorage.deleteHansardRecord(record.id);
+        }
+        console.log("✅ Deleted stale Hansard records, proceeding with fresh seed...");
+      } else {
+        console.log("Database already seeded, skipping...");
+        return;
+      }
     } else {
       console.log("Hansard records not seeded, proceeding with hansard seed...");
     }
