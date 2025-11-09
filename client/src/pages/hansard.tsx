@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { format } from "date-fns";
+import { Link } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -16,24 +17,17 @@ export default function HansardPage() {
   const [endDate, setEndDate] = useState("");
   const { toast } = useToast();
 
-  const queryParams = useMemo(() => {
+  const queryUrl = useMemo(() => {
     const params = new URLSearchParams();
     if (searchQuery) params.set("query", searchQuery);
     if (startDate) params.set("startDate", startDate);
     if (endDate) params.set("endDate", endDate);
-    return params.toString();
+    const queryString = params.toString();
+    return queryString ? `/api/hansard-records/search?${queryString}` : "/api/hansard-records/search";
   }, [searchQuery, startDate, endDate]);
 
-  const { data: filteredRecords, isLoading } = useQuery<HansardRecord[]>({
-    queryKey: ["/api/hansard-records/search", queryParams],
-    queryFn: async () => {
-      const url = queryParams 
-        ? `/api/hansard-records/search?${queryParams}`
-        : "/api/hansard-records/search";
-      const response = await fetch(url);
-      if (!response.ok) throw new Error("Failed to fetch Hansard records");
-      return response.json();
-    },
+  const { data: filteredRecords, isLoading, isError } = useQuery<HansardRecord[]>({
+    queryKey: [queryUrl],
   });
 
   const summarizeMutation = useMutation({
@@ -50,7 +44,11 @@ export default function HansardPage() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/hansard-records/search"] });
+      queryClient.invalidateQueries({ 
+        predicate: (query) => 
+          typeof query.queryKey[0] === 'string' && 
+          query.queryKey[0].startsWith('/api/hansard-records/search')
+      });
       toast({
         title: "Summary Generated",
         description: "The Hansard record has been successfully summarized."
@@ -69,6 +67,18 @@ export default function HansardPage() {
     return (
       <div className="flex items-center justify-center h-full">
         <div className="text-muted-foreground">Loading Hansard records...</div>
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="container mx-auto p-6">
+        <Card>
+          <CardContent className="py-12 text-center">
+            <p className="text-destructive">Failed to load Hansard records. Please try again.</p>
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -142,10 +152,27 @@ export default function HansardPage() {
 
         {filteredRecords && filteredRecords.length === 0 && (
           <Card>
-            <CardContent className="py-12 text-center text-muted-foreground">
-              <FileText className="w-12 h-12 mx-auto mb-4 opacity-50" />
-              <p>No Hansard records found matching your criteria.</p>
-              <p className="text-sm mt-2">Try adjusting your search filters.</p>
+            <CardContent className="py-12 text-center">
+              <FileText className="w-12 h-12 mx-auto mb-4 opacity-50 text-muted-foreground" />
+              <h3 className="font-semibold text-lg mb-2">No Hansard Records Available</h3>
+              <p className="text-muted-foreground mb-4">
+                {searchQuery || startDate || endDate 
+                  ? "No records found matching your search criteria. Try adjusting your filters."
+                  : "The Hansard database is empty. Download records from the Malaysian Parliament website to get started."}
+              </p>
+              {!searchQuery && !startDate && !endDate && (
+                <div className="mt-6 space-y-3">
+                  <p className="text-sm text-muted-foreground">
+                    Visit the Admin page to download parliamentary transcripts from the 15th Parliament
+                  </p>
+                  <Button asChild data-testid="button-go-to-admin">
+                    <Link href="/hansard-admin">
+                      <Download className="w-4 h-4 mr-2" />
+                      Go to Hansard Admin
+                    </Link>
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </Card>
         )}

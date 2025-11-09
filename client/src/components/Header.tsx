@@ -77,6 +77,17 @@ export function Header({ searchQuery, onSearchChange, onMenuClick }: HeaderProps
               <span>Hansard</span>
             </Button>
           </Link>
+          <Link href="/hansard-admin">
+            <Button
+              variant={location === "/hansard-admin" ? "secondary" : "ghost"}
+              size="sm"
+              data-testid="nav-hansard-admin"
+              className="gap-2"
+            >
+              <FileText className="w-4 h-4" />
+              <span>Admin</span>
+            </Button>
+          </Link>
         </nav>
 
         <div className="flex-1 flex justify-end">
