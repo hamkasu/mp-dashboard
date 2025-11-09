@@ -1525,9 +1525,16 @@ export async function seedDatabase() {
   }
   
   if (!shouldSeedMps) {
-    // Check if hansard records need to be seeded
+    // Check if court cases and SPRM investigations need to be seeded
+    const existingCourtCases = await dbStorage.getAllCourtCases();
+    const existingSprmInvestigations = await dbStorage.getAllSprmInvestigations();
     const existingHansardRecords = await dbStorage.getAllHansardRecords();
-    if (existingHansardRecords && existingHansardRecords.length > 0) {
+    
+    const hasCourtCases = existingCourtCases && existingCourtCases.length > 0;
+    const hasSprmInvestigations = existingSprmInvestigations && existingSprmInvestigations.length > 0;
+    const hasHansardRecords = existingHansardRecords && existingHansardRecords.length > 0;
+    
+    if (hasHansardRecords) {
       // Check if existing records have null/undefined absentMpIds (stale data from before this feature was added)
       // Note: Empty arrays [] are valid (sessions with perfect attendance), so we only check for null/undefined
       const hasStaleData = existingHansardRecords.some(record => 
@@ -1543,12 +1550,15 @@ export async function seedDatabase() {
           await dbStorage.deleteHansardRecord(record.id);
         }
         console.log("✅ Deleted stale Hansard records, proceeding with fresh seed...");
-      } else {
-        console.log("Database already seeded, skipping...");
+      } else if (hasCourtCases && hasSprmInvestigations) {
+        // Only skip if we have everything: MPs, court cases, SPRM investigations, and Hansard
+        console.log("Database already fully seeded, skipping...");
         return;
+      } else {
+        console.log("Hansard records exist but court cases or SPRM investigations missing, proceeding with partial seed...");
       }
     } else {
-      console.log("Hansard records not seeded, proceeding with hansard seed...");
+      console.log("Hansard records not seeded, proceeding with full seed...");
     }
   }
   
