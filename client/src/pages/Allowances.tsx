@@ -13,7 +13,8 @@ import {
   Users, 
   AlertCircle,
   Search,
-  ChevronRight
+  ChevronRight,
+  Calendar
 } from "lucide-react";
 import { Link } from "wouter";
 import type { Mp } from "@shared/schema";
@@ -84,10 +85,21 @@ export default function Allowances() {
       0
     );
 
+    const totalCumulativeAttendance = mps.reduce(
+      (sum, mp) => sum + calculateMpAllowances(mp).totalCumulativeAttendance,
+      0
+    );
+
+    const avgCumulativeAttendance = mps.length > 0
+      ? totalCumulativeAttendance / mps.length
+      : 0;
+
     return {
       avgMinisterMonthly,
       avgRegularMpMonthly,
       totalMonthlyAllowances,
+      totalCumulativeAttendance,
+      avgCumulativeAttendance,
       ministerCount: ministers.length,
       regularMpCount: regularMps.length,
     };
@@ -134,66 +146,106 @@ export default function Allowances() {
           </Card>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          <Card data-testid="card-stat-total-monthly">
-            <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Monthly Allowances</CardTitle>
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold" data-testid="text-total-monthly">
-                {formatCurrency(totalAllowanceStats.totalMonthlyAllowances)}
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                For all {mps.length} MPs
-              </p>
-            </CardContent>
-          </Card>
+        <div className="space-y-6 mb-8">
+          <div>
+            <h2 className="text-xl font-semibold mb-4">Monthly Recurring Allowances</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <Card data-testid="card-stat-total-monthly">
+                <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Total Monthly (Recurring)</CardTitle>
+                  <DollarSign className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold" data-testid="text-total-monthly">
+                    {formatCurrency(totalAllowanceStats.totalMonthlyAllowances)}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    For all {mps.length} MPs
+                  </p>
+                </CardContent>
+              </Card>
 
-          <Card data-testid="card-stat-minister-avg">
-            <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Avg. Minister Allowance</CardTitle>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold" data-testid="text-minister-avg">
-                {formatCurrency(totalAllowanceStats.avgMinisterMonthly)}
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                {totalAllowanceStats.ministerCount} ministers
-              </p>
-            </CardContent>
-          </Card>
+              <Card data-testid="card-stat-minister-avg">
+                <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Avg. Minister (Monthly)</CardTitle>
+                  <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold" data-testid="text-minister-avg">
+                    {formatCurrency(totalAllowanceStats.avgMinisterMonthly)}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {totalAllowanceStats.ministerCount} ministers
+                  </p>
+                </CardContent>
+              </Card>
 
-          <Card data-testid="card-stat-mp-avg">
-            <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Avg. Regular MP Allowance</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold" data-testid="text-mp-avg">
-                {formatCurrency(totalAllowanceStats.avgRegularMpMonthly)}
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                {totalAllowanceStats.regularMpCount} regular MPs
-              </p>
-            </CardContent>
-          </Card>
+              <Card data-testid="card-stat-mp-avg">
+                <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Avg. Regular MP (Monthly)</CardTitle>
+                  <Users className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold" data-testid="text-mp-avg">
+                    {formatCurrency(totalAllowanceStats.avgRegularMpMonthly)}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {totalAllowanceStats.regularMpCount} regular MPs
+                  </p>
+                </CardContent>
+              </Card>
 
-          <Card data-testid="card-stat-annual-total">
-            <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Est. Annual Total</CardTitle>
-              <Calculator className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold" data-testid="text-annual-total">
-                {formatCurrency(totalAllowanceStats.totalMonthlyAllowances * 12)}
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                Projected yearly expenditure
-              </p>
-            </CardContent>
-          </Card>
+              <Card data-testid="card-stat-annual-total">
+                <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Est. Annual (Recurring)</CardTitle>
+                  <Calculator className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold" data-testid="text-annual-total">
+                    {formatCurrency(totalAllowanceStats.totalMonthlyAllowances * 12)}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Projected yearly expenditure
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+
+          <div>
+            <h2 className="text-xl font-semibold mb-4">Cumulative Attendance Allowances (Since Sworn In)</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Card data-testid="card-stat-total-cumulative">
+                <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Total Cumulative Attendance</CardTitle>
+                  <Calendar className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold" data-testid="text-total-cumulative">
+                    {formatCurrency(totalAllowanceStats.totalCumulativeAttendance)}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Lifetime attendance for all {mps.length} MPs
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card data-testid="card-stat-avg-cumulative">
+                <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Avg. Cumulative per MP</CardTitle>
+                  <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold" data-testid="text-avg-cumulative">
+                    {formatCurrency(totalAllowanceStats.avgCumulativeAttendance)}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Average lifetime attendance allowance
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
@@ -255,8 +307,8 @@ export default function Allowances() {
           <div className="space-y-6">
             <Card data-testid="card-daily-allowances">
               <CardHeader>
-                <CardTitle>Daily Allowances</CardTitle>
-                <CardDescription>Based on attendance</CardDescription>
+                <CardTitle>Attendance Allowances</CardTitle>
+                <CardDescription>Cumulative from sworn-in date</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="flex justify-between items-center">
@@ -267,6 +319,9 @@ export default function Allowances() {
                   <span className="text-sm">Government Meetings</span>
                   <span className="font-semibold">{formatCurrency(ALLOWANCE_RATES.GOVERNMENT_MEETING_PER_DAY)}/day</span>
                 </div>
+                <p className="text-xs text-muted-foreground pt-2">
+                  Total calculated from days attended since sworn in
+                </p>
               </CardContent>
             </Card>
 
@@ -372,11 +427,19 @@ export default function Allowances() {
                         </div>
                       </div>
                       <div className="flex items-center gap-4 flex-shrink-0">
-                        <div className="text-right">
-                          <p className="font-semibold" data-testid={`text-monthly-allowance-${mp.id}`}>
-                            {formatCurrency(allowance.totalMonthly)}
-                          </p>
-                          <p className="text-xs text-muted-foreground">monthly</p>
+                        <div className="text-right space-y-1">
+                          <div>
+                            <p className="font-semibold" data-testid={`text-monthly-allowance-${mp.id}`}>
+                              {formatCurrency(allowance.totalMonthly)}
+                            </p>
+                            <p className="text-xs text-muted-foreground">monthly recurring</p>
+                          </div>
+                          <div className="pt-1 border-t">
+                            <p className="font-semibold text-green-600 dark:text-green-400" data-testid={`text-cumulative-allowance-${mp.id}`}>
+                              {formatCurrency(allowance.totalCumulativeAttendance)}
+                            </p>
+                            <p className="text-xs text-muted-foreground">cumulative attendance</p>
+                          </div>
                         </div>
                         <ChevronRight className="h-5 w-5 text-muted-foreground" />
                       </div>

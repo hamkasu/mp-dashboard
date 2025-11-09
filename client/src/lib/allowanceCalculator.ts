@@ -9,7 +9,7 @@ export const ALLOWANCE_RATES = {
   // Additional Minister Allowance
   MINISTER_ADDITIONAL: 13400,
   
-  // Daily Attendance Allowances
+  // Daily Attendance Allowances (Cumulative from sworn-in date)
   PARLIAMENT_SITTING_PER_DAY: 400,
   GOVERNMENT_MEETING_PER_DAY: 300,
   
@@ -47,13 +47,13 @@ export interface AllowanceBreakdown {
   driver: number;
   phoneBill: number;
   
-  // Variable (based on attendance)
+  // Cumulative (lifetime from sworn-in date)
   parliamentSittingTotal: number;
   governmentMeetingTotal: number;
+  totalCumulativeAttendance: number;
   
-  // Totals
+  // Totals (recurring only)
   totalMonthlyFixed: number;
-  totalMonthlyVariable: number;
   totalMonthly: number;
   totalAnnual: number;
   
@@ -92,11 +92,12 @@ export function calculateMpAllowances(
   const driver = ALLOWANCE_RATES.DRIVER;
   const phoneBill = ALLOWANCE_RATES.PHONE_BILL;
   
-  // Variable allowances based on attendance
+  // Cumulative allowances based on lifetime attendance (from sworn-in date)
   const parliamentSittingTotal = mp.daysAttended * ALLOWANCE_RATES.PARLIAMENT_SITTING_PER_DAY;
   const governmentMeetingTotal = mp.governmentMeetingDays * ALLOWANCE_RATES.GOVERNMENT_MEETING_PER_DAY;
+  const totalCumulativeAttendance = parliamentSittingTotal + governmentMeetingTotal;
   
-  // Calculate totals
+  // Calculate recurring monthly totals (excluding cumulative attendance)
   const totalMonthlyFixed = 
     baseSalary +
     ministerAdditional +
@@ -108,9 +109,8 @@ export function calculateMpAllowances(
     driver +
     phoneBill;
   
-  const totalMonthlyVariable = parliamentSittingTotal + governmentMeetingTotal;
-  const totalMonthly = totalMonthlyFixed + totalMonthlyVariable;
-  const totalAnnual = (totalMonthlyFixed + totalMonthlyVariable) * monthsInYear;
+  const totalMonthly = totalMonthlyFixed;
+  const totalAnnual = totalMonthlyFixed * monthsInYear;
   
   return {
     baseSalary,
@@ -124,8 +124,8 @@ export function calculateMpAllowances(
     phoneBill,
     parliamentSittingTotal,
     governmentMeetingTotal,
+    totalCumulativeAttendance,
     totalMonthlyFixed,
-    totalMonthlyVariable,
     totalMonthly,
     totalAnnual,
     isMinister,

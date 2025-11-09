@@ -125,7 +125,7 @@ export function MPCard({ mp }: MPCardProps) {
                 <p className={`font-semibold ${attendanceColor}`} data-testid={`text-attendance-${mp.id}`}>
                   {mp.daysAttended}/{mp.totalParliamentDays} days
                 </p>
-                <p className="text-xs text-muted-foreground">Parliament attendance</p>
+                <p className="text-xs text-muted-foreground">Parliament attendance (since sworn in)</p>
               </div>
             </div>
             

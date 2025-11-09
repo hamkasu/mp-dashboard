@@ -415,10 +415,10 @@ export default function MPProfile() {
                         <td className="py-3 px-4 font-medium">
                           Parliament Sitting Attendance
                           <p className="text-xs text-muted-foreground mt-1">
-                            {formatCurrency(mp.parliamentSittingAllowance)}/day × {mp.daysAttended} days
+                            {formatCurrency(mp.parliamentSittingAllowance)}/day × {mp.daysAttended} days (cumulative since sworn in)
                           </p>
                         </td>
-                        <td className="text-center py-3 px-4 text-sm text-muted-foreground">Per Session</td>
+                        <td className="text-center py-3 px-4 text-sm text-muted-foreground">Cumulative</td>
                         <td className="text-right py-3 px-4 font-semibold" data-testid="text-parliament-sitting-total">
                           {formatCurrency(mp.parliamentSittingAllowance * mp.daysAttended)}
                         </td>
