@@ -897,6 +897,11 @@ export class MemStorage implements IStorage {
     const rafizMp = mpsArray.find(mp => mp.name === "Rafizi Ramli");
     const ahmadZahidMp = mpsArray.find(mp => mp.name === "Ahmad Zahid Hamidi");
     
+    const absentMps1 = mpsArray.filter(mp => 
+      mp.name !== "Anwar Ibrahim" && 
+      mp.name !== "Ahmad Zahid Hamidi"
+    ).slice(0, 15);
+    
     this.createHansardRecord({
       sessionNumber: "DR.11.04.2022",
       sessionDate: new Date("2022-04-11"),
@@ -928,7 +933,13 @@ export class MemStorage implements IStorage {
         abstainCount: 2,
         timestamp: "2022-04-11T16:30:00Z",
       }],
+      attendedMpIds: [anwarMp?.id, ahmadZahidMp?.id].filter((id): id is string => id !== undefined),
+      absentMpIds: absentMps1.map(mp => mp.id),
     });
+    
+    const absentMps2 = mpsArray.filter(mp => 
+      mp.name !== "Rafizi Ramli"
+    ).slice(0, 22);
     
     this.createHansardRecord({
       sessionNumber: "DR.13.10.2023",
@@ -955,6 +966,8 @@ export class MemStorage implements IStorage {
         abstainCount: 0,
         timestamp: "2023-10-13T18:45:00Z",
       }],
+      attendedMpIds: rafizMp ? [rafizMp.id] : [],
+      absentMpIds: absentMps2.map(mp => mp.id),
     });
   }
 
@@ -1308,6 +1321,8 @@ export class DbStorage implements IStorage {
         topics,
         speakers,
         vote_records,
+        attended_mp_ids,
+        absent_mp_ids,
         created_at
       FROM hansard_records
       WHERE id = ${id}
@@ -1328,6 +1343,8 @@ export class DbStorage implements IStorage {
       topics: row.topics,
       speakers: row.speakers,
       voteRecords: row.vote_records,
+      attendedMpIds: row.attended_mp_ids || [],
+      absentMpIds: row.absent_mp_ids || [],
       createdAt: row.created_at,
     } as unknown as HansardRecord;
   }
@@ -1350,6 +1367,8 @@ export class DbStorage implements IStorage {
           topics,
           speakers,
           vote_records,
+          attended_mp_ids,
+          absent_mp_ids,
           created_at
         FROM hansard_records
         ORDER BY session_date DESC
@@ -1368,6 +1387,8 @@ export class DbStorage implements IStorage {
         topics: row.topics,
         speakers: row.speakers,
         voteRecords: row.vote_records,
+        attendedMpIds: row.attended_mp_ids || [],
+        absentMpIds: row.absent_mp_ids || [],
         createdAt: row.created_at,
       })) as unknown as HansardRecord[];
     } catch (error) {
@@ -1394,6 +1415,8 @@ export class DbStorage implements IStorage {
           topics,
           speakers,
           vote_records,
+          attended_mp_ids,
+          absent_mp_ids,
           created_at
         FROM hansard_records
         WHERE session_number = ${sessionNumber}
@@ -1413,6 +1436,8 @@ export class DbStorage implements IStorage {
         topics: row.topics,
         speakers: row.speakers,
         voteRecords: row.vote_records,
+        attendedMpIds: row.attended_mp_ids || [],
+        absentMpIds: row.absent_mp_ids || [],
         createdAt: row.created_at,
       })) as unknown as HansardRecord[];
     } catch (error) {
@@ -1475,36 +1500,61 @@ export async function seedDatabase() {
   const memStorage = new MemStorage();
   const dbStorage = new DbStorage();
   
-  // Check if database is already seeded
+  let mpIdMap = new Map<string, string>();
+  let shouldSeedMps = false;
+  
+  // Check if database is already seeded with MPs
   try {
     const existingMps = await dbStorage.getAllMps();
     if (existingMps && existingMps.length > 0) {
-      console.log("Database already seeded, skipping...");
-      return;
+      console.log("MPs already seeded, building ID map...");
+      // Build MP ID map from existing MPs
+      const memMps = await memStorage.getAllMps();
+      for (const memMp of memMps) {
+        const dbMp = existingMps.find(m => m.name === memMp.name);
+        if (dbMp) {
+          mpIdMap.set(memMp.id, dbMp.id);
+        }
+      }
+    } else {
+      shouldSeedMps = true;
     }
   } catch (error) {
-    console.log("Database not yet seeded, proceeding with seed...");
+    console.log("Database not yet seeded, proceeding with full seed...");
+    shouldSeedMps = true;
   }
   
-  // Seed MPs and keep track of ID mapping
-  const allMps = await memStorage.getAllMps();
-  const mpIdMap = new Map<string, string>();
-  
-  console.log(`Seeding ${allMps.length} MPs...`);
-  for (const mp of allMps) {
-    const { id: oldId, ...mpData } = mp;
-    try {
-      const newMp = await dbStorage.createMp(mpData);
-      if (!newMp || !newMp.id) {
-        console.error(`Failed to create MP: ${mp.name} - returned undefined or no ID`);
-        continue;
-      }
-      mpIdMap.set(oldId, newMp.id);
-    } catch (error) {
-      console.error(`Error creating MP ${mp.name}:`, error);
+  if (!shouldSeedMps) {
+    // Check if hansard records need to be seeded
+    const existingHansardRecords = await dbStorage.getAllHansardRecords();
+    if (existingHansardRecords && existingHansardRecords.length > 0) {
+      console.log("Database already seeded, skipping...");
+      return;
+    } else {
+      console.log("Hansard records not seeded, proceeding with hansard seed...");
     }
   }
-  console.log(`Successfully seeded ${mpIdMap.size} MPs`);
+  
+  // Seed MPs and keep track of ID mapping (only if needed)
+  if (shouldSeedMps) {
+    const allMps = await memStorage.getAllMps();
+    
+    console.log(`Seeding ${allMps.length} MPs...`);
+    for (const mp of allMps) {
+      const { id: oldId, ...mpData} = mp;
+      try {
+        const newMp = await dbStorage.createMp(mpData);
+        if (!newMp || !newMp.id) {
+          console.error(`Failed to create MP: ${mp.name} - returned undefined or no ID`);
+          continue;
+        }
+        mpIdMap.set(oldId, newMp.id);
+      } catch (error) {
+        console.error(`Error creating MP ${mp.name}:`, error);
+      }
+    }
+    console.log(`Successfully seeded ${mpIdMap.size} MPs`);
+  }
   
   // Seed court cases with updated MP IDs
   const allCourtCases = await memStorage.getAllCourtCases();
@@ -1556,7 +1606,7 @@ export async function seedDatabase() {
     }
   }
   
-  // Seed Hansard records (update MP IDs in speakers)
+  // Seed Hansard records (update MP IDs in speakers, attendedMpIds, and absentMpIds)
   const allHansardRecords = await memStorage.getAllHansardRecords();
   for (const record of allHansardRecords) {
     const { id, createdAt, ...recordData } = record;
@@ -1567,9 +1617,21 @@ export async function seedDatabase() {
       return newMpId ? { ...speaker, mpId: newMpId } : speaker;
     });
     
+    // Update MP IDs in attendedMpIds array
+    const updatedAttendedMpIds = (recordData.attendedMpIds || [])
+      .map(oldId => mpIdMap.get(oldId))
+      .filter((id): id is string => id !== undefined);
+    
+    // Update MP IDs in absentMpIds array
+    const updatedAbsentMpIds = (recordData.absentMpIds || [])
+      .map(oldId => mpIdMap.get(oldId))
+      .filter((id): id is string => id !== undefined);
+    
     await dbStorage.createHansardRecord({
       ...recordData,
       speakers: updatedSpeakers,
+      attendedMpIds: updatedAttendedMpIds,
+      absentMpIds: updatedAbsentMpIds,
     });
   }
   

@@ -888,8 +888,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const reportData = records.map(record => {
-        const speakerIds = new Set(record.speakers.map(s => s.mpId));
-        const absentMps = filteredMps.filter(mp => !speakerIds.has(mp.id));
+        const absentMpIds = record.absentMpIds || [];
+        const mpIdMap = new Map(allMps.map(mp => [mp.id, mp]));
+        
+        const absentMps = absentMpIds
+          .map(id => mpIdMap.get(id))
+          .filter((mp): mp is NonNullable<typeof mp> => mp !== undefined)
+          .filter(mp => filteredMps.some(fmp => fmp.id === mp.id));
+        
+        const attendedMps = filteredMps.filter(mp => !absentMpIds.includes(mp.id));
         
         return {
           id: record.id,
@@ -899,7 +906,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           sitting: record.sitting,
           totalAbsent: absentMps.length,
           totalSpeakers: record.speakers.length,
-          attendanceRate: ((filteredMps.length - absentMps.length) / filteredMps.length) * 100,
+          attendanceRate: filteredMps.length > 0 
+            ? (attendedMps.length / filteredMps.length) * 100 
+            : 0,
           absentMps: absentMps.map(mp => ({
             id: mp.id,
             name: mp.name,
@@ -997,6 +1006,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         try {
           const topics = extractTopics(transcript);
+          const attendance = scraper.extractAttendanceFromText(transcript);
+          
+          const allMps = await storage.getAllMps();
+          const nameMatcher = new MPNameMatcher(allMps);
+          
+          const attendedMpIds = nameMatcher.matchNames(attendance.attendedNames);
+          const absentMpIds = nameMatcher.matchNames(attendance.absentNames);
+          
+          console.log(`  Attendance: ${attendedMpIds.length} present, ${absentMpIds.length} absent`);
           
           await storage.createHansardRecord({
             sessionNumber: metadata.sessionNumber,
@@ -1007,7 +1025,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             pdfLinks: [metadata.pdfUrl],
             topics: topics,
             speakers: [],
-            voteRecords: []
+            voteRecords: [],
+            attendedMpIds,
+            absentMpIds
           });
           
           console.log(`  ✓ Saved (${Math.floor(transcript.length / 1000)}KB of text)`);
