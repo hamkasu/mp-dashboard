@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Search, FileText, Calendar, Download, Sparkles, CheckCircle } from "lucide-react";
+import { Search, FileText, Calendar, Download, Sparkles, CheckCircle, Users, UserX } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import type { HansardRecord } from "@shared/schema";
@@ -216,6 +216,25 @@ export default function HansardPage() {
                       {topic}
                     </Badge>
                   ))}
+                </div>
+              )}
+
+              {(record.attendedMpIds?.length > 0 || record.absentMpIds?.length > 0) && (
+                <div className="flex flex-wrap gap-4 text-sm">
+                  {record.attendedMpIds && record.attendedMpIds.length > 0 && (
+                    <div className="flex items-center gap-2" data-testid="attendance-present">
+                      <Users className="w-4 h-4 text-green-600 dark:text-green-400" />
+                      <span className="font-medium">{record.attendedMpIds.length}</span>
+                      <span className="text-muted-foreground">MPs Present</span>
+                    </div>
+                  )}
+                  {record.absentMpIds && record.absentMpIds.length > 0 && (
+                    <div className="flex items-center gap-2" data-testid="attendance-absent">
+                      <UserX className="w-4 h-4 text-orange-600 dark:text-orange-400" />
+                      <span className="font-medium">{record.absentMpIds.length}</span>
+                      <span className="text-muted-foreground">MPs Absent</span>
+                    </div>
+                  )}
                 </div>
               )}
               

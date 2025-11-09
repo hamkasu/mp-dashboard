@@ -1,4 +1,5 @@
 import { HansardScraper } from './hansard-scraper';
+import { MPNameMatcher } from './mp-name-matcher';
 import { storage } from './storage';
 
 async function scrapeAndStoreHansard() {
@@ -8,6 +9,10 @@ async function scrapeAndStoreHansard() {
   const hansardList = await scraper.getHansardListForParliament15(1000);
   
   console.log(`Found ${hansardList.length} Hansard records to process`);
+  
+  const allMps = await storage.getAllMps();
+  const nameMatcher = new MPNameMatcher(allMps);
+  console.log(`Loaded ${allMps.length} MPs for name matching`);
   
   let successCount = 0;
   let errorCount = 0;
@@ -31,6 +36,12 @@ async function scrapeAndStoreHansard() {
     
     try {
       const topics = extractTopics(transcript);
+      const attendance = scraper.extractAttendanceFromText(transcript);
+      
+      const attendedMpIds = nameMatcher.matchNames(attendance.attendedNames);
+      const absentMpIds = nameMatcher.matchNames(attendance.absentNames);
+      
+      console.log(`  Attendance: ${attendedMpIds.length} present, ${absentMpIds.length} absent`);
       
       await storage.createHansardRecord({
         sessionNumber: metadata.sessionNumber,
@@ -41,7 +52,9 @@ async function scrapeAndStoreHansard() {
         pdfLinks: [metadata.pdfUrl],
         topics: topics,
         speakers: [],
-        voteRecords: []
+        voteRecords: [],
+        attendedMpIds,
+        absentMpIds
       });
       
       console.log(`  ✓ Saved (${Math.floor(transcript.length / 1000)}KB of text)`);

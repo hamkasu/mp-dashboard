@@ -23,6 +23,11 @@ interface HansardMetadata {
   pdfUrl: string;
 }
 
+export interface AttendanceData {
+  attendedNames: string[];
+  absentNames: string[];
+}
+
 export class HansardScraper {
   private readonly baseUrl = 'https://www.parlimen.gov.my';
   private readonly headers = {
@@ -170,5 +175,75 @@ export class HansardScraper {
 
   private delay(ms: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  extractAttendanceFromText(pdfText: string): AttendanceData {
+    const attendedNames: string[] = [];
+    const absentNames: string[] = [];
+
+    const normalizedText = pdfText.replace(/[ \t]+/g, ' ');
+    
+    const attendancePattern = /KEHADIRAN\s+AHLI[-\s]AHLI\s+PARLIMEN/i;
+    const absentPattern = /Ahli[-\s]Ahli\s+Yang\s+Tidak\s+Hadir\s*:?/i;
+    
+    const attendanceMatch = normalizedText.match(attendancePattern);
+    const absentMatch = normalizedText.match(absentPattern);
+
+    if (attendanceMatch && attendanceMatch.index !== undefined) {
+      const startIdx = attendanceMatch.index + attendanceMatch[0].length;
+      let endIdx = normalizedText.length;
+      
+      if (absentMatch && absentMatch.index !== undefined && absentMatch.index > startIdx) {
+        endIdx = absentMatch.index;
+      } else {
+        const nextSectionMatch = normalizedText.substring(startIdx).match(/\n\s*\n\s*[A-Z][A-Z]/);
+        if (nextSectionMatch && nextSectionMatch.index !== undefined) {
+          endIdx = startIdx + nextSectionMatch.index;
+        } else {
+          endIdx = Math.min(startIdx + 20000, normalizedText.length);
+        }
+      }
+      
+      const attendanceSection = normalizedText.substring(startIdx, endIdx);
+      const extractedAttended = this.extractNamesFromSection(attendanceSection);
+      attendedNames.push(...extractedAttended);
+    }
+
+    if (absentMatch && absentMatch.index !== undefined) {
+      const startIdx = absentMatch.index + absentMatch[0].length;
+      const nextSectionMatch = normalizedText.substring(startIdx).match(/\n\s*\n\s*[A-Z][A-Z]/);
+      const endIdx = nextSectionMatch && nextSectionMatch.index !== undefined 
+        ? startIdx + nextSectionMatch.index 
+        : Math.min(startIdx + 10000, normalizedText.length);
+      
+      const absentSection = normalizedText.substring(startIdx, endIdx);
+      const extractedAbsent = this.extractNamesFromSection(absentSection);
+      absentNames.push(...extractedAbsent);
+    }
+
+    return { attendedNames, absentNames };
+  }
+
+  private extractNamesFromSection(sectionText: string): string[] {
+    const names: string[] = [];
+    const lines = sectionText.split('\n');
+    
+    for (const line of lines) {
+      let trimmed = line.trim();
+      if (!trimmed || trimmed.length < 5) continue;
+      
+      trimmed = trimmed
+        .replace(/^\d+\.\s*/, '')
+        .replace(/\s*\([^)]*\)\s*/g, '')
+        .replace(/\s*\[[^\]]*\]\s*/g, '')
+        .replace(/,.*$/, '')
+        .trim();
+      
+      if (trimmed.length > 3 && trimmed.match(/^[A-Z]/i) && trimmed.match(/[a-z]/i)) {
+        names.push(trimmed);
+      }
+    }
+    
+    return names;
   }
 }
