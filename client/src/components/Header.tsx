@@ -1,11 +1,11 @@
-import { Search, Menu, Home, FileText, BookOpen, UserCheck } from "lucide-react";
+import { Search, Menu, Home, FileText, BookOpen, UserCheck, Calculator } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Link, useLocation } from "wouter";
 
 interface HeaderProps {
-  searchQuery: string;
-  onSearchChange: (value: string) => void;
+  searchQuery?: string;
+  onSearchChange?: (value: string) => void;
   onMenuClick?: () => void;
 }
 
@@ -88,6 +88,17 @@ export function Header({ searchQuery, onSearchChange, onMenuClick }: HeaderProps
               <span>Attendance</span>
             </Button>
           </Link>
+          <Link href="/allowances">
+            <Button
+              variant={location === "/allowances" ? "secondary" : "ghost"}
+              size="sm"
+              data-testid="nav-allowances"
+              className="gap-2"
+            >
+              <Calculator className="w-4 h-4" />
+              <span>Allowances</span>
+            </Button>
+          </Link>
           <Link href="/hansard-admin">
             <Button
               variant={location === "/hansard-admin" ? "secondary" : "ghost"}
@@ -101,19 +112,21 @@ export function Header({ searchQuery, onSearchChange, onMenuClick }: HeaderProps
           </Link>
         </nav>
 
-        <div className="flex-1 flex justify-end">
-          <div className="relative w-full max-w-sm">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder="Search MPs..."
-              value={searchQuery}
-              onChange={(e) => onSearchChange(e.target.value)}
-              className="pl-9 h-9"
-              data-testid="input-search"
-            />
+        {onSearchChange && (
+          <div className="flex-1 flex justify-end">
+            <div className="relative w-full max-w-sm">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="search"
+                placeholder="Search MPs..."
+                value={searchQuery || ""}
+                onChange={(e) => onSearchChange(e.target.value)}
+                className="pl-9 h-9"
+                data-testid="input-search"
+              />
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </header>
   );

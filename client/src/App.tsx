@@ -9,6 +9,7 @@ import ParliamentaryActivity from "@/pages/ParliamentaryActivity";
 import Hansard from "@/pages/hansard";
 import HansardAdmin from "@/pages/HansardAdmin";
 import Attendance from "@/pages/attendance";
+import Allowances from "@/pages/Allowances";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -19,6 +20,7 @@ function Router() {
       <Route path="/activity" component={ParliamentaryActivity} />
       <Route path="/hansard" component={Hansard} />
       <Route path="/attendance" component={Attendance} />
+      <Route path="/allowances" component={Allowances} />
       <Route path="/hansard-admin" component={HansardAdmin} />
       <Route component={NotFound} />
     </Switch>

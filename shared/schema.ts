@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, timestamp, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, timestamp, jsonb, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -24,6 +24,9 @@ export const mps = pgTable("mps", {
   computerAllowance: integer("computer_allowance").notNull().default(6000),
   dressWearAllowance: integer("dress_wear_allowance").notNull().default(1000),
   parliamentSittingAllowance: integer("parliament_sitting_allowance").notNull().default(400),
+  governmentMeetingDays: integer("government_meeting_days").notNull().default(0),
+  isMinister: boolean("is_minister").notNull().default(false),
+  ministerialPosition: text("ministerial_position"),
 });
 
 export const insertMpSchema = createInsertSchema(mps).omit({
