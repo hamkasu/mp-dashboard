@@ -801,6 +801,138 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get absent MPs for a specific Hansard record
+  app.get("/api/hansard-records/:id/absent-mps", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const record = await storage.getHansardRecord(id);
+      
+      if (!record) {
+        return res.status(404).json({ error: "Hansard record not found" });
+      }
+      
+      const allMps = await storage.getAllMps();
+      const speakerIds = new Set(record.speakers.map(s => s.mpId));
+      
+      const absentMps = allMps.filter(mp => !speakerIds.has(mp.id));
+      
+      const partyBreakdown = absentMps.reduce((acc, mp) => {
+        const existing = acc.find(p => p.party === mp.party);
+        if (existing) {
+          existing.count++;
+        } else {
+          acc.push({ party: mp.party, count: 1 });
+        }
+        return acc;
+      }, [] as { party: string; count: number }[]);
+      
+      res.json({
+        sessionNumber: record.sessionNumber,
+        sessionDate: record.sessionDate,
+        totalAbsent: absentMps.length,
+        totalMps: allMps.length,
+        attendanceRate: ((allMps.length - absentMps.length) / allMps.length) * 100,
+        partyBreakdown: partyBreakdown.sort((a, b) => b.count - a.count),
+        absentMps: absentMps.map(mp => ({
+          id: mp.id,
+          name: mp.name,
+          party: mp.party,
+          state: mp.state,
+          constituency: mp.constituency,
+          photoUrl: mp.photoUrl
+        }))
+      });
+    } catch (error) {
+      console.error("Error fetching absent MPs:", error);
+      res.status(500).json({ error: "Failed to fetch absent MPs" });
+    }
+  });
+
+  // Get attendance report across all Hansard sessions
+  app.get("/api/attendance/report", async (req, res) => {
+    try {
+      const { startDate, endDate, party, state } = req.query;
+      
+      let records = await storage.getAllHansardRecords();
+      const allMps = await storage.getAllMps();
+      
+      if (startDate && typeof startDate === 'string') {
+        const start = new Date(startDate);
+        records = records.filter(r => new Date(r.sessionDate) >= start);
+      }
+      
+      if (endDate && typeof endDate === 'string') {
+        const end = new Date(endDate);
+        records = records.filter(r => new Date(r.sessionDate) <= end);
+      }
+      
+      let filteredMps = allMps;
+      if (party && typeof party === 'string') {
+        filteredMps = filteredMps.filter(mp => mp.party === party);
+      }
+      
+      if (state && typeof state === 'string') {
+        filteredMps = filteredMps.filter(mp => mp.state === state);
+      }
+      
+      if (filteredMps.length === 0) {
+        return res.json({
+          summary: {
+            totalSessions: 0,
+            averageAbsent: 0,
+            averageAttendanceRate: 0,
+            totalMpsTracked: 0
+          },
+          sessions: []
+        });
+      }
+      
+      const reportData = records.map(record => {
+        const speakerIds = new Set(record.speakers.map(s => s.mpId));
+        const absentMps = filteredMps.filter(mp => !speakerIds.has(mp.id));
+        
+        return {
+          id: record.id,
+          sessionNumber: record.sessionNumber,
+          sessionDate: record.sessionDate,
+          parliamentTerm: record.parliamentTerm,
+          sitting: record.sitting,
+          totalAbsent: absentMps.length,
+          totalSpeakers: record.speakers.length,
+          attendanceRate: ((filteredMps.length - absentMps.length) / filteredMps.length) * 100,
+          absentMps: absentMps.map(mp => ({
+            id: mp.id,
+            name: mp.name,
+            party: mp.party,
+            state: mp.state,
+            constituency: mp.constituency
+          }))
+        };
+      }).sort((a, b) => new Date(b.sessionDate).getTime() - new Date(a.sessionDate).getTime());
+      
+      const totalSessions = reportData.length;
+      const avgAbsent = totalSessions > 0 
+        ? reportData.reduce((sum, r) => sum + r.totalAbsent, 0) / totalSessions 
+        : 0;
+      const avgAttendanceRate = totalSessions > 0
+        ? reportData.reduce((sum, r) => sum + r.attendanceRate, 0) / totalSessions
+        : 0;
+      
+      res.json({
+        summary: {
+          totalSessions,
+          averageAbsent: Math.round(avgAbsent * 10) / 10,
+          averageAttendanceRate: Math.round(avgAttendanceRate * 10) / 10,
+          totalMpsTracked: filteredMps.length
+        },
+        sessions: reportData
+      });
+    } catch (error) {
+      console.error("Error generating attendance report:", error);
+      res.status(500).json({ error: "Failed to generate attendance report" });
+    }
+  });
+
   // Delete a Hansard record
   app.delete("/api/hansard-records/:id", async (req, res) => {
     try {
