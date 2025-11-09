@@ -680,17 +680,17 @@ export class MemStorage implements IStorage {
     if (ismailSabriMp) {
       this.createSprmInvestigation({
         mpId: ismailSabriMp.id,
-        caseNumber: "SPRM-ISY-2025",
-        title: "SPRM Investigation - Corruption and Money Laundering",
+        caseNumber: "MACC-ISY-2025",
+        title: "Corruption and money laundering probe - Keluarga Malaysia campaign",
         status: "Ongoing",
-        startDate: new Date("2024-12-11"),
+        startDate: new Date("2025-02-10"),
         endDate: null,
         outcome: null,
-        charges: "Under SPRM investigation for corruption and money laundering related to RM700 million 'Keluarga Malaysia' promotional campaign. Named as suspect in March 2025. Raids uncovered RM170 million cash and 16 gold bears.",
+        charges: "Under MACC investigation for corruption and money laundering related to RM700 million 'Keluarga Malaysia' promotional campaign during his tenure as PM (Aug 2021-Nov 2022). Named as primary suspect on March 3, 2025. Total assets seized: RM177 million comprising RM170 million in cash (multiple currencies) and 16kg gold bars worth RM7 million from safe houses and residences of senior aides. 13 bank accounts frozen with RM2 million. Will not challenge RM169 million forfeiture (Sept 2025). AGC reviewing full investigation report as of Oct 2025. No charges filed yet.",
         documentLinks: [
-          "https://www.thestar.com.my/news/nation/2025/03/15/ismail-sabri-named-suspect-in-sprm-probe",
-          "https://www.nst.com.my/news/crime-courts/2024/12/1135678/sprm-raids-ismail-sabri-home-rm170-million-cash-seized",
-          "https://www.malaymail.com/news/malaysia/2025/03/15/keluarga-malaysia-campaign-under-macc-investigation/123456"
+          "https://www.nst.com.my/news/crime-courts/2025/09/1272173/ismail-sabri-will-not-challenge-maccs-rm169mil-forfeiture",
+          "https://www.freemalaysiatoday.com/category/nation/2025/03/13/ismail-sabri-pledges-full-cooperation-in-macc-probe",
+          "https://www.malaymail.com/news/malaysia/2025/10/16/ag-macc-report-on-ismail-sabri-under-review-charges-ready-for-muhyiddins-son-in-law/194763"
         ],
       });
     }
