@@ -13,7 +13,6 @@ import {
   updateHansardRecordSchema
 } from "@shared/schema";
 import { HansardScraper } from "./hansard-scraper";
-import { summarizeHansardTranscript } from "./services/gemini";
 
 function extractTopics(transcript: string): string[] {
   const topics: Set<string> = new Set();
@@ -729,11 +728,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      const languageMap = { en: "English", ms: "Malay", zh: "Chinese" };
-      const summary = await summarizeHansardTranscript(record.transcript, {
-        maxLength: validatedData.maxLength,
-        language: languageMap[validatedData.language]
-      });
+      const HUGGINGFACE_API_KEY = process.env.HUGGINGFACE_API_KEY;
+      
+      if (!HUGGINGFACE_API_KEY) {
+        return res.status(500).json({ error: "Hugging Face API key not configured" });
+      }
+
+      const targetLanguage = validatedData.language === "en" ? "english" : "malay";
+      const languageInstruction = targetLanguage === "malay" 
+        ? "Ringkaskan dalam Bahasa Malaysia: " 
+        : "Summarize in English: ";
+      
+      const inputText = languageInstruction + record.transcript;
+
+      const response = await fetch(
+        "https://api-inference.huggingface.co/models/csebuetnlp/mT5_multilingual_XLSum",
+        {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${HUGGINGFACE_API_KEY}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            inputs: inputText,
+            parameters: {
+              max_length: validatedData.maxLength,
+              min_length: 30,
+              do_sample: false,
+            }
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Hugging Face API error:", errorText);
+        
+        if (response.status === 503) {
+          return res.status(503).json({ 
+            error: "Model is loading. Please try again in a moment.",
+            retry: true 
+          });
+        }
+        
+        return res.status(response.status).json({ 
+          error: "Failed to generate summary",
+          details: errorText 
+        });
+      }
+
+      const result = await response.json();
+      const summary = Array.isArray(result) && result[0]?.summary_text 
+        ? result[0].summary_text 
+        : result.summary_text || "Summary not available";
       
       const updatedRecord = await storage.updateHansardRecord(id, {
         summary,
