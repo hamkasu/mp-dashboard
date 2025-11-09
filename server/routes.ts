@@ -883,6 +883,92 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Summarize text with Hugging Face mT5 (supports Malay and English)
+  app.post("/api/summarize", async (req, res) => {
+    try {
+      const { text, language } = req.body;
+      
+      if (!text) {
+        return res.status(400).json({ error: "Text is required" });
+      }
+
+      const validLanguages = ['malay', 'english'];
+      const targetLanguage = language?.toLowerCase() || 'english';
+      
+      if (!validLanguages.includes(targetLanguage)) {
+        return res.status(400).json({ error: "Language must be 'malay' or 'english'" });
+      }
+
+      const HUGGINGFACE_API_KEY = process.env.HUGGINGFACE_API_KEY;
+      
+      if (!HUGGINGFACE_API_KEY) {
+        return res.status(500).json({ error: "Hugging Face API key not configured" });
+      }
+
+      // Prepend language instruction to guide the model
+      const languageInstruction = targetLanguage === 'malay' 
+        ? "Ringkaskan dalam Bahasa Malaysia: " 
+        : "Summarize in English: ";
+      
+      const inputText = languageInstruction + text;
+
+      // Use mT5 model for multilingual summarization
+      const response = await fetch(
+        "https://api-inference.huggingface.co/models/csebuetnlp/mT5_multilingual_XLSum",
+        {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${HUGGINGFACE_API_KEY}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            inputs: inputText,
+            parameters: {
+              max_length: 150,
+              min_length: 30,
+              do_sample: false,
+            }
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Hugging Face API error:", errorText);
+        
+        // Check if model is loading
+        if (response.status === 503) {
+          return res.status(503).json({ 
+            error: "Model is loading. Please try again in a moment.",
+            retry: true 
+          });
+        }
+        
+        return res.status(response.status).json({ 
+          error: "Failed to generate summary",
+          details: errorText 
+        });
+      }
+
+      const result = await response.json();
+      
+      // The API returns an array with summary_text
+      const summary = Array.isArray(result) && result[0]?.summary_text 
+        ? result[0].summary_text 
+        : result.summary_text || "Summary not available";
+
+      res.json({ 
+        summary,
+        language: targetLanguage,
+        originalLength: text.length,
+        summaryLength: summary.length
+      });
+    } catch (error) {
+      console.error("Error in summarization:", error);
+      res.status(500).json({ error: "Failed to summarize text" });
+    }
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;

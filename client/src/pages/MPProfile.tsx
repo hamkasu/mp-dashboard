@@ -9,6 +9,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Summarizer } from "@/components/Summarizer";
 import type { Mp, CourtCase, SprmInvestigation, LegislativeProposal, DebateParticipation, ParliamentaryQuestion } from "@shared/schema";
 import { calculateTotalSalary, calculateYearlyBreakdown, formatCurrency, getPublicationName } from "@/lib/utils";
 import { format } from "date-fns";
@@ -560,7 +561,7 @@ export default function MPProfile() {
                                     </span>
                                   </div>
                                   {courtCase.documentLinks && courtCase.documentLinks.length > 0 && (
-                                    <div className="space-y-1">
+                                    <div className="space-y-1 mb-3">
                                       <p className="text-xs font-medium text-muted-foreground">Sources:</p>
                                       <div className="flex flex-wrap gap-2">
                                         {courtCase.documentLinks.map((link, index) => (
@@ -579,6 +580,11 @@ export default function MPProfile() {
                                       </div>
                                     </div>
                                   )}
+                                  <Summarizer 
+                                    text={`Court Case: ${courtCase.title}. Charges: ${courtCase.charges}. Status: ${courtCase.status}. Court Level: ${courtCase.courtLevel}.${courtCase.outcome ? ` Outcome: ${courtCase.outcome}` : ''}`}
+                                    title="Case Summary"
+                                    className="mt-3"
+                                  />
                                 </div>
                               ))}
                           </div>
@@ -634,7 +640,7 @@ export default function MPProfile() {
                                     </span>
                                   </div>
                                   {courtCase.documentLinks && courtCase.documentLinks.length > 0 && (
-                                    <div className="space-y-1">
+                                    <div className="space-y-1 mb-3">
                                       <p className="text-xs font-medium text-muted-foreground">Sources:</p>
                                       <div className="flex flex-wrap gap-2">
                                         {courtCase.documentLinks.map((link, index) => (
@@ -653,6 +659,11 @@ export default function MPProfile() {
                                       </div>
                                     </div>
                                   )}
+                                  <Summarizer 
+                                    text={`Court Case: ${courtCase.title}. Charges: ${courtCase.charges}. Status: ${courtCase.status}. Court Level: ${courtCase.courtLevel}.${courtCase.outcome ? ` Outcome: ${courtCase.outcome}` : ''}`}
+                                    title="Case Summary"
+                                    className="mt-3"
+                                  />
                                 </div>
                               ))}
                           </div>
@@ -727,7 +738,7 @@ export default function MPProfile() {
                                     </span>
                                   </div>
                                   {investigation.documentLinks && investigation.documentLinks.length > 0 && (
-                                    <div className="space-y-1">
+                                    <div className="space-y-1 mb-3">
                                       <p className="text-xs font-medium text-muted-foreground">Sources:</p>
                                       <div className="flex flex-wrap gap-2">
                                         {investigation.documentLinks.map((link, index) => (
@@ -746,6 +757,11 @@ export default function MPProfile() {
                                       </div>
                                     </div>
                                   )}
+                                  <Summarizer 
+                                    text={`SPRM Investigation: ${investigation.title}. Allegations: ${investigation.charges}. Status: ${investigation.status}.${investigation.outcome ? ` Outcome: ${investigation.outcome}` : ''}`}
+                                    title="Investigation Summary"
+                                    className="mt-3"
+                                  />
                                 </div>
                               ))}
                           </div>
@@ -807,7 +823,7 @@ export default function MPProfile() {
                                     </div>
                                   </div>
                                   {investigation.documentLinks && investigation.documentLinks.length > 0 && (
-                                    <div className="space-y-1">
+                                    <div className="space-y-1 mb-3">
                                       <p className="text-xs font-medium text-muted-foreground">Sources:</p>
                                       <div className="flex flex-wrap gap-2">
                                         {investigation.documentLinks.map((link, index) => (
@@ -826,6 +842,11 @@ export default function MPProfile() {
                                       </div>
                                     </div>
                                   )}
+                                  <Summarizer 
+                                    text={`SPRM Investigation: ${investigation.title}. Allegations: ${investigation.charges}. Status: ${investigation.status}.${investigation.outcome ? ` Outcome: ${investigation.outcome}` : ''}`}
+                                    title="Investigation Summary"
+                                    className="mt-3"
+                                  />
                                 </div>
                               ))}
                           </div>
