@@ -734,11 +734,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(500).json({ error: "Hugging Face API key not configured" });
       }
 
-      const targetLanguage = validatedData.language === "en" ? "english" : "malay";
-      const languageInstruction = targetLanguage === "malay" 
-        ? "Ringkaskan dalam Bahasa Malaysia: " 
-        : "Summarize in English: ";
+      const languageInstructionMap: Record<string, string> = {
+        en: "Summarize in English: ",
+        ms: "Ringkaskan dalam Bahasa Malaysia: ",
+        zh: "用中文总结: "
+      };
       
+      const languageInstruction = languageInstructionMap[validatedData.language];
       const inputText = languageInstruction + record.transcript;
 
       const response = await fetch(
