@@ -28,6 +28,10 @@ export interface AttendanceData {
   absentNames: string[];
 }
 
+export interface ConstituencyAttendanceData {
+  absentConstituencies: string[];
+}
+
 export class HansardScraper {
   private readonly baseUrl = 'https://www.parlimen.gov.my';
   private readonly headers = {
@@ -277,5 +281,66 @@ export class HansardScraper {
     }
     
     return names;
+  }
+
+  extractAbsentConstituencies(pdfText: string): ConstituencyAttendanceData {
+    const absentConstituencies: string[] = [];
+    const normalizedText = pdfText.replace(/[ \t]+/g, ' ');
+    
+    // Pattern to find "Ahli-Ahli Yang Tidak Hadir" sections
+    const absentPattern = /Ahli[-\s]Ahli\s+Yang\s+Tidak\s+Hadir[^:]*:?/gi;
+    
+    let match;
+    while ((match = absentPattern.exec(normalizedText)) !== null) {
+      const startIdx = match.index + match[0].length;
+      
+      // Find the end of this absent section
+      const remainingText = normalizedText.substring(startIdx);
+      const nextAbsentMatch = remainingText.match(/Ahli[-\s]Ahli\s+Yang\s+Tidak\s+Hadir/i);
+      const nextMajorSectionMatch = remainingText.match(/\n\s*\n\s*[A-Z][A-Z][A-Z]/);
+      
+      let endIdx;
+      if (nextAbsentMatch && nextAbsentMatch.index !== undefined) {
+        endIdx = startIdx + nextAbsentMatch.index;
+      } else if (nextMajorSectionMatch && nextMajorSectionMatch.index !== undefined) {
+        endIdx = startIdx + nextMajorSectionMatch.index;
+      } else {
+        endIdx = Math.min(startIdx + 10000, normalizedText.length);
+      }
+      
+      const absentSection = normalizedText.substring(startIdx, endIdx);
+      const constituencies = this.extractConstituenciesFromSection(absentSection);
+      absentConstituencies.push(...constituencies);
+    }
+    
+    return { absentConstituencies };
+  }
+
+  private extractConstituenciesFromSection(sectionText: string): string[] {
+    const constituencies: string[] = [];
+    
+    // Normalize the section text
+    const normalizedSection = sectionText.replace(/\n/g, ' ').replace(/\s+/g, ' ');
+    
+    // Pattern to match numbered entries with constituencies in parentheses
+    // Format: "1. Title Name, (Constituency)"
+    const numberedEntryPattern = /\d+\.\s+[^(]+\(([^)]+)\)/g;
+    
+    let match;
+    while ((match = numberedEntryPattern.exec(normalizedSection)) !== null) {
+      const constituency = match[1].trim();
+      
+      // Filter out non-constituency entries (like job titles)
+      if (constituency && 
+          constituency.length > 2 && 
+          !constituency.toLowerCase().includes('menteri') &&
+          !constituency.toLowerCase().includes('timbalan') &&
+          !constituency.toLowerCase().includes('datuk') &&
+          !constituency.toLowerCase().includes('dato')) {
+        constituencies.push(constituency);
+      }
+    }
+    
+    return constituencies;
   }
 }

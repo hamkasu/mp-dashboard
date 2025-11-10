@@ -5,6 +5,7 @@ import { mps, users, courtCases, sprmInvestigations, legislativeProposals, debat
 import { eq, sql } from "drizzle-orm";
 import { MPNameMatcher } from "./mp-name-matcher";
 import { HansardScraper } from "./hansard-scraper";
+import { ConstituencyMatcher } from "./constituency-matcher";
 
 export interface IStorage {
   // User methods
