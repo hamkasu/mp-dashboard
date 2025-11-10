@@ -126,6 +126,9 @@ export function MPCard({ mp }: MPCardProps) {
                   {mp.daysAttended}/{mp.totalParliamentDays} days
                 </p>
                 <p className="text-xs text-muted-foreground">Parliament attendance (since sworn in)</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {formatCurrency(mp.parliamentSittingAllowance * mp.daysAttended)} - Parliament sitting allowance
+                </p>
               </div>
             </div>
             
