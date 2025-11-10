@@ -3,6 +3,7 @@ import { randomUUID } from "crypto";
 import { db } from "./db";
 import { mps, users, courtCases, sprmInvestigations, legislativeProposals, debateParticipations, parliamentaryQuestions, hansardRecords, pageViews } from "@shared/schema";
 import { eq, sql } from "drizzle-orm";
+import { MPNameMatcher } from "./mp-name-matcher";
 
 export interface IStorage {
   // User methods
@@ -970,70 +971,68 @@ export class MemStorage implements IStorage {
       absentMpIds: absentMps2.map(mp => mp.id),
     });
     
-    const absentMpNames = [
-      "Anwar Ibrahim",
-      "Ahmad Zahid Hamidi",
-      "Loke Siew Fook",
-      "Mohamed Khaled bin Nordin",
-      "Ewon Benedick",
-      "Azalina Othman Said",
-      "Haji Hasbi bin Haji Habibollah",
-      "Chan Foong Hin",
-      "Haji Abdul Rahman bin Haji Mohamad",
-      "Shamsul Anuar bin Haji Nasarah",
-      "Nga Kor Ming",
-      "Mohamad bin Haji Hasan",
-      "Alexander Nanta Linggi",
-      "Aaron Ago Dagang",
-      "Dzulkefly bin Ahmad",
-      "Hanifah Hajar Taib",
-      "Mohammad Yusof bin Apdal",
-      "Arthur Joseph Kurup",
-      "Huang Tiong Sii",
-      "Khairul Firdaus bin Akbar Khan",
-      "Adam Adli bin Abd Halim",
-      "Wilson Ugak Anak Kumbong",
-      "Sh Mohmed Puzi bin Sh Ali",
-      "Shahelmey bin Yahya",
-      "Suhaimi bin Nasir",
-      "Seri Panglima Haji Mohd Shafie bin Haji Apdal",
-      "Hishammuddin bin Tun Hussein",
-      "Seri Saifuddin a/l Murugan",
-      "Chow Kon Yeow",
-      "Haji Aminuddin bin Harun",
-      "Anuar bin Shari",
-      "Bung Moktar bin Radin",
-      "Isnaraissah Munirah binti Majilis",
-      "Bimol Anak Gading",
-      "Lim Lip Eng",
-      "Verdon bin Bahanda",
-      "Wetrom bin Bahanda",
-      "Haji Muhammad Ismi bin Mat Taib",
-      "Ahmad Samsuri bin Mokhtar",
-      "Hamzah bin Zainudin",
-      "Haji Abdul Hadi bin Haji Awang",
-      "Ronald Kiandee",
-      "Tiong King Sing",
-      "Jonathan bin Yasin",
-      "Matbali bin Musah",
-      "Manndzri bin Haji Nasib",
-      "Haji Adnan bin Abu Hassan",
-      "Ismail Sabri bin Yaakob",
-      "Hassan bin Abdul Karim",
-      "Haji Yusuf bin Abd Wahab",
-      "Panglima Dr. Gapari bin Katingan",
-      "Ali Anak Biju"
+    const hansardAbsentNames = [
+      "Dato' Seri Anwar bin Ibrahim (Tambun)",
+      "Dato' Seri Dr. Ahmad Zahid bin Hamidi (Bagan Datuk)",
+      "Menteri Pengangkutan, Tuan Loke Siew Fook (Seremban)",
+      "Menteri Pertahanan, Dato' Seri Mohamed Khaled bin Nordin (Kota Tinggi)",
+      "Menteri Pembangunan Usahawan dan Koperasi, Datuk Ewon Benedick (Penampang)",
+      "Menteri Di Jabatan Perdana Menteri (Undang-Undang dan Reformasi Institusi), Dato' Sri Azalina Othman Said (Pengerang)",
+      "Timbalan Menteri Pengangkutan, Datuk Haji Hasbi bin Haji Habibollah (Limbang)",
+      "Timbalan Menteri Perdagangan dan Komoditi, Datuk Chan Foong Hin (Kota Kinabalu)",
+      "Timbalan Menteri Sumber Manusia, Dato' Sri Haji Abdul Rahman bin Haji Mohamad (Lipis)",
+      "Timbalan Menteri Dalam Negeri, Datuk Seri Dr. Shamsul Anuar bin Haji Nasarah (Lenggong)",
+      "Menteri Perumahan dan Kerajaan Tempatan, Tuan Nga Kor Ming (Teluk Intan)",
+      "Menteri Luar Negeri, Dato' Seri Utama Haji Mohamad bin Haji Hasan (Rembau)",
+      "Menteri Kerja Raya, Dato Sri Alexander Nanta Linggi (Kapit)",
+      "Menteri Perpaduan Negara, Datuk Aaron Ago Dagang (Kanowit)",
+      "Menteri Kesihatan, Datuk Dr. Haji Dzulkefly bin Ahmad (Kuala Selangor)",
+      "Timbalan Menteri Ekonomi, Dato Hanifah Hajar Taib (Mukah)",
+      "Timbalan Menteri Sains, Teknologi dan Inovasi, Dato' Mohammad Yusof bin Apdal (Lahad Datu)",
+      "Timbalan Menteri Pertanian dan Keterjaminan Makanan, Dato' Sri Arthur Joseph Kurup (Pensiangan)",
+      "Timbalan Menteri Sumber Asli dan Kelestarian Alam, Dato' Sri Huang Tiong Sii (Sarikei)",
+      "Timbalan Menteri Pelancongan, Seni dan Budaya, Tuan Khairul Firdaus bin Akbar Khan (Batu Sapi)",
+      "Timbalan Menteri Belia dan Sukan, Tuan Adam Adli bin Abd Halim (Hang Tuah Jaya)",
+      "Timbalan Menteri Digital, Datuk Wilson Ugak Anak Kumbong (Hulu Rajang)",
+      "Dato' Sri Sh Mohmed Puzi bin Sh Ali (Pekan)",
+      "Datuk Ir. Shahelmey bin Yahya (Putatan)",
+      "Datuk Suhaimi bin Nasir (Libaran)",
+      "Datuk Seri Panglima Haji Mohd Shafie bin Haji Apdal (Semporna)",
+      "Dato' Seri Hishammuddin bin Tun Hussein (Sembrong)",
+      "Datuk Seri Saifuddin a/l Murugan (Tapah)",
+      "Tuan Chow Kon Yeow (Batu Kawan)",
+      "Dato' Seri Utama Haji Aminuddin bin Harun (Port Dickson)",
+      "Dato' Seri Anuar bin Shari (Gombak)",
+      "Datuk Seri Panglima Bung Moktar bin Radin (Kinabatangan)",
+      "Puan Isnaraissah Munirah binti Majilis (Kota Belud)",
+      "Tuan Bimol Anak Gading (Mas Gading)",
+      "Tuan Lim Lip Eng (Kepong)",
+      "Dato' Verdon bin Bahanda (Kudat)",
+      "Datuk Wetrom bin Bahanda (Kota Marudu)",
+      "Tuan Haji Muhammad Ismi bin Mat Taib (Parit)",
+      "Dato' Seri Dr. Ahmad Samsuri bin Mokhtar (Kemaman)",
+      "Dato' Seri Hamzah bin Zainudin (Larut)",
+      "Tan Sri Dato' Seri Haji Abdul Hadi bin Haji Awang (Marang)",
+      "Datuk Seri Dr. Ronald Kiandee (Beluran)",
+      "Dato' Sri Ismail Sabri bin Yaakob (Bera)",
+      "Tuan Hassan bin Abdul Karim (Pasir Gudang)",
+      "Datuk Seri Panglima Dr. Gapari bin Katingan @ Geoffrey Kitingan (Keningau)",
+      "Dato Ir. Haji Yusuf bin Abd Wahab (Tanjong Manis)",
+      "Datuk Ali Anak Biju (Saratok)",
+      "Datuk Jonathan bin Yasin (Ranau)",
+      "Datuk Matbali bin Musah (Sipitang)",
+      "Tuan Haji Manndzri bin Haji Nasib (Tenggara)",
+      "Dato' Haji Adnan bin Abu Hassan (Kuala Pilah)",
+      "Tiong King Sing (Bintulu)"
     ];
     
-    const absentMps3 = mpsArray.filter(mp => 
-      absentMpNames.includes(mp.name)
-    );
+    const nameMatcher = new MPNameMatcher(mpsArray);
+    const absentMpIds = nameMatcher.matchNames(hansardAbsentNames);
+    const attendedMpIds = mpsArray
+      .filter(mp => !absentMpIds.includes(mp.id))
+      .map(mp => mp.id);
     
-    const attendedMps3 = mpsArray.filter(mp => 
-      !absentMpNames.includes(mp.name)
-    );
-    
-    console.log(`Seeding Hansard DR.6.11.2025: ${absentMps3.length} absent MPs, ${attendedMps3.length} attended MPs`);
+    console.log(`Seeding Hansard DR.6.11.2025: ${absentMpIds.length} absent MPs, ${attendedMpIds.length} attended MPs`);
     
     this.createHansardRecord({
       sessionNumber: "DR.6.11.2025",
@@ -1045,8 +1044,8 @@ export class MemStorage implements IStorage {
       topics: ["Rang Undang-Undang", "Perlembagaan", "Constitution", "Soalan", "Question", "Parlimen", "Parliament", "Ekonomi", "Economy"],
       speakers: [],
       voteRecords: [],
-      attendedMpIds: attendedMps3.map(mp => mp.id),
-      absentMpIds: absentMps3.map(mp => mp.id),
+      attendedMpIds,
+      absentMpIds,
     });
   }
 
