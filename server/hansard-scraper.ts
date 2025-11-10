@@ -243,12 +243,17 @@ export class HansardScraper {
       let trimmed = line.trim();
       if (!trimmed || trimmed.length < 5) continue;
       
-      trimmed = trimmed
-        .replace(/^\d+\.\s*/, '')
-        .replace(/\s*\([^)]*\)\s*/g, '')
-        .replace(/\s*\[[^\]]*\]\s*/g, '')
-        .replace(/,.*$/, '')
-        .trim();
+      trimmed = trimmed.replace(/^\d+\.\s*/, '');
+      
+      if (trimmed.includes(',')) {
+        const afterComma = trimmed.split(',').slice(1).join(',').trim();
+        trimmed = afterComma.replace(/\s*\([^)]*\)\s*/g, '').trim();
+      } else {
+        trimmed = trimmed
+          .replace(/\s*\([^)]*\)\s*/g, '')
+          .replace(/\s*\[[^\]]*\]\s*/g, '')
+          .trim();
+      }
       
       if (trimmed.length > 3 && trimmed.match(/^[A-Z]/i) && trimmed.match(/[a-z]/i)) {
         names.push(trimmed);
