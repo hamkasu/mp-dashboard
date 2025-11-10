@@ -7,6 +7,12 @@ This web application provides a comprehensive dashboard for Malaysian Members of
 ## Recent Changes
 
 **November 10, 2025**:
+- ✅ Added constituency-level attendance tracking feature:
+  - Created `/api/hansard-records/:id/constituency-attendance` endpoint to return attended/absent constituencies by state
+  - Built `ConstituencyAttendance` component with lazy loading and query gating to prevent unnecessary API calls
+  - Integrated constituency view in Hansard page via dialog ("View by Constituency" button)
+  - Added "By Constituency" tab to Attendance page alongside existing "By MP" view
+  - Optimized query performance: API calls only fire when user explicitly opens constituency view (dialog or tab)
 - ✅ Fixed Hansard PDF parsing bug where absent MPs were incorrectly identified
 - ✅ Updated `extractNamesFromSection` in `server/hansard-scraper.ts` to use regex-based numbered entry extraction, preventing wrapped continuation lines from being counted as extra MPs
 - ✅ Corrected seed data in `server/storage.ts` to reflect accurate absent MP count (16 instead of 38) for DR.6.11.2025 session
@@ -64,6 +70,13 @@ Preferred communication style: Simple, everyday language.
     - Official PDF document links
     - Topics discussed displayed as badges
     - Vote tallies and results
+    - "View by Constituency" dialog showing attended/absent constituencies grouped by state with party breakdown
+- **MP Attendance Report Page**: Track which MPs and constituencies did not participate in parliamentary sessions:
+    - Filter by date range, party, and state
+    - View attendance statistics: Total Sessions, Average MPs Absent, Average Attendance Rate, MPs Tracked
+    - Toggle between "By MP" and "By Constituency" views
+    - By MP view: Shows collapsible session cards with absent MP lists and details
+    - By Constituency view: Shows constituency-level attendance breakdown grouped by state for each session
 - **State Management**: Server state managed by TanStack Query; local UI state by React hooks.
 
 ### Backend Architecture
@@ -86,6 +99,7 @@ Preferred communication style: Simple, everyday language.
   - `GET /api/hansard-records/search?query=&startDate=&endDate=&sessionNumber=` (server-side search with filters)
   - `GET /api/hansard-records` (all records)
   - `GET /api/hansard-records/:id` (single record)
+  - `GET /api/hansard-records/:id/constituency-attendance` (constituency-level attendance breakdown by state)
   - `GET /api/hansard-records/session/:sessionNumber` (by session)
   - `POST /api/hansard-records`, `PATCH /api/hansard-records/:id`, `DELETE /api/hansard-records/:id`
 
