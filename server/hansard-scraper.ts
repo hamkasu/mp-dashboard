@@ -195,17 +195,17 @@ export class HansardScraper {
     const normalizedText = pdfText.replace(/[ \t]+/g, ' ');
     
     const attendancePattern = /KEHADIRAN\s+AHLI[-\s]AHLI\s+PARLIMEN/i;
-    const absentPattern = /Ahli[-\s]Ahli\s+Yang\s+Tidak\s+Hadir\s*:?/i;
+    const absentPattern = /Ahli[-\s]Ahli\s+Yang\s+Tidak\s+Hadir\s*:?/gi;
     
     const attendanceMatch = normalizedText.match(attendancePattern);
-    const absentMatch = normalizedText.match(absentPattern);
 
     if (attendanceMatch && attendanceMatch.index !== undefined) {
       const startIdx = attendanceMatch.index + attendanceMatch[0].length;
       let endIdx = normalizedText.length;
       
-      if (absentMatch && absentMatch.index !== undefined && absentMatch.index > startIdx) {
-        endIdx = absentMatch.index;
+      const firstAbsentMatch = normalizedText.substring(startIdx).match(/Ahli[-\s]Ahli\s+Yang\s+Tidak\s+Hadir\s*:?/i);
+      if (firstAbsentMatch && firstAbsentMatch.index !== undefined) {
+        endIdx = startIdx + firstAbsentMatch.index;
       } else {
         const nextSectionMatch = normalizedText.substring(startIdx).match(/\n\s*\n\s*[A-Z][A-Z]/);
         if (nextSectionMatch && nextSectionMatch.index !== undefined) {
@@ -220,12 +220,22 @@ export class HansardScraper {
       attendedNames.push(...extractedAttended);
     }
 
-    if (absentMatch && absentMatch.index !== undefined) {
-      const startIdx = absentMatch.index + absentMatch[0].length;
-      const nextSectionMatch = normalizedText.substring(startIdx).match(/\n\s*\n\s*[A-Z][A-Z]/);
-      const endIdx = nextSectionMatch && nextSectionMatch.index !== undefined 
-        ? startIdx + nextSectionMatch.index 
-        : Math.min(startIdx + 10000, normalizedText.length);
+    let match;
+    while ((match = absentPattern.exec(normalizedText)) !== null) {
+      const startIdx = match.index + match[0].length;
+      
+      const remainingText = normalizedText.substring(startIdx);
+      const nextAbsentMatch = remainingText.match(/Ahli[-\s]Ahli\s+Yang\s+Tidak\s+Hadir/i);
+      const nextMajorSectionMatch = remainingText.match(/\n\s*\n\s*[A-Z][A-Z][A-Z]/);
+      
+      let endIdx;
+      if (nextAbsentMatch && nextAbsentMatch.index !== undefined) {
+        endIdx = startIdx + nextAbsentMatch.index;
+      } else if (nextMajorSectionMatch && nextMajorSectionMatch.index !== undefined) {
+        endIdx = startIdx + nextMajorSectionMatch.index;
+      } else {
+        endIdx = Math.min(startIdx + 10000, normalizedText.length);
+      }
       
       const absentSection = normalizedText.substring(startIdx, endIdx);
       const extractedAbsent = this.extractNamesFromSection(absentSection);
