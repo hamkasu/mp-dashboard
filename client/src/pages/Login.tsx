@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Lock, User } from "lucide-react";
 
 export default function Login() {
@@ -21,6 +21,7 @@ export default function Login() {
       return await res.json();
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
       toast({
         title: "Login successful",
         description: "Welcome to the admin panel",
