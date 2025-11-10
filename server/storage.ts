@@ -21,6 +21,7 @@ export interface IStorage {
   // Court Case methods
   getCourtCase(id: string): Promise<CourtCase | undefined>;
   getCourtCasesByMpId(mpId: string): Promise<CourtCase[]>;
+  getCourtCaseByCaseNumber(caseNumber: string): Promise<CourtCase | undefined>;
   getAllCourtCases(): Promise<CourtCase[]>;
   createCourtCase(courtCase: InsertCourtCase): Promise<CourtCase>;
   updateCourtCase(id: string, courtCase: Partial<InsertCourtCase>): Promise<CourtCase | undefined>;
@@ -29,6 +30,7 @@ export interface IStorage {
   // SPRM Investigation methods
   getSprmInvestigation(id: string): Promise<SprmInvestigation | undefined>;
   getSprmInvestigationsByMpId(mpId: string): Promise<SprmInvestigation[]>;
+  getSprmInvestigationByCaseNumber(caseNumber: string): Promise<SprmInvestigation | undefined>;
   getAllSprmInvestigations(): Promise<SprmInvestigation[]>;
   createSprmInvestigation(investigation: InsertSprmInvestigation): Promise<SprmInvestigation>;
   updateSprmInvestigation(id: string, investigation: Partial<InsertSprmInvestigation>): Promise<SprmInvestigation | undefined>;
@@ -455,6 +457,12 @@ export class MemStorage implements IStorage {
     );
   }
 
+  async getCourtCaseByCaseNumber(caseNumber: string): Promise<CourtCase | undefined> {
+    return Array.from(this.courtCases.values()).find(
+      (courtCase) => courtCase.caseNumber === caseNumber
+    );
+  }
+
   async getAllCourtCases(): Promise<CourtCase[]> {
     return Array.from(this.courtCases.values());
   }
@@ -639,6 +647,12 @@ export class MemStorage implements IStorage {
   async getSprmInvestigationsByMpId(mpId: string): Promise<SprmInvestigation[]> {
     return Array.from(this.sprmInvestigations.values()).filter(
       (investigation) => investigation.mpId === mpId
+    );
+  }
+
+  async getSprmInvestigationByCaseNumber(caseNumber: string): Promise<SprmInvestigation | undefined> {
+    return Array.from(this.sprmInvestigations.values()).find(
+      (investigation) => investigation.caseNumber === caseNumber
     );
   }
 
@@ -1194,6 +1208,16 @@ export class DbStorage implements IStorage {
     }
   }
 
+  async getCourtCaseByCaseNumber(caseNumber: string): Promise<CourtCase | undefined> {
+    try {
+      const result = await db.select().from(courtCases).where(eq(courtCases.caseNumber, caseNumber));
+      return result[0];
+    } catch (error) {
+      console.error("Error in getCourtCaseByCaseNumber:", error);
+      return undefined;
+    }
+  }
+
   async getAllCourtCases(): Promise<CourtCase[]> {
     try {
       const result = await db.select().from(courtCases);
@@ -1232,6 +1256,16 @@ export class DbStorage implements IStorage {
     } catch (error) {
       console.error("Error in getSprmInvestigationsByMpId:", error);
       return [];
+    }
+  }
+
+  async getSprmInvestigationByCaseNumber(caseNumber: string): Promise<SprmInvestigation | undefined> {
+    try {
+      const result = await db.select().from(sprmInvestigations).where(eq(sprmInvestigations.caseNumber, caseNumber));
+      return result[0];
+    } catch (error) {
+      console.error("Error in getSprmInvestigationByCaseNumber:", error);
+      return undefined;
     }
   }
 
@@ -1663,24 +1697,58 @@ export async function seedDatabase() {
     console.log(`Successfully seeded ${mpIdMap.size} MPs`);
   }
   
-  // Seed court cases with updated MP IDs
+  // Seed court cases with updated MP IDs (check for duplicates)
   const allCourtCases = await memStorage.getAllCourtCases();
+  let courtCaseCreated = 0;
+  let courtCaseSkipped = 0;
+  
   for (const courtCase of allCourtCases) {
     const { id, mpId, ...caseData } = courtCase;
     const newMpId = mpIdMap.get(mpId);
     if (newMpId) {
-      await dbStorage.createCourtCase({ ...caseData, mpId: newMpId });
+      // Check if this case already exists
+      const existing = await dbStorage.getCourtCaseByCaseNumber(courtCase.caseNumber);
+      if (existing) {
+        courtCaseSkipped++;
+      } else {
+        await dbStorage.createCourtCase({ ...caseData, mpId: newMpId });
+        courtCaseCreated++;
+      }
     }
   }
   
-  // Seed SPRM investigations with updated MP IDs
+  if (courtCaseCreated > 0) {
+    console.log(`✅ Created ${courtCaseCreated} new court cases`);
+  }
+  if (courtCaseSkipped > 0) {
+    console.log(`⏭️  Skipped ${courtCaseSkipped} existing court cases`);
+  }
+  
+  // Seed SPRM investigations with updated MP IDs (check for duplicates)
   const allInvestigations = await memStorage.getAllSprmInvestigations();
+  let investigationCreated = 0;
+  let investigationSkipped = 0;
+  
   for (const investigation of allInvestigations) {
     const { id, mpId, ...invData } = investigation;
     const newMpId = mpIdMap.get(mpId);
-    if (newMpId) {
-      await dbStorage.createSprmInvestigation({ ...invData, mpId: newMpId });
+    if (newMpId && investigation.caseNumber) {
+      // Check if this investigation already exists
+      const existing = await dbStorage.getSprmInvestigationByCaseNumber(investigation.caseNumber);
+      if (existing) {
+        investigationSkipped++;
+      } else {
+        await dbStorage.createSprmInvestigation({ ...invData, mpId: newMpId });
+        investigationCreated++;
+      }
     }
+  }
+  
+  if (investigationCreated > 0) {
+    console.log(`✅ Created ${investigationCreated} new SPRM investigations`);
+  }
+  if (investigationSkipped > 0) {
+    console.log(`⏭️  Skipped ${investigationSkipped} existing SPRM investigations`);
   }
   
   // Seed legislative proposals with updated MP IDs

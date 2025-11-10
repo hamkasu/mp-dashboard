@@ -53,7 +53,7 @@ export type User = typeof users.$inferSelect;
 export const courtCases = pgTable("court_cases", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   mpId: varchar("mp_id").notNull().references(() => mps.id),
-  caseNumber: text("case_number").notNull(),
+  caseNumber: text("case_number").notNull().unique(),
   title: text("title").notNull(),
   courtLevel: text("court_level").notNull(),
   status: text("status").notNull(),
@@ -75,7 +75,7 @@ export type CourtCase = typeof courtCases.$inferSelect;
 export const sprmInvestigations = pgTable("sprm_investigations", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   mpId: varchar("mp_id").notNull().references(() => mps.id),
-  caseNumber: text("case_number"),
+  caseNumber: text("case_number").unique(),
   title: text("title").notNull(),
   status: text("status").notNull(),
   startDate: timestamp("start_date").notNull(),
