@@ -849,6 +849,74 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get constituency attendance for a specific Hansard record
+  app.get("/api/hansard-records/:id/constituency-attendance", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const record = await storage.getHansardRecord(id);
+      
+      if (!record) {
+        return res.status(404).json({ error: "Hansard record not found" });
+      }
+      
+      const allMps = await storage.getAllMps();
+      const absentMpIds = new Set(record.absentMpIds || []);
+      
+      const attendedMps = allMps.filter(mp => !absentMpIds.has(mp.id));
+      const absentMps = allMps.filter(mp => absentMpIds.has(mp.id));
+      
+      const attendedConstituencies = attendedMps.map(mp => ({
+        constituency: mp.constituency,
+        state: mp.state,
+        party: mp.party,
+        mpName: mp.name,
+        mpId: mp.id
+      })).sort((a, b) => a.constituency.localeCompare(b.constituency));
+      
+      const absentConstituencies = absentMps.map(mp => ({
+        constituency: mp.constituency,
+        state: mp.state,
+        party: mp.party,
+        mpName: mp.name,
+        mpId: mp.id
+      })).sort((a, b) => a.constituency.localeCompare(b.constituency));
+      
+      const stateBreakdown = allMps.reduce((acc, mp) => {
+        if (!acc[mp.state]) {
+          acc[mp.state] = { total: 0, attended: 0, absent: 0 };
+        }
+        acc[mp.state].total++;
+        if (absentMpIds.has(mp.id)) {
+          acc[mp.state].absent++;
+        } else {
+          acc[mp.state].attended++;
+        }
+        return acc;
+      }, {} as Record<string, { total: number; attended: number; absent: number }>);
+      
+      const stateStats = Object.entries(stateBreakdown).map(([state, stats]) => ({
+        state,
+        ...stats,
+        attendanceRate: stats.total > 0 ? (stats.attended / stats.total) * 100 : 0
+      })).sort((a, b) => b.attendanceRate - a.attendanceRate);
+      
+      res.json({
+        sessionNumber: record.sessionNumber,
+        sessionDate: record.sessionDate,
+        totalConstituencies: allMps.length,
+        attendedConstituencies: attendedConstituencies.length,
+        absentConstituencies: absentConstituencies.length,
+        attendanceRate: allMps.length > 0 ? (attendedConstituencies.length / allMps.length) * 100 : 0,
+        attended: attendedConstituencies,
+        absent: absentConstituencies,
+        stateStats
+      });
+    } catch (error) {
+      console.error("Error fetching constituency attendance:", error);
+      res.status(500).json({ error: "Failed to fetch constituency attendance" });
+    }
+  });
+
   // Get attendance report across all Hansard sessions
   app.get("/api/attendance/report", async (req, res) => {
     try {
