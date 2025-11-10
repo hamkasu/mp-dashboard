@@ -969,6 +969,85 @@ export class MemStorage implements IStorage {
       attendedMpIds: rafizMp ? [rafizMp.id] : [],
       absentMpIds: absentMps2.map(mp => mp.id),
     });
+    
+    const absentMpNames = [
+      "Anwar Ibrahim",
+      "Ahmad Zahid Hamidi",
+      "Loke Siew Fook",
+      "Mohamed Khaled bin Nordin",
+      "Ewon Benedick",
+      "Azalina Othman Said",
+      "Haji Hasbi bin Haji Habibollah",
+      "Chan Foong Hin",
+      "Haji Abdul Rahman bin Haji Mohamad",
+      "Shamsul Anuar bin Haji Nasarah",
+      "Nga Kor Ming",
+      "Mohamad bin Haji Hasan",
+      "Alexander Nanta Linggi",
+      "Aaron Ago Dagang",
+      "Dzulkefly bin Ahmad",
+      "Hanifah Hajar Taib",
+      "Mohammad Yusof bin Apdal",
+      "Arthur Joseph Kurup",
+      "Huang Tiong Sii",
+      "Khairul Firdaus bin Akbar Khan",
+      "Adam Adli bin Abd Halim",
+      "Wilson Ugak Anak Kumbong",
+      "Sh Mohmed Puzi bin Sh Ali",
+      "Shahelmey bin Yahya",
+      "Suhaimi bin Nasir",
+      "Seri Panglima Haji Mohd Shafie bin Haji Apdal",
+      "Hishammuddin bin Tun Hussein",
+      "Seri Saifuddin a/l Murugan",
+      "Chow Kon Yeow",
+      "Haji Aminuddin bin Harun",
+      "Anuar bin Shari",
+      "Bung Moktar bin Radin",
+      "Isnaraissah Munirah binti Majilis",
+      "Bimol Anak Gading",
+      "Lim Lip Eng",
+      "Verdon bin Bahanda",
+      "Wetrom bin Bahanda",
+      "Haji Muhammad Ismi bin Mat Taib",
+      "Ahmad Samsuri bin Mokhtar",
+      "Hamzah bin Zainudin",
+      "Haji Abdul Hadi bin Haji Awang",
+      "Ronald Kiandee",
+      "Tiong King Sing",
+      "Jonathan bin Yasin",
+      "Matbali bin Musah",
+      "Manndzri bin Haji Nasib",
+      "Haji Adnan bin Abu Hassan",
+      "Ismail Sabri bin Yaakob",
+      "Hassan bin Abdul Karim",
+      "Haji Yusuf bin Abd Wahab",
+      "Panglima Dr. Gapari bin Katingan",
+      "Ali Anak Biju"
+    ];
+    
+    const absentMps3 = mpsArray.filter(mp => 
+      absentMpNames.includes(mp.name)
+    );
+    
+    const attendedMps3 = mpsArray.filter(mp => 
+      !absentMpNames.includes(mp.name)
+    );
+    
+    console.log(`Seeding Hansard DR.6.11.2025: ${absentMps3.length} absent MPs, ${attendedMps3.length} attended MPs`);
+    
+    this.createHansardRecord({
+      sessionNumber: "DR.6.11.2025",
+      sessionDate: new Date("2025-11-06"),
+      parliamentTerm: "15th Parliament",
+      sitting: "Third Session",
+      transcript: "Naskah belum disemak DEWAN RAKYAT PARLIMEN KELIMA BELAS PENGGAL KEEMPAT MESYUARAT KETIGA Bil. 62 Khamis 6 November 2025 K A N D U N G A N WAKTU PERTANYAAN-PERTANYAAN MENTERI (Halaman 1) PERTANYAAN-PERTANYAAN BAGI JAWAB LISAN (Halaman 12) USUL: Waktu Mesyuarat dan Urusan Dibebaskan Daripada Peraturan...",
+      pdfLinks: ["https://hansard.parliament.gov.my/files/DR-06112025.pdf"],
+      topics: ["Rang Undang-Undang", "Perlembagaan", "Constitution", "Soalan", "Question", "Parlimen", "Parliament", "Ekonomi", "Economy"],
+      speakers: [],
+      voteRecords: [],
+      attendedMpIds: attendedMps3.map(mp => mp.id),
+      absentMpIds: absentMps3.map(mp => mp.id),
+    });
   }
 
   private seedLegislativeProposals() {
