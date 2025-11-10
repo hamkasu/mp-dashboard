@@ -143,6 +143,9 @@ export class MemStorage implements IStorage {
       computerAllowance: insertMp.computerAllowance ?? 6000,
       dressWearAllowance: insertMp.dressWearAllowance ?? 1000,
       parliamentSittingAllowance: insertMp.parliamentSittingAllowance ?? 400,
+      governmentMeetingDays: insertMp.governmentMeetingDays ?? 0,
+      isMinister: insertMp.isMinister ?? false,
+      ministerialPosition: insertMp.ministerialPosition ?? null,
     };
     this.mps.set(id, mp);
     return mp;
@@ -428,13 +431,15 @@ export class MemStorage implements IStorage {
     mpsData.forEach((mpData) => {
       const id = randomUUID();
       const attendance = this.generateAttendance();
+      const ministerSalary = mpData.ministerSalary ?? 0;
+      const isMinister = ministerSalary > 0;
       const mp: Mp = { 
         ...mpData, 
         id,
         photoUrl: mpData.photoUrl ?? null,
         title: mpData.title ?? null,
         role: mpData.role ?? null,
-        ministerSalary: mpData.ministerSalary ?? 0,
+        ministerSalary,
         daysAttended: attendance.daysAttended,
         totalParliamentDays: attendance.totalParliamentDays,
         entertainmentAllowance: 2500,
@@ -442,6 +447,9 @@ export class MemStorage implements IStorage {
         computerAllowance: 6000,
         dressWearAllowance: 1000,
         parliamentSittingAllowance: 400,
+        governmentMeetingDays: 0,
+        isMinister,
+        ministerialPosition: isMinister ? (mpData.role ?? null) : null,
       };
       this.mps.set(id, mp);
     });
