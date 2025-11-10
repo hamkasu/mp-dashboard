@@ -236,14 +236,14 @@ export default function HansardPage() {
                       <div className="flex items-center gap-2" data-testid="attendance-present">
                         <Users className="w-4 h-4 text-green-600 dark:text-green-400" />
                         <span className="font-medium">{record.attendedMpIds.length}</span>
-                        <span className="text-muted-foreground">MPs Present</span>
+                        <span className="text-muted-foreground">Constituency Present</span>
                       </div>
                     )}
                     {record.absentMpIds && record.absentMpIds.length > 0 && (
                       <div className="flex items-center gap-2" data-testid="attendance-absent">
                         <UserX className="w-4 h-4 text-orange-600 dark:text-orange-400" />
                         <span className="font-medium">{record.absentMpIds.length}</span>
-                        <span className="text-muted-foreground">MPs Absent</span>
+                        <span className="text-muted-foreground">Constituency Absent</span>
                       </div>
                     )}
                   </div>

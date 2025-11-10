@@ -73,7 +73,7 @@ Preferred communication style: Simple, everyday language.
     - "View by Constituency" dialog showing attended/absent constituencies grouped by state with party breakdown
 - **MP Attendance Report Page**: Track which MPs and constituencies did not participate in parliamentary sessions:
     - Filter by date range, party, and state
-    - View attendance statistics: Total Sessions, Average MPs Absent, Average Attendance Rate, MPs Tracked
+    - View attendance statistics: Total Sessions, Average Constituency Absent, Average Attendance Rate, MPs Tracked
     - Toggle between "By MP" and "By Constituency" views
     - By MP view: Shows collapsible session cards with absent MP lists and details
     - By Constituency view: Shows constituency-level attendance breakdown grouped by state for each session
