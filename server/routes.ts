@@ -39,7 +39,93 @@ function extractTopics(transcript: string): string[] {
   return Array.from(topics).slice(0, 10);
 }
 
+// Authentication middleware
+function requireAuth(req: any, res: any, next: any) {
+  if (!req.session.userId) {
+    return res.status(401).json({ error: "Not authenticated" });
+  }
+  next();
+}
+
+async function requireAdmin(req: any, res: any, next: any) {
+  if (!req.session.userId) {
+    return res.status(401).json({ error: "Not authenticated" });
+  }
+  
+  const user = await storage.getUser(req.session.userId);
+  if (!user || !user.isAdmin) {
+    return res.status(403).json({ error: "Forbidden: Admin access required" });
+  }
+  
+  next();
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Authentication routes
+  app.post("/api/auth/login", async (req, res) => {
+    try {
+      const { username, password } = req.body;
+      
+      if (!username || !password) {
+        return res.status(400).json({ error: "Username and password are required" });
+      }
+      
+      const user = await storage.getUserByUsername(username);
+      
+      if (!user || user.password !== password) {
+        return res.status(401).json({ error: "Invalid credentials" });
+      }
+      
+      req.session.userId = user.id;
+      
+      res.json({ 
+        user: { 
+          id: user.id, 
+          username: user.username, 
+          isAdmin: user.isAdmin 
+        } 
+      });
+    } catch (error) {
+      console.error("Error during login:", error);
+      res.status(500).json({ error: "Login failed" });
+    }
+  });
+  
+  app.post("/api/auth/logout", (req, res) => {
+    req.session.destroy((err) => {
+      if (err) {
+        return res.status(500).json({ error: "Logout failed" });
+      }
+      res.json({ success: true });
+    });
+  });
+  
+  app.get("/api/auth/me", async (req, res) => {
+    if (!req.session.userId) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+    
+    try {
+      const user = await storage.getUser(req.session.userId);
+      
+      if (!user) {
+        req.session.destroy(() => {});
+        return res.status(401).json({ error: "User not found" });
+      }
+      
+      res.json({ 
+        user: { 
+          id: user.id, 
+          username: user.username, 
+          isAdmin: user.isAdmin 
+        } 
+      });
+    } catch (error) {
+      console.error("Error fetching current user:", error);
+      res.status(500).json({ error: "Failed to fetch user" });
+    }
+  });
+
   // Get all MPs
   app.get("/api/mps", async (_req, res) => {
     try {
@@ -669,8 +755,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Create a new Hansard record
-  app.post("/api/hansard-records", async (req, res) => {
+  // Create a new Hansard record (Admin only)
+  app.post("/api/hansard-records", requireAdmin, async (req, res) => {
     try {
       const validatedData = insertHansardRecordSchema.parse(req.body);
       const record = await storage.createHansardRecord(validatedData);
@@ -684,8 +770,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Update a Hansard record
-  app.patch("/api/hansard-records/:id", async (req, res) => {
+  // Update a Hansard record (Admin only)
+  app.patch("/api/hansard-records/:id", requireAdmin, async (req, res) => {
     try {
       const { id } = req.params;
       const validatedData = updateHansardRecordSchema.parse(req.body);
@@ -1011,8 +1097,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Delete a Hansard record
-  app.delete("/api/hansard-records/:id", async (req, res) => {
+  // Delete a Hansard record (Admin only)
+  app.delete("/api/hansard-records/:id", requireAdmin, async (req, res) => {
     try {
       const { id } = req.params;
       const deleted = await storage.deleteHansardRecord(id);
@@ -1028,8 +1114,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Delete all Hansard records
-  app.delete("/api/hansard-records", async (_req, res) => {
+  // Delete all Hansard records (Admin only)
+  app.delete("/api/hansard-records", requireAdmin, async (_req, res) => {
     try {
       const count = await storage.deleteAllHansardRecords();
       res.json({ deletedCount: count });
@@ -1039,8 +1125,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Reprocess attendance for all or selected Hansard records
-  app.post("/api/hansard-records/reprocess-attendance", async (req, res) => {
+  // Reprocess attendance for all or selected Hansard records (Admin only)
+  app.post("/api/hansard-records/reprocess-attendance", requireAdmin, async (req, res) => {
     try {
       const { limit, recordIds } = req.body;
       const scraper = new HansardScraper();
@@ -1147,8 +1233,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Trigger Hansard download
-  app.post("/api/hansard-records/download", async (req, res) => {
+  // Trigger Hansard download (Admin only)
+  app.post("/api/hansard-records/download", requireAdmin, async (req, res) => {
     try {
       const { maxRecords = 200, deleteExisting = false } = req.body;
       

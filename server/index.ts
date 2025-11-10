@@ -1,21 +1,42 @@
 import express, { type Request, Response, NextFunction } from "express";
+import session from "express-session";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { seedDatabase } from "./storage";
 
 const app = express();
 
+declare module 'express-session' {
+  interface SessionData {
+    userId?: string;
+  }
+}
+
 declare module 'http' {
   interface IncomingMessage {
     rawBody: unknown
   }
 }
+
 app.use(express.json({
   verify: (req, _res, buf) => {
     req.rawBody = buf;
   }
 }));
 app.use(express.urlencoded({ extended: false }));
+
+app.use(
+  session({
+    secret: process.env.SESSION_SECRET || "dev-secret-change-in-production",
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      secure: process.env.NODE_ENV === "production",
+      httpOnly: true,
+      maxAge: 1000 * 60 * 60 * 24 * 7,
+    },
+  })
+);
 
 app.use((req, res, next) => {
   const start = Date.now();
