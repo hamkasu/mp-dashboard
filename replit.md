@@ -6,6 +6,12 @@ This web application provides a comprehensive dashboard for Malaysian Members of
 
 ## Recent Changes
 
+**November 10, 2025**:
+- ✅ Fixed Hansard PDF parsing bug where absent MPs were incorrectly identified
+- ✅ Updated `extractNamesFromSection` in `server/hansard-scraper.ts` to use regex-based numbered entry extraction, preventing wrapped continuation lines from being counted as extra MPs
+- ✅ Corrected seed data in `server/storage.ts` to reflect accurate absent MP count (16 instead of 38) for DR.6.11.2025 session
+- ✅ Verified frontend displays correct attendance data from Hansard records
+
 **November 9, 2025**:
 - ✅ Added diagnostic logging to database seeding process for attendance tracking
 - ✅ Created admin endpoints `/api/admin/seed` and `/api/admin/db-status` for Railway deployment troubleshooting
