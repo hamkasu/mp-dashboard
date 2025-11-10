@@ -375,7 +375,7 @@ export class HansardScraper {
       const matches = presentSection.match(numberedPattern);
       
       if (matches && matches.length > 0) {
-        constituenciesPresent = matches.length - 1;
+        constituenciesPresent = matches.length;
       }
     }
 
