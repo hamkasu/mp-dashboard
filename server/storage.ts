@@ -6,6 +6,7 @@ import { eq, sql } from "drizzle-orm";
 import { MPNameMatcher } from "./mp-name-matcher";
 import { HansardScraper } from "./hansard-scraper";
 import { ConstituencyMatcher } from "./constituency-matcher";
+import { scrapeMpPhotos } from "./utils/scrape-mp-photos";
 
 export interface IStorage {
   // User methods
@@ -1694,6 +1695,34 @@ export async function seedDatabase() {
         }
         console.log("✅ Deleted stale Hansard records, proceeding with fresh seed...");
       } else if (hasCourtCases && hasSprmInvestigations) {
+        // Check if MP photos need to be updated
+        const existingMps = await dbStorage.getAllMps();
+        const mpsWithoutPhotos = existingMps.filter(mp => !mp.photoUrl || mp.photoUrl === null);
+        
+        if (mpsWithoutPhotos.length > 0) {
+          console.log(`${mpsWithoutPhotos.length} MPs missing photos, fetching from parliament website...`);
+          const photoMap = await scrapeMpPhotos();
+          let photosUpdated = 0;
+          
+          for (const mp of existingMps) {
+            const photoUrl = photoMap.get(mp.parliamentCode);
+            if (photoUrl && (!mp.photoUrl || mp.photoUrl === null)) {
+              try {
+                await db.update(mps)
+                  .set({ photoUrl })
+                  .where(eq(mps.id, mp.id));
+                photosUpdated++;
+              } catch (error) {
+                console.error(`Error updating photo for MP ${mp.name}:`, error);
+              }
+            }
+          }
+          
+          if (photosUpdated > 0) {
+            console.log(`✅ Updated ${photosUpdated} MP photos from parliament website`);
+          }
+        }
+        
         // Only skip if we have everything: MPs, court cases, SPRM investigations, and Hansard
         console.log("Database already fully seeded, skipping...");
         return;
@@ -1724,6 +1753,32 @@ export async function seedDatabase() {
       }
     }
     console.log(`Successfully seeded ${mpIdMap.size} MPs`);
+    
+    // Fetch and update MP photos
+    console.log("Fetching MP photos from parliament website...");
+    const photoMap = await scrapeMpPhotos();
+    let photosUpdated = 0;
+    
+    const allSeededMps = await dbStorage.getAllMps();
+    for (const mp of allSeededMps) {
+      const photoUrl = photoMap.get(mp.parliamentCode);
+      if (photoUrl && photoUrl !== mp.photoUrl) {
+        try {
+          await db.update(mps)
+            .set({ photoUrl })
+            .where(eq(mps.id, mp.id));
+          photosUpdated++;
+        } catch (error) {
+          console.error(`Error updating photo for MP ${mp.name}:`, error);
+        }
+      }
+    }
+    
+    if (photosUpdated > 0) {
+      console.log(`✅ Updated ${photosUpdated} MP photos from parliament website`);
+    } else {
+      console.log("⚠️  No MP photos found on parliament website");
+    }
   }
   
   // Seed court cases with updated MP IDs (check for duplicates)
