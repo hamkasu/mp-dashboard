@@ -237,26 +237,32 @@ export class HansardScraper {
 
   private extractNamesFromSection(sectionText: string): string[] {
     const names: string[] = [];
-    const lines = sectionText.split('\n');
     
-    for (const line of lines) {
-      let trimmed = line.trim();
-      if (!trimmed || trimmed.length < 5) continue;
+    const normalizedSection = sectionText.replace(/\n/g, ' ').replace(/\s+/g, ' ');
+    const numberedEntryPattern = /(\d+)\.\s+([^0-9]+?)(?=\s*\d+\.\s+|$)/g;
+    
+    let match;
+    while ((match = numberedEntryPattern.exec(normalizedSection)) !== null) {
+      const entryText = match[2].trim();
       
-      trimmed = trimmed.replace(/^\d+\.\s*/, '');
+      if (!entryText.includes('(')) continue;
       
-      if (trimmed.includes(',')) {
-        const afterComma = trimmed.split(',').slice(1).join(',').trim();
-        trimmed = afterComma.replace(/\s*\([^)]*\)\s*/g, '').trim();
+      if (entryText.includes(',')) {
+        const afterComma = entryText.split(',').slice(1).join(',').trim();
+        const nameText = afterComma.replace(/\s*\([^)]*\)\s*/g, '').trim();
+        
+        if (nameText.length > 3 && nameText.match(/^[A-Z]/i) && nameText.match(/[a-z]/i)) {
+          names.push(nameText);
+        }
       } else {
-        trimmed = trimmed
+        const nameText = entryText
           .replace(/\s*\([^)]*\)\s*/g, '')
           .replace(/\s*\[[^\]]*\]\s*/g, '')
           .trim();
-      }
-      
-      if (trimmed.length > 3 && trimmed.match(/^[A-Z]/i) && trimmed.match(/[a-z]/i)) {
-        names.push(trimmed);
+        
+        if (nameText.length > 3 && nameText.match(/^[A-Z]/i) && nameText.match(/[a-z]/i)) {
+          names.push(nameText);
+        }
       }
     }
     

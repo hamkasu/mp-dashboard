@@ -4,6 +4,7 @@ import { db } from "./db";
 import { mps, users, courtCases, sprmInvestigations, legislativeProposals, debateParticipations, parliamentaryQuestions, hansardRecords, pageViews } from "@shared/schema";
 import { eq, sql } from "drizzle-orm";
 import { MPNameMatcher } from "./mp-name-matcher";
+import { HansardScraper } from "./hansard-scraper";
 
 export interface IStorage {
   // User methods
@@ -972,58 +973,22 @@ export class MemStorage implements IStorage {
     });
     
     const hansardAbsentNames = [
-      "Dato' Seri Anwar bin Ibrahim (Tambun)",
-      "Dato' Seri Dr. Ahmad Zahid bin Hamidi (Bagan Datuk)",
-      "Menteri Pengangkutan, Tuan Loke Siew Fook (Seremban)",
-      "Menteri Pertahanan, Dato' Seri Mohamed Khaled bin Nordin (Kota Tinggi)",
-      "Menteri Pembangunan Usahawan dan Koperasi, Datuk Ewon Benedick (Penampang)",
-      "Menteri Di Jabatan Perdana Menteri (Undang-Undang dan Reformasi Institusi), Dato' Sri Azalina Othman Said (Pengerang)",
-      "Timbalan Menteri Pengangkutan, Datuk Haji Hasbi bin Haji Habibollah (Limbang)",
-      "Timbalan Menteri Perdagangan dan Komoditi, Datuk Chan Foong Hin (Kota Kinabalu)",
-      "Timbalan Menteri Sumber Manusia, Dato' Sri Haji Abdul Rahman bin Haji Mohamad (Lipis)",
-      "Timbalan Menteri Dalam Negeri, Datuk Seri Dr. Shamsul Anuar bin Haji Nasarah (Lenggong)",
-      "Menteri Perumahan dan Kerajaan Tempatan, Tuan Nga Kor Ming (Teluk Intan)",
-      "Menteri Luar Negeri, Dato' Seri Utama Haji Mohamad bin Haji Hasan (Rembau)",
-      "Menteri Kerja Raya, Dato Sri Alexander Nanta Linggi (Kapit)",
-      "Menteri Perpaduan Negara, Datuk Aaron Ago Dagang (Kanowit)",
-      "Menteri Kesihatan, Datuk Dr. Haji Dzulkefly bin Ahmad (Kuala Selangor)",
-      "Timbalan Menteri Ekonomi, Dato Hanifah Hajar Taib (Mukah)",
-      "Timbalan Menteri Sains, Teknologi dan Inovasi, Dato' Mohammad Yusof bin Apdal (Lahad Datu)",
-      "Timbalan Menteri Pertanian dan Keterjaminan Makanan, Dato' Sri Arthur Joseph Kurup (Pensiangan)",
-      "Timbalan Menteri Sumber Asli dan Kelestarian Alam, Dato' Sri Huang Tiong Sii (Sarikei)",
-      "Timbalan Menteri Pelancongan, Seni dan Budaya, Tuan Khairul Firdaus bin Akbar Khan (Batu Sapi)",
-      "Timbalan Menteri Belia dan Sukan, Tuan Adam Adli bin Abd Halim (Hang Tuah Jaya)",
-      "Timbalan Menteri Digital, Datuk Wilson Ugak Anak Kumbong (Hulu Rajang)",
-      "Dato' Sri Sh Mohmed Puzi bin Sh Ali (Pekan)",
-      "Datuk Ir. Shahelmey bin Yahya (Putatan)",
-      "Datuk Suhaimi bin Nasir (Libaran)",
-      "Datuk Seri Panglima Haji Mohd Shafie bin Haji Apdal (Semporna)",
-      "Dato' Seri Hishammuddin bin Tun Hussein (Sembrong)",
-      "Datuk Seri Saifuddin a/l Murugan (Tapah)",
-      "Tuan Chow Kon Yeow (Batu Kawan)",
-      "Dato' Seri Utama Haji Aminuddin bin Harun (Port Dickson)",
-      "Dato' Seri Anuar bin Shari (Gombak)",
-      "Datuk Seri Panglima Bung Moktar bin Radin (Kinabatangan)",
-      "Puan Isnaraissah Munirah binti Majilis (Kota Belud)",
-      "Tuan Bimol Anak Gading (Mas Gading)",
-      "Tuan Lim Lip Eng (Kepong)",
-      "Dato' Verdon bin Bahanda (Kudat)",
-      "Datuk Wetrom bin Bahanda (Kota Marudu)",
-      "Tuan Haji Muhammad Ismi bin Mat Taib (Parit)",
-      "Dato' Seri Dr. Ahmad Samsuri bin Mokhtar (Kemaman)",
-      "Dato' Seri Hamzah bin Zainudin (Larut)",
-      "Tan Sri Dato' Seri Haji Abdul Hadi bin Haji Awang (Marang)",
-      "Datuk Seri Dr. Ronald Kiandee (Beluran)",
-      "Dato' Sri Ismail Sabri bin Yaakob (Bera)",
-      "Tuan Hassan bin Abdul Karim (Pasir Gudang)",
-      "Datuk Seri Panglima Dr. Gapari bin Katingan @ Geoffrey Kitingan (Keningau)",
-      "Dato Ir. Haji Yusuf bin Abd Wahab (Tanjong Manis)",
-      "Datuk Ali Anak Biju (Saratok)",
-      "Datuk Jonathan bin Yasin (Ranau)",
-      "Datuk Matbali bin Musah (Sipitang)",
-      "Tuan Haji Manndzri bin Haji Nasib (Tenggara)",
-      "Dato' Haji Adnan bin Abu Hassan (Kuala Pilah)",
-      "Tiong King Sing (Bintulu)"
+      "Dato' Seri Anwar bin Ibrahim",
+      "Dato' Seri Dr. Ahmad Zahid bin Hamidi",
+      "Tuan Loke Siew Fook",
+      "Dato' Seri Mohamed Khaled bin Nordin",
+      "Datuk Ewon Benedick",
+      "Dato' Sri Azalina Othman Said",
+      "Datuk Haji Hasbi bin Haji Habibollah",
+      "Datuk Chan Foong Hin",
+      "Dato' Sri Haji Abdul Rahman bin Mohamad",
+      "Datuk Seri Dr. Shamsul Anuar bin Haji Nasarah",
+      "Tuan Nga Kor Ming",
+      "Dato' Seri Utama Haji Mohamad bin Haji Hasan",
+      "Dato Sri Alexander Nanta Linggi",
+      "Datuk Aaron Ago Dagang",
+      "Datuk Seri Dr. Haji Dzulkefly bin Ahmad",
+      "Dato Hajjah Hanifah Hajar Taib"
     ];
     
     const nameMatcher = new MPNameMatcher(mpsArray);
