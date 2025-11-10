@@ -94,6 +94,7 @@ export class MemStorage implements IStorage {
     this.debateParticipations = new Map();
     this.parliamentaryQuestions = new Map();
     this.hansardRecords = new Map();
+    this.seedAdminUser();
     this.seedMps();
     this.seedCourtCases();
     this.seedSprmInvestigations();
@@ -101,6 +102,19 @@ export class MemStorage implements IStorage {
     this.seedDebateParticipations();
     this.seedParliamentaryQuestions();
     this.seedHansardRecords();
+  }
+
+  private seedAdminUser() {
+    const bcrypt = require('bcryptjs');
+    const hashedPassword = bcrypt.hashSync('admin123', 10);
+    const adminUser: User = {
+      id: randomUUID(),
+      username: 'admin',
+      password: hashedPassword,
+      isAdmin: true
+    };
+    this.users.set(adminUser.id, adminUser);
+    console.log('Admin user seeded - Username: admin, Password: admin123');
   }
 
   async getUser(id: string): Promise<User | undefined> {
@@ -1641,10 +1655,27 @@ export class DbStorage implements IStorage {
 
 // Helper function to seed the database with initial data from MemStorage
 export async function seedDatabase() {
+  const bcrypt = require('bcryptjs');
   const memStorage = new MemStorage();
   const dbStorage = new DbStorage();
   
-  let mpIdMap = new Map<string, string>();
+  // Seed admin user if not exists
+  try {
+    const existingAdmin = await dbStorage.getUserByUsername('admin');
+    if (!existingAdmin) {
+      const hashedPassword = bcrypt.hashSync('admin123', 10);
+      await dbStorage.createUser({
+        username: 'admin',
+        password: hashedPassword,
+        isAdmin: true
+      });
+      console.log('✅ Admin user created - Username: admin, Password: admin123');
+    }
+  } catch (error) {
+    console.log('Admin user seeding skipped or already exists');
+  }
+  
+  let mpIdMap = new Map<string, String>();
   let shouldSeedMps = false;
   
   // Check if database is already seeded with MPs
