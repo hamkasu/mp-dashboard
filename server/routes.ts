@@ -1192,6 +1192,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         try {
           const topics = extractTopics(transcript);
           const attendance = scraper.extractAttendanceFromText(transcript);
+          const constituencyCounts = scraper.extractConstituencyAttendanceCounts(transcript);
           
           const allMps = await storage.getAllMps();
           const nameMatcher = new MPNameMatcher(allMps);
@@ -1200,6 +1201,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const absentMpIds = nameMatcher.matchNames(attendance.absentNames);
           
           console.log(`  Attendance: ${attendedMpIds.length} present, ${absentMpIds.length} absent`);
+          console.log(`  Constituencies: ${constituencyCounts.constituenciesPresent} present, ${constituencyCounts.constituenciesAbsent} absent, ${constituencyCounts.constituenciesAbsentRule91} absent (Rule 91)`);
           
           await storage.createHansardRecord({
             sessionNumber: metadata.sessionNumber,
@@ -1212,7 +1214,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
             speakers: [],
             voteRecords: [],
             attendedMpIds,
-            absentMpIds
+            absentMpIds,
+            constituenciesPresent: constituencyCounts.constituenciesPresent,
+            constituenciesAbsent: constituencyCounts.constituenciesAbsent,
+            constituenciesAbsentRule91: constituencyCounts.constituenciesAbsentRule91
           });
           
           console.log(`  ✓ Saved (${Math.floor(transcript.length / 1000)}KB of text)`);

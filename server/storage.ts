@@ -866,6 +866,9 @@ export class MemStorage implements IStorage {
       summaryLanguage: insertRecord.summaryLanguage ?? null,
       summarizedAt: null,
       createdAt: new Date(),
+      constituenciesPresent: insertRecord.constituenciesPresent ?? null,
+      constituenciesAbsent: insertRecord.constituenciesAbsent ?? null,
+      constituenciesAbsentRule91: insertRecord.constituenciesAbsentRule91 ?? null,
     };
     this.hansardRecords.set(id, record);
     return record;
@@ -1437,6 +1440,9 @@ export class DbStorage implements IStorage {
         vote_records,
         attended_mp_ids,
         absent_mp_ids,
+        constituencies_present,
+        constituencies_absent,
+        constituencies_absent_rule91,
         created_at
       FROM hansard_records
       WHERE id = ${id}
@@ -1459,6 +1465,9 @@ export class DbStorage implements IStorage {
       voteRecords: row.vote_records,
       attendedMpIds: row.attended_mp_ids || [],
       absentMpIds: row.absent_mp_ids || [],
+      constituenciesPresent: row.constituencies_present,
+      constituenciesAbsent: row.constituencies_absent,
+      constituenciesAbsentRule91: row.constituencies_absent_rule91,
       createdAt: row.created_at,
     } as unknown as HansardRecord;
   }
@@ -1483,6 +1492,9 @@ export class DbStorage implements IStorage {
           vote_records,
           attended_mp_ids,
           absent_mp_ids,
+          constituencies_present,
+          constituencies_absent,
+          constituencies_absent_rule91,
           created_at
         FROM hansard_records
         ORDER BY session_date DESC
@@ -1503,6 +1515,9 @@ export class DbStorage implements IStorage {
         voteRecords: row.vote_records,
         attendedMpIds: row.attended_mp_ids || [],
         absentMpIds: row.absent_mp_ids || [],
+        constituenciesPresent: row.constituencies_present,
+        constituenciesAbsent: row.constituencies_absent,
+        constituenciesAbsentRule91: row.constituencies_absent_rule91,
         createdAt: row.created_at,
       })) as unknown as HansardRecord[];
     } catch (error) {
@@ -1531,6 +1546,9 @@ export class DbStorage implements IStorage {
           vote_records,
           attended_mp_ids,
           absent_mp_ids,
+          constituencies_present,
+          constituencies_absent,
+          constituencies_absent_rule91,
           created_at
         FROM hansard_records
         WHERE session_number = ${sessionNumber}
@@ -1552,6 +1570,9 @@ export class DbStorage implements IStorage {
         voteRecords: row.vote_records,
         attendedMpIds: row.attended_mp_ids || [],
         absentMpIds: row.absent_mp_ids || [],
+        constituenciesPresent: row.constituencies_present,
+        constituenciesAbsent: row.constituencies_absent,
+        constituenciesAbsentRule91: row.constituencies_absent_rule91,
         createdAt: row.created_at,
       })) as unknown as HansardRecord[];
     } catch (error) {
