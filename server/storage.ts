@@ -171,7 +171,7 @@ export class MemStorage implements IStorage {
 
   private seedMps() {
     const swornInDate = new Date("2022-12-19");
-    const BASE_MP_ALLOWANCE = 16000;
+    const BASE_MP_ALLOWANCE = 25700;
     
     const mpsData: InsertMp[] = [
       // PERLIS (P001-P003)
