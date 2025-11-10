@@ -3,7 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, Download, Trash2, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { Loader2, Download, Trash2, AlertTriangle, CheckCircle2, RefreshCw } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
@@ -64,6 +64,31 @@ export default function HansardAdmin() {
     },
   });
 
+  const refreshMutation = useMutation({
+    mutationFn: async (maxRecords: number) => {
+      const res = await apiRequest("POST", "/api/hansard-records/download", { 
+        maxRecords,
+        deleteExisting: true 
+      });
+      return await res.json();
+    },
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/hansard-records"] });
+      setDownloadStatus(data);
+      toast({
+        title: "Refresh Complete",
+        description: `Successfully refreshed ${data.successful} hansard records`,
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to refresh hansard records",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleDelete = () => {
     if (confirm(`Are you sure you want to delete all ${hansardRecords?.length || 0} hansard records? This action cannot be undone.`)) {
       deleteMutation.mutate();
@@ -77,6 +102,13 @@ export default function HansardAdmin() {
     }
   };
 
+  const handleRefresh = () => {
+    if (confirm("This will DELETE all existing hansard records and download fresh data from the 15th Parliament. This may take several minutes. Continue?")) {
+      setDownloadStatus(null);
+      refreshMutation.mutate(1000);
+    }
+  };
+
   return (
     <div className="container mx-auto p-6 space-y-6" data-testid="page-hansard-admin">
       <div>
@@ -85,6 +117,50 @@ export default function HansardAdmin() {
           Manage parliamentary hansard records for the 15th Parliament
         </p>
       </div>
+
+      <Card className="border-primary">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <RefreshCw className="h-5 w-5" />
+            Refresh All Hansard Data
+          </CardTitle>
+          <CardDescription>
+            Delete existing records and download fresh hansard data from Parliament 15
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <p className="text-sm text-muted-foreground">
+              This will delete all existing hansard records and download up to 1,000 fresh records from the Malaysian Parliament website.
+            </p>
+            <Alert>
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription>
+                This operation will delete all existing data and may take 10-30 minutes to complete. Use this to get the latest hansard records.
+              </AlertDescription>
+            </Alert>
+          </div>
+          <Button
+            onClick={handleRefresh}
+            disabled={refreshMutation.isPending}
+            variant="default"
+            className="w-full"
+            data-testid="button-refresh-hansard"
+          >
+            {refreshMutation.isPending ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Refreshing...
+              </>
+            ) : (
+              <>
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Refresh Hansard Data
+              </>
+            )}
+          </Button>
+        </CardContent>
+      </Card>
 
       <div className="grid gap-6 md:grid-cols-2">
         <Card>

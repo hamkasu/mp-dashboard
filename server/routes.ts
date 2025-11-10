@@ -973,7 +973,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Trigger Hansard download
   app.post("/api/hansard-records/download", async (req, res) => {
     try {
-      const { maxRecords = 200 } = req.body;
+      const { maxRecords = 200, deleteExisting = false } = req.body;
+      
+      if (deleteExisting) {
+        console.log('Deleting all existing Hansard records...');
+        const deletedCount = await storage.deleteAllHansardRecords();
+        console.log(`Deleted ${deletedCount} existing Hansard records`);
+      }
       
       const scraper = new HansardScraper();
       
@@ -989,11 +995,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       for (const metadata of hansardList) {
         console.log(`Processing ${metadata.sessionNumber} (${metadata.sessionDate.toISOString().split('T')[0]})...`);
         
-        const existingRecords = await storage.getHansardRecordsBySessionNumber(metadata.sessionNumber);
-        if (existingRecords.length > 0) {
-          console.log(`  ✓ Already exists, skipping`);
-          skippedCount++;
-          continue;
+        if (!deleteExisting) {
+          const existingRecords = await storage.getHansardRecordsBySessionNumber(metadata.sessionNumber);
+          if (existingRecords.length > 0) {
+            console.log(`  ✓ Already exists, skipping`);
+            skippedCount++;
+            continue;
+          }
         }
         
         const transcript = await scraper.downloadAndExtractPdf(metadata.pdfUrl);
