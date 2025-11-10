@@ -229,22 +229,54 @@ export default function HansardPage() {
                 </div>
               )}
 
-              {(record.attendedMpIds?.length > 0 || record.absentMpIds?.length > 0) && (
+              {(record.constituenciesPresent !== null && record.constituenciesPresent !== undefined) || 
+               (record.attendedMpIds?.length > 0 || record.absentMpIds?.length > 0) ? (
                 <div className="flex flex-wrap items-center justify-between gap-4">
                   <div className="flex flex-wrap gap-4 text-sm">
-                    {record.attendedMpIds && record.attendedMpIds.length > 0 && (
-                      <div className="flex items-center gap-2" data-testid="attendance-present">
-                        <Users className="w-4 h-4 text-green-600 dark:text-green-400" />
-                        <span className="font-medium">{record.attendedMpIds.length}</span>
-                        <span className="text-muted-foreground">Constituency Present</span>
-                      </div>
-                    )}
-                    {record.absentMpIds && record.absentMpIds.length > 0 && (
-                      <div className="flex items-center gap-2" data-testid="attendance-absent">
-                        <UserX className="w-4 h-4 text-orange-600 dark:text-orange-400" />
-                        <span className="font-medium">{record.absentMpIds.length}</span>
-                        <span className="text-muted-foreground">Constituency Absent</span>
-                      </div>
+                    {(record.constituenciesPresent !== null && record.constituenciesPresent !== undefined) ? (
+                      <>
+                        <div className="flex items-center gap-2" data-testid="attendance-present">
+                          <Users className="w-4 h-4 text-green-600 dark:text-green-400" />
+                          <span className="font-medium">{record.constituenciesPresent}</span>
+                          <span className="text-muted-foreground">Constituencies Present</span>
+                        </div>
+                        {record.constituenciesAbsent !== null && record.constituenciesAbsent !== undefined && record.constituenciesAbsent > 0 && (
+                          <div className="flex items-center gap-2" data-testid="attendance-absent">
+                            <UserX className="w-4 h-4 text-orange-600 dark:text-orange-400" />
+                            <span className="font-medium">{record.constituenciesAbsent}</span>
+                            <span className="text-muted-foreground">Absent</span>
+                          </div>
+                        )}
+                        {record.constituenciesAbsentRule91 !== null && record.constituenciesAbsentRule91 !== undefined && record.constituenciesAbsentRule91 > 0 && (
+                          <div className="flex items-center gap-2" data-testid="attendance-absent-rule91">
+                            <UserX className="w-4 h-4 text-red-600 dark:text-red-400" />
+                            <span className="font-medium">{record.constituenciesAbsentRule91}</span>
+                            <span className="text-muted-foreground">Absent (SO 91)</span>
+                          </div>
+                        )}
+                        {record.constituenciesPresent > 0 && (
+                          <Badge variant="secondary" data-testid="attendance-rate">
+                            {((record.constituenciesPresent / 222) * 100).toFixed(1)}% Attendance
+                          </Badge>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        {record.attendedMpIds && record.attendedMpIds.length > 0 && (
+                          <div className="flex items-center gap-2" data-testid="attendance-present">
+                            <Users className="w-4 h-4 text-green-600 dark:text-green-400" />
+                            <span className="font-medium">{record.attendedMpIds.length}</span>
+                            <span className="text-muted-foreground">MPs Present</span>
+                          </div>
+                        )}
+                        {record.absentMpIds && record.absentMpIds.length > 0 && (
+                          <div className="flex items-center gap-2" data-testid="attendance-absent">
+                            <UserX className="w-4 h-4 text-orange-600 dark:text-orange-400" />
+                            <span className="font-medium">{record.absentMpIds.length}</span>
+                            <span className="text-muted-foreground">MPs Absent</span>
+                          </div>
+                        )}
+                      </>
                     )}
                   </div>
                   <Dialog open={openDialogId === record.id} onOpenChange={(open) => setOpenDialogId(open ? record.id : null)}>
@@ -272,7 +304,7 @@ export default function HansardPage() {
                     </DialogContent>
                   </Dialog>
                 </div>
-              )}
+              ) : null}
               
               {record.summary ? (
                 <div className="space-y-2">

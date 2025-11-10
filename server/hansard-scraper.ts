@@ -32,6 +32,12 @@ export interface ConstituencyAttendanceData {
   absentConstituencies: string[];
 }
 
+export interface ConstituencyAttendanceCounts {
+  constituenciesPresent: number;
+  constituenciesAbsent: number;
+  constituenciesAbsentRule91: number;
+}
+
 export class HansardScraper {
   private readonly baseUrl = 'https://www.parlimen.gov.my';
   private readonly headers = {
@@ -342,5 +348,96 @@ export class HansardScraper {
     }
     
     return constituencies;
+  }
+
+  extractConstituencyAttendanceCounts(pdfText: string): ConstituencyAttendanceCounts {
+    const normalizedText = pdfText.replace(/[ \t]+/g, ' ');
+    
+    let constituenciesPresent = 0;
+    let constituenciesAbsent = 0;
+    let constituenciesAbsentRule91 = 0;
+
+    const presentPattern = /Ahli[-\s]Ahli\s+Yang\s+Hadir\s*:?/i;
+    const presentMatch = normalizedText.match(presentPattern);
+    
+    if (presentMatch && presentMatch.index !== undefined) {
+      const startIdx = presentMatch.index + presentMatch[0].length;
+      
+      const remainingText = normalizedText.substring(startIdx);
+      const nextSectionMatch = remainingText.match(/Ahli[-\s]Ahli\s+Yang\s+Tidak\s+Hadir/i);
+      
+      const endIdx = nextSectionMatch && nextSectionMatch.index !== undefined
+        ? startIdx + nextSectionMatch.index
+        : Math.min(startIdx + 20000, normalizedText.length);
+      
+      const presentSection = normalizedText.substring(startIdx, endIdx);
+      const numberedPattern = /\d+\.\s+/g;
+      const matches = presentSection.match(numberedPattern);
+      
+      if (matches && matches.length > 0) {
+        constituenciesPresent = matches.length - 1;
+      }
+    }
+
+    const absentPattern = /Ahli[-\s]Ahli\s+Yang\s+Tidak\s+Hadir\s*:?(?!\s*Di\s+Bawah)/i;
+    const absentMatch = normalizedText.match(absentPattern);
+    
+    if (absentMatch && absentMatch.index !== undefined) {
+      const startIdx = absentMatch.index + absentMatch[0].length;
+      
+      const remainingText = normalizedText.substring(startIdx);
+      const rule91Match = remainingText.match(/Ahli[-\s]Ahli\s+Yang\s+Tidak\s+Hadir\s+Di\s+Bawah/i);
+      const nextMajorSectionMatch = remainingText.match(/\n\s*\n\s*[A-Z][A-Z][A-Z]/);
+      
+      let endIdx;
+      if (rule91Match && rule91Match.index !== undefined) {
+        endIdx = startIdx + rule91Match.index;
+      } else if (nextMajorSectionMatch && nextMajorSectionMatch.index !== undefined) {
+        endIdx = startIdx + nextMajorSectionMatch.index;
+      } else {
+        endIdx = Math.min(startIdx + 10000, normalizedText.length);
+      }
+      
+      const absentSection = normalizedText.substring(startIdx, endIdx);
+      const numberedPattern = /\d+\.\s+/g;
+      const matches = absentSection.match(numberedPattern);
+      
+      if (matches) {
+        constituenciesAbsent = matches.length;
+      }
+    }
+
+    const rule91Pattern = /Ahli[-\s]Ahli\s+Yang\s+Tidak\s+Hadir\s+Di\s+Bawah\s+Peraturan\s+Mesyuarat\s+91\s*:?/i;
+    const rule91Match = normalizedText.match(rule91Pattern);
+    
+    if (rule91Match && rule91Match.index !== undefined) {
+      const startIdx = rule91Match.index + rule91Match[0].length;
+      
+      const remainingText = normalizedText.substring(startIdx);
+      const nextMajorSectionMatch = remainingText.match(/\n\s*\n\s*[A-Z][A-Z][A-Z]/);
+      
+      const endIdx = nextMajorSectionMatch && nextMajorSectionMatch.index !== undefined
+        ? startIdx + nextMajorSectionMatch.index
+        : Math.min(startIdx + 10000, normalizedText.length);
+      
+      const rule91Section = normalizedText.substring(startIdx, endIdx);
+      const numberedPattern = /\d+\.\s+/g;
+      const matches = rule91Section.match(numberedPattern);
+      
+      if (matches) {
+        constituenciesAbsentRule91 = matches.length;
+      }
+    }
+
+    const total = constituenciesPresent + constituenciesAbsent + constituenciesAbsentRule91;
+    if (total > 0 && total !== 222) {
+      console.warn(`Constituency count discrepancy: ${constituenciesPresent} present + ${constituenciesAbsent} absent + ${constituenciesAbsentRule91} absent (Rule 91) = ${total} (expected 222)`);
+    }
+
+    return {
+      constituenciesPresent,
+      constituenciesAbsent,
+      constituenciesAbsentRule91
+    };
   }
 }

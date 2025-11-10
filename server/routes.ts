@@ -12,7 +12,7 @@ import {
   insertHansardRecordSchema,
   updateHansardRecordSchema
 } from "@shared/schema";
-import { HansardScraper } from "./hansard-scraper";
+import { HansardScraper, ConstituencyAttendanceCounts } from "./hansard-scraper";
 import { MPNameMatcher } from "./mp-name-matcher";
 
 function extractTopics(transcript: string): string[] {
@@ -1036,6 +1036,114 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting all Hansard records:", error);
       res.status(500).json({ error: "Failed to delete all Hansard records" });
+    }
+  });
+
+  // Reprocess attendance for all or selected Hansard records
+  app.post("/api/hansard-records/reprocess-attendance", async (req, res) => {
+    try {
+      const { limit, recordIds } = req.body;
+      const scraper = new HansardScraper();
+      
+      let records = await storage.getAllHansardRecords();
+      
+      if (recordIds && Array.isArray(recordIds) && recordIds.length > 0) {
+        records = records.filter(r => recordIds.includes(r.id));
+      }
+      
+      if (limit && typeof limit === 'number' && limit > 0) {
+        records = records.slice(0, limit);
+      }
+
+      console.log(`Starting attendance reprocessing for ${records.length} records...`);
+      
+      let processed = 0;
+      let updated = 0;
+      let errors = 0;
+      const results: Array<{
+        id: string;
+        sessionNumber: string;
+        status: string;
+        counts?: ConstituencyAttendanceCounts;
+        error?: string;
+      }> = [];
+
+      for (const record of records) {
+        processed++;
+        
+        if (!record.pdfLinks || record.pdfLinks.length === 0) {
+          console.log(`[${processed}/${records.length}] ${record.sessionNumber}: No PDF links`);
+          results.push({
+            id: record.id,
+            sessionNumber: record.sessionNumber,
+            status: 'skipped',
+            error: 'No PDF links'
+          });
+          continue;
+        }
+
+        try {
+          console.log(`[${processed}/${records.length}] Reprocessing ${record.sessionNumber}...`);
+          
+          const pdfText = await scraper.downloadAndExtractPdf(record.pdfLinks[0]);
+          
+          if (!pdfText) {
+            console.log(`  ✗ Failed to extract PDF`);
+            errors++;
+            results.push({
+              id: record.id,
+              sessionNumber: record.sessionNumber,
+              status: 'error',
+              error: 'Failed to extract PDF'
+            });
+            continue;
+          }
+
+          const counts = scraper.extractConstituencyAttendanceCounts(pdfText);
+          
+          await storage.updateHansardRecord(record.id, {
+            constituenciesPresent: counts.constituenciesPresent,
+            constituenciesAbsent: counts.constituenciesAbsent,
+            constituenciesAbsentRule91: counts.constituenciesAbsentRule91
+          });
+          
+          console.log(`  ✓ Updated: ${counts.constituenciesPresent} present, ${counts.constituenciesAbsent} absent, ${counts.constituenciesAbsentRule91} absent (Rule 91)`);
+          updated++;
+          results.push({
+            id: record.id,
+            sessionNumber: record.sessionNumber,
+            status: 'success',
+            counts
+          });
+        } catch (error) {
+          console.error(`  ✗ Error processing ${record.sessionNumber}:`, error);
+          errors++;
+          results.push({
+            id: record.id,
+            sessionNumber: record.sessionNumber,
+            status: 'error',
+            error: error instanceof Error ? error.message : 'Unknown error'
+          });
+        }
+      }
+
+      console.log(`\n=== Reprocessing Summary ===`);
+      console.log(`Total records: ${records.length}`);
+      console.log(`Successfully updated: ${updated}`);
+      console.log(`Errors: ${errors}`);
+
+      res.json({
+        totalRecords: records.length,
+        processed,
+        updated,
+        errors,
+        results
+      });
+    } catch (error) {
+      console.error("Error reprocessing attendance:", error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Failed to reprocess attendance" 
+      });
     }
   });
 
