@@ -1,5 +1,6 @@
 import { type User, type InsertUser, type Mp, type InsertMp, type CourtCase, type InsertCourtCase, type SprmInvestigation, type InsertSprmInvestigation, type LegislativeProposal, type InsertLegislativeProposal, type DebateParticipation, type InsertDebateParticipation, type ParliamentaryQuestion, type InsertParliamentaryQuestion, type HansardRecord, type InsertHansardRecord, type UpdateHansardRecord, type PageView } from "@shared/schema";
 import { randomUUID } from "crypto";
+import bcrypt from "bcryptjs";
 import { db } from "./db";
 import { mps, users, courtCases, sprmInvestigations, legislativeProposals, debateParticipations, parliamentaryQuestions, hansardRecords, pageViews } from "@shared/schema";
 import { eq, sql } from "drizzle-orm";
@@ -105,7 +106,6 @@ export class MemStorage implements IStorage {
   }
 
   private seedAdminUser() {
-    const bcrypt = require('bcryptjs');
     const hashedPassword = bcrypt.hashSync('admin123', 10);
     const adminUser: User = {
       id: randomUUID(),
@@ -1655,7 +1655,6 @@ export class DbStorage implements IStorage {
 
 // Helper function to seed the database with initial data from MemStorage
 export async function seedDatabase() {
-  const bcrypt = require('bcryptjs');
   const memStorage = new MemStorage();
   const dbStorage = new DbStorage();
   
@@ -1675,7 +1674,7 @@ export async function seedDatabase() {
     console.log('Admin user seeding skipped or already exists');
   }
   
-  let mpIdMap = new Map<string, String>();
+  let mpIdMap = new Map<string, string>();
   let shouldSeedMps = false;
   
   // Check if database is already seeded with MPs
