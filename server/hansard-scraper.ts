@@ -117,6 +117,7 @@ export class HansardScraper {
     try {
       await this.delay(2000);
       
+      console.log(`  Downloading PDF from: ${pdfUrl}`);
       const response = await axios.get(pdfUrl, {
         responseType: 'arraybuffer',
         headers: this.headers,
@@ -124,14 +125,24 @@ export class HansardScraper {
         httpsAgent
       });
       
+      console.log(`  PDF downloaded, size: ${response.data.byteLength} bytes`);
       const pdfBuffer = Buffer.from(response.data);
       
+      console.log(`  Parsing PDF...`);
       const parser = new PDFParse({ data: pdfBuffer });
       const result = await parser.getText();
       
+      console.log(`  Extracted ${result.text.length} characters`);
       return result.text;
-    } catch (error) {
-      console.error(`Error downloading/extracting PDF ${pdfUrl}:`, error);
+    } catch (error: any) {
+      if (error.response) {
+        console.error(`  ✗ HTTP Error ${error.response.status} for ${pdfUrl}`);
+        console.error(`  Response headers:`, error.response.headers);
+      } else if (error.code === 'ETIMEDOUT' || error.code === 'ECONNABORTED') {
+        console.error(`  ✗ Timeout downloading PDF: ${pdfUrl}`);
+      } else {
+        console.error(`  ✗ Error downloading/extracting PDF ${pdfUrl}:`, error.message);
+      }
       return null;
     }
   }
