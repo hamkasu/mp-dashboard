@@ -13,6 +13,7 @@ import {
   updateHansardRecordSchema
 } from "@shared/schema";
 import { HansardScraper } from "./hansard-scraper";
+import { MPNameMatcher } from "./mp-name-matcher";
 
 function extractTopics(transcript: string): string[] {
   const topics: Set<string> = new Set();
