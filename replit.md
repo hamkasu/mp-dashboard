@@ -7,6 +7,12 @@ This web application provides a comprehensive dashboard for Malaysian Members of
 ## Recent Changes
 
 **November 10, 2025**:
+- ✅ **FIXED: Database duplicate seeding issue on Railway deployments**
+  - Added `getCourtCaseByCaseNumber` and `getSprmInvestigationByCaseNumber` methods to storage interface
+  - Implemented duplicate prevention in seeding logic - checks if records exist before creating them
+  - Added unique constraints to `courtCases.caseNumber` and `sprmInvestigations.caseNumber` in schema
+  - App restarts now skip existing records instead of creating duplicates (logs show "Database already fully seeded, skipping...")
+  - This fixes the issue where court cases and SPRM investigations were showing "4 Ongoing" instead of "1 Ongoing"
 - ✅ Added constituency-level attendance tracking feature:
   - Created `/api/hansard-records/:id/constituency-attendance` endpoint to return attended/absent constituencies by state
   - Built `ConstituencyAttendance` component with lazy loading and query gating to prevent unnecessary API calls
