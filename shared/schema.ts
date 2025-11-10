@@ -185,6 +185,9 @@ export const hansardRecords = pgTable("hansard_records", {
   voteRecords: jsonb("vote_records").$type<HansardVoteRecord[]>().notNull().default(sql`'[]'::jsonb`),
   attendedMpIds: jsonb("attended_mp_ids").$type<string[]>().notNull().default(sql`'[]'::jsonb`),
   absentMpIds: jsonb("absent_mp_ids").$type<string[]>().notNull().default(sql`'[]'::jsonb`),
+  constituenciesPresent: integer("constituencies_present"),
+  constituenciesAbsent: integer("constituencies_absent"),
+  constituenciesAbsentRule91: integer("constituencies_absent_rule91"),
   createdAt: timestamp("created_at").notNull().default(sql`NOW()`),
 });
 
@@ -215,6 +218,9 @@ export const insertHansardRecordSchema = createInsertSchema(hansardRecords).omit
   })).default([]),
   attendedMpIds: z.array(z.string()).default([]),
   absentMpIds: z.array(z.string()).default([]),
+  constituenciesPresent: z.number().nullable().optional(),
+  constituenciesAbsent: z.number().nullable().optional(),
+  constituenciesAbsentRule91: z.number().nullable().optional(),
 });
 
 export const updateHansardRecordSchema = insertHansardRecordSchema.partial();
