@@ -2,6 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage, seedDatabase } from "./storage";
 import { z } from "zod";
+import bcrypt from "bcryptjs";
 import { 
   insertCourtCaseSchema, 
   insertSprmInvestigationSchema, 
@@ -52,12 +53,16 @@ async function requireAdmin(req: any, res: any, next: any) {
     return res.status(401).json({ error: "Not authenticated" });
   }
   
-  const user = await storage.getUser(req.session.userId);
-  if (!user || !user.isAdmin) {
-    return res.status(403).json({ error: "Forbidden: Admin access required" });
+  try {
+    const user = await storage.getUser(req.session.userId);
+    if (!user || !user.isAdmin) {
+      return res.status(403).json({ error: "Forbidden: Admin access required" });
+    }
+    next();
+  } catch (error) {
+    console.error("Error in requireAdmin middleware:", error);
+    return res.status(500).json({ error: "Internal server error" });
   }
-  
-  next();
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -72,7 +77,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const user = await storage.getUserByUsername(username);
       
-      if (!user || user.password !== password) {
+      if (!user) {
+        return res.status(401).json({ error: "Invalid credentials" });
+      }
+      
+      const isPasswordValid = await bcrypt.compare(password, user.password);
+      
+      if (!isPasswordValid) {
         return res.status(401).json({ error: "Invalid credentials" });
       }
       
