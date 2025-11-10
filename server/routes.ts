@@ -70,24 +70,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/auth/login", async (req, res) => {
     try {
       const { username, password } = req.body;
+      console.log(`[LOGIN] Attempting login for username: ${username}`);
       
       if (!username || !password) {
+        console.log("[LOGIN] Missing username or password");
         return res.status(400).json({ error: "Username and password are required" });
       }
       
       const user = await storage.getUserByUsername(username);
+      console.log(`[LOGIN] User lookup result:`, user ? `Found user ${user.username} (isAdmin: ${user.isAdmin})` : "User not found");
       
       if (!user) {
+        console.log("[LOGIN] Authentication failed - user not found");
         return res.status(401).json({ error: "Invalid credentials" });
       }
       
+      console.log(`[LOGIN] Comparing password. Hash starts with: ${user.password.substring(0, 10)}`);
       const isPasswordValid = await bcrypt.compare(password, user.password);
+      console.log(`[LOGIN] Password comparison result: ${isPasswordValid}`);
       
       if (!isPasswordValid) {
+        console.log("[LOGIN] Authentication failed - invalid password");
         return res.status(401).json({ error: "Invalid credentials" });
       }
       
       req.session.userId = user.id;
+      console.log(`[LOGIN] Session created for user ${user.id}`);
       
       res.json({ 
         user: { 
@@ -96,8 +104,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           isAdmin: user.isAdmin 
         } 
       });
+      console.log(`[LOGIN] Login successful for ${username}`);
     } catch (error) {
-      console.error("Error during login:", error);
+      console.error("[LOGIN] Error during login:", error);
       res.status(500).json({ error: "Login failed" });
     }
   });
