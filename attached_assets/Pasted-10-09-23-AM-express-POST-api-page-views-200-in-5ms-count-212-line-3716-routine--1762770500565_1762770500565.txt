@@ -1,0 +1,77 @@
+10:09:23 AM [express] POST /api/page-views 200 in 5ms :: {"count":212}
+  line: '3716',
+  routine: 'errorMissingColumn'
+}
+  code: '42703',
+10:09:33 AM [express] DELETE /api/hansard-records 500 in 190ms :: {"error":"Failed to delete all Hans…
+  detail: undefined,
+Error deleting all Hansard records: error: column "constituencies_present" does not exist
+  hint: undefined,
+  position: '260',
+    at /app/node_modules/pg-pool/index.js:45:11
+  internalPosition: undefined,
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async file:///app/node_modules/drizzle-orm/node-postgres/session.js:83:22
+  internalQuery: undefined,
+    at async DbStorage.deleteAllHansardRecords (file:///app/dist/index.js:1690:20)
+  where: undefined,
+    at async file:///app/dist/index.js:3013:21 {
+  schema: undefined,
+  length: 123,
+  table: undefined,
+  severity: 'ERROR',
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'parse_relation.c',
+Deleting all existing Hansard records...
+Error downloading Hansard records: error: column "constituencies_present" does not exist
+    at /app/node_modules/pg-pool/index.js:45:11
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async file:///app/node_modules/drizzle-orm/node-postgres/session.js:83:22
+    at async DbStorage.deleteAllHansardRecords (file:///app/dist/index.js:1690:20)
+    at async file:///app/dist/index.js:3111:30 {
+  length: 123,
+  severity: 'ERROR',
+  code: '42703',
+  detail: undefined,
+  hint: undefined,
+  position: '260',
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'parse_relation.c',
+  line: '3716',
+  routine: 'errorMissingColumn'
+}
+10:26:41 AM [express] POST /api/hansard-records/download 500 in 190ms :: {"error":"Failed to download…
+Error deleting all Hansard records: error: column "constituencies_present" does not exist
+    at /app/node_modules/pg-pool/index.js:45:11
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async file:///app/node_modules/drizzle-orm/node-postgres/session.js:83:22
+    at async DbStorage.deleteAllHansardRecords (file:///app/dist/index.js:1690:20)
+    at async file:///app/dist/index.js:3013:21 {
+  length: 123,
+  severity: 'ERROR',
+  code: '42703',
+  detail: undefined,
+  hint: undefined,
+  position: '260',
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'parse_relation.c',
+  line: '3716',
+  routine: 'errorMissingColumn'
+}
+10:26:59 AM [express] DELETE /api/hansard-records 500 in 194ms :: {"error":"Failed to delete all Hans…
