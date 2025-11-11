@@ -3,6 +3,7 @@ import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Home from "@/pages/Home";
 import MPProfile from "@/pages/MPProfile";
 import ParliamentaryActivity from "@/pages/ParliamentaryActivity";
@@ -23,7 +24,11 @@ function Router() {
       <Route path="/attendance" component={Attendance} />
       <Route path="/allowances" component={Allowances} />
       <Route path="/login" component={Login} />
-      <Route path="/hansard-admin" component={HansardAdmin} />
+      <Route path="/hansard-admin">
+        <ProtectedRoute>
+          <HansardAdmin />
+        </ProtectedRoute>
+      </Route>
       <Route component={NotFound} />
     </Switch>
   );
