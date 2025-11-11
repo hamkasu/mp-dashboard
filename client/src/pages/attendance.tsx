@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { Link } from "wouter";
+import { Header } from "@/components/Header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -100,14 +101,19 @@ export default function AttendancePage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <div className="text-muted-foreground">Loading attendance report...</div>
-      </div>
+      <>
+        <Header />
+        <div className="flex items-center justify-center h-full">
+          <div className="text-muted-foreground">Loading attendance report...</div>
+        </div>
+      </>
     );
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <>
+      <Header />
+      <div className="container mx-auto p-6 space-y-6">
       <div>
         <h1 className="text-3xl font-bold">MP Attendance Report</h1>
         <p className="text-muted-foreground mt-2">
@@ -354,5 +360,6 @@ export default function AttendancePage() {
         </>
       )}
     </div>
+    </>
   );
 }
