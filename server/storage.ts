@@ -66,6 +66,7 @@ export interface IStorage {
   getHansardRecord(id: string): Promise<HansardRecord | undefined>;
   getAllHansardRecords(): Promise<HansardRecord[]>;
   getHansardRecordsBySessionNumber(sessionNumber: string): Promise<HansardRecord[]>;
+  getLatestHansardRecord(): Promise<HansardRecord | undefined>;
   createHansardRecord(record: InsertHansardRecord): Promise<HansardRecord>;
   updateHansardRecord(id: string, record: UpdateHansardRecord): Promise<HansardRecord | undefined>;
   deleteHansardRecord(id: string): Promise<boolean>;
@@ -880,6 +881,17 @@ export class MemStorage implements IStorage {
     );
   }
   
+  async getLatestHansardRecord(): Promise<HansardRecord | undefined> {
+    const records = Array.from(this.hansardRecords.values());
+    if (records.length === 0) return undefined;
+    
+    return records.sort((a, b) => {
+      const dateA = new Date(a.sessionDate).getTime();
+      const dateB = new Date(b.sessionDate).getTime();
+      return dateB - dateA;
+    })[0];
+  }
+  
   async createHansardRecord(insertRecord: InsertHansardRecord): Promise<HansardRecord> {
     const id = randomUUID();
     const record: HansardRecord = {
@@ -1601,6 +1613,62 @@ export class DbStorage implements IStorage {
     } catch (error) {
       console.error("Error in getHansardRecordsBySessionNumber:", error);
       return [];
+    }
+  }
+  
+  async getLatestHansardRecord(): Promise<HansardRecord | undefined> {
+    try {
+      const result = await db.execute(sql`
+        SELECT 
+          id,
+          session_number,
+          to_char(session_date, 'YYYY-MM-DD"T"HH24:MI:SS"Z"') as session_date,
+          parliament_term,
+          sitting,
+          transcript,
+          summary,
+          summary_language,
+          summarized_at,
+          pdf_links,
+          topics,
+          speakers,
+          vote_records,
+          attended_mp_ids,
+          absent_mp_ids,
+          constituencies_present,
+          constituencies_absent,
+          constituencies_absent_rule91,
+          created_at
+        FROM hansard_records
+        ORDER BY session_date DESC
+        LIMIT 1
+      `);
+      if (!result.rows || result.rows.length === 0) return undefined;
+      const row: any = result.rows[0];
+      return {
+        id: row.id,
+        sessionNumber: row.session_number,
+        sessionDate: row.session_date,
+        parliamentTerm: row.parliament_term,
+        sitting: row.sitting,
+        transcript: row.transcript,
+        summary: row.summary,
+        summaryLanguage: row.summary_language,
+        summarizedAt: row.summarized_at,
+        pdfLinks: row.pdf_links,
+        topics: row.topics,
+        speakers: row.speakers,
+        voteRecords: row.vote_records,
+        attendedMpIds: row.attended_mp_ids || [],
+        absentMpIds: row.absent_mp_ids || [],
+        constituenciesPresent: row.constituencies_present,
+        constituenciesAbsent: row.constituencies_absent,
+        constituenciesAbsentRule91: row.constituencies_absent_rule91,
+        createdAt: row.created_at,
+      } as unknown as HansardRecord;
+    } catch (error) {
+      console.error("Error in getLatestHansardRecord:", error);
+      return undefined;
     }
   }
   

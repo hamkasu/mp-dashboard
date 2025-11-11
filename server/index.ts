@@ -3,6 +3,7 @@ import session from "express-session";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { seedDatabase } from "./storage";
+import { startHansardCron } from "./hansard-cron";
 
 const app = express();
 
@@ -110,5 +111,8 @@ app.use((req, res, next) => {
     reusePort: true,
   }, () => {
     log(`serving on port ${port}`);
+    
+    // Start the daily Hansard sync cron job
+    startHansardCron();
   });
 })();

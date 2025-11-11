@@ -15,6 +15,7 @@ import {
 } from "@shared/schema";
 import { HansardScraper, ConstituencyAttendanceCounts } from "./hansard-scraper";
 import { MPNameMatcher } from "./mp-name-matcher";
+import { runHansardSync } from "./hansard-cron";
 
 function extractTopics(transcript: string): string[] {
   const topics: Set<string> = new Set();
@@ -1591,6 +1592,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error generating sitemap:", error);
       res.status(500).send("Error generating sitemap");
+    }
+  });
+
+  // Admin endpoint to manually trigger Hansard sync
+  app.post("/api/admin/trigger-hansard-check", async (req, res) => {
+    try {
+      // Require admin token for security
+      const adminToken = req.headers['x-admin-token'];
+      if (!adminToken || adminToken !== process.env.ADMIN_TOKEN) {
+        return res.status(403).json({ error: "Unauthorized - valid admin token required" });
+      }
+
+      console.log("Manual Hansard sync triggered via API...");
+      const result = await runHansardSync({ triggeredBy: 'manual' });
+
+      res.json({
+        message: "Hansard sync completed",
+        result: {
+          triggeredBy: result.triggeredBy,
+          startTime: result.startTime,
+          endTime: result.endTime,
+          durationMs: result.durationMs,
+          lastKnownSession: result.lastKnownSession,
+          recordsFound: result.recordsFound,
+          recordsInserted: result.recordsInserted,
+          recordsSkipped: result.recordsSkipped,
+          errorCount: result.errors.length,
+          errors: result.errors
+        }
+      });
+    } catch (error) {
+      console.error("Error triggering Hansard sync:", error);
+      res.status(500).json({ error: "Failed to trigger Hansard sync", details: String(error) });
     }
   });
 
