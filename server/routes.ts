@@ -41,73 +41,61 @@ function extractTopics(transcript: string): string[] {
   return Array.from(topics).slice(0, 10);
 }
 
-// Authentication middleware
-function requireAuth(req: any, res: any, next: any) {
-  if (!req.session.userId) {
-    return res.status(401).json({ error: "Not authenticated" });
-  }
-  next();
-}
-
+// Authentication Middleware
 async function requireAdmin(req: any, res: any, next: any) {
-  if (!req.session.userId) {
-    return res.status(401).json({ error: "Not authenticated" });
+  if (!req.session?.userId) {
+    return res.status(401).json({ error: "Authentication required" });
   }
   
   try {
     const user = await storage.getUser(req.session.userId);
-    if (!user || !user.isAdmin) {
-      return res.status(403).json({ error: "Forbidden: Admin access required" });
+    if (!user?.isAdmin) {
+      return res.status(403).json({ error: "Admin access required" });
     }
+    req.user = user;
     next();
   } catch (error) {
-    console.error("Error in requireAdmin middleware:", error);
-    return res.status(500).json({ error: "Internal server error" });
+    console.error("Authentication error:", error);
+    return res.status(500).json({ error: "Authentication failed" });
   }
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Authentication routes
+  // Authentication Routes
   app.post("/api/auth/login", async (req, res) => {
     try {
       const { username, password } = req.body;
-      console.log(`[LOGIN] Attempting login for username: ${username}`);
       
       if (!username || !password) {
-        console.log("[LOGIN] Missing username or password");
-        return res.status(400).json({ error: "Username and password are required" });
+        return res.status(400).json({ error: "Username and password required" });
       }
       
       const user = await storage.getUserByUsername(username);
-      console.log(`[LOGIN] User lookup result:`, user ? `Found user ${user.username} (isAdmin: ${user.isAdmin})` : "User not found");
-      
       if (!user) {
-        console.log("[LOGIN] Authentication failed - user not found");
         return res.status(401).json({ error: "Invalid credentials" });
       }
       
-      console.log(`[LOGIN] Comparing password. Hash starts with: ${user.password.substring(0, 10)}`);
-      const isPasswordValid = await bcrypt.compare(password, user.password);
-      console.log(`[LOGIN] Password comparison result: ${isPasswordValid}`);
-      
-      if (!isPasswordValid) {
-        console.log("[LOGIN] Authentication failed - invalid password");
+      const isValid = await bcrypt.compare(password, user.password);
+      if (!isValid) {
         return res.status(401).json({ error: "Invalid credentials" });
+      }
+      
+      if (!user.isAdmin) {
+        return res.status(403).json({ error: "Admin access required" });
       }
       
       req.session.userId = user.id;
-      console.log(`[LOGIN] Session created for user ${user.id}`);
       
       res.json({ 
+        success: true,
         user: { 
           id: user.id, 
-          username: user.username, 
+          username: user.username,
           isAdmin: user.isAdmin 
         } 
       });
-      console.log(`[LOGIN] Login successful for ${username}`);
     } catch (error) {
-      console.error("[LOGIN] Error during login:", error);
+      console.error("Login error:", error);
       res.status(500).json({ error: "Login failed" });
     }
   });
@@ -121,29 +109,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
   
-  app.get("/api/auth/me", async (req, res) => {
-    if (!req.session.userId) {
-      return res.status(401).json({ error: "Not authenticated" });
+  app.get("/api/auth/check", async (req, res) => {
+    if (!req.session?.userId) {
+      return res.status(401).json({ authenticated: false });
     }
     
     try {
       const user = await storage.getUser(req.session.userId);
-      
       if (!user) {
         req.session.destroy(() => {});
-        return res.status(401).json({ error: "User not found" });
+        return res.status(401).json({ authenticated: false });
       }
       
       res.json({ 
+        authenticated: true,
         user: { 
           id: user.id, 
-          username: user.username, 
+          username: user.username,
           isAdmin: user.isAdmin 
         } 
       });
     } catch (error) {
-      console.error("Error fetching current user:", error);
-      res.status(500).json({ error: "Failed to fetch user" });
+      console.error("Auth check error:", error);
+      res.status(500).json({ error: "Failed to verify authentication" });
     }
   });
 
