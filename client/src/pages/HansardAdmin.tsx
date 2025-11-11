@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { Header } from "@/components/Header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -111,6 +112,7 @@ export default function HansardAdmin() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
+      <Header />
       <div className="container mx-auto p-6 space-y-6" data-testid="page-hansard-admin">
         <div>
           <h1 className="text-3xl font-bold">Hansard Administration</h1>
