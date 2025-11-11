@@ -776,8 +776,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Create a new Hansard record (Admin only)
-  app.post("/api/hansard-records", requireAdmin, async (req, res) => {
+  // Create a new Hansard record
+  app.post("/api/hansard-records", async (req, res) => {
     try {
       const validatedData = insertHansardRecordSchema.parse(req.body);
       const record = await storage.createHansardRecord(validatedData);
@@ -791,8 +791,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Update a Hansard record (Admin only)
-  app.patch("/api/hansard-records/:id", requireAdmin, async (req, res) => {
+  // Update a Hansard record
+  app.patch("/api/hansard-records/:id", async (req, res) => {
     try {
       const { id } = req.params;
       const validatedData = updateHansardRecordSchema.parse(req.body);
@@ -1118,8 +1118,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Delete a Hansard record (Admin only)
-  app.delete("/api/hansard-records/:id", requireAdmin, async (req, res) => {
+  // Delete a Hansard record
+  app.delete("/api/hansard-records/:id", async (req, res) => {
     try {
       const { id } = req.params;
       const deleted = await storage.deleteHansardRecord(id);
@@ -1135,8 +1135,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Delete all Hansard records (Admin only)
-  app.delete("/api/hansard-records", requireAdmin, async (_req, res) => {
+  // Delete all Hansard records
+  app.delete("/api/hansard-records", async (_req, res) => {
     try {
       const count = await storage.deleteAllHansardRecords();
       res.json({ deletedCount: count });
@@ -1146,8 +1146,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Reprocess attendance for all or selected Hansard records (Admin only)
-  app.post("/api/hansard-records/reprocess-attendance", requireAdmin, async (req, res) => {
+  // Reprocess attendance for all or selected Hansard records
+  app.post("/api/hansard-records/reprocess-attendance", async (req, res) => {
     try {
       const { limit, recordIds } = req.body;
       const scraper = new HansardScraper();
@@ -1254,8 +1254,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Trigger Hansard download (Admin only)
-  app.post("/api/hansard-records/download", requireAdmin, async (req, res) => {
+  // Trigger Hansard download
+  app.post("/api/hansard-records/download", async (req, res) => {
     try {
       const { maxRecords = 200, deleteExisting = false } = req.body;
       

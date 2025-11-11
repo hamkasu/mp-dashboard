@@ -1,29 +1,14 @@
-import { useState, useEffect } from "react";
-import { useLocation } from "wouter";
+import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, Download, Trash2, AlertTriangle, CheckCircle2, RefreshCw, LogOut } from "lucide-react";
+import { Loader2, Download, Trash2, AlertTriangle, CheckCircle2, RefreshCw } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/lib/auth";
 
 export default function HansardAdmin() {
-  const [, setLocation] = useLocation();
-  const { user, isLoading: authLoading, logout } = useAuth();
   const { toast } = useToast();
-  
-  useEffect(() => {
-    if (!authLoading && (!user || !user.isAdmin)) {
-      toast({
-        title: "Access Denied",
-        description: "You must be an admin to access this page",
-        variant: "destructive",
-      });
-      setLocation("/login");
-    }
-  }, [user, authLoading, setLocation, toast]);
   const [downloadStatus, setDownloadStatus] = useState<{
     total?: number;
     successful?: number;
@@ -123,39 +108,15 @@ export default function HansardAdmin() {
       refreshMutation.mutate(1000);
     }
   };
-  
-  if (authLoading || (!user && !authLoading)) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <div className="container mx-auto p-6 space-y-6" data-testid="page-hansard-admin">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold">Hansard Administration</h1>
-            <p className="text-muted-foreground mt-2">
-              Manage parliamentary hansard records for the 15th Parliament
-            </p>
-          </div>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-muted-foreground">
-              Logged in as: <strong>{user?.username}</strong>
-            </span>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={logout}
-              data-testid="button-logout"
-            >
-              <LogOut className="h-4 w-4 mr-2" />
-              Logout
-            </Button>
-          </div>
+        <div>
+          <h1 className="text-3xl font-bold">Hansard Administration</h1>
+          <p className="text-muted-foreground mt-2">
+            Manage parliamentary hansard records for the 15th Parliament
+          </p>
         </div>
 
       <Card className="border-primary">
