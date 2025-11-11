@@ -74,3 +74,28 @@ Preferred communication style: Simple, everyday language.
 
 ### Session & Authentication
 -   connect-pg-simple (PostgreSQL session store)
+
+## SEO Implementation (November 2025)
+
+### Sitemap & Robots.txt
+-   **Dynamic Sitemap**: Backend endpoint `/sitemap.xml` generates XML with all static pages and 222 MP profile URLs
+-   **Robots.txt**: Located at `client/public/robots.txt`, allows public pages while blocking `/login`, `/hansard-admin`, and `/api/`, blocks AI bots (GPTBot, CCBot, anthropic-ai)
+
+### Structured Data
+-   **Schema.org Person JSON-LD**: Added to MP profile pages with government official information (name, role, party, constituency, photo)
+-   **GovernmentOrganization Schema**: Links MPs to Malaysian Parliament - Dewan Rakyat
+
+### Meta Tags & SEO
+-   **Enhanced Meta Description**: Emphasizes tracking MPs, voting records, and parliamentary activities
+-   **Keywords**: Includes "MP dashboard", "voting records", "parliamentary activities", "court cases", "SPRM investigations"
+-   **Canonical URL**: Points to `https://myparliament.calmic.com.my`
+-   **Open Graph Tags**: Complete metadata for social media sharing (title, description, URL, site name)
+
+### Landing Page Content
+-   **SEO-optimized H1**: "Malaysian Parliament MP Dashboard"
+-   **Descriptive Content**: Clear explanation of dashboard features and value proposition
+-   **Key Features List**: Highlights attendance tracking, Hansard access, court case monitoring, salary transparency
+
+### Google Search Console
+-   **Setup Documentation**: Complete guide in `SEO_SETUP.md` for sitemap submission and verification
+-   **Expected Coverage**: 227 total pages (5 static + 222 MP profiles)

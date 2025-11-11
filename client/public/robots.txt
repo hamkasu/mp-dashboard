@@ -1,0 +1,31 @@
+# Malaysian Parliament MP Dashboard - robots.txt
+# Updated: 2025-11-11
+
+# Allow all search engines to crawl public dashboard content
+User-agent: *
+
+# Allow public pages
+Allow: /
+Allow: /activity
+Allow: /hansard
+Allow: /attendance
+Allow: /allowances
+Allow: /mp/
+
+# Block admin and authentication pages
+Disallow: /hansard-admin
+Disallow: /login
+Disallow: /api/
+
+# Block AI bots from scraping government data
+User-agent: GPTBot
+Disallow: /
+
+User-agent: CCBot
+Disallow: /
+
+User-agent: anthropic-ai
+Disallow: /
+
+# Sitemap location
+Sitemap: https://myparliament.calmic.com.my/sitemap.xml

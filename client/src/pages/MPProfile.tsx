@@ -132,10 +132,47 @@ export default function MPProfile() {
   const attendanceColor = getAttendanceColor(attendanceRate);
   const attendanceLabel = getAttendanceLabel(attendanceRate);
 
+  const baseUrl = window.location.origin;
+  
+  const schemaData = {
+    "@context": "https://schema.org",
+    "@type": "Person",
+    "name": `${mp.title || ''} ${mp.name}`.trim(),
+    "jobTitle": mp.role || "Member of Parliament",
+    "image": mp.photoUrl || undefined,
+    "url": `${baseUrl}/mp/${mp.id}`,
+    "identifier": mp.parliamentCode,
+    "gender": mp.gender === "M" ? "Male" : mp.gender === "F" ? "Female" : undefined,
+    "worksFor": {
+      "@type": "GovernmentOrganization",
+      "name": "Malaysian Parliament - Dewan Rakyat",
+      "url": "https://www.parlimen.gov.my",
+      "department": {
+        "@type": "GovernmentOrganization",
+        "name": mp.party
+      }
+    },
+    "memberOf": {
+      "@type": "Organization",
+      "name": mp.party
+    },
+    "address": {
+      "@type": "PostalAddress",
+      "addressLocality": mp.constituency,
+      "addressRegion": mp.state,
+      "addressCountry": "MY"
+    },
+    "knowsAbout": mp.role ? [mp.role] : ["Parliamentary Affairs", "Malaysian Politics"]
+  };
+
   return (
     <div className="min-h-screen bg-background">
-      <div className="max-w-5xl mx-auto px-4 md:px-6 lg:px-8 py-6 md:py-8">
-        <div className="space-y-6 md:space-y-8">
+      <script 
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(schemaData) }}
+      />
+        <div className="max-w-5xl mx-auto px-4 md:px-6 lg:px-8 py-6 md:py-8">
+          <div className="space-y-6 md:space-y-8">
           {/* Back Button */}
           <Link href="/">
             <Button variant="ghost" size="sm" data-testid="button-back">

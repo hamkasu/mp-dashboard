@@ -184,10 +184,39 @@ export default function Home() {
         {/* Main Content */}
         <main className="flex-1 px-4 md:px-6 lg:px-8 py-6 md:py-8">
           <div className="space-y-6 md:space-y-8">
+            {/* SEO Landing Section */}
+            <div className="space-y-3" data-testid="landing-section">
+              <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
+                Malaysian Parliament MP Dashboard
+              </h1>
+              <p className="text-lg text-muted-foreground max-w-3xl">
+                Your comprehensive source for tracking all 222 Members of Parliament from Malaysia's Dewan Rakyat. 
+                Monitor voting records, attendance rates, parliamentary activities, court cases, and SPRM investigations in one transparent, accessible platform.
+              </p>
+              <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold text-foreground">✓</span>
+                  <span>Real-time attendance tracking</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold text-foreground">✓</span>
+                  <span>Hansard record access</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold text-foreground">✓</span>
+                  <span>Court case & SPRM monitoring</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold text-foreground">✓</span>
+                  <span>Salary & allowance transparency</span>
+                </div>
+              </div>
+            </div>
+
             {/* Page Title */}
             <div>
               <div className="flex flex-wrap items-center gap-3 mb-2">
-                <h2 className="text-3xl md:text-4xl font-bold tracking-tight">
+                <h2 className="text-2xl md:text-3xl font-bold tracking-tight">
                   Members of Parliament
                 </h2>
                 {pageViewData && (
