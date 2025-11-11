@@ -1,15 +1,18 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { Header } from "@/components/Header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, Download, Trash2, AlertTriangle, CheckCircle2, RefreshCw } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Loader2, Download, Trash2, AlertTriangle, CheckCircle2, RefreshCw, LogOut, User } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
 export default function HansardAdmin() {
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
   const [downloadStatus, setDownloadStatus] = useState<{
     total?: number;
     successful?: number;
@@ -17,8 +20,34 @@ export default function HansardAdmin() {
     skipped?: number;
   } | null>(null);
 
+  const { data: authData } = useQuery<{ authenticated: boolean; user?: { username: string } }>({
+    queryKey: ["/api/auth/check"],
+  });
+
   const { data: hansardRecords, isLoading } = useQuery<any[]>({
     queryKey: ["/api/hansard-records"],
+  });
+
+  const logoutMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/auth/logout", {});
+      return await res.json();
+    },
+    onSuccess: () => {
+      queryClient.clear();
+      toast({
+        title: "Logged Out",
+        description: "You have been successfully logged out",
+      });
+      setLocation("/login");
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to logout",
+        variant: "destructive",
+      });
+    },
   });
 
   const deleteMutation = useMutation({
@@ -114,11 +143,33 @@ export default function HansardAdmin() {
     <div className="min-h-screen flex flex-col bg-background">
       <Header />
       <div className="container mx-auto p-6 space-y-6" data-testid="page-hansard-admin">
-        <div>
-          <h1 className="text-3xl font-bold">Hansard Administration</h1>
-          <p className="text-muted-foreground mt-2">
-            Manage parliamentary hansard records for the 15th Parliament
-          </p>
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold">Hansard Administration</h1>
+            <p className="text-muted-foreground mt-2">
+              Manage parliamentary hansard records for the 15th Parliament
+            </p>
+          </div>
+          <div className="flex items-center gap-3">
+            {authData?.user && (
+              <div className="flex items-center gap-2 px-3 py-2 bg-muted rounded-md">
+                <User className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm font-medium">{authData.user.username}</span>
+                <Badge variant="secondary" className="text-xs">Admin</Badge>
+              </div>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => logoutMutation.mutate()}
+              disabled={logoutMutation.isPending}
+              data-testid="button-logout"
+              className="gap-2"
+            >
+              <LogOut className="h-4 w-4" />
+              Logout
+            </Button>
+          </div>
         </div>
 
       <Card className="border-primary">
