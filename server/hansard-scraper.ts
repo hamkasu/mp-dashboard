@@ -415,8 +415,9 @@ export class HansardScraper {
       }
       
       const absentSection = normalizedText.substring(startIdx, endIdx);
-      const numberedPattern = /\d+\.\s+/g;
-      const matches = absentSection.match(numberedPattern);
+      // Count only entries with constituencies in parentheses to exclude non-MPs
+      const constituencyPattern = /\d+\.\s+[^(]+\([^)]+\)/g;
+      const matches = absentSection.match(constituencyPattern);
       
       if (matches) {
         constituenciesAbsent = matches.length;
@@ -453,8 +454,9 @@ export class HansardScraper {
       }
       
       const rule91Section = normalizedText.substring(startIdx, endIdx);
-      const numberedPattern = /\d+\.\s+/g;
-      const matches = rule91Section.match(numberedPattern);
+      // Count only entries with constituencies in parentheses to exclude non-MPs
+      const constituencyPattern = /\d+\.\s+[^(]+\([^)]+\)/g;
+      const matches = rule91Section.match(constituencyPattern);
       
       if (matches) {
         constituenciesAbsentRule91 = matches.length;
