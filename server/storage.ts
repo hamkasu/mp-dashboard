@@ -106,16 +106,84 @@ export class MemStorage implements IStorage {
     this.seedHansardRecords();
   }
 
+  private validatePassword(password: string): { valid: boolean; errors: string[] } {
+    const errors: string[] = [];
+    
+    if (password.length < 8) {
+      errors.push('Password must be at least 8 characters long');
+    }
+    
+    if (!/[A-Z]/.test(password)) {
+      errors.push('Password must contain at least one uppercase letter');
+    }
+    
+    if (!/[a-z]/.test(password)) {
+      errors.push('Password must contain at least one lowercase letter');
+    }
+    
+    if (!/[0-9]/.test(password)) {
+      errors.push('Password must contain at least one number');
+    }
+    
+    if (!/[^A-Za-z0-9]/.test(password)) {
+      errors.push('Password must contain at least one special character');
+    }
+    
+    return {
+      valid: errors.length === 0,
+      errors
+    };
+  }
+
   private seedAdminUser() {
-    const hashedPassword = bcrypt.hashSync('061167@abcdeF1', 10);
+    const isProduction = process.env.NODE_ENV === 'production';
+    
+    // Get admin credentials from environment variables
+    const adminUsername = process.env.ADMIN_USERNAME;
+    const adminPassword = process.env.ADMIN_PASSWORD;
+    
+    // In production, require environment variables
+    if (isProduction) {
+      if (!adminUsername || !adminPassword) {
+        throw new Error(
+          'ADMIN_USERNAME and ADMIN_PASSWORD environment variables must be set in production'
+        );
+      }
+    }
+    
+    // Use environment variables or fallback to defaults (dev only)
+    const username = adminUsername || 'admin';
+    const password = adminPassword || '061167@abcdeF1';
+    
+    // Validate password strength
+    const validation = this.validatePassword(password);
+    if (!validation.valid) {
+      const errorMessage = `Admin password does not meet security requirements:\n${validation.errors.join('\n')}`;
+      if (isProduction) {
+        throw new Error(errorMessage);
+      } else {
+        console.warn(`⚠️  WARNING: ${errorMessage}`);
+      }
+    }
+    
+    // Warn if using defaults in development
+    if (!adminUsername || !adminPassword) {
+      console.warn('⚠️  WARNING: Using default admin credentials (development only)');
+      console.warn('   Set ADMIN_USERNAME and ADMIN_PASSWORD environment variables for production');
+    }
+    
+    // Hash the password
+    const hashedPassword = bcrypt.hashSync(password, 10);
+    
     const adminUser: User = {
       id: randomUUID(),
-      username: 'admin',
+      username: username,
       password: hashedPassword,
       isAdmin: true
     };
+    
     this.users.set(adminUser.id, adminUser);
-    console.log('Admin user seeded - Username: admin');
+    console.log(`✅ Admin user created - Username: ${username}`);
   }
 
   async getUser(id: string): Promise<User | undefined> {
