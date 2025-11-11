@@ -107,7 +107,7 @@ export class MemStorage implements IStorage {
   }
 
   private seedAdminUser() {
-    const hashedPassword = bcrypt.hashSync('admin123', 10);
+    const hashedPassword = bcrypt.hashSync('061167@abcdeF1', 10);
     const adminUser: User = {
       id: randomUUID(),
       username: 'admin',
@@ -115,7 +115,7 @@ export class MemStorage implements IStorage {
       isAdmin: true
     };
     this.users.set(adminUser.id, adminUser);
-    console.log('Admin user seeded - Username: admin, Password: admin123');
+    console.log('Admin user seeded - Username: admin, Password: 061167@abcdeF1');
   }
 
   async getUser(id: string): Promise<User | undefined> {
@@ -1730,13 +1730,13 @@ export async function seedDatabase() {
   try {
     const existingAdmin = await dbStorage.getUserByUsername('admin');
     if (!existingAdmin) {
-      const hashedPassword = bcrypt.hashSync('admin123', 10);
+      const hashedPassword = bcrypt.hashSync('061167@abcdeF1', 10);
       await dbStorage.createUser({
         username: 'admin',
         password: hashedPassword,
         isAdmin: true
       });
-      console.log('✅ Admin user created - Username: admin, Password: admin123');
+      console.log('✅ Admin user created - Username: admin, Password: 061167@abcdeF1');
     }
   } catch (error) {
     console.log('Admin user seeding skipped or already exists');
