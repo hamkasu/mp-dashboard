@@ -115,7 +115,7 @@ export class MemStorage implements IStorage {
       isAdmin: true
     };
     this.users.set(adminUser.id, adminUser);
-    console.log('Admin user seeded - Username: admin, Password: 061167@abcdeF1');
+    console.log('Admin user seeded - Username: admin');
   }
 
   async getUser(id: string): Promise<User | undefined> {
@@ -1736,7 +1736,7 @@ export async function seedDatabase() {
         password: hashedPassword,
         isAdmin: true
       });
-      console.log('✅ Admin user created - Username: admin, Password: 061167@abcdeF1');
+      console.log('✅ Admin user created - Username: admin');
     }
   } catch (error) {
     console.log('Admin user seeding skipped or already exists');
