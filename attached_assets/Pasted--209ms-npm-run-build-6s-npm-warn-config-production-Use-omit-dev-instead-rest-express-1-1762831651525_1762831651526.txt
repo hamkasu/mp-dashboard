@@ -1,0 +1,45 @@
+
+209ms
+
+npm run build
+6s
+npm warn config production Use `--omit=dev` instead.
+> rest-express@1.0.0 build
+> vite build && esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist && npm run prerender
+vite v5.4.20 building for production...
+transforming...
+Browserslist: browsers data (caniuse-lite) is 13 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+A PostCSS plugin did not pass the `from` option to `postcss.parse`. This may cause imported assets to be incorrectly transformed. If you've recently added a PostCSS plugin that raised this warning, please contact the package author to fix the issue.
+✓ 2159 modules transformed.
+rendering chunks...
+computing gzip size...
+../dist/public/index.html                   3.08 kB │ gzip:   1.06 kB
+../dist/public/assets/index-DCaNUTmk.css   77.99 kB │ gzip:  12.96 kB
+../dist/public/assets/index-D5OwyiGT.js   657.10 kB │ gzip: 184.61 kB
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 4.99s
+  dist/index.js  208.3kb
+⚡ Done in 13ms
+npm warn config production Use `--omit=dev` instead.
+> rest-express@1.0.0 prerender
+> tsx server/prerender.ts
+🚀 Starting pre-rendering process...
+📄 Generating homepage...
+👥 Fetching all MPs...
+❌ Pre-rendering failed: Error: getaddrinfo ENOTFOUND postgres.railway.internal
+    at /app/node_modules/pg-pool/index.js:45:11
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async <anonymous> (/app/node_modules/src/node-postgres/session.ts:104:19)
+    at async generatePrerenderedPages (/app/server/prerender.ts:262:18)
+    at async <anonymous> (/app/server/prerender.ts:385:20) {
+  errno: -3008,
+  code: 'ENOTFOUND',
+  syscall: 'getaddrinfo',
+  hostname: 'postgres.railway.internal'
+}
+ERROR: failed to build: failed to solve: process "npm run build" did not complete successfully: exit code: 1
