@@ -60,7 +60,9 @@ export default function Home() {
       const matchesSearch =
         searchQuery === "" ||
         mp.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        mp.constituency.toLowerCase().includes(searchQuery.toLowerCase());
+        mp.constituency.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (mp.parliamentCode ?? "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (mp.state ?? "").toLowerCase().includes(searchQuery.toLowerCase());
 
       const matchesParty =
         selectedParties.length === 0 || selectedParties.includes(mp.party);
