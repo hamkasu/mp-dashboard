@@ -5,6 +5,7 @@ import { createServer as createViteServer, createLogger } from "vite";
 import { type Server } from "http";
 import viteConfig from "../vite.config";
 import { nanoid } from "nanoid";
+import { shouldServePrerendered, normalizePathForPrerender } from "./bot-detector";
 
 const viteLogger = createLogger();
 
@@ -67,8 +68,30 @@ export async function setupVite(app: Express, server: Server) {
   });
 }
 
+let urlMapCache: Record<string, string> | null = null;
+
+function loadUrlMap(prerenderedPath: string): Record<string, string> {
+  if (urlMapCache) {
+    return urlMapCache;
+  }
+  
+  const urlMapPath = path.join(prerenderedPath, 'url-map.json');
+  if (fs.existsSync(urlMapPath)) {
+    try {
+      const content = fs.readFileSync(urlMapPath, 'utf-8');
+      urlMapCache = JSON.parse(content);
+      return urlMapCache as Record<string, string>;
+    } catch (error) {
+      log(`Warning: Failed to load URL map: ${error}`);
+    }
+  }
+  
+  return {};
+}
+
 export function serveStatic(app: Express) {
   const distPath = path.resolve(import.meta.dirname, "public");
+  const prerenderedPath = path.resolve(import.meta.dirname, "..", "dist", "prerendered");
 
   if (!fs.existsSync(distPath)) {
     throw new Error(
@@ -77,9 +100,40 @@ export function serveStatic(app: Express) {
   }
 
   app.use(express.static(distPath));
+  
+  app.get("/sitemap.xml", (_req, res) => {
+    const sitemapPath = path.join(distPath, "sitemap.xml");
+    if (fs.existsSync(sitemapPath)) {
+      res.sendFile(sitemapPath);
+    } else {
+      res.status(404).send("Sitemap not found");
+    }
+  });
+  
+  app.get("/robots.txt", (_req, res) => {
+    const robotsPath = path.join(distPath, "robots.txt");
+    if (fs.existsSync(robotsPath)) {
+      res.sendFile(robotsPath);
+    } else {
+      res.status(404).send("robots.txt not found");
+    }
+  });
 
-  // fall through to index.html if the file doesn't exist
-  app.use("*", (_req, res) => {
+  app.use("*", (req, res) => {
+    if (shouldServePrerendered(req) && fs.existsSync(prerenderedPath)) {
+      const normalizedPath = normalizePathForPrerender(req.path);
+      const urlMap = loadUrlMap(prerenderedPath);
+      const filename = urlMap[normalizedPath];
+      
+      if (filename) {
+        const htmlPath = path.join(prerenderedPath, filename);
+        if (fs.existsSync(htmlPath)) {
+          log(`🤖 Serving pre-rendered page to bot: ${req.path} -> ${filename}`);
+          return res.sendFile(htmlPath);
+        }
+      }
+    }
+    
     res.sendFile(path.resolve(distPath, "index.html"));
   });
 }
