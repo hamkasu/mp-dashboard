@@ -3,7 +3,7 @@ import type { Mp } from "@shared/schema";
 // Standard MP Allowances (in RM) based on official rates
 export const ALLOWANCE_RATES = {
   // Monthly Base Salary
-  DEWAN_RAKYAT_SALARY: 16000,
+  DEWAN_RAKYAT_SALARY: 25700,
   DEWAN_NEGARA_SALARY: 11000,
   
   // Additional Minister Allowance
