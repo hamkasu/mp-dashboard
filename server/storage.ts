@@ -107,6 +107,20 @@ export class MemStorage implements IStorage {
   }
 
   private validatePassword(password: string): { valid: boolean; errors: string[] } {
+    // Environment-driven security bypass for testing ONLY
+    // Defaults to SECURE (validation enabled) unless explicitly disabled
+    const disableValidation = process.env.DISABLE_PASSWORD_VALIDATION === 'true';
+    
+    if (disableValidation) {
+      console.warn('⚠️⚠️⚠️ PASSWORD VALIDATION BYPASSED via DISABLE_PASSWORD_VALIDATION=true ⚠️⚠️⚠️');
+      console.warn('   This is for TESTING ONLY - Remove this flag before production!');
+      return {
+        valid: true,
+        errors: []
+      };
+    }
+    
+    // SECURE by default - Full password validation
     const errors: string[] = [];
     
     if (password.length < 8) {
@@ -155,7 +169,7 @@ export class MemStorage implements IStorage {
     const username = adminUsername || 'admin';
     const password = adminPassword || '061167@abcdeF1';
     
-    // Validate password strength
+    // Validate password strength (defaults to enabled for security)
     const validation = this.validatePassword(password);
     if (!validation.valid) {
       const errorMessage = `Admin password does not meet security requirements:\n${validation.errors.join('\n')}`;

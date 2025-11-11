@@ -1,5 +1,29 @@
 # Deployment Guide
 
+## Password Validation (Testing Mode Available)
+
+**Password validation is ENABLED by default** for security. The application requires strong passwords in all environments unless explicitly disabled.
+
+### For Testing: Temporarily Disable Password Validation
+
+If you need to use simple passwords for testing (like "admin" or "123"), you can temporarily disable validation:
+
+**Local Development:**
+Create a `.env` file and add:
+```env
+DISABLE_PASSWORD_VALIDATION=true
+ADMIN_USERNAME=admin
+ADMIN_PASSWORD=simple
+```
+
+**⚠️ WARNING:** This allows ANY password and should ONLY be used for local testing. Never deploy to production with this flag enabled!
+
+### Production Deployment
+
+**Password validation is SECURE by default.** Do NOT set `DISABLE_PASSWORD_VALIDATION` on Railway or any production environment.
+
+---
+
 ## Railway Deployment
 
 This application is designed to be deployed on Railway with secure environment variable management.
