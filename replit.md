@@ -77,25 +77,43 @@ Preferred communication style: Simple, everyday language.
 
 ## SEO Implementation (November 2025)
 
-### Sitemap & Robots.txt
--   **Dynamic Sitemap**: Backend endpoint `/sitemap.xml` generates XML with all static pages and 222 MP profile URLs
--   **Robots.txt**: Located at `client/public/robots.txt`, allows public pages while blocking `/login`, `/hansard-admin`, and `/api/`, blocks AI bots (GPTBot, CCBot, anthropic-ai)
+### Pre-rendering Strategy
+-   **Hybrid Approach**: Pre-rendered static HTML for search bots + Interactive SPA for users
+-   **Build Process**: `npm run build` chains vite build → esbuild server → pre-render script
+-   **Output**: 227 static HTML files in `dist/prerendered/` (homepage + 222 MP profiles + 4 stats pages)
+-   **URL Mapping**: Safe cross-platform filenames (e.g., `/mp/123` → `mp_123.html`) stored in `url-map.json`
+-   **Bot Detection**: Middleware (`server/bot-detector.ts`) detects search bots and serves pre-rendered HTML; regular users get full SPA
 
-### Structured Data
--   **Schema.org Person JSON-LD**: Added to MP profile pages with government official information (name, role, party, constituency, photo)
--   **GovernmentOrganization Schema**: Links MPs to Malaysian Parliament - Dewan Rakyat
+### Sitemap & Robots.txt
+-   **Static Sitemap**: Generated at build time (`dist/public/sitemap.xml`) with all 227 pre-rendered URLs
+-   **Robots.txt**: Located at `dist/public/robots.txt`, allows public pages while blocking `/login`, `/hansard-admin`, and `/api/`, blocks AI bots (GPTBot, CCBot, anthropic-ai)
+-   **Sitemap Reference**: robots.txt points to sitemap.xml for search engine discovery
+
+### Structured Data (JSON-LD)
+-   **Person Schema**: All 222 MP profile pages include Person schema with government official data (name, role, party, constituency, photo)
+-   **GovernmentOrganization Schema**: Homepage includes organization schema linking to Malaysian Parliament - Dewan Rakyat
+-   **Dataset Schemas**: Homepage and all stats pages include Dataset schema describing MP directory, attendance records, Hansard records, allowances, and parliamentary activities data
+-   **Schema.org Compliance**: All structured data follows Schema.org standards for government data
 
 ### Meta Tags & SEO
+-   **Dynamic Meta Tags**: Each pre-rendered page includes unique title, description, canonical URL, Open Graph tags, and Twitter Card metadata
 -   **Enhanced Meta Description**: Emphasizes tracking MPs, voting records, and parliamentary activities
 -   **Keywords**: Includes "MP dashboard", "voting records", "parliamentary activities", "court cases", "SPRM investigations"
--   **Canonical URL**: Points to `https://myparliament.calmic.com.my`
--   **Open Graph Tags**: Complete metadata for social media sharing (title, description, URL, site name)
+-   **Canonical URLs**: Point to `https://myparliament.calmic.com.my` with proper page paths
+-   **Open Graph Tags**: Complete metadata for social media sharing (title, description, URL, site name, images)
+-   **Twitter Cards**: Summary large image cards for better Twitter/X sharing
 
-### Landing Page Content
+### SEO-Optimized Content
 -   **SEO-optimized H1**: "Malaysian Parliament MP Dashboard"
 -   **Descriptive Content**: Clear explanation of dashboard features and value proposition
 -   **Key Features List**: Highlights attendance tracking, Hansard access, court case monitoring, salary transparency
 
+### Technical Implementation
+-   **Pre-render Script**: `server/prerender.ts` generates all static HTML at build time
+-   **Bot Detection**: `server/bot-detector.ts` identifies search engines (Googlebot, Bingbot, etc.)
+-   **Server Integration**: `server/vite.ts` loads URL map and serves appropriate content based on user agent
+-   **Build Pipeline**: Automated through `package.json` build script
+
 ### Google Search Console
 -   **Setup Documentation**: Complete guide in `SEO_SETUP.md` for sitemap submission and verification
--   **Expected Coverage**: 227 total pages (5 static + 222 MP profiles)
+-   **Expected Coverage**: 227 total pages (1 homepage + 222 MP profiles + 4 stats pages)
