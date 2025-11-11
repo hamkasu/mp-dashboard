@@ -386,8 +386,9 @@ export class HansardScraper {
       }
       
       const presentSection = normalizedText.substring(startIdx, endIdx);
-      const numberedPattern = /\d+\.\s+/g;
-      const matches = presentSection.match(numberedPattern);
+      // Count only entries with constituencies in parentheses to exclude non-MPs like Speaker
+      const constituencyPattern = /\d+\.\s+[^(]+\([^)]+\)/g;
+      const matches = presentSection.match(constituencyPattern);
       
       if (matches && matches.length > 0) {
         constituenciesPresent = matches.length;
@@ -429,11 +430,27 @@ export class HansardScraper {
       const startIdx = rule91Match.index + rule91Match[0].length;
       
       const remainingText = normalizedText.substring(startIdx);
+      
+      // Stop at various section boundaries to avoid counting non-MPs
+      const senatorMatch = remainingText.match(/Senator\s+Yang\s+Turut\s+Hadir\s*:?/i);
+      const pageMarkerMatch = remainingText.match(/--\s+\d+\s+of\s+\d+\s+--/i);
+      const drSectionMatch = remainingText.match(/DR\.\s+\d+\.\d+\.\d+/i);
       const nextMajorSectionMatch = remainingText.match(/\n\s*\n\s*[A-Z][A-Z][A-Z]/);
       
-      const endIdx = nextMajorSectionMatch && nextMajorSectionMatch.index !== undefined
-        ? startIdx + nextMajorSectionMatch.index
-        : Math.min(startIdx + 10000, normalizedText.length);
+      let endIdx;
+      // Use the earliest boundary we find
+      const boundaries = [
+        senatorMatch?.index,
+        pageMarkerMatch?.index,
+        drSectionMatch?.index,
+        nextMajorSectionMatch?.index
+      ].filter((idx): idx is number => idx !== undefined);
+      
+      if (boundaries.length > 0) {
+        endIdx = startIdx + Math.min(...boundaries);
+      } else {
+        endIdx = Math.min(startIdx + 10000, normalizedText.length);
+      }
       
       const rule91Section = normalizedText.substring(startIdx, endIdx);
       const numberedPattern = /\d+\.\s+/g;
