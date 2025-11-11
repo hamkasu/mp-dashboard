@@ -213,15 +213,22 @@ export class HansardScraper {
       const startIdx = attendanceMatch.index + attendanceMatch[0].length;
       let endIdx = normalizedText.length;
       
-      const firstAbsentMatch = normalizedText.substring(startIdx).match(/Ahli[-\s]Ahli\s+Yang\s+Tidak\s+Hadir\s*:?/i);
-      if (firstAbsentMatch && firstAbsentMatch.index !== undefined) {
-        endIdx = startIdx + firstAbsentMatch.index;
+      // Stop at senator section to avoid counting senators as MPs
+      const senatorMatch = normalizedText.substring(startIdx).match(/Senator\s+Yang\s+Turut\s+Hadir\s*:?/i);
+      if (senatorMatch && senatorMatch.index !== undefined) {
+        endIdx = startIdx + senatorMatch.index;
       } else {
-        const nextSectionMatch = normalizedText.substring(startIdx).match(/\n\s*\n\s*[A-Z][A-Z]/);
-        if (nextSectionMatch && nextSectionMatch.index !== undefined) {
-          endIdx = startIdx + nextSectionMatch.index;
+        // Otherwise stop at absent section
+        const firstAbsentMatch = normalizedText.substring(startIdx).match(/Ahli[-\s]Ahli\s+Yang\s+Tidak\s+Hadir\s*:?/i);
+        if (firstAbsentMatch && firstAbsentMatch.index !== undefined) {
+          endIdx = startIdx + firstAbsentMatch.index;
         } else {
-          endIdx = Math.min(startIdx + 20000, normalizedText.length);
+          const nextSectionMatch = normalizedText.substring(startIdx).match(/\n\s*\n\s*[A-Z][A-Z]/);
+          if (nextSectionMatch && nextSectionMatch.index !== undefined) {
+            endIdx = startIdx + nextSectionMatch.index;
+          } else {
+            endIdx = Math.min(startIdx + 20000, normalizedText.length);
+          }
         }
       }
       
@@ -364,11 +371,19 @@ export class HansardScraper {
       const startIdx = presentMatch.index + presentMatch[0].length;
       
       const remainingText = normalizedText.substring(startIdx);
+      
+      // Stop at senator section to avoid counting senators as MPs
+      const senatorMatch = remainingText.match(/Senator\s+Yang\s+Turut\s+Hadir\s*:?/i);
       const nextSectionMatch = remainingText.match(/Ahli[-\s]Ahli\s+Yang\s+Tidak\s+Hadir/i);
       
-      const endIdx = nextSectionMatch && nextSectionMatch.index !== undefined
-        ? startIdx + nextSectionMatch.index
-        : Math.min(startIdx + 20000, normalizedText.length);
+      let endIdx;
+      if (senatorMatch && senatorMatch.index !== undefined) {
+        endIdx = startIdx + senatorMatch.index;
+      } else if (nextSectionMatch && nextSectionMatch.index !== undefined) {
+        endIdx = startIdx + nextSectionMatch.index;
+      } else {
+        endIdx = Math.min(startIdx + 20000, normalizedText.length);
+      }
       
       const presentSection = normalizedText.substring(startIdx, endIdx);
       const numberedPattern = /\d+\.\s+/g;
