@@ -5,7 +5,12 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-export function calculateTotalSalary(swornInDate: Date | string, monthlySalary: number): number {
+export function calculateTotalSalary(
+  swornInDate: Date | string, 
+  monthlySalary: number,
+  daysAttended: number = 0,
+  parliamentSittingAllowance: number = 400
+): number {
   const swornIn = new Date(swornInDate);
   const now = new Date();
   
@@ -18,8 +23,13 @@ export function calculateTotalSalary(swornInDate: Date | string, monthlySalary: 
     totalMonths -= 1;
   }
   
-  // Ensure we never return a negative value
-  return Math.max(0, totalMonths) * monthlySalary;
+  // Calculate base salary from months served
+  const baseSalary = Math.max(0, totalMonths) * monthlySalary;
+  
+  // Add parliament sitting allowance
+  const attendanceAllowance = daysAttended * parliamentSittingAllowance;
+  
+  return baseSalary + attendanceAllowance;
 }
 
 export function formatCurrency(amount: number): string {

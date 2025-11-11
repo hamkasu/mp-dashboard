@@ -40,7 +40,7 @@ export function MPCard({ mp }: MPCardProps) {
   const partyColor = PARTY_COLORS[mp.party] || "bg-muted text-muted-foreground";
   const monthlySalary = mp.mpAllowance + mp.ministerSalary;
   const yearlySalary = monthlySalary * 12;
-  const totalSalary = calculateTotalSalary(mp.swornInDate, monthlySalary);
+  const totalSalary = calculateTotalSalary(mp.swornInDate, monthlySalary, mp.daysAttended, mp.parliamentSittingAllowance);
   
   const attendanceRate = mp.totalParliamentDays > 0 
     ? (mp.daysAttended / mp.totalParliamentDays) * 100 
