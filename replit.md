@@ -12,8 +12,8 @@ Preferred communication style: Simple, everyday language.
 **Frameworks & Libraries**: React 18+ with TypeScript, Wouter for routing, TanStack Query for server state, shadcn/ui (Radix UI), Tailwind CSS.
 **Design System**: Material Design and Government Digital Service principles, custom theme with CSS variables for light/dark mode, Inter font, responsive grid layouts.
 **Key Features**:
--   **Home Dashboard**: MP grid, filters, search, statistics (Total MPs, Party Breakdown, Gender Diversity, State Coverage, Avg Attendance), sort options (Name, Best/Worst Attendance), color-coded attendance displays.
--   **MP Profile Page**: Detailed individual MP information, monthly/yearly allowance calculations, attendance section with color-coded days, allowance information table, court cases section with status badges, SPRM investigations section.
+-   **Home Dashboard**: MP grid, filters, search, statistics (Total MPs, Party Breakdown, Gender Diversity, State Coverage, Avg Attendance), sort options (Name, Best/Worst Attendance), color-coded attendance displays. MP cards now display cumulative speech counts from Hansard records showing total speeches, sessions spoke, and average speeches per session.
+-   **MP Profile Page**: Detailed individual MP information, monthly/yearly allowance calculations, attendance section with color-coded days, allowance information table, court cases section with status badges, SPRM investigations section, Hansard speech participation metrics.
 -   **Parliamentary Activity Page**: Browse legislative proposals, debate participations, parliamentary questions, court cases, and SPRM investigations with search and filters.
 -   **Hansard Records Page**: Browse parliamentary session transcripts with search/filter, collapsible sections for speakers, vote records, full transcripts, PDF links, topics, vote tallies, and a "View by Constituency" dialog showing attendance grouped by state and party.
 -   **MP Attendance Report Page**: Tracks MP and constituency participation; filter by date range, party, state; view attendance statistics; toggle between "By MP" and "By Constituency" views.
@@ -27,11 +27,11 @@ Preferred communication style: Simple, everyday language.
 **Development & Production**: Vite dev server for frontend, esbuild for backend bundling. In-memory storage for dev, PostgreSQL for production.
 
 ### Data Models
-**MP Schema**: Core details (`id`, `name`, `party`, `constituency`, `gender`, `role`, etc.), financial data (`mpAllowance`, `ministerSalary`, etc.), performance (`daysAttended`).
+**MP Schema**: Core details (`id`, `name`, `party`, `constituency`, `gender`, `role`, etc.), financial data (`mpAllowance`, `ministerSalary`, etc.), performance (`daysAttended`, `hansardSessionsSpoke`, `totalSpeechInstances`).
 **User Schema**: `id`, `username`, `password` (authentication schema defined).
 **Court Case Schema**: `id`, `mpId`, `caseNumber`, `title`, `courtLevel`, `status`, `filingDate`, `outcome`, `charges`, `documentLinks`.
 **SPRM Investigation Schema**: `id`, `mpId`, `caseNumber`, `title`, `status`, `startDate`, `endDate`, `outcome`, `charges`.
-**Hansard Record Schema**: `id`, `sessionNumber`, `sessionDate`, `parliamentTerm`, `transcript`, `pdfLinks`, `topics`, `speakers`, `voteRecords`.
+**Hansard Record Schema**: `id`, `sessionNumber`, `sessionDate`, `parliamentTerm`, `transcript`, `pdfLinks`, `topics`, `speakers`, `speakerStats`, `voteRecords`.
 
 ## External Dependencies
 
