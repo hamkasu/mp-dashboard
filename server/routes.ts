@@ -898,7 +898,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Analyze Hansard PDF for specific MP speeches (transient analysis, no persistence)
-  app.post("/api/hansard-analysis", requireAdmin, upload.single('pdf'), handleMulterError, async (req, res) => {
+  app.post("/api/hansard-analysis", upload.single('pdf'), handleMulterError, async (req, res) => {
     try {
       if (!req.file) {
         return res.status(400).json({ error: "No PDF file uploaded. Only PDF files are accepted." });

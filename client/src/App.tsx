@@ -25,16 +25,8 @@ function Router() {
       <Route path="/attendance" component={Attendance} />
       <Route path="/allowances" component={Allowances} />
       <Route path="/login" component={Login} />
-      <Route path="/hansard-admin">
-        <ProtectedRoute>
-          <HansardAdmin />
-        </ProtectedRoute>
-      </Route>
-      <Route path="/hansard-analysis">
-        <ProtectedRoute>
-          <HansardAnalysis />
-        </ProtectedRoute>
-      </Route>
+      <Route path="/hansard-admin" component={HansardAdmin} />
+      <Route path="/hansard-analysis" component={HansardAnalysis} />
       <Route component={NotFound} />
     </Switch>
   );
