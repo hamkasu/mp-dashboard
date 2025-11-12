@@ -20,6 +20,8 @@ import { MPNameMatcher } from "./mp-name-matcher";
 import { runHansardSync } from "./hansard-cron";
 import { HansardPdfParser } from "./hansard-pdf-parser";
 import { db } from "./db";
+import { jobTracker } from "./job-tracker";
+import { runHansardDownloadJob } from "./hansard-background-jobs";
 
 // Configure multer for file uploads
 const upload = multer({
@@ -1467,103 +1469,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Trigger Hansard download
+  // Trigger Hansard download (background job)
   app.post("/api/hansard-records/download", requireAdmin, async (req, res) => {
     try {
       const { maxRecords = 200, deleteExisting = false } = req.body;
       
-      if (deleteExisting) {
-        console.log('Deleting all existing Hansard records...');
-        const deletedCount = await storage.deleteAllHansardRecords();
-        console.log(`Deleted ${deletedCount} existing Hansard records`);
-      }
+      // Create a background job
+      const jobId = jobTracker.createJob(maxRecords, 'Initializing Hansard download...');
       
-      const scraper = new HansardScraper();
+      // Start the background job (don't await it)
+      runHansardDownloadJob(jobId, maxRecords, deleteExisting).catch(error => {
+        console.error('[Background Job] Uncaught error:', error);
+      });
       
-      console.log('Fetching Hansard list for 15th Parliament...');
-      const hansardList = await scraper.getHansardListForParliament15(maxRecords);
-      
-      console.log(`Found ${hansardList.length} Hansard records to process`);
-      
-      let successCount = 0;
-      let errorCount = 0;
-      let skippedCount = 0;
-      
-      for (const metadata of hansardList) {
-        console.log(`Processing ${metadata.sessionNumber} (${metadata.sessionDate.toISOString().split('T')[0]})...`);
-        
-        if (!deleteExisting) {
-          const existingRecords = await storage.getHansardRecordsBySessionNumber(metadata.sessionNumber);
-          if (existingRecords.length > 0) {
-            console.log(`  ✓ Already exists, skipping`);
-            skippedCount++;
-            continue;
-          }
-        }
-        
-        const transcript = await scraper.downloadAndExtractPdf(metadata.pdfUrl);
-        
-        if (!transcript) {
-          console.log(`  ✗ Failed to extract PDF`);
-          errorCount++;
-          continue;
-        }
-        
-        try {
-          const topics = extractTopics(transcript);
-          const attendance = scraper.extractAttendanceFromText(transcript);
-          const constituencyCounts = scraper.extractConstituencyAttendanceCounts(transcript);
-          
-          const allMps = await storage.getAllMps();
-          const nameMatcher = new MPNameMatcher(allMps);
-          
-          const attendedMpIds = nameMatcher.matchNames(attendance.attendedNames);
-          const absentMpIds = nameMatcher.matchNames(attendance.absentNames);
-          
-          console.log(`  Attendance: ${attendedMpIds.length} present, ${absentMpIds.length} absent`);
-          console.log(`  Constituencies: ${constituencyCounts.constituenciesPresent} present, ${constituencyCounts.constituenciesAbsent} absent, ${constituencyCounts.constituenciesAbsentRule91} absent (Rule 91)`);
-          
-          await storage.createHansardRecord({
-            sessionNumber: metadata.sessionNumber,
-            sessionDate: metadata.sessionDate,
-            parliamentTerm: metadata.parliamentTerm,
-            sitting: metadata.sitting,
-            transcript: transcript.substring(0, 100000),
-            pdfLinks: [metadata.pdfUrl],
-            topics: topics,
-            speakers: [],
-            voteRecords: [],
-            attendedMpIds,
-            absentMpIds,
-            constituenciesPresent: constituencyCounts.constituenciesPresent,
-            constituenciesAbsent: constituencyCounts.constituenciesAbsent,
-            constituenciesAbsentRule91: constituencyCounts.constituenciesAbsentRule91
-          });
-          
-          console.log(`  ✓ Saved (${Math.floor(transcript.length / 1000)}KB of text)`);
-          successCount++;
-        } catch (error) {
-          console.error(`  ✗ Error saving:`, error);
-          errorCount++;
-        }
-      }
-      
-      const summary = {
-        total: hansardList.length,
-        successful: successCount,
-        errors: errorCount,
-        skipped: skippedCount
-      };
-      
-      console.log('\n=== Summary ===');
-      console.log(`Successfully processed: ${successCount}`);
-      console.log(`Errors: ${errorCount}`);
-      console.log(`Already existed: ${skippedCount}`);
-      
-      res.json(summary);
+      // Return immediately with the job ID
+      res.json({
+        jobId,
+        message: 'Download started in background',
+        statusUrl: `/api/jobs/${jobId}`
+      });
     } catch (error) {
-      console.error("Error downloading Hansard records:", error);
-      res.status(500).json({ error: "Failed to download Hansard records" });
+      console.error("Error starting Hansard download job:", error);
+      res.status(500).json({ error: "Failed to start download job" });
+    }
+  });
+
+  // Get job status
+  app.get("/api/jobs/:jobId", requireAdmin, async (req, res) => {
+    try {
+      const { jobId } = req.params;
+      const job = jobTracker.getJob(jobId);
+      
+      if (!job) {
+        return res.status(404).json({ error: "Job not found" });
+      }
+      
+      res.json(job);
+    } catch (error) {
+      console.error("Error fetching job status:", error);
+      res.status(500).json({ error: "Failed to fetch job status" });
+    }
+  });
+
+  // Get all jobs
+  app.get("/api/jobs", requireAdmin, async (req, res) => {
+    try {
+      const jobs = jobTracker.getAllJobs();
+      res.json(jobs);
+    } catch (error) {
+      console.error("Error fetching jobs:", error);
+      res.status(500).json({ error: "Failed to fetch jobs" });
     }
   });
 
