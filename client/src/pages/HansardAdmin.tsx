@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Header } from "@/components/Header";
@@ -33,6 +33,31 @@ export default function HansardAdmin() {
     errors?: number;
     skipped?: number;
   } | null>(null);
+  const [jobStatus, setJobStatus] = useState<{
+    jobId: string;
+    status: 'pending' | 'running' | 'completed' | 'failed';
+    progress: {
+      current: number;
+      total: number;
+      message: string;
+    };
+    result?: {
+      successCount: number;
+      errorCount: number;
+      skippedCount: number;
+    };
+    error?: string;
+  } | null>(null);
+  const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(null);
+
+  // Cleanup polling interval on unmount
+  useEffect(() => {
+    return () => {
+      if (pollingInterval) {
+        clearInterval(pollingInterval);
+      }
+    };
+  }, [pollingInterval]);
 
   const { data: authData } = useQuery<{ authenticated: boolean; user?: { username: string } }>({
     queryKey: ["/api/auth/check"],
@@ -86,23 +111,75 @@ export default function HansardAdmin() {
     },
   });
 
+  const pollJobStatus = async (jobId: string) => {
+    try {
+      const res = await apiRequest("GET", `/api/jobs/${jobId}`);
+      const job = await res.json();
+      setJobStatus(job);
+      
+      if (job.status === 'completed') {
+        // Stop polling
+        if (pollingInterval) {
+          clearInterval(pollingInterval);
+          setPollingInterval(null);
+        }
+        
+        // Update download status and invalidate cache
+        if (job.result) {
+          setDownloadStatus({
+            total: job.progress.total,
+            successful: job.result.successCount,
+            errors: job.result.errorCount,
+            skipped: job.result.skippedCount
+          });
+        }
+        
+        queryClient.invalidateQueries({ queryKey: ["/api/hansard-records"] });
+        
+        toast({
+          title: "Download Complete",
+          description: `Successfully downloaded ${job.result?.successCount || 0} hansard records`,
+        });
+      } else if (job.status === 'failed') {
+        // Stop polling
+        if (pollingInterval) {
+          clearInterval(pollingInterval);
+          setPollingInterval(null);
+        }
+        
+        toast({
+          title: "Error",
+          description: job.error || "Download failed",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Error polling job status:', error);
+    }
+  };
+
   const downloadMutation = useMutation({
     mutationFn: async (maxRecords: number) => {
       const res = await apiRequest("POST", "/api/hansard-records/download", { maxRecords });
       return await res.json();
     },
-    onSuccess: (data: any) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/hansard-records"] });
-      setDownloadStatus(data);
+    onSuccess: (data: { jobId: string; message: string }) => {
       toast({
-        title: "Download Complete",
-        description: `Successfully downloaded ${data.successful} hansard records`,
+        title: "Download Started",
+        description: "Download running in background...",
       });
+      
+      // Start polling for job status
+      const interval = setInterval(() => pollJobStatus(data.jobId), 2000);
+      setPollingInterval(interval);
+      
+      // Initial poll
+      pollJobStatus(data.jobId);
     },
     onError: () => {
       toast({
         title: "Error",
-        description: "Failed to download hansard records",
+        description: "Failed to start download job",
         variant: "destructive",
       });
     },
@@ -116,18 +193,23 @@ export default function HansardAdmin() {
       });
       return await res.json();
     },
-    onSuccess: (data: any) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/hansard-records"] });
-      setDownloadStatus(data);
+    onSuccess: (data: { jobId: string; message: string }) => {
       toast({
-        title: "Refresh Complete",
-        description: `Successfully refreshed ${data.successful} hansard records`,
+        title: "Refresh Started",
+        description: "Refresh running in background...",
       });
+      
+      // Start polling for job status
+      const interval = setInterval(() => pollJobStatus(data.jobId), 2000);
+      setPollingInterval(interval);
+      
+      // Initial poll
+      pollJobStatus(data.jobId);
     },
     onError: () => {
       toast({
         title: "Error",
-        description: "Failed to refresh hansard records",
+        description: "Failed to start refresh job",
         variant: "destructive",
       });
     },
@@ -406,15 +488,15 @@ export default function HansardAdmin() {
           </div>
           <Button
             onClick={handleRefresh}
-            disabled={refreshMutation.isPending}
+            disabled={refreshMutation.isPending || jobStatus?.status === 'running'}
             variant="default"
             className="w-full"
             data-testid="button-refresh-hansard"
           >
-            {refreshMutation.isPending ? (
+            {refreshMutation.isPending || jobStatus?.status === 'running' ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Refreshing...
+                {jobStatus?.status === 'running' ? 'Processing...' : 'Starting...'}
               </>
             ) : (
               <>
@@ -423,6 +505,58 @@ export default function HansardAdmin() {
               </>
             )}
           </Button>
+
+          {jobStatus && jobStatus.status !== 'completed' && (
+            <Alert className="mt-4">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <AlertDescription>
+                <div className="space-y-2">
+                  <p className="font-medium">{jobStatus.progress.message}</p>
+                  <div className="flex items-center gap-2 text-sm">
+                    <div className="flex-1 bg-secondary rounded-full h-2 overflow-hidden">
+                      <div 
+                        className="bg-primary h-full transition-all duration-300"
+                        style={{ 
+                          width: `${jobStatus.progress.total > 0 ? (jobStatus.progress.current / jobStatus.progress.total) * 100 : 0}%` 
+                        }}
+                      />
+                    </div>
+                    <span className="text-muted-foreground">
+                      {jobStatus.progress.current} / {jobStatus.progress.total}
+                    </span>
+                  </div>
+                </div>
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {jobStatus?.status === 'completed' && jobStatus.result && (
+            <Alert className="mt-4">
+              <CheckCircle2 className="h-4 w-4" />
+              <AlertDescription>
+                <p className="font-medium">Download Complete</p>
+                <div className="text-sm space-y-1 mt-2">
+                  <p>✅ Successfully downloaded: {jobStatus.result.successCount}</p>
+                  {jobStatus.result.skippedCount > 0 && (
+                    <p>⏭️ Skipped (already existed): {jobStatus.result.skippedCount}</p>
+                  )}
+                  {jobStatus.result.errorCount > 0 && (
+                    <p className="text-destructive">❌ Errors: {jobStatus.result.errorCount}</p>
+                  )}
+                </div>
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {jobStatus?.status === 'failed' && (
+            <Alert variant="destructive" className="mt-4">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription>
+                <p className="font-medium">Download Failed</p>
+                <p className="text-sm mt-1">{jobStatus.error || 'Unknown error occurred'}</p>
+              </AlertDescription>
+            </Alert>
+          )}
         </CardContent>
       </Card>
 
