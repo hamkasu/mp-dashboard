@@ -1,0 +1,114 @@
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'parse_relation.c',
+  line: '3716',
+  routine: 'errorMissingColumn'
+}
+2:38:23 AM [express] GET /api/mps 500 in 2ms :: {"error":"Failed to fetch MPs"}
+Error generating attendance report: error: column "hansard_sessions_spoke" does not exist
+    at /app/node_modules/pg-pool/index.js:45:11
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async file:///app/node_modules/drizzle-orm/node-postgres/session.js:83:22
+    at async DbStorage.getAllMps (file:///app/dist/index.js:1504:20)
+    at async file:///app/dist/index.js:3561:22 {
+  length: 123,
+  severity: 'ERROR',
+  code: '42703',
+  detail: undefined,
+  hint: undefined,
+  position: '209',
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'parse_relation.c',
+  line: '3716',
+  routine: 'errorMissingColumn'
+}
+2:38:23 AM [express] GET /api/attendance/report 500 in 48ms :: {"error":"Failed to generate attendan…
+2:38:25 AM [express] GET /api/hansard-records/search 304 in 76ms :: [{"id":"b4c790ad-f731-48f5-8eb2-…
+Error fetching MPs: error: column "hansard_sessions_spoke" does not exist
+    at /app/node_modules/pg-pool/index.js:45:11
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async file:///app/node_modules/drizzle-orm/node-postgres/session.js:83:22
+    at async DbStorage.getAllMps (file:///app/dist/index.js:1504:20)
+    at async file:///app/dist/index.js:2836:20 {
+  length: 123,
+  severity: 'ERROR',
+  code: '42703',
+  detail: undefined,
+  hint: undefined,
+  position: '209',
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'parse_relation.c',
+  line: '3716',
+  routine: 'errorMissingColumn'
+}
+2:38:32 AM [express] GET /api/mps 500 in 3ms :: {"error":"Failed to fetch MPs"}
+2:38:32 AM [express] GET /api/debate-participations 200 in 192ms :: [{"id":"0f7da564-0d52-4944-83bb-…
+2:38:32 AM [express] GET /api/parliamentary-questions 200 in 192ms :: [{"id":"e27a40b4-6eca-4c91-a48…
+2:38:32 AM [express] GET /api/legislative-proposals 200 in 195ms :: [{"id":"326a97d1-ec3f-4d95-8541-…
+2:38:34 AM [express] POST /api/page-views 200 in 5ms :: {"count":356}
+Error fetching MPs: error: column "hansard_sessions_spoke" does not exist
+    at /app/node_modules/pg-pool/index.js:45:11
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async file:///app/node_modules/drizzle-orm/node-postgres/session.js:83:22
+    at async DbStorage.getAllMps (file:///app/dist/index.js:1504:20)
+    at async file:///app/dist/index.js:2836:20 {
+  length: 123,
+  severity: 'ERROR',
+  code: '42703',
+  detail: undefined,
+  hint: undefined,
+  position: '209',
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'parse_relation.c',
+  line: '3716',
+  routine: 'errorMissingColumn'
+}
+2:38:34 AM [express] GET /api/mps 500 in 3ms :: {"error":"Failed to fetch MPs"}
+  table: undefined,
+  column: undefined,
+Error calculating stats: error: column "hansard_sessions_spoke" does not exist
+  dataType: undefined,
+  constraint: undefined,
+    at /app/node_modules/pg-pool/index.js:45:11
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+  file: 'parse_relation.c',
+  line: '3716',
+    at async file:///app/node_modules/drizzle-orm/node-postgres/session.js:83:22
+  routine: 'errorMissingColumn'
+    at async DbStorage.getAllMps (file:///app/dist/index.js:1504:20)
+    at async file:///app/dist/index.js:2868:20 {
+}
+2:38:34 AM [express] GET /api/stats 500 in 3ms :: {"error":"Failed to calculate statistics"}
+  length: 123,
+  severity: 'ERROR',
+  code: '42703',
+  detail: undefined,
+  hint: undefined,
+  position: '209',
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: undefined,
