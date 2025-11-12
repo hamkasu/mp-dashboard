@@ -6,6 +6,12 @@ type SpeakerMatchResult =
   | { kind: 'unmatched'; name: string; constituency?: string }
   | { kind: 'skip' };
 
+interface SpeakingInstance {
+  mpId: string;
+  mpName: string;
+  position: number;
+}
+
 export class HansardSpeakerParser {
   private mpNameMatcher: MPNameMatcher;
   private allMps: Mp[];
@@ -41,8 +47,13 @@ export class HansardSpeakerParser {
    * Parse speaker information from Hansard transcript
    * Returns array of speakers in order of appearance
    */
-  public extractSpeakers(transcript: string): { speakers: HansardSpeaker[]; unmatched: string[] } {
+  public extractSpeakers(transcript: string): { 
+    speakers: HansardSpeaker[]; 
+    allInstances: SpeakingInstance[];
+    unmatched: string[] 
+  } {
     const speakerMap = new Map<string, HansardSpeaker>();
+    const allInstances: SpeakingInstance[] = [];
     const unmatchedSpeakers: string[] = [];
     let speakingOrder = 1;
 
@@ -50,7 +61,15 @@ export class HansardSpeakerParser {
     const chunkSize = 50000;
     for (let i = 0; i < transcript.length; i += chunkSize) {
       const chunk = transcript.substring(i, i + chunkSize);
-      speakingOrder = this.extractSpeakersFromChunk(chunk, speakerMap, speakingOrder, unmatchedSpeakers);
+      const offset = i;
+      speakingOrder = this.extractSpeakersFromChunk(
+        chunk, 
+        speakerMap, 
+        allInstances,
+        speakingOrder, 
+        unmatchedSpeakers,
+        offset
+      );
     }
 
     // Convert map to array and sort by speaking order
@@ -63,14 +82,16 @@ export class HansardSpeakerParser {
       console.log(`⚠️  ${unmatchedSpeakers.length} speakers could not be matched to MPs`);
     }
     
-    return { speakers, unmatched: unmatchedSpeakers };
+    return { speakers, allInstances, unmatched: unmatchedSpeakers };
   }
 
   private extractSpeakersFromChunk(
     chunk: string,
     speakerMap: Map<string, HansardSpeaker>,
+    allInstances: SpeakingInstance[],
     speakingOrder: number,
-    unmatchedSpeakers: string[]
+    unmatchedSpeakers: string[],
+    offset: number
   ): number {
     // Try each pattern
     for (const pattern of this.SPEAKER_PATTERNS) {
@@ -81,9 +102,19 @@ export class HansardSpeakerParser {
       while ((match = regex.exec(chunk)) !== null) {
         const result = this.processSpeakerMatch(match, speakingOrder);
         
-        if (result.kind === 'matched' && !speakerMap.has(result.speaker.mpId)) {
-          speakerMap.set(result.speaker.mpId, result.speaker);
-          speakingOrder++;
+        if (result.kind === 'matched') {
+          // Add to unique speakers map if first occurrence
+          if (!speakerMap.has(result.speaker.mpId)) {
+            speakerMap.set(result.speaker.mpId, result.speaker);
+            speakingOrder++;
+          }
+          
+          // Always track this speaking instance
+          allInstances.push({
+            mpId: result.speaker.mpId,
+            mpName: result.speaker.mpName,
+            position: offset + (match.index || 0)
+          });
         } else if (result.kind === 'unmatched') {
           // Track unmatched speakers (avoid duplicates)
           const unmatchedKey = result.constituency 
