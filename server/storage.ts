@@ -1096,6 +1096,21 @@ export class MemStorage implements IStorage {
       mp.name !== "Ahmad Zahid Hamidi"
     ).slice(0, 15);
     
+    const hansard1Speakers = [
+      ...(anwarMp ? [{
+        mpId: anwarMp.id,
+        mpName: anwarMp.name,
+        speakingOrder: 1,
+        duration: 45,
+      }] : []),
+      ...(ahmadZahidMp ? [{
+        mpId: ahmadZahidMp.id,
+        mpName: ahmadZahidMp.name,
+        speakingOrder: 2,
+        duration: 30,
+      }] : []),
+    ];
+    
     this.createHansardRecord({
       sessionNumber: "DR.11.04.2022",
       sessionDate: new Date("2022-04-11"),
@@ -1104,21 +1119,13 @@ export class MemStorage implements IStorage {
       transcript: "The Dewan Rakyat proceeded with the second reading of the Constitution (Amendment) Bill 2022, commonly known as the Anti-Hopping Bill. The Yang Berhormat Prime Minister Dato' Seri Anwar Ibrahim presented the bill, explaining that this constitutional amendment aims to strengthen democratic principles by preventing elected representatives from switching political allegiances mid-term. The bill received strong bipartisan support with extensive debate on the mechanisms of implementation and impact on parliamentary democracy.",
       pdfLinks: ["https://hansard.parliament.gov.my/files/DR-11042022.pdf"],
       topics: ["Anti-Hopping Bill", "Constitutional Amendment", "Democratic Reform", "Party Loyalty"],
-      speakers: [
-        ...(anwarMp ? [{
-          mpId: anwarMp.id,
-          mpName: anwarMp.name,
-          speakingOrder: 1,
-          duration: 45,
-        }] : []),
-        ...(ahmadZahidMp ? [{
-          mpId: ahmadZahidMp.id,
-          mpName: ahmadZahidMp.name,
-          speakingOrder: 2,
-          duration: 30,
-        }] : []),
-      ],
-      speakerStats: [],
+      speakers: hansard1Speakers,
+      speakerStats: hansard1Speakers.map(speaker => ({
+        mpId: speaker.mpId,
+        mpName: speaker.mpName,
+        totalSpeeches: speaker.speakingOrder === 1 ? 7 : 4,
+        speakingOrder: speaker.speakingOrder,
+      })),
       voteRecords: [{
         voteType: "Second Reading",
         motion: "Constitution (Amendment) Bill 2022",
@@ -1136,6 +1143,15 @@ export class MemStorage implements IStorage {
       mp.name !== "Rafizi Ramli"
     ).slice(0, 22);
     
+    const hansard2Speakers = [
+      ...(rafizMp ? [{
+        mpId: rafizMp.id,
+        mpName: rafizMp.name,
+        speakingOrder: 1,
+        duration: 60,
+      }] : []),
+    ];
+    
     this.createHansardRecord({
       sessionNumber: "DR.13.10.2023",
       sessionDate: new Date("2023-10-13"),
@@ -1144,15 +1160,13 @@ export class MemStorage implements IStorage {
       transcript: "The Dewan Rakyat debated Budget 2024 with focus on economic reforms, subsidy rationalization, and fiscal sustainability. The Minister of Economy YB Rafizi Ramli presented the government's comprehensive economic plan including the PADU (Central Database Hub) initiative for targeted subsidy distribution. Extensive discussions covered inflation control, digital economy development, and social safety net programs.",
       pdfLinks: ["https://hansard.parliament.gov.my/files/DR-13102023.pdf"],
       topics: ["Budget 2024", "Economic Reform", "Subsidy Rationalization", "PADU Database", "Digital Economy"],
-      speakers: [
-        ...(rafizMp ? [{
-          mpId: rafizMp.id,
-          mpName: rafizMp.name,
-          speakingOrder: 1,
-          duration: 60,
-        }] : []),
-      ],
-      speakerStats: [],
+      speakers: hansard2Speakers,
+      speakerStats: hansard2Speakers.map(speaker => ({
+        mpId: speaker.mpId,
+        mpName: speaker.mpName,
+        totalSpeeches: 5,
+        speakingOrder: speaker.speakingOrder,
+      })),
       voteRecords: [{
         voteType: "Budget Approval",
         motion: "Budget 2024 - Economic Development",
