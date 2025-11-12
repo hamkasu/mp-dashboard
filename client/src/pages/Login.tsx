@@ -27,9 +27,9 @@ export default function Login() {
     onSuccess: () => {
       toast({
         title: "Login Successful",
-        description: "Welcome to the admin panel",
+        description: "Welcome to the dashboard",
       });
-      setLocation("/hansard-admin");
+      setLocation("/");
     },
     onError: (error: Error) => {
       toast({
