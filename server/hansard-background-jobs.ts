@@ -54,7 +54,13 @@ export async function runHansardDownloadJob(
     const hansardList = await scraper.getHansardListForParliament15(maxRecords);
     console.log(`[Job] Found ${hansardList.length} Hansard records to process`);
     
-    jobTracker.updateProgress(jobId, 0, `Processing ${hansardList.length} Hansard records...`);
+    // Update the job's total to reflect the actual number of records and broadcast it
+    const job = jobTracker.getJob(jobId);
+    if (job) {
+      job.progress.total = hansardList.length;
+      // Broadcast the updated total by calling updateProgress
+      jobTracker.updateProgress(jobId, 0, `Processing ${hansardList.length} Hansard records...`);
+    }
     
     // Process each record
     for (let i = 0; i < hansardList.length; i++) {
