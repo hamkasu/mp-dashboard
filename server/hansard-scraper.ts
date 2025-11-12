@@ -2,6 +2,7 @@ import axios from 'axios';
 import * as cheerio from 'cheerio';
 import https from 'https';
 import { PDFParse } from 'pdf-parse';
+import { XMLParser } from 'fast-xml-parser';
 
 // SECURITY NOTE: The Malaysian Parliament website (parlimen.gov.my) has SSL certificate
 // validation issues in some environments. Since we are ONLY READING public government data
@@ -21,6 +22,14 @@ interface HansardMetadata {
   parliamentTerm: string;
   sitting: string;
   pdfUrl: string;
+}
+
+interface TreeNode {
+  id: string;
+  text: string;
+  hasChildren: boolean;
+  level: number;
+  myurl?: string;
 }
 
 export interface AttendanceData {
@@ -43,84 +52,174 @@ export class HansardScraper {
   private readonly headers = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
   };
+  private readonly xmlParser = new XMLParser({
+    ignoreAttributes: false,
+    attributeNamePrefix: '@_'
+  });
+  private visitedNodes = new Set<string>();
+
+  /**
+   * Fetch XML tree data from parliament website archive
+   * @param nodeId - Node ID to fetch children for (null for root)
+   * @returns Array of tree nodes
+   */
+  private async fetchTreeLevel(nodeId: string | null = null): Promise<TreeNode[]> {
+    const maxRetries = 3;
+    const retryDelay = 2000;
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        await this.delay(500); // Polite throttling
+
+        const url = nodeId 
+          ? `${this.baseUrl}/hansard-dewan-rakyat.html?uweb=dr&lang=bm&arkib=yes&ajx=1&id=${nodeId}`
+          : `${this.baseUrl}/hansard-dewan-rakyat.html?uweb=dr&lang=bm&arkib=yes&ajx=0`;
+
+        const response = await axios.get(url, {
+          headers: this.headers,
+          timeout: 30000,
+          httpsAgent
+        });
+
+        const parsed = this.xmlParser.parse(response.data);
+        
+        if (!parsed.tree || !parsed.tree.item) {
+          return [];
+        }
+
+        const items = Array.isArray(parsed.tree.item) ? parsed.tree.item : [parsed.tree.item];
+        
+        return items.map((item: any) => ({
+          id: item['@_id'] || '',
+          text: item['@_text'] || '',
+          hasChildren: item['@_child'] === '1',
+          level: this.getNodeLevel(item['@_id'] || ''),
+          myurl: item.userdata?.['@_name'] === 'myurl' ? item.userdata['#text'] : undefined
+        }));
+      } catch (error: any) {
+        if (attempt < maxRetries) {
+          console.log(`  Retry ${attempt}/${maxRetries} for node ${nodeId || 'root'}...`);
+          await this.delay(retryDelay);
+        } else {
+          console.error(`  Failed to fetch tree level for ${nodeId || 'root'}:`, error.message);
+          return [];
+        }
+      }
+    }
+    return [];
+  }
+
+  /**
+   * Calculate the level of a node based on its ID structure
+   * Example: '0_15_4_11_0' has 5 segments = level 5
+   */
+  private getNodeLevel(nodeId: string): number {
+    return nodeId.split('_').length;
+  }
+
+  /**
+   * Extract PDF URL from the myurl javascript string
+   * Example: "javascript:loadResult('/files/hindex/pdf/DR-05052025.pdf','DR-05052025.pdf')"
+   */
+  private extractPdfUrlFromMyurl(myurl: string): string | null {
+    if (!myurl) return null;
+    const match = myurl.match(/['"](\/files\/[^'"]+\.pdf)['"]/);
+    if (match) {
+      return `${this.baseUrl}${match[1]}`;
+    }
+    return null;
+  }
+
+  /**
+   * Recursively traverse the archive tree and collect all Hansard records
+   */
+  private async traverseArchiveTree(
+    nodeId: string | null,
+    parliamentTerm: string,
+    penggal: string,
+    mesyuarat: string,
+    maxRecords: number,
+    collected: Map<string, HansardMetadata>
+  ): Promise<void> {
+    if (collected.size >= maxRecords) {
+      return;
+    }
+
+    if (nodeId && this.visitedNodes.has(nodeId)) {
+      return; // Avoid cycles
+    }
+
+    if (nodeId) {
+      this.visitedNodes.add(nodeId);
+    }
+
+    const nodes = await this.fetchTreeLevel(nodeId);
+
+    for (const node of nodes) {
+      if (collected.size >= maxRecords) {
+        break;
+      }
+
+      const level = node.level;
+
+      // Level 1: Parliament (e.g., "Parlimen Kelima Belas (2022 - Sekarang)")
+      if (level === 2) {
+        await this.traverseArchiveTree(node.id, node.text, '', '', maxRecords, collected);
+      }
+      // Level 2: Penggal (e.g., "Penggal Pertama")
+      else if (level === 3) {
+        await this.traverseArchiveTree(node.id, parliamentTerm, node.text, '', maxRecords, collected);
+      }
+      // Level 3: Mesyuarat (e.g., "Mesyuarat Pertama (03/02/2025 - 06/03/2025)")
+      else if (level === 4) {
+        await this.traverseArchiveTree(node.id, parliamentTerm, penggal, node.text, maxRecords, collected);
+      }
+      // Level 4: Individual date (e.g., "05 Mei 2025") - This is where PDF links are
+      else if (level === 5) {
+        const pdfUrl = this.extractPdfUrlFromMyurl(node.myurl || '');
+        if (pdfUrl) {
+          const sessionDate = this.parseMalayDate(node.text);
+          if (sessionDate) {
+            const sessionNumber = `DR.${sessionDate.getDate()}.${sessionDate.getMonth() + 1}.${sessionDate.getFullYear()}`;
+            
+            if (!collected.has(sessionNumber)) {
+              collected.set(sessionNumber, {
+                sessionNumber,
+                sessionDate,
+                parliamentTerm,
+                sitting: mesyuarat,
+                pdfUrl
+              });
+              console.log(`  Found: ${sessionNumber} - ${node.text} (total: ${collected.size})`);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  /**
+   * Get complete Hansard list by traversing the archive tree structure
+   * This replaces the pagination-based approach with a tree-based approach
+   */
+  async getHansardListFromArchiveTree(maxRecords: number = 1000): Promise<HansardMetadata[]> {
+    console.log('🌳 Traversing archive tree structure...');
+    this.visitedNodes.clear();
+    const collected = new Map<string, HansardMetadata>();
+
+    try {
+      await this.traverseArchiveTree(null, '', '', '', maxRecords, collected);
+      console.log(`✅ Tree traversal complete. Found ${collected.size} unique records.`);
+      return Array.from(collected.values());
+    } catch (error) {
+      console.error('❌ Error traversing archive tree:', error);
+      return Array.from(collected.values());
+    }
+  }
 
   async getHansardListForParliament15(maxRecords: number = 100): Promise<HansardMetadata[]> {
-    const allHansards: Map<string, HansardMetadata> = new Map();
-    let pageNum = 1;
-    
-    try {
-      while (allHansards.size < maxRecords) {
-        const url = pageNum === 1 
-          ? `${this.baseUrl}/hansard-dewan-rakyat.html?uweb=dr&lang=bm&arkib=yes`
-          : `${this.baseUrl}/hansard-dewan-rakyat.html?uweb=dr&lang=bm&arkib=yes&page=${pageNum}`;
-        
-        console.log(`Fetching page ${pageNum}...`);
-        const response = await axios.get(url, { headers: this.headers, timeout: 30000, httpsAgent });
-        const $ = cheerio.load(response.data);
-        let pageCount = 0;
-        
-        $('a[href*=".pdf"], a[onclick*=".pdf"]').each((_, element) => {
-          const $el = $(element);
-          let pdfUrl = '';
-          
-          // Try to get from href
-          let href = $el.attr('href');
-          
-          // If href is javascript, try to extract from onclick
-          if (href && href.startsWith('javascript:')) {
-            const onclick = $el.attr('onclick') || href;
-            const match = onclick.match(/['"](\/files\/[^'"]+\.pdf)['"]/);
-            if (match) {
-              pdfUrl = `${this.baseUrl}${match[1]}`;
-            }
-          } else if (href && href.includes('.pdf')) {
-            pdfUrl = href.startsWith('http') ? href : `${this.baseUrl}${href}`;
-          }
-          
-          if (pdfUrl) {
-            const text = $el.text().trim();
-            const dateMatch = text.match(/(\d{1,2})\s+([\w]+)\s+(\d{4})/);
-            if (dateMatch) {
-              const sessionDate = this.parseMalayDate(text);
-              if (sessionDate) {
-                const sessionNumber = `DR.${sessionDate.getDate()}.${sessionDate.getMonth() + 1}.${sessionDate.getFullYear()}`;
-                
-                // Use session number as key to deduplicate (each date should have one record)
-                if (!allHansards.has(sessionNumber)) {
-                  allHansards.set(sessionNumber, {
-                    sessionNumber,
-                    sessionDate,
-                    parliamentTerm: '15th Parliament',
-                    sitting: this.determineSitting(sessionDate),
-                    pdfUrl
-                  });
-                  pageCount++;
-                }
-              }
-            }
-          }
-        });
-        
-        if (pageCount === 0) {
-          console.log(`No more new records on page ${pageNum}`);
-          break;
-        }
-        
-        console.log(`Found ${pageCount} unique records on page ${pageNum} (total unique: ${allHansards.size})`);
-        
-        if (allHansards.size >= maxRecords) {
-          break;
-        }
-        
-        pageNum++;
-        await this.delay(2000);
-      }
-      
-      return Array.from(allHansards.values());
-    } catch (error) {
-      console.error('Error fetching Hansard list:', error);
-      return Array.from(allHansards.values());
-    }
+    // Use the new tree-based approach instead of pagination
+    return this.getHansardListFromArchiveTree(maxRecords);
   }
 
   async downloadAndExtractPdf(pdfUrl: string): Promise<string | null> {
