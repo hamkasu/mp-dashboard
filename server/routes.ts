@@ -31,7 +31,7 @@ const upload = multer({
     if (file.mimetype === 'application/pdf') {
       cb(null, true);
     } else {
-      cb(null, false);
+      cb(new Error(`Invalid file type: ${file.mimetype}. Only PDF files are allowed.`));
     }
   },
 });
@@ -885,6 +885,98 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error processing Hansard PDF:", error);
       res.status(500).json({ 
         error: "Failed to process Hansard PDF", 
+        details: error instanceof Error ? error.message : 'Unknown error' 
+      });
+    }
+  });
+
+  // Analyze Hansard PDF for specific MP speeches (transient analysis, no persistence)
+  app.post("/api/hansard-analysis", requireAdmin, upload.single('pdf'), handleMulterError, async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: "No PDF file uploaded. Only PDF files are accepted." });
+      }
+
+      const mpId = req.body.mpId;
+      if (!mpId) {
+        return res.status(400).json({ error: "MP ID is required" });
+      }
+
+      console.log(`📊 Analyzing Hansard PDF: ${req.file.originalname} for MP: ${mpId}`);
+
+      // Get all MPs from database
+      const allMps = await db.select().from(mps);
+      
+      // Find target MP
+      const targetMp = allMps.find(mp => mp.id === mpId);
+      if (!targetMp) {
+        return res.status(404).json({ error: "MP not found" });
+      }
+
+      // Parse using HansardPdfParser - uses canonical speaker identification
+      const parser = new HansardPdfParser(allMps);
+      const parsed = await parser.parseHansardPdf(req.file.buffer);
+
+      // Filter unique speakers for target MP (deduplicated)
+      const targetSpeakers = parsed.speakers.filter(s => s.mpId === mpId);
+
+      // Use parser's canonical speaking instance data
+      // Filter all instances for the target MP
+      const allSpeechInstances = parsed.allSpeakingInstances
+        .filter(inst => inst.mpId === mpId)
+        .map(inst => ({
+          position: inst.charOffsetStart || inst.lineNumber * 100, // Approximate position
+          capturedName: inst.mpName,
+          context: `Speaking instance ${inst.instanceNumber} at line ${inst.lineNumber}`,
+          speakingOrder: inst.instanceNumber
+        }));
+
+      console.log(`📊 Found ${targetSpeakers.length} unique speaking slots and ${allSpeechInstances.length} total speech instances for ${targetMp.name} (via parser canonical data)`);
+
+      // Check attendance status
+      const wasPresent = parsed.attendance.attendedMpIds.includes(mpId);
+      const wasAbsent = parsed.attendance.absentMpIds.includes(mpId);
+      
+      const attendanceStatus = wasPresent ? 'present' : wasAbsent ? 'absent' : 'unknown';
+
+      // Return combined analysis
+      res.json({
+        success: true,
+        mp: {
+          id: targetMp.id,
+          name: targetMp.name,
+          constituency: targetMp.constituency,
+          party: targetMp.party,
+        },
+        metadata: {
+          sessionNumber: parsed.metadata.sessionNumber,
+          sessionDate: parsed.metadata.sessionDate,
+          parliamentTerm: parsed.metadata.parliamentTerm,
+          sitting: parsed.metadata.sitting,
+        },
+        attendanceStatus,
+        uniqueSpeakers: {
+          count: targetSpeakers.length,
+          speakers: targetSpeakers,
+        },
+        allSpeechInstances: {
+          count: allSpeechInstances.length,
+          instances: allSpeechInstances,
+        },
+        sessionStats: {
+          totalUniqueSpeakers: parsed.speakers.length,
+          attendedMps: parsed.attendance.attendedMpIds.length,
+          absentMps: parsed.attendance.absentMpIds.length,
+          unmatchedSpeakers: parsed.unmatchedSpeakers.length,
+          unmatchedSpeakerNames: parsed.unmatchedSpeakers,
+        }
+      });
+
+      console.log(`✅ Analysis complete: ${targetSpeakers.length} unique speaking instances, ${allSpeechInstances.length} total speeches`);
+    } catch (error) {
+      console.error("Error analyzing Hansard PDF:", error);
+      res.status(500).json({ 
+        error: "Failed to analyze Hansard PDF", 
         details: error instanceof Error ? error.message : 'Unknown error' 
       });
     }

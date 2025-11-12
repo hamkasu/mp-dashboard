@@ -157,6 +157,15 @@ export const insertParliamentaryQuestionSchema = createInsertSchema(parliamentar
 export type InsertParliamentaryQuestion = z.infer<typeof insertParliamentaryQuestionSchema>;
 export type ParliamentaryQuestion = typeof parliamentaryQuestions.$inferSelect;
 
+// Hansard Speaking Instance type for speech analysis
+export interface HansardSpeakingInstance {
+  mpId: string;
+  mpName: string;
+  instanceNumber: number;
+  lineNumber: number;
+  charOffsetStart?: number;
+}
+
 export interface HansardSpeaker {
   mpId: string;
   mpName: string;

@@ -23,6 +23,12 @@ interface ParsedHansard {
     mpName: string;
     speakingOrder: number;
   }>;
+  allSpeakingInstances: Array<{
+    mpId: string;
+    mpName: string;
+    instanceNumber: number;
+    lineNumber: number;
+  }>;
   unmatchedSpeakers: string[];
   transcript: string;
   topics: string[];
@@ -51,20 +57,22 @@ export class HansardPdfParser {
     // Parse all components
     const metadata = this.parseMetadata(fullText);
     const attendance = this.parseAttendance(fullText);
-    const { speakers, unmatched } = this.speakerParser.extractSpeakers(fullText);
+    const { speakers, allInstances, unmatched } = this.speakerParser.extractSpeakers(fullText);
     const topics = this.parseTopics(fullText);
 
     console.log('✅ Hansard parsing complete');
     console.log(`   - Session: ${metadata.sessionNumber}`);
     console.log(`   - Attended: ${attendance.attendedMpIds.length} MPs`);
     console.log(`   - Absent: ${attendance.absentMpIds.length} MPs`);
-    console.log(`   - Speakers: ${speakers.length} MPs`);
+    console.log(`   - Speakers: ${speakers.length} unique MPs`);
+    console.log(`   - All speaking instances: ${allInstances.length} total`);
     console.log(`   - Unmatched: ${unmatched.length} speakers`);
 
     return {
       metadata,
       attendance,
       speakers,
+      allSpeakingInstances: allInstances,
       unmatchedSpeakers: unmatched,
       transcript: fullText.substring(0, 10000), // Store first 10k chars for transcript
       topics,

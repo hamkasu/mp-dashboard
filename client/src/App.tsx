@@ -9,6 +9,7 @@ import MPProfile from "@/pages/MPProfile";
 import ParliamentaryActivity from "@/pages/ParliamentaryActivity";
 import Hansard from "@/pages/hansard";
 import HansardAdmin from "@/pages/HansardAdmin";
+import HansardAnalysis from "@/pages/hansard-analysis";
 import Attendance from "@/pages/attendance";
 import Allowances from "@/pages/Allowances";
 import Login from "@/pages/Login";
@@ -27,6 +28,11 @@ function Router() {
       <Route path="/hansard-admin">
         <ProtectedRoute>
           <HansardAdmin />
+        </ProtectedRoute>
+      </Route>
+      <Route path="/hansard-analysis">
+        <ProtectedRoute>
+          <HansardAnalysis />
         </ProtectedRoute>
       </Route>
       <Route component={NotFound} />

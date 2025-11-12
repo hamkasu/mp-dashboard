@@ -1,4 +1,4 @@
-import { Search, Menu, Home, FileText, BookOpen, UserCheck, Calculator } from "lucide-react";
+import { Search, Menu, Home, FileText, BookOpen, UserCheck, Calculator, BarChart3 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Link, useLocation } from "wouter";
@@ -108,6 +108,17 @@ export function Header({ searchQuery, onSearchChange, onMenuClick }: HeaderProps
             >
               <FileText className="w-4 h-4" />
               <span>Admin</span>
+            </Button>
+          </Link>
+          <Link href="/hansard-analysis">
+            <Button
+              variant={location === "/hansard-analysis" ? "secondary" : "ghost"}
+              size="sm"
+              data-testid="nav-hansard-analysis"
+              className="gap-2"
+            >
+              <BarChart3 className="w-4 h-4" />
+              <span>Analysis</span>
             </Button>
           </Link>
         </nav>
