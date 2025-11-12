@@ -1,4 +1,4 @@
-import { MapPin, UserCircle, Wallet, Calendar } from "lucide-react";
+import { MapPin, UserCircle, Wallet, Calendar, Mic } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -29,6 +29,12 @@ function getAttendanceColor(attendanceRate: number): string {
   return "text-red-600 dark:text-red-400";
 }
 
+function getSpeakingColor(speakingRate: number): string {
+  if (speakingRate >= 70) return "text-green-600 dark:text-green-400";
+  if (speakingRate >= 40) return "text-yellow-600 dark:text-yellow-400";
+  return "text-red-600 dark:text-red-400";
+}
+
 export function MPCard({ mp }: MPCardProps) {
   const initials = mp.name
     .split(" ")
@@ -46,6 +52,12 @@ export function MPCard({ mp }: MPCardProps) {
     ? (mp.daysAttended / mp.totalParliamentDays) * 100 
     : 0;
   const attendanceColor = getAttendanceColor(attendanceRate);
+  
+  // Calculate speaking participation rate (compared to days attended)
+  const speakingRate = mp.daysAttended > 0
+    ? (mp.hansardSessionsSpoke / mp.daysAttended) * 100
+    : 0;
+  const speakingColor = getSpeakingColor(speakingRate);
 
   return (
     <Link href={`/mp/${mp.id}`}>
@@ -129,6 +141,16 @@ export function MPCard({ mp }: MPCardProps) {
                 <p className="text-xs text-muted-foreground mt-1">
                   {formatCurrency(mp.parliamentSittingAllowance * mp.daysAttended)} - Parliament sitting allowance
                 </p>
+              </div>
+            </div>
+            
+            <div className="flex items-start gap-2">
+              <Mic className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
+              <div className="flex-1 min-w-0">
+                <p className={`font-semibold ${speakingColor}`} data-testid={`text-speaking-${mp.id}`}>
+                  Spoke in {mp.hansardSessionsSpoke} sessions
+                </p>
+                <p className="text-xs text-muted-foreground">Hansard speaking participation</p>
               </div>
             </div>
             

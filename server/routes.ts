@@ -139,7 +139,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/mps", async (_req, res) => {
     try {
       const mps = await storage.getAllMps();
-      res.json(mps);
+      const hansardRecords = await storage.getAllHansardRecords();
+      
+      // Calculate speaking participation for each MP
+      const mpsWithSpeaking = mps.map(mp => {
+        const sessionsSpoke = hansardRecords.filter(record => 
+          record.speakers && record.speakers.some(speaker => speaker.mpId === mp.id)
+        ).length;
+        
+        return {
+          ...mp,
+          hansardSessionsSpoke: sessionsSpoke
+        };
+      });
+      
+      res.json(mpsWithSpeaking);
     } catch (error) {
       console.error("Error fetching MPs:", error);
       res.status(500).json({ error: "Failed to fetch MPs" });

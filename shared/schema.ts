@@ -19,6 +19,7 @@ export const mps = pgTable("mps", {
   ministerSalary: integer("minister_salary").notNull().default(0),
   daysAttended: integer("days_attended").notNull().default(0),
   totalParliamentDays: integer("total_parliament_days").notNull().default(0),
+  hansardSessionsSpoke: integer("hansard_sessions_spoke").notNull().default(0),
   entertainmentAllowance: integer("entertainment_allowance").notNull().default(2500),
   handphoneAllowance: integer("handphone_allowance").notNull().default(2000),
   computerAllowance: integer("computer_allowance").notNull().default(6000),
