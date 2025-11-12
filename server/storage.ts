@@ -69,6 +69,7 @@ export interface IStorage {
   getLatestHansardRecord(): Promise<HansardRecord | undefined>;
   getHansardSpeakingParticipationByMpId(mpId: string): Promise<{ count: number; sessions: HansardRecord[] }>;
   createHansardRecord(record: InsertHansardRecord): Promise<HansardRecord>;
+  createHansardRecordWithSpeechStats(record: InsertHansardRecord, speakerStats: Array<{mpId: string; totalSpeeches: number}>): Promise<HansardRecord>;
   updateHansardRecord(id: string, record: UpdateHansardRecord): Promise<HansardRecord | undefined>;
   deleteHansardRecord(id: string): Promise<boolean>;
   deleteAllHansardRecords(): Promise<number>;
@@ -237,6 +238,7 @@ export class MemStorage implements IStorage {
       ministerSalary: insertMp.ministerSalary ?? 0,
       daysAttended: insertMp.daysAttended ?? 0,
       totalParliamentDays: insertMp.totalParliamentDays ?? 0,
+      totalSpeechInstances: insertMp.totalSpeechInstances ?? 0,
       hansardSessionsSpoke: insertMp.hansardSessionsSpoke ?? 0,
       entertainmentAllowance: insertMp.entertainmentAllowance ?? 2500,
       handphoneAllowance: insertMp.handphoneAllowance ?? 2000,
@@ -1012,6 +1014,39 @@ export class MemStorage implements IStorage {
     this.hansardRecords.set(id, record);
     return record;
   }
+
+  async createHansardRecordWithSpeechStats(
+    insertRecord: InsertHansardRecord,
+    speakerStats: Array<{mpId: string; totalSpeeches: number}>
+  ): Promise<HansardRecord> {
+    // Clone MPs into temp map for atomic updates
+    const mpUpdates = new Map<string, Mp>();
+    
+    // Prepare MP updates - throw if any MP is missing
+    for (const { mpId, totalSpeeches } of speakerStats) {
+      const mp = this.mps.get(mpId);
+      if (!mp) {
+        throw new Error(`MP ${mpId} not found - cannot update speech statistics`);
+      }
+      
+      // Clone and increment
+      mpUpdates.set(mpId, {
+        ...mp,
+        hansardSessionsSpoke: mp.hansardSessionsSpoke + 1,
+        totalSpeechInstances: mp.totalSpeechInstances + totalSpeeches
+      });
+    }
+    
+    // Create hansard record
+    const record = await this.createHansardRecord(insertRecord);
+    
+    // Apply all MP updates atomically (all succeed or none)
+    mpUpdates.forEach((updatedMp, mpId) => {
+      this.mps.set(mpId, updatedMp);
+    });
+    
+    return record;
+  }
   
   async updateHansardRecord(id: string, updates: UpdateHansardRecord): Promise<HansardRecord | undefined> {
     const existing = this.hansardRecords.get(id);
@@ -1083,6 +1118,7 @@ export class MemStorage implements IStorage {
           duration: 30,
         }] : []),
       ],
+      speakerStats: [],
       voteRecords: [{
         voteType: "Second Reading",
         motion: "Constitution (Amendment) Bill 2022",
@@ -1116,6 +1152,7 @@ export class MemStorage implements IStorage {
           duration: 60,
         }] : []),
       ],
+      speakerStats: [],
       voteRecords: [{
         voteType: "Budget Approval",
         motion: "Budget 2024 - Economic Development",
@@ -1847,6 +1884,34 @@ export class DbStorage implements IStorage {
   async createHansardRecord(record: InsertHansardRecord): Promise<HansardRecord> {
     const result = await db.insert(hansardRecords).values(record).returning();
     return result[0];
+  }
+
+  async createHansardRecordWithSpeechStats(
+    record: InsertHansardRecord,
+    speakerStats: Array<{mpId: string; totalSpeeches: number}>
+  ): Promise<HansardRecord> {
+    return await db.transaction(async (tx) => {
+      // Insert hansard record
+      const inserted = await tx.insert(hansardRecords).values(record).returning();
+      const hansardRecord = inserted[0];
+
+      // Update MP speech statistics atomically
+      for (const { mpId, totalSpeeches } of speakerStats) {
+        const updated = await tx.update(mps)
+          .set({
+            hansardSessionsSpoke: sql`${mps.hansardSessionsSpoke} + 1`,
+            totalSpeechInstances: sql`${mps.totalSpeechInstances} + ${totalSpeeches}`
+          })
+          .where(eq(mps.id, mpId))
+          .returning();
+        
+        if (!updated.length) {
+          throw new Error(`MP ${mpId} not found - cannot update speech statistics`);
+        }
+      }
+
+      return hansardRecord;
+    });
   }
   
   async updateHansardRecord(id: string, record: UpdateHansardRecord): Promise<HansardRecord | undefined> {

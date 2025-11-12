@@ -2,6 +2,7 @@ import cron from 'node-cron';
 import { storage } from './storage';
 import { HansardScraper } from './hansard-scraper';
 import { InsertHansardRecord } from '@shared/schema';
+import { HansardSpeechAnalyzer } from './hansard-speech-analyzer';
 import { randomUUID } from 'crypto';
 
 export interface HansardSyncResult {
@@ -85,7 +86,27 @@ export async function runHansardSync(options: { triggeredBy: 'manual' | 'schedul
         const attendanceData = scraper.extractAttendanceFromText(transcript);
         const constituencyData = scraper.extractConstituencyAttendanceCounts(transcript);
 
-        // Create hansard record
+        // Analyze speeches using the HansardSpeechAnalyzer
+        const allMps = await storage.getAllMps();
+        const speechAnalyzer = new HansardSpeechAnalyzer(allMps);
+        const speechStats = speechAnalyzer.analyzeSpeeches(
+          transcript,
+          metadata.sessionNumber,
+          metadata.sessionDate
+        );
+
+        // Convert speakerStats map to array for storage (all speakers)
+        const speakerStatsArray = Array.from(speechStats.speakerStats.values());
+
+        // Enrich speakers with totalSpeeches count (ALL speakers, not just top 10)
+        const enrichedSpeakers = speakerStatsArray.map(stat => ({
+          mpId: stat.mpId,
+          mpName: stat.mpName,
+          speakingOrder: stat.speakingOrder || 1,
+          totalSpeeches: stat.totalSpeeches
+        }));
+
+        // Create hansard record with speech statistics
         const hansardRecord: InsertHansardRecord = {
           sessionNumber: metadata.sessionNumber,
           sessionDate: metadata.sessionDate,
@@ -94,7 +115,8 @@ export async function runHansardSync(options: { triggeredBy: 'manual' | 'schedul
           transcript,
           pdfLinks: [metadata.pdfUrl],
           topics: [],
-          speakers: [],
+          speakers: enrichedSpeakers,
+          speakerStats: speakerStatsArray,
           voteRecords: [],
           attendedMpIds: [],
           absentMpIds: [],
@@ -103,7 +125,13 @@ export async function runHansardSync(options: { triggeredBy: 'manual' | 'schedul
           constituenciesAbsentRule91: constituencyData.constituenciesAbsentRule91
         };
 
-        await storage.createHansardRecord(hansardRecord);
+        // Create hansard record with speech statistics (transactional)
+        // This will atomically insert the record and update MP aggregates
+        const uniqueSpeakerStats = Array.from(
+          new Map(speakerStatsArray.map(s => [s.mpId, s])).values()
+        );
+        
+        await storage.createHansardRecordWithSpeechStats(hansardRecord, uniqueSpeakerStats);
         result.recordsInserted++;
         
         const recordDuration = Date.now() - recordStartTime;

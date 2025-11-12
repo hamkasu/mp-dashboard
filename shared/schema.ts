@@ -20,6 +20,7 @@ export const mps = pgTable("mps", {
   daysAttended: integer("days_attended").notNull().default(0),
   totalParliamentDays: integer("total_parliament_days").notNull().default(0),
   hansardSessionsSpoke: integer("hansard_sessions_spoke").notNull().default(0),
+  totalSpeechInstances: integer("total_speech_instances").notNull().default(0),
   entertainmentAllowance: integer("entertainment_allowance").notNull().default(2500),
   handphoneAllowance: integer("handphone_allowance").notNull().default(2000),
   computerAllowance: integer("computer_allowance").notNull().default(6000),
@@ -161,6 +162,14 @@ export interface HansardSpeaker {
   mpName: string;
   speakingOrder: number;
   duration?: number;
+  totalSpeeches?: number;
+}
+
+export interface HansardSpeakerStats {
+  mpId: string;
+  mpName: string;
+  totalSpeeches: number;
+  speakingOrder: number | null;
 }
 
 export interface HansardVoteRecord {
@@ -186,6 +195,7 @@ export const hansardRecords = pgTable("hansard_records", {
   pdfLinks: jsonb("pdf_links").$type<string[]>().notNull().default(sql`'[]'::jsonb`),
   topics: jsonb("topics").$type<string[]>().notNull().default(sql`'[]'::jsonb`),
   speakers: jsonb("speakers").$type<HansardSpeaker[]>().notNull().default(sql`'[]'::jsonb`),
+  speakerStats: jsonb("speaker_stats").$type<HansardSpeakerStats[]>().notNull().default(sql`'[]'::jsonb`),
   voteRecords: jsonb("vote_records").$type<HansardVoteRecord[]>().notNull().default(sql`'[]'::jsonb`),
   attendedMpIds: jsonb("attended_mp_ids").$type<string[]>().notNull().default(sql`'[]'::jsonb`),
   absentMpIds: jsonb("absent_mp_ids").$type<string[]>().notNull().default(sql`'[]'::jsonb`),
@@ -210,7 +220,14 @@ export const insertHansardRecordSchema = createInsertSchema(hansardRecords).omit
     mpName: z.string(),
     speakingOrder: z.number(),
     duration: z.number().optional(),
+    totalSpeeches: z.number().optional(),
   })).default([]),
+  speakerStats: z.array(z.object({
+    mpId: z.string(),
+    mpName: z.string(),
+    totalSpeeches: z.number(),
+    speakingOrder: z.number().nullable(),
+  })).optional().default([]),
   voteRecords: z.array(z.object({
     voteType: z.string(),
     motion: z.string(),
