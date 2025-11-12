@@ -2,7 +2,6 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage, seedDatabase } from "./storage";
 import { z } from "zod";
-import bcrypt from "bcryptjs";
 import multer from "multer";
 import { 
   insertCourtCaseSchema, 
@@ -75,107 +74,7 @@ function extractTopics(transcript: string): string[] {
   return Array.from(topics).slice(0, 10);
 }
 
-// Authentication Middleware
-async function requireAdmin(req: any, res: any, next: any) {
-  if (!req.session?.userId) {
-    return res.status(401).json({ error: "Authentication required" });
-  }
-  
-  try {
-    const user = await storage.getUser(req.session.userId);
-    if (!user?.isAdmin) {
-      return res.status(403).json({ error: "Admin access required" });
-    }
-    req.user = user;
-    next();
-  } catch (error) {
-    console.error("Authentication error:", error);
-    return res.status(500).json({ error: "Authentication failed" });
-  }
-}
-
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Authentication Routes
-  app.post("/api/auth/login", async (req, res) => {
-    try {
-      const { username, password } = req.body;
-      
-      if (!username || !password) {
-        return res.status(400).json({ error: "Username and password required" });
-      }
-      
-      const user = await storage.getUserByUsername(username);
-      if (!user) {
-        return res.status(401).json({ error: "Invalid credentials" });
-      }
-      
-      const isValid = await bcrypt.compare(password, user.password);
-      if (!isValid) {
-        return res.status(401).json({ error: "Invalid credentials" });
-      }
-      
-      if (!user.isAdmin) {
-        return res.status(403).json({ error: "Admin access required" });
-      }
-      
-      req.session.userId = user.id;
-      
-      req.session.save((err) => {
-        if (err) {
-          console.error("Session save error:", err);
-          return res.status(500).json({ error: "Failed to create session" });
-        }
-        
-        res.json({ 
-          success: true,
-          user: { 
-            id: user.id, 
-            username: user.username,
-            isAdmin: user.isAdmin 
-          } 
-        });
-      });
-    } catch (error) {
-      console.error("Login error:", error);
-      res.status(500).json({ error: "Login failed" });
-    }
-  });
-  
-  app.post("/api/auth/logout", (req, res) => {
-    req.session.destroy((err) => {
-      if (err) {
-        return res.status(500).json({ error: "Logout failed" });
-      }
-      res.json({ success: true });
-    });
-  });
-  
-  app.get("/api/auth/check", async (req, res) => {
-    if (!req.session?.userId) {
-      return res.status(401).json({ authenticated: false });
-    }
-    
-    try {
-      const user = await storage.getUser(req.session.userId);
-      if (!user) {
-        req.session.destroy(() => {});
-        return res.status(401).json({ authenticated: false });
-      }
-      
-      res.json({ 
-        authenticated: true,
-        user: { 
-          id: user.id, 
-          username: user.username,
-          isAdmin: user.isAdmin 
-        } 
-      });
-    } catch (error) {
-      console.error("Auth check error:", error);
-      res.status(500).json({ error: "Failed to verify authentication" });
-    }
-  });
-
   // Get all MPs
   app.get("/api/mps", async (_req, res) => {
     try {
@@ -832,7 +731,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Upload and parse Hansard PDF
-  app.post("/api/hansard-records/upload", requireAdmin, upload.single('pdf'), handleMulterError, async (req, res) => {
+  app.post("/api/hansard-records/upload", upload.single('pdf'), handleMulterError, async (req, res) => {
     try {
       if (!req.file) {
         return res.status(400).json({ error: "No PDF file uploaded. Only PDF files are accepted." });
@@ -1334,7 +1233,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Delete a Hansard record
-  app.delete("/api/hansard-records/:id", requireAdmin, async (req, res) => {
+  app.delete("/api/hansard-records/:id", async (req, res) => {
     try {
       const { id } = req.params;
       const deleted = await storage.deleteHansardRecord(id);
@@ -1351,7 +1250,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Delete all Hansard records
-  app.delete("/api/hansard-records", requireAdmin, async (_req, res) => {
+  app.delete("/api/hansard-records", async (_req, res) => {
     try {
       const count = await storage.deleteAllHansardRecords();
       res.json({ deletedCount: count });
@@ -1362,7 +1261,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Reprocess attendance for all or selected Hansard records
-  app.post("/api/hansard-records/reprocess-attendance", requireAdmin, async (req, res) => {
+  app.post("/api/hansard-records/reprocess-attendance", async (req, res) => {
     try {
       const { limit, recordIds } = req.body;
       const scraper = new HansardScraper();
@@ -1470,7 +1369,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Trigger Hansard download (background job)
-  app.post("/api/hansard-records/download", requireAdmin, async (req, res) => {
+  app.post("/api/hansard-records/download", async (req, res) => {
     try {
       const { maxRecords = 200, deleteExisting = false } = req.body;
       
@@ -1495,7 +1394,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get job status
-  app.get("/api/jobs/:jobId", requireAdmin, async (req, res) => {
+  app.get("/api/jobs/:jobId", async (req, res) => {
     try {
       const { jobId } = req.params;
       const job = jobTracker.getJob(jobId);
@@ -1512,7 +1411,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get all jobs
-  app.get("/api/jobs", requireAdmin, async (req, res) => {
+  app.get("/api/jobs", async (req, res) => {
     try {
       const jobs = jobTracker.getAllJobs();
       res.json(jobs);

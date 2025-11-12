@@ -1,20 +1,10 @@
 import express, { type Request, Response, NextFunction } from "express";
-import session from "express-session";
-import connectPgSimple from "connect-pg-simple";
-import pg from "pg";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { seedDatabase } from "./storage";
 import { startHansardCron } from "./hansard-cron";
 
 const app = express();
-const PgSession = connectPgSimple(session);
-
-declare module 'express-session' {
-  interface SessionData {
-    userId?: string;
-  }
-}
 
 declare module 'http' {
   interface IncomingMessage {
@@ -28,35 +18,6 @@ app.use(express.json({
   }
 }));
 app.use(express.urlencoded({ extended: false }));
-
-const sessionStore = process.env.DATABASE_URL
-  ? new PgSession({
-      pool: new pg.Pool({
-        connectionString: process.env.DATABASE_URL,
-        ssl: process.env.NODE_ENV === "production" 
-          ? { rejectUnauthorized: false } 
-          : false,
-        max: 10,
-      }),
-      tableName: 'session',
-      createTableIfMissing: true,
-    })
-  : undefined;
-
-app.use(
-  session({
-    secret: process.env.SESSION_SECRET || "dev-secret-change-in-production",
-    resave: false,
-    saveUninitialized: false,
-    store: sessionStore,
-    cookie: {
-      secure: process.env.NODE_ENV === "production",
-      httpOnly: true,
-      sameSite: process.env.NODE_ENV === "production" ? "lax" : "lax",
-      maxAge: 1000 * 60 * 60 * 24 * 7,
-    },
-  })
-);
 
 app.use((req, res, next) => {
   const start = Date.now();
