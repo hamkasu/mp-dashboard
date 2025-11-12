@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Header } from "@/components/Header";
@@ -6,13 +6,27 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Download, Trash2, AlertTriangle, CheckCircle2, RefreshCw, LogOut, User } from "lucide-react";
+import { Loader2, Download, Trash2, AlertTriangle, CheckCircle2, RefreshCw, LogOut, User, Upload, FileText, X } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+
+interface UploadResult {
+  success: boolean;
+  sessionNumber?: string;
+  speakersFound?: number;
+  unmatchedSpeakers?: string[];
+  attendedCount?: number;
+  absentCount?: number;
+  error?: string;
+}
 
 export default function HansardAdmin() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [uploadResult, setUploadResult] = useState<UploadResult | null>(null);
   const [downloadStatus, setDownloadStatus] = useState<{
     total?: number;
     successful?: number;
@@ -139,6 +153,87 @@ export default function HansardAdmin() {
     }
   };
 
+  const uploadMutation = useMutation({
+    mutationFn: async (file: File) => {
+      const formData = new FormData();
+      formData.append('pdf', file);
+      
+      const response = await fetch('/api/hansard-records/upload', {
+        method: 'POST',
+        body: formData,
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Upload failed');
+      }
+      
+      return await response.json();
+    },
+    onSuccess: (data: UploadResult) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/hansard-records"] });
+      setUploadResult(data);
+      setSelectedFile(null);
+      toast({
+        title: "Upload Successful",
+        description: `Successfully parsed Hansard ${data.sessionNumber}. Found ${data.speakersFound} speakers.`,
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Upload Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleFileSelect = (file: File) => {
+    if (file.type !== 'application/pdf') {
+      toast({
+        title: "Invalid File",
+        description: "Please select a PDF file",
+        variant: "destructive",
+      });
+      return;
+    }
+    setSelectedFile(file);
+    setUploadResult(null);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    
+    const files = Array.from(e.dataTransfer.files);
+    if (files.length > 0) {
+      handleFileSelect(files[0]);
+    }
+  };
+
+  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      handleFileSelect(files[0]);
+    }
+  };
+
+  const handleUpload = () => {
+    if (selectedFile) {
+      uploadMutation.mutate(selectedFile);
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <Header />
@@ -171,6 +266,121 @@ export default function HansardAdmin() {
             </Button>
           </div>
         </div>
+
+      <Card className="border-primary">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Upload className="h-5 w-5" />
+            Upload Hansard PDF
+          </CardTitle>
+          <CardDescription>
+            Upload and automatically parse Hansard PDF files to extract speakers and attendance
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div
+            className={`border-2 border-dashed rounded-md p-8 text-center transition-colors ${
+              isDragging
+                ? "border-primary bg-primary/5"
+                : "border-muted-foreground/25 hover-elevate"
+            }`}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+            data-testid="dropzone-upload"
+          >
+            {selectedFile ? (
+              <div className="space-y-4">
+                <div className="flex items-center justify-center gap-3">
+                  <FileText className="h-10 w-10 text-primary" />
+                  <div className="text-left">
+                    <p className="font-medium">{selectedFile.name}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+                    </p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setSelectedFile(null)}
+                    data-testid="button-remove-file"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+                <Button
+                  onClick={handleUpload}
+                  disabled={uploadMutation.isPending}
+                  className="w-full"
+                  data-testid="button-upload-pdf"
+                >
+                  {uploadMutation.isPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Parsing PDF...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="mr-2 h-4 w-4" />
+                      Upload and Parse
+                    </>
+                  )}
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <Upload className="h-12 w-12 text-muted-foreground mx-auto" />
+                <div>
+                  <p className="text-lg font-medium">
+                    Drag and drop your Hansard PDF here
+                  </p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    or click to browse files
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  onClick={() => fileInputRef.current?.click()}
+                  data-testid="button-browse-files"
+                >
+                  Browse Files
+                </Button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".pdf"
+                  onChange={handleFileInputChange}
+                  className="hidden"
+                  data-testid="input-file"
+                />
+              </div>
+            )}
+          </div>
+
+          {uploadResult && (
+            <Alert>
+              <CheckCircle2 className="h-4 w-4" />
+              <AlertDescription>
+                <div className="space-y-2">
+                  <p className="font-medium">
+                    Successfully parsed Hansard {uploadResult.sessionNumber}
+                  </p>
+                  <div className="text-sm space-y-1">
+                    <p>✅ {uploadResult.speakersFound} MPs detected as speakers</p>
+                    <p>✅ {uploadResult.attendedCount} MPs attended</p>
+                    <p>✅ {uploadResult.absentCount} MPs absent</p>
+                    {uploadResult.unmatchedSpeakers && uploadResult.unmatchedSpeakers.length > 0 && (
+                      <p className="text-yellow-600">
+                        ⚠️ {uploadResult.unmatchedSpeakers.length} speakers could not be matched
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </AlertDescription>
+            </Alert>
+          )}
+        </CardContent>
+      </Card>
 
       <Card className="border-primary">
         <CardHeader>

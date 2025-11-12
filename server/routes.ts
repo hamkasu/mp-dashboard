@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { storage, seedDatabase } from "./storage";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
+import multer from "multer";
 import { 
   insertCourtCaseSchema, 
   insertSprmInvestigationSchema, 
@@ -11,11 +12,42 @@ import {
   insertDebateParticipationSchema,
   insertParliamentaryQuestionSchema,
   insertHansardRecordSchema,
-  updateHansardRecordSchema
+  updateHansardRecordSchema,
+  mps
 } from "@shared/schema";
 import { HansardScraper, ConstituencyAttendanceCounts } from "./hansard-scraper";
 import { MPNameMatcher } from "./mp-name-matcher";
 import { runHansardSync } from "./hansard-cron";
+import { HansardPdfParser } from "./hansard-pdf-parser";
+import { db } from "./db";
+
+// Configure multer for file uploads
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 50 * 1024 * 1024, // 50MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype === 'application/pdf') {
+      cb(null, true);
+    } else {
+      cb(null, false);
+    }
+  },
+});
+
+// Multer error handling middleware
+function handleMulterError(err: any, req: any, res: any, next: any) {
+  if (err instanceof multer.MulterError) {
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      return res.status(400).json({ error: 'File too large. Maximum size is 50MB.' });
+    }
+    return res.status(400).json({ error: `Upload error: ${err.message}` });
+  } else if (err) {
+    return res.status(400).json({ error: err.message || 'Invalid file type. Only PDF files are allowed.' });
+  }
+  next();
+}
 
 function extractTopics(transcript: string): string[] {
   const topics: Set<string> = new Set();
@@ -787,6 +819,74 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching Hansard records by session:", error);
       res.status(500).json({ error: "Failed to fetch Hansard records by session" });
+    }
+  });
+
+  // Upload and parse Hansard PDF
+  app.post("/api/hansard-records/upload", requireAdmin, upload.single('pdf'), handleMulterError, async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: "No PDF file uploaded. Only PDF files are accepted." });
+      }
+
+      console.log(`📤 Received PDF upload: ${req.file.originalname} (${req.file.size} bytes)`);
+
+      // Get all MPs from database
+      const allMps = await db.select().from(mps);
+      
+      // Parse the PDF
+      const parser = new HansardPdfParser(allMps);
+      const parsed = await parser.parseHansardPdf(req.file.buffer);
+
+      // Create Hansard record
+      const hansardData = {
+        sessionNumber: parsed.metadata.sessionNumber,
+        sessionDate: parsed.metadata.sessionDate,
+        parliamentTerm: parsed.metadata.parliamentTerm,
+        sitting: parsed.metadata.sitting,
+        transcript: parsed.transcript,
+        summary: `Parliamentary session ${parsed.metadata.sessionNumber} with ${parsed.speakers.length} speakers.`,
+        summaryLanguage: 'en' as const,
+        pdfLinks: [req.file.originalname],
+        topics: parsed.topics,
+        speakers: parsed.speakers,
+        voteRecords: [],
+        attendedMpIds: parsed.attendance.attendedMpIds,
+        absentMpIds: parsed.attendance.absentMpIds,
+        constituenciesPresent: parsed.attendance.attendedConstituencies.length,
+        constituenciesAbsent: parsed.attendance.absentConstituencies.length,
+      };
+
+      const record = await storage.createHansardRecord(hansardData);
+
+      // Update MP speaking statistics
+      const speakerIds = parsed.speakers.map(s => s.mpId);
+      for (const mpId of speakerIds) {
+        const mp = allMps.find(m => m.id === mpId);
+        if (mp) {
+          const { eq } = await import("drizzle-orm");
+          await db.update(mps)
+            .set({ hansardSessionsSpoke: mp.hansardSessionsSpoke + 1 })
+            .where(eq(mps.id, mpId));
+        }
+      }
+
+      console.log(`✅ Successfully created Hansard record ${parsed.metadata.sessionNumber}`);
+
+      res.status(201).json({
+        success: true,
+        sessionNumber: parsed.metadata.sessionNumber,
+        speakersFound: parsed.speakers.length,
+        unmatchedSpeakers: parsed.unmatchedSpeakers,
+        attendedCount: parsed.attendance.attendedMpIds.length,
+        absentCount: parsed.attendance.absentMpIds.length,
+      });
+    } catch (error) {
+      console.error("Error processing Hansard PDF:", error);
+      res.status(500).json({ 
+        error: "Failed to process Hansard PDF", 
+        details: error instanceof Error ? error.message : 'Unknown error' 
+      });
     }
   });
 
