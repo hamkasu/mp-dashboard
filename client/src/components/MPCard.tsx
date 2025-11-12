@@ -148,9 +148,18 @@ export function MPCard({ mp }: MPCardProps) {
               <Mic className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
               <div className="flex-1 min-w-0">
                 <p className={`font-semibold ${speakingColor}`} data-testid={`text-speaking-${mp.id}`}>
-                  Spoke in {mp.hansardSessionsSpoke} sessions
+                  {mp.totalSpeechInstances > 0 ? (
+                    <>{mp.totalSpeechInstances} speeches in {mp.hansardSessionsSpoke} sessions</>
+                  ) : (
+                    <>Spoke in {mp.hansardSessionsSpoke} sessions</>
+                  )}
                 </p>
-                <p className="text-xs text-muted-foreground">Hansard speaking participation</p>
+                <p className="text-xs text-muted-foreground">
+                  {mp.totalSpeechInstances > 0 
+                    ? `Hansard participation (avg ${(mp.totalSpeechInstances / (mp.hansardSessionsSpoke || 1)).toFixed(1)} speeches/session)`
+                    : 'Hansard speaking participation'
+                  }
+                </p>
               </div>
             </div>
             
