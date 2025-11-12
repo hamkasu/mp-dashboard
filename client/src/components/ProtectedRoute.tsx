@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Loader2 } from "lucide-react";
+import { useEffect } from "react";
 
 interface AuthResponse {
   authenticated: boolean;
@@ -23,6 +24,12 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
     retry: false,
   });
 
+  useEffect(() => {
+    if (!isLoading && (!data?.authenticated || !data?.user?.isAdmin)) {
+      setLocation("/login");
+    }
+  }, [isLoading, data, setLocation]);
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -35,7 +42,6 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
   }
 
   if (!data?.authenticated || !data?.user?.isAdmin) {
-    setLocation("/login");
     return null;
   }
 
