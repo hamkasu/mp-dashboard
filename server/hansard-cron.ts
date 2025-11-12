@@ -48,7 +48,7 @@ export async function runHansardSync(options: { triggeredBy: 'manual' | 'schedul
     // Fetch new hansard metadata from parliament website
     const scraper = new HansardScraper();
     console.log(`🔍 [Hansard Sync] Fetching hansard metadata from parliament website...`);
-    const allMetadata = await scraper.getHansardListForParliament15(50);
+    const allMetadata = await scraper.getHansardListForParliament15(1000);
     
     // Filter to only records newer than the latest we have
     const newMetadata = latestDate
