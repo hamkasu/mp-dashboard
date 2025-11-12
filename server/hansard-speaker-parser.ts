@@ -12,6 +12,10 @@ export class HansardSpeakerParser {
   
   // Common speaker patterns in Malaysian Hansard
   private readonly SPEAKER_PATTERNS = [
+    // Pattern: "Datuk/Dato'/Tuan/etc [Full Name]: " (without constituency)
+    // This must come FIRST to catch ministerial titles without constituencies
+    /(?:Menteri|Timbalan Menteri|Datuk Seri|Dato' Sri|Datuk|Dato'|Tan Sri|Toh Puan|Tuan|Puan|Dr\.?|Yang Berhormat|Y\.Bhg\.|YB)\s+(?:Haji|Hajjah)?\s*([^:]{10,80}):\s+/gi,
+    
     // Pattern: "[P###] Constituency - Name" or "[Constituency - Name]"
     /\[(?:P\d{3}\s+)?([A-Za-z\s]+?)\s*[-–]\s*([^\]]+)\]/gi,
     

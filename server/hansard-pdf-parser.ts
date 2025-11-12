@@ -41,10 +41,10 @@ export class HansardPdfParser {
     console.log('📄 Starting Hansard PDF parsing...');
     
     // Extract text from PDF using dynamic import
-    const pdfParseModule = await import('pdf-parse');
-    const pdfParse = pdfParseModule.default;
-    const pdfData = await pdfParse(pdfBuffer);
-    const fullText = pdfData.text;
+    const { PDFParse } = await import('pdf-parse');
+    const parser = new PDFParse({ data: pdfBuffer });
+    const result = await parser.getText();
+    const fullText = result.text;
     
     console.log(`📄 Extracted ${fullText.length} characters from PDF`);
 
