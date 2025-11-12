@@ -614,6 +614,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get Hansard speaking participation by MP ID
+  app.get("/api/mps/:id/hansard-participation", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const participation = await storage.getHansardSpeakingParticipationByMpId(id);
+      res.json(participation);
+    } catch (error) {
+      console.error("Error fetching Hansard participation:", error);
+      res.status(500).json({ error: "Failed to fetch Hansard participation" });
+    }
+  });
+
   // Get single parliamentary question by ID
   app.get("/api/parliamentary-questions/:id", async (req, res) => {
     try {

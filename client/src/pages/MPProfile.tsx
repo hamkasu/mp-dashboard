@@ -10,7 +10,7 @@ import { Separator } from "@/components/ui/separator";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Summarizer } from "@/components/Summarizer";
-import type { Mp, CourtCase, SprmInvestigation, LegislativeProposal, DebateParticipation, ParliamentaryQuestion } from "@shared/schema";
+import type { Mp, CourtCase, SprmInvestigation, LegislativeProposal, DebateParticipation, ParliamentaryQuestion, HansardRecord } from "@shared/schema";
 import { calculateTotalSalary, calculateYearlyBreakdown, formatCurrency, getPublicationName } from "@/lib/utils";
 import { format } from "date-fns";
 
@@ -70,6 +70,11 @@ export default function MPProfile() {
 
   const { data: parliamentaryQuestions = [], isLoading: isLoadingQuestions } = useQuery<ParliamentaryQuestion[]>({
     queryKey: [`/api/mps/${mpId}/parliamentary-questions`],
+    enabled: !!mpId,
+  });
+
+  const { data: hansardParticipation, isLoading: isLoadingHansard } = useQuery<{ count: number; sessions: HansardRecord[] }>({
+    queryKey: [`/api/mps/${mpId}/hansard-participation`],
     enabled: !!mpId,
   });
 
@@ -311,6 +316,72 @@ export default function MPProfile() {
                 <p className="text-xs text-muted-foreground italic" data-testid="text-attendance-source">
                   Source: Malaysian Parliament Records
                 </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <MessageSquare className="h-5 w-5" />
+                  Hansard Speaking Record
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <Info className="h-4 w-4 text-muted-foreground" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p className="max-w-xs">
+                        Number of parliamentary sessions where this MP spoke, based on official Hansard records
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {isLoadingHansard ? (
+                  <div className="animate-pulse space-y-3">
+                    <div className="h-12 bg-muted rounded" />
+                    <div className="h-8 bg-muted rounded" />
+                  </div>
+                ) : hansardParticipation ? (
+                  <>
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-2">Sessions Spoken</p>
+                      <p className="text-3xl font-bold text-primary" data-testid="text-hansard-count">
+                        {hansardParticipation.count}
+                      </p>
+                      <p className="text-sm text-muted-foreground mt-1">parliamentary sessions</p>
+                    </div>
+                    {hansardParticipation.sessions.length > 0 && (
+                      <>
+                        <Separator />
+                        <div>
+                          <p className="text-sm text-muted-foreground mb-2">Recent Sessions</p>
+                          <div className="space-y-2" data-testid="list-recent-hansard-sessions">
+                            {hansardParticipation.sessions.slice(0, 5).map((session, index) => (
+                              <div key={session.id} className="text-sm">
+                                <p className="font-medium" data-testid={`text-hansard-session-${index}`}>
+                                  {session.sessionNumber}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  {format(new Date(session.sessionDate), "MMM d, yyyy")}
+                                  {session.topics && session.topics.length > 0 && (
+                                    <span> • {session.topics[0]}</span>
+                                  )}
+                                </p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </>
+                    )}
+                    <Separator />
+                    <p className="text-xs text-muted-foreground italic" data-testid="text-hansard-source">
+                      Source: Official Hansard Records
+                    </p>
+                  </>
+                ) : (
+                  <p className="text-sm text-muted-foreground">No speaking records found</p>
+                )}
               </CardContent>
             </Card>
 
