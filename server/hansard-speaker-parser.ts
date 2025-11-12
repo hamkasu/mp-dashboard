@@ -9,7 +9,8 @@ type SpeakerMatchResult =
 interface SpeakingInstance {
   mpId: string;
   mpName: string;
-  position: number;
+  instanceNumber: number;
+  lineNumber: number;
 }
 
 export class HansardSpeakerParser {
@@ -55,6 +56,7 @@ export class HansardSpeakerParser {
     const speakerMap = new Map<string, HansardSpeaker>();
     const allInstances: SpeakingInstance[] = [];
     const unmatchedSpeakers: string[] = [];
+    const instanceCountMap = new Map<string, number>(); // Track instance number per MP
     let speakingOrder = 1;
 
     // Process in chunks to manage memory
@@ -66,9 +68,11 @@ export class HansardSpeakerParser {
         chunk, 
         speakerMap, 
         allInstances,
+        instanceCountMap,
         speakingOrder, 
         unmatchedSpeakers,
-        offset
+        offset,
+        transcript
       );
     }
 
@@ -89,9 +93,11 @@ export class HansardSpeakerParser {
     chunk: string,
     speakerMap: Map<string, HansardSpeaker>,
     allInstances: SpeakingInstance[],
+    instanceCountMap: Map<string, number>,
     speakingOrder: number,
     unmatchedSpeakers: string[],
-    offset: number
+    offset: number,
+    fullTranscript: string
   ): number {
     // Try each pattern
     for (const pattern of this.SPEAKER_PATTERNS) {
@@ -103,17 +109,28 @@ export class HansardSpeakerParser {
         const result = this.processSpeakerMatch(match, speakingOrder);
         
         if (result.kind === 'matched') {
+          const mpId = result.speaker.mpId;
+          
           // Add to unique speakers map if first occurrence
-          if (!speakerMap.has(result.speaker.mpId)) {
-            speakerMap.set(result.speaker.mpId, result.speaker);
+          if (!speakerMap.has(mpId)) {
+            speakerMap.set(mpId, result.speaker);
             speakingOrder++;
           }
+          
+          // Track instance number for this MP
+          const currentInstanceCount = instanceCountMap.get(mpId) || 0;
+          instanceCountMap.set(mpId, currentInstanceCount + 1);
+          
+          // Calculate line number from position
+          const position = offset + (match.index || 0);
+          const lineNumber = this.calculateLineNumber(fullTranscript, position);
           
           // Always track this speaking instance
           allInstances.push({
             mpId: result.speaker.mpId,
             mpName: result.speaker.mpName,
-            position: offset + (match.index || 0)
+            instanceNumber: currentInstanceCount + 1,
+            lineNumber
           });
         } else if (result.kind === 'unmatched') {
           // Track unmatched speakers (avoid duplicates)
@@ -128,6 +145,17 @@ export class HansardSpeakerParser {
     }
     
     return speakingOrder;
+  }
+
+  private calculateLineNumber(transcript: string, position: number): number {
+    // Count newlines up to the position
+    let lineNumber = 1;
+    for (let i = 0; i < Math.min(position, transcript.length); i++) {
+      if (transcript[i] === '\n') {
+        lineNumber++;
+      }
+    }
+    return lineNumber;
   }
 
   private processSpeakerMatch(match: RegExpMatchArray, speakingOrder: number): SpeakerMatchResult {
