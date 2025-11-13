@@ -802,8 +802,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Delete a Hansard record (admin only)
-  app.delete("/api/hansard-records/:id", ensureAuthenticated, async (req, res) => {
+  // Delete a Hansard record
+  app.delete("/api/hansard-records/:id", async (req, res) => {
     try {
       const { id } = req.params;
       const deleted = await storage.deleteHansardRecord(id);
@@ -1053,8 +1053,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Delete multiple Hansard records (admin only)
-  app.post("/api/hansard-records/bulk-delete", ensureAuthenticated, async (req, res) => {
+  // Delete multiple Hansard records
+  app.post("/api/hansard-records/bulk-delete", async (req, res) => {
     try {
       const schema = z.object({
         ids: z.array(z.string()).min(1, "At least one ID is required")
@@ -1668,7 +1668,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin endpoint to manually trigger database seeding (for Railway/production)
-  app.post("/api/admin/seed", ensureAuthenticated, async (req, res) => {
+  app.post("/api/admin/seed", async (req, res) => {
     try {
       if (!process.env.DATABASE_URL) {
         return res.status(400).json({ error: "No database configured - using in-memory storage" });
@@ -1790,7 +1790,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin endpoint to manually trigger Hansard sync
-  app.post("/api/admin/trigger-hansard-check", ensureAuthenticated, async (req, res) => {
+  app.post("/api/admin/trigger-hansard-check", async (req, res) => {
     try {
       console.log("Manual Hansard sync triggered via API...");
       const result = await runHansardSync({ triggeredBy: 'manual' });
