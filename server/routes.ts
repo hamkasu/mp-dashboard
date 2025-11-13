@@ -718,6 +718,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Delete a Hansard record
+  app.delete("/api/hansard-records/:id", async (req, res) => {
+    try {
+      const adminToken = req.headers['x-admin-token'];
+      if (!adminToken || adminToken !== process.env.ADMIN_TOKEN) {
+        return res.status(403).json({ error: "Unauthorized - valid admin token required" });
+      }
+
+      const { id } = req.params;
+      const deleted = await storage.deleteHansardRecord(id);
+      
+      if (!deleted) {
+        return res.status(404).json({ error: "Hansard record not found" });
+      }
+      
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting Hansard record:", error);
+      res.status(500).json({ error: "Failed to delete Hansard record" });
+    }
+  });
+
   // Get Hansard records by session number
   app.get("/api/hansard-records/session/:sessionNumber", async (req, res) => {
     try {
