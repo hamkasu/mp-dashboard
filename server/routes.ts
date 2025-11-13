@@ -1,8 +1,9 @@
-import type { Express } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage, seedDatabase } from "./storage";
 import { z } from "zod";
 import multer from "multer";
+import bcrypt from "bcryptjs";
 import { 
   insertCourtCaseSchema, 
   insertSprmInvestigationSchema, 
@@ -21,6 +22,13 @@ import { HansardPdfParser } from "./hansard-pdf-parser";
 import { db } from "./db";
 import { jobTracker } from "./job-tracker";
 import { runHansardDownloadJob } from "./hansard-background-jobs";
+
+function ensureAuthenticated(req: Request, res: Response, next: NextFunction) {
+  if (req.session && req.session.userId) {
+    return next();
+  }
+  return res.status(401).json({ error: "Authentication required" });
+}
 
 // Configure multer for file uploads
 const upload = multer({
@@ -75,6 +83,82 @@ function extractTopics(transcript: string): string[] {
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Authentication routes
+  app.post("/api/auth/login", async (req, res) => {
+    try {
+      const { username, password } = req.body;
+      
+      if (!username || !password) {
+        return res.status(400).json({ error: "Username and password are required" });
+      }
+      
+      const user = await storage.getUserByUsername(username);
+      
+      if (!user) {
+        return res.status(401).json({ error: "Invalid username or password" });
+      }
+      
+      const isValidPassword = await bcrypt.compare(password, user.password);
+      
+      if (!isValidPassword) {
+        return res.status(401).json({ error: "Invalid username or password" });
+      }
+      
+      if (!user.isAdmin) {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+      
+      req.session.userId = user.id;
+      
+      res.json({
+        user: {
+          id: user.id,
+          username: user.username,
+          isAdmin: user.isAdmin
+        }
+      });
+    } catch (error) {
+      console.error("Login error:", error);
+      res.status(500).json({ error: "Login failed" });
+    }
+  });
+  
+  app.post("/api/auth/logout", (req, res) => {
+    req.session.destroy((err) => {
+      if (err) {
+        return res.status(500).json({ error: "Logout failed" });
+      }
+      res.clearCookie('connect.sid');
+      res.json({ message: "Logged out successfully" });
+    });
+  });
+  
+  app.get("/api/auth/me", async (req, res) => {
+    try {
+      if (!req.session || !req.session.userId) {
+        return res.status(401).json({ error: "Not authenticated" });
+      }
+      
+      const user = await storage.getUser(req.session.userId);
+      
+      if (!user) {
+        req.session.destroy(() => {});
+        return res.status(401).json({ error: "User not found" });
+      }
+      
+      res.json({
+        user: {
+          id: user.id,
+          username: user.username,
+          isAdmin: user.isAdmin
+        }
+      });
+    } catch (error) {
+      console.error("Auth check error:", error);
+      res.status(500).json({ error: "Authentication check failed" });
+    }
+  });
+
   // Get all MPs
   app.get("/api/mps", async (_req, res) => {
     try {
@@ -718,14 +802,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Delete a Hansard record
-  app.delete("/api/hansard-records/:id", async (req, res) => {
+  // Delete a Hansard record (admin only)
+  app.delete("/api/hansard-records/:id", ensureAuthenticated, async (req, res) => {
     try {
-      const adminToken = req.headers['x-admin-token'];
-      if (!adminToken || adminToken !== process.env.ADMIN_TOKEN) {
-        return res.status(403).json({ error: "Unauthorized - valid admin token required" });
-      }
-
       const { id } = req.params;
       const deleted = await storage.deleteHansardRecord(id);
       
@@ -974,25 +1053,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Delete a single Hansard record
-  app.delete("/api/hansard-records/:id", async (req, res) => {
-    try {
-      const { id } = req.params;
-      const deleted = await storage.deleteHansardRecord(id);
-      
-      if (!deleted) {
-        return res.status(404).json({ error: "Hansard record not found" });
-      }
-      
-      res.status(200).json({ message: "Hansard record deleted successfully" });
-    } catch (error) {
-      console.error("Error deleting Hansard record:", error);
-      res.status(500).json({ error: "Failed to delete Hansard record" });
-    }
-  });
-
-  // Delete multiple Hansard records
-  app.post("/api/hansard-records/bulk-delete", async (req, res) => {
+  // Delete multiple Hansard records (admin only)
+  app.post("/api/hansard-records/bulk-delete", ensureAuthenticated, async (req, res) => {
     try {
       const schema = z.object({
         ids: z.array(z.string()).min(1, "At least one ID is required")
@@ -1320,23 +1382,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Delete a Hansard record
-  app.delete("/api/hansard-records/:id", async (req, res) => {
-    try {
-      const { id } = req.params;
-      const deleted = await storage.deleteHansardRecord(id);
-      
-      if (!deleted) {
-        return res.status(404).json({ error: "Hansard record not found" });
-      }
-      
-      res.status(204).send();
-    } catch (error) {
-      console.error("Error deleting Hansard record:", error);
-      res.status(500).json({ error: "Failed to delete Hansard record" });
-    }
-  });
-
   // Delete all Hansard records
   app.delete("/api/hansard-records", async (_req, res) => {
     try {
@@ -1623,14 +1668,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin endpoint to manually trigger database seeding (for Railway/production)
-  app.post("/api/admin/seed", async (req, res) => {
+  app.post("/api/admin/seed", ensureAuthenticated, async (req, res) => {
     try {
-      // Require admin token for security
-      const adminToken = req.headers['x-admin-token'];
-      if (!adminToken || adminToken !== process.env.ADMIN_TOKEN) {
-        return res.status(403).json({ error: "Unauthorized - valid admin token required" });
-      }
-      
       if (!process.env.DATABASE_URL) {
         return res.status(400).json({ error: "No database configured - using in-memory storage" });
       }
@@ -1751,14 +1790,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin endpoint to manually trigger Hansard sync
-  app.post("/api/admin/trigger-hansard-check", async (req, res) => {
+  app.post("/api/admin/trigger-hansard-check", ensureAuthenticated, async (req, res) => {
     try {
-      // Require admin token for security
-      const adminToken = req.headers['x-admin-token'];
-      if (!adminToken || adminToken !== process.env.ADMIN_TOKEN) {
-        return res.status(403).json({ error: "Unauthorized - valid admin token required" });
-      }
-
       console.log("Manual Hansard sync triggered via API...");
       const result = await runHansardSync({ triggeredBy: 'manual' });
 
