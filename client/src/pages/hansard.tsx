@@ -87,12 +87,9 @@ export default function HansardPage() {
 
   const deleteMutation = useMutation({
     mutationFn: async (recordId: string) => {
-      const adminToken = localStorage.getItem('adminToken');
       const response = await fetch(`/api/hansard-records/${recordId}`, {
         method: 'DELETE',
-        headers: {
-          'x-admin-token': adminToken || ''
-        }
+        credentials: 'include'
       });
       if (!response.ok) {
         const error = await response.json();
@@ -300,18 +297,7 @@ export default function HansardPage() {
                         </AlertDialogCancel>
                         <AlertDialogAction
                           data-testid="button-confirm-delete"
-                          onClick={() => {
-                            const adminToken = localStorage.getItem('adminToken');
-                            if (!adminToken) {
-                              toast({
-                                title: "Authentication Required",
-                                description: "Admin token not found. Please sign in as admin.",
-                                variant: "destructive"
-                              });
-                              return;
-                            }
-                            deleteMutation.mutate(record.id);
-                          }}
+                          onClick={() => deleteMutation.mutate(record.id)}
                           disabled={deleteMutation.isPending}
                           className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                         >
