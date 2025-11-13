@@ -38,3 +38,42 @@ export function buildPdfUrl(baseUrl: string, relativePath: string): string {
   const cleanPath = relativePath.replace(/^(\.\/|\/)+/, '');
   return `${baseUrl}/${cleanPath}`;
 }
+
+/**
+ * Fixes localhost URLs in PDF links by replacing them with the correct public base URL
+ * This is needed because some records may have localhost URLs stored from development/Railway
+ */
+export function fixPdfUrl(pdfUrl: string, req?: Request): string {
+  // If it's already a proper URL (not localhost), return as-is
+  if (pdfUrl.startsWith('https://') && !pdfUrl.includes('localhost')) {
+    return pdfUrl;
+  }
+  
+  // If it contains localhost, extract the path and rebuild
+  if (pdfUrl.includes('localhost')) {
+    const match = pdfUrl.match(/attached_assets\/.+\.pdf$/);
+    if (match) {
+      const baseUrl = getPublicBaseUrl(req);
+      return buildPdfUrl(baseUrl, match[0]);
+    }
+  }
+  
+  // If it's a relative path (no protocol), build full URL
+  if (pdfUrl.startsWith('attached_assets/') || pdfUrl.startsWith('/attached_assets/')) {
+    const baseUrl = getPublicBaseUrl(req);
+    return buildPdfUrl(baseUrl, pdfUrl);
+  }
+  
+  // Return as-is if we can't parse it
+  return pdfUrl;
+}
+
+/**
+ * Fixes all PDF URLs in a Hansard record
+ */
+export function fixHansardPdfUrls<T extends { pdfLinks: string[] }>(record: T, req?: Request): T {
+  return {
+    ...record,
+    pdfLinks: record.pdfLinks.map(url => fixPdfUrl(url, req))
+  };
+}

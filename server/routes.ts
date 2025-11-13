@@ -6,7 +6,7 @@ import multer from "multer";
 import bcrypt from "bcryptjs";
 import { promises as fs } from "fs";
 import path from "path";
-import { getPublicBaseUrl, buildPdfUrl } from "./utils/url-helper";
+import { getPublicBaseUrl, buildPdfUrl, fixHansardPdfUrls } from "./utils/url-helper";
 import { 
   insertCourtCaseSchema, 
   insertSprmInvestigationSchema, 
@@ -770,7 +770,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         );
       }
       
-      res.json(records);
+      // Fix localhost URLs in PDF links
+      const fixedRecords = records.map(record => fixHansardPdfUrls(record, req));
+      res.json(fixedRecords);
     } catch (error) {
       console.error("Error searching Hansard records:", error);
       res.status(500).json({ error: "Failed to search Hansard records" });
@@ -778,10 +780,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get all Hansard records
-  app.get("/api/hansard-records", async (_req, res) => {
+  app.get("/api/hansard-records", async (req, res) => {
     try {
       const records = await storage.getAllHansardRecords();
-      res.json(records);
+      // Fix localhost URLs in PDF links
+      const fixedRecords = records.map(record => fixHansardPdfUrls(record, req));
+      res.json(fixedRecords);
     } catch (error) {
       console.error("Error fetching Hansard records:", error);
       res.status(500).json({ error: "Failed to fetch Hansard records" });
@@ -798,7 +802,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Hansard record not found" });
       }
       
-      res.json(record);
+      // Fix localhost URLs in PDF links
+      const fixedRecord = fixHansardPdfUrls(record, req);
+      res.json(fixedRecord);
     } catch (error) {
       console.error("Error fetching Hansard record:", error);
       res.status(500).json({ error: "Failed to fetch Hansard record" });
@@ -827,7 +833,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { sessionNumber } = req.params;
       const records = await storage.getHansardRecordsBySessionNumber(sessionNumber);
-      res.json(records);
+      // Fix localhost URLs in PDF links
+      const fixedRecords = records.map(record => fixHansardPdfUrls(record, req));
+      res.json(fixedRecords);
     } catch (error) {
       console.error("Error fetching Hansard records by session:", error);
       res.status(500).json({ error: "Failed to fetch Hansard records by session" });
