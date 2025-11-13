@@ -148,19 +148,15 @@ export class HansardScraper {
   /**
    * Recursively traverse the archive tree and collect all Hansard records
    * Only processes 15th Parliament records
+   * Collects ALL records without stopping early (no maxRecords limit during traversal)
    */
   private async traverseArchiveTree(
     nodeId: string | null,
     parliamentTerm: string,
     penggal: string,
     mesyuarat: string,
-    maxRecords: number,
     collected: Map<string, HansardMetadata>
   ): Promise<void> {
-    if (collected.size >= maxRecords) {
-      return;
-    }
-
     if (nodeId && this.visitedNodes.has(nodeId)) {
       return; // Avoid cycles
     }
@@ -172,10 +168,6 @@ export class HansardScraper {
     const nodes = await this.fetchTreeLevel(nodeId);
 
     for (const node of nodes) {
-      if (collected.size >= maxRecords) {
-        break;
-      }
-
       const level = node.level;
 
       // Level 1: Parliament (e.g., "Parlimen Kelima Belas (2022 - Sekarang)")
@@ -183,18 +175,18 @@ export class HansardScraper {
         // Only process 15th Parliament
         if (this.is15thParliament(node.text)) {
           console.log(`✅ Processing 15th Parliament: ${node.text}`);
-          await this.traverseArchiveTree(node.id, node.text, '', '', maxRecords, collected);
+          await this.traverseArchiveTree(node.id, node.text, '', '', collected);
         } else {
           console.log(`⏭️  Skipping non-15th Parliament: ${node.text}`);
         }
       }
       // Level 2: Penggal (e.g., "Penggal Pertama")
       else if (level === 3) {
-        await this.traverseArchiveTree(node.id, parliamentTerm, node.text, '', maxRecords, collected);
+        await this.traverseArchiveTree(node.id, parliamentTerm, node.text, '', collected);
       }
       // Level 3: Mesyuarat (e.g., "Mesyuarat Pertama (03/02/2025 - 06/03/2025)")
       else if (level === 4) {
-        await this.traverseArchiveTree(node.id, parliamentTerm, penggal, node.text, maxRecords, collected);
+        await this.traverseArchiveTree(node.id, parliamentTerm, penggal, node.text, collected);
       }
       // Level 4: Individual date (e.g., "05 Mei 2025") - This is where PDF links are
       else if (level === 5) {
@@ -222,20 +214,35 @@ export class HansardScraper {
 
   /**
    * Get complete Hansard list by traversing the archive tree structure
-   * This replaces the pagination-based approach with a tree-based approach
+   * Collects ALL records from the parliament website, then sorts by date (newest first)
+   * @param maxRecords - Optional limit on number of records to return (after sorting)
    */
   async getHansardListFromArchiveTree(maxRecords: number = 1000): Promise<HansardMetadata[]> {
-    console.log('🌳 Traversing archive tree structure...');
+    console.log('🌳 Traversing archive tree structure to collect ALL records...');
     this.visitedNodes.clear();
     const collected = new Map<string, HansardMetadata>();
 
     try {
-      await this.traverseArchiveTree(null, '', '', '', maxRecords, collected);
+      await this.traverseArchiveTree(null, '', '', '', collected);
       console.log(`✅ Tree traversal complete. Found ${collected.size} unique records.`);
-      return Array.from(collected.values());
+      
+      // Sort by date (newest first) to prioritize recent records
+      const allRecords = Array.from(collected.values()).sort((a, b) => 
+        b.sessionDate.getTime() - a.sessionDate.getTime()
+      );
+      
+      // Return up to maxRecords (newest records first)
+      const records = allRecords.slice(0, maxRecords);
+      console.log(`📊 Returning ${records.length} records (sorted by date, newest first)`);
+      
+      return records;
     } catch (error) {
       console.error('❌ Error traversing archive tree:', error);
-      return Array.from(collected.values());
+      // Even on error, return what we collected, sorted
+      const allRecords = Array.from(collected.values()).sort((a, b) => 
+        b.sessionDate.getTime() - a.sessionDate.getTime()
+      );
+      return allRecords.slice(0, maxRecords);
     }
   }
 
