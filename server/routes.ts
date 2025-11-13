@@ -1316,6 +1316,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           name: string;
           party: string;
           swornInDate: Date;
+          termEndDate: Date | null;
         }>;
       }>();
       
@@ -1331,7 +1332,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           id: mp.id,
           name: mp.name,
           party: mp.party,
-          swornInDate: mp.swornInDate
+          swornInDate: mp.swornInDate,
+          termEndDate: mp.termEndDate
         });
       }
       
@@ -1349,8 +1351,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const absentMpIds = new Set(record.absentMpIds || []);
           
           // Find the MP who was representing this constituency at the time of this session
-          // This is the most recent MP whose swornInDate is before or equal to the session date
-          const activeMp = sortedMps.find(mp => recordDate >= mp.swornInDate);
+          // MP's term is active if: sessionDate >= swornInDate AND (termEndDate is null OR sessionDate <= termEndDate)
+          const activeMp = sortedMps.find(mp => {
+            const swornIn = mp.swornInDate;
+            const termEnd = mp.termEndDate;
+            const isAfterSwornIn = recordDate >= swornIn;
+            const isBeforeTermEnd = !termEnd || recordDate <= termEnd;
+            return isAfterSwornIn && isBeforeTermEnd;
+          });
           
           if (activeMp) {
             totalSessionsRelevant++;

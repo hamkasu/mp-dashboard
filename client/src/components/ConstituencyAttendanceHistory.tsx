@@ -19,6 +19,7 @@ interface Mp {
   name: string;
   party: string;
   swornInDate: string;
+  termEndDate: string | null;
 }
 
 interface ConstituencyHistoryData {
@@ -182,17 +183,24 @@ export function ConstituencyAttendanceHistory({
                           </div>
                           
                           <div className="space-y-2">
-                            {constituency.currentMps.map((mp, mpIdx) => (
-                              <Link key={mp.id} href={`/mp/${mp.id}`}>
-                                <div className="flex items-center gap-2 text-sm hover-elevate p-2 rounded-md">
-                                  <Badge variant="secondary">{mp.party}</Badge>
-                                  <span className="font-medium">{mp.name}</span>
-                                  {mpIdx === 0 && (
-                                    <Badge variant="outline" className="text-xs">Current</Badge>
-                                  )}
-                                </div>
-                              </Link>
-                            ))}
+                            {constituency.currentMps.map((mp, mpIdx) => {
+                              const isCurrent = !mp.termEndDate;
+                              const termInfo = isCurrent 
+                                ? "Current" 
+                                : `${new Date(mp.swornInDate).toLocaleDateString()} - ${new Date(mp.termEndDate!).toLocaleDateString()}`;
+                              
+                              return (
+                                <Link key={mp.id} href={`/mp/${mp.id}`}>
+                                  <div className="flex items-center gap-2 text-sm hover-elevate p-2 rounded-md flex-wrap">
+                                    <Badge variant="secondary">{mp.party}</Badge>
+                                    <span className="font-medium">{mp.name}</span>
+                                    <Badge variant={isCurrent ? "outline" : "secondary"} className="text-xs">
+                                      {termInfo}
+                                    </Badge>
+                                  </div>
+                                </Link>
+                              );
+                            })}
                           </div>
                         </div>
                         

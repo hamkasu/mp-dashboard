@@ -15,6 +15,7 @@ export const mps = pgTable("mps", {
   title: text("title"),
   role: text("role"),
   swornInDate: timestamp("sworn_in_date").notNull(),
+  termEndDate: timestamp("term_end_date"),
   mpAllowance: integer("mp_allowance").notNull(),
   ministerSalary: integer("minister_salary").notNull().default(0),
   daysAttended: integer("days_attended").notNull().default(0),
