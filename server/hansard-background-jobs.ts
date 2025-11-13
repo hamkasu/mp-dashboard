@@ -2,6 +2,7 @@ import { storage } from './storage';
 import { HansardScraper } from './hansard-scraper';
 import { MPNameMatcher } from './mp-name-matcher';
 import { jobTracker } from './job-tracker';
+import { getPublicBaseUrl, buildPdfUrl } from './utils/url-helper';
 
 function extractTopics(text: string): string[] {
   const topics: Set<string> = new Set();
@@ -96,6 +97,9 @@ export async function runHansardDownloadJob(
       
       const { localPath, text: transcript } = result;
       
+      // Convert local path to full URL
+      const pdfUrl = buildPdfUrl(getPublicBaseUrl(), localPath);
+      
       try {
         const topics = extractTopics(transcript);
         const attendance = scraper.extractAttendanceFromText(transcript);
@@ -116,7 +120,7 @@ export async function runHansardDownloadJob(
           parliamentTerm: metadata.parliamentTerm,
           sitting: metadata.sitting,
           transcript: transcript.substring(0, 100000),
-          pdfLinks: [localPath],
+          pdfLinks: [pdfUrl],
           topics: topics,
           speakers: [],
           speakerStats: [],

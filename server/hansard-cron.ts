@@ -4,6 +4,7 @@ import { HansardScraper } from './hansard-scraper';
 import { InsertHansardRecord } from '@shared/schema';
 import { HansardSpeechAnalyzer } from './hansard-speech-analyzer';
 import { randomUUID } from 'crypto';
+import { getPublicBaseUrl, buildPdfUrl } from './utils/url-helper';
 
 export interface HansardSyncResult {
   triggeredBy: 'manual' | 'scheduled';
@@ -82,6 +83,9 @@ export async function runHansardSync(options: { triggeredBy: 'manual' | 'schedul
         // Download PDF, save locally, and extract text with retries
         const downloadResult = await downloadAndSaveWithRetry(scraper, metadata.pdfUrl, metadata.sessionNumber, 3);
         const { localPath, text: transcript } = downloadResult;
+        
+        // Convert local path to full URL
+        const pdfUrl = buildPdfUrl(getPublicBaseUrl(), localPath);
 
         // Extract attendance data
         const attendanceData = scraper.extractAttendanceFromText(transcript);
@@ -114,7 +118,7 @@ export async function runHansardSync(options: { triggeredBy: 'manual' | 'schedul
           parliamentTerm: metadata.parliamentTerm,
           sitting: metadata.sitting,
           transcript,
-          pdfLinks: [localPath],
+          pdfLinks: [pdfUrl],
           topics: [],
           speakers: enrichedSpeakers,
           speakerStats: speakerStatsArray,

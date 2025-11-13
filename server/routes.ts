@@ -4,6 +4,9 @@ import { storage, seedDatabase } from "./storage";
 import { z } from "zod";
 import multer from "multer";
 import bcrypt from "bcryptjs";
+import { promises as fs } from "fs";
+import path from "path";
+import { getPublicBaseUrl, buildPdfUrl } from "./utils/url-helper";
 import { 
   insertCourtCaseSchema, 
   insertSprmInvestigationSchema, 
@@ -842,6 +845,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log(`📤 Received ${files.length} PDF upload(s)`);
 
+      // Ensure attached_assets directory exists
+      const attachedAssetsDir = path.join(process.cwd(), 'attached_assets');
+      await fs.mkdir(attachedAssetsDir, { recursive: true });
+
       // Get all MPs from database once
       const allMps = await db.select().from(mps);
       const parser = new HansardPdfParser(allMps);
@@ -856,6 +863,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Parse the PDF with filename for better date extraction
           const parsed = await parser.parseHansardPdf(file.buffer, file.originalname);
 
+          // Sanitize filename to prevent path traversal attacks
+          const sanitizedName = path.basename(file.originalname);
+          const timestamp = Date.now();
+          const baseFilename = sanitizedName.replace(/\.pdf$/i, '');
+          const savedFilename = `${baseFilename}_${timestamp}.pdf`;
+          const filePath = path.join(attachedAssetsDir, savedFilename);
+          await fs.writeFile(filePath, file.buffer);
+          
+          // Generate the full URL for the saved PDF
+          const pdfUrl = buildPdfUrl(getPublicBaseUrl(req), `attached_assets/${savedFilename}`);
+          
+          console.log(`💾 Saved PDF to: ${filePath}`);
+          console.log(`🔗 PDF URL: ${pdfUrl}`);
+
           // Create Hansard record
           const hansardData = {
             sessionNumber: parsed.metadata.sessionNumber,
@@ -865,7 +886,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             transcript: parsed.transcript,
             summary: `Parliamentary session ${parsed.metadata.sessionNumber} with ${parsed.speakers.length} speakers.`,
             summaryLanguage: 'en' as const,
-            pdfLinks: [file.originalname],
+            pdfLinks: [pdfUrl],
             topics: parsed.topics,
             speakers: parsed.speakers,
             voteRecords: [],
