@@ -73,7 +73,55 @@ Preferred communication style: Simple, everyday language.
 -   esbuild
 
 ### Session & Authentication
+-   express-session (session middleware)
 -   connect-pg-simple (PostgreSQL session store)
+-   bcryptjs (password hashing)
+-   passport (authentication middleware - optional)
+
+## Authentication & Security (November 2025)
+
+### Session-Based Authentication
+-   **Authentication Method**: Secure session-based authentication using express-session with PostgreSQL persistence
+-   **Session Storage**: PostgreSQL-based session store (connect-pg-simple) for production reliability
+-   **Session Persistence**: Sessions survive server restarts and Railway dyno recycling
+-   **Session Lifetime**: 24-hour expiration with automatic cleanup
+-   **Cookie Security**: httpOnly, secure (HTTPS in production), SameSite=lax for CSRF protection
+
+### Admin Authentication
+-   **Login Endpoint**: POST `/api/auth/login` (username/password)
+-   **Logout Endpoint**: POST `/api/auth/logout` (destroys session)
+-   **Status Endpoint**: GET `/api/auth/me` (check authentication status)
+-   **Login Page**: `/login` - dedicated admin login interface
+-   **Default Credentials**: admin/admin123 (override with ADMIN_USERNAME and ADMIN_PASSWORD env vars)
+
+### Protected Endpoints
+All admin endpoints require authentication via `ensureAuthenticated` middleware:
+-   DELETE `/api/hansard-records/:id` - Delete Hansard record
+-   POST `/api/admin/seed` - Seed database
+-   POST `/api/admin/trigger-hansard-check` - Trigger Hansard scraper
+-   POST `/api/hansard-records/bulk-delete` - Bulk delete Hansard records
+
+### Security Improvements (Token Auth Removed)
+Previous token-based authentication was **removed** (November 2025) due to:
+-   XSS vulnerability (tokens stored in localStorage)
+-   No session expiration
+-   Difficult to revoke access
+-   Not suitable for production deployment
+
+Current session-based authentication provides:
+-   ✅ Secure httpOnly cookies (protected from XSS)
+-   ✅ Automatic session expiration
+-   ✅ Database-backed persistence (survives restarts)
+-   ✅ CSRF protection
+-   ✅ Production-ready for Railway deployment
+
+### Railway Deployment Requirements
+-   `SESSION_SECRET`: 32+ character random string (required for secure sessions)
+-   `DATABASE_URL`: Auto-configured by Railway PostgreSQL addon
+-   `ADMIN_USERNAME` & `ADMIN_PASSWORD`: Optional custom admin credentials
+-   `NODE_ENV=production`: Auto-configured by Railway
+
+See `RAILWAY_DEPLOYMENT.md` for complete deployment guide.
 
 ## SEO Implementation (November 2025)
 
