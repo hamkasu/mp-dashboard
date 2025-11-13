@@ -952,6 +952,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Delete a single Hansard record
+  app.delete("/api/hansard-records/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const deleted = await storage.deleteHansardRecord(id);
+      
+      if (!deleted) {
+        return res.status(404).json({ error: "Hansard record not found" });
+      }
+      
+      res.status(200).json({ message: "Hansard record deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting Hansard record:", error);
+      res.status(500).json({ error: "Failed to delete Hansard record" });
+    }
+  });
+
+  // Delete multiple Hansard records
+  app.post("/api/hansard-records/bulk-delete", async (req, res) => {
+    try {
+      const schema = z.object({
+        ids: z.array(z.string()).min(1, "At least one ID is required")
+      });
+      
+      const { ids } = schema.parse(req.body);
+      const deletedCount = await storage.deleteBulkHansardRecords(ids);
+      
+      res.status(200).json({ 
+        message: `${deletedCount} Hansard record${deletedCount !== 1 ? 's' : ''} deleted successfully`,
+        deletedCount 
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid data", details: error.errors });
+      }
+      console.error("Error bulk deleting Hansard records:", error);
+      res.status(500).json({ error: "Failed to delete Hansard records" });
+    }
+  });
+
   // Summarize a Hansard record using AI
   app.post("/api/hansard-records/:id/summarize", async (req, res) => {
     try {

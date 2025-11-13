@@ -72,6 +72,7 @@ export interface IStorage {
   createHansardRecordWithSpeechStats(record: InsertHansardRecord, speakerStats: Array<{mpId: string; totalSpeeches: number}>): Promise<HansardRecord>;
   updateHansardRecord(id: string, record: UpdateHansardRecord): Promise<HansardRecord | undefined>;
   deleteHansardRecord(id: string): Promise<boolean>;
+  deleteBulkHansardRecords(ids: string[]): Promise<number>;
   deleteAllHansardRecords(): Promise<number>;
   
   // Page View methods
@@ -1064,6 +1065,16 @@ export class MemStorage implements IStorage {
     return this.hansardRecords.delete(id);
   }
   
+  async deleteBulkHansardRecords(ids: string[]): Promise<number> {
+    let deleted = 0;
+    for (const id of ids) {
+      if (this.hansardRecords.delete(id)) {
+        deleted++;
+      }
+    }
+    return deleted;
+  }
+  
   async deleteAllHansardRecords(): Promise<number> {
     const count = this.hansardRecords.size;
     this.hansardRecords.clear();
@@ -1936,6 +1947,14 @@ export class DbStorage implements IStorage {
   async deleteHansardRecord(id: string): Promise<boolean> {
     const result = await db.delete(hansardRecords).where(eq(hansardRecords.id, id)).returning();
     return result.length > 0;
+  }
+  
+  async deleteBulkHansardRecords(ids: string[]): Promise<number> {
+    if (ids.length === 0) return 0;
+    const result = await db.delete(hansardRecords)
+      .where(sql`${hansardRecords.id} = ANY(${ids})`)
+      .returning();
+    return result.length;
   }
   
   async deleteAllHansardRecords(): Promise<number> {
