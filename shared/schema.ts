@@ -1,7 +1,19 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, timestamp, jsonb, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, timestamp, jsonb, boolean, customType } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+
+const bytea = customType<{ data: Buffer }>({
+  dataType() {
+    return 'bytea';
+  },
+  toDriver(value: Buffer) {
+    return value;
+  },
+  fromDriver(value: unknown) {
+    return value as Buffer;
+  },
+});
 
 export const mps = pgTable("mps", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -259,6 +271,32 @@ export const updateHansardRecordSchema = insertHansardRecordSchema.partial();
 export type InsertHansardRecord = z.infer<typeof insertHansardRecordSchema>;
 export type UpdateHansardRecord = z.infer<typeof updateHansardRecordSchema>;
 export type HansardRecord = typeof hansardRecords.$inferSelect;
+
+export const hansardPdfFiles = pgTable("hansard_pdf_files", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  hansardRecordId: varchar("hansard_record_id").notNull().references(() => hansardRecords.id, { onDelete: "cascade" }),
+  originalFilename: text("original_filename").notNull(),
+  fileSizeBytes: integer("file_size_bytes").notNull(),
+  contentType: text("content_type").notNull().default("application/pdf"),
+  pdfData: bytea("pdf_data").notNull(),
+  md5Hash: text("md5_hash"),
+  uploadedAt: timestamp("uploaded_at").notNull().default(sql`NOW()`),
+  uploadedBy: varchar("uploaded_by").references(() => users.id),
+  isPrimary: boolean("is_primary").notNull().default(true),
+});
+
+export const insertHansardPdfFileSchema = createInsertSchema(hansardPdfFiles).omit({
+  id: true,
+  uploadedAt: true,
+}).extend({
+  pdfData: z.any(), // Buffer type - validated on server only
+  md5Hash: z.string().optional(),
+  uploadedBy: z.string().optional(),
+  isPrimary: z.boolean().optional().default(true),
+});
+
+export type InsertHansardPdfFile = z.infer<typeof insertHansardPdfFileSchema>;
+export type HansardPdfFile = typeof hansardPdfFiles.$inferSelect;
 
 export const pageViews = pgTable("page_views", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),

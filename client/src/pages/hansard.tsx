@@ -256,19 +256,17 @@ export default function HansardPage() {
                   </CardDescription>
                 </div>
                 <div className="flex gap-2">
-                  {record.pdfLinks && record.pdfLinks.length > 0 && (
-                    <Button
-                      data-testid={`button-download-${record.id}`}
-                      variant="outline"
-                      size="sm"
-                      asChild
-                    >
-                      <a href={record.pdfLinks[0]} target="_blank" rel="noopener noreferrer">
-                        <Download className="w-4 h-4 mr-2" />
-                        PDF
-                      </a>
-                    </Button>
-                  )}
+                  <Button
+                    data-testid={`button-download-${record.id}`}
+                    variant="outline"
+                    size="sm"
+                    asChild
+                  >
+                    <a href={`/api/hansard-records/${record.id}/pdf`} target="_blank" rel="noopener noreferrer">
+                      <Download className="w-4 h-4 mr-2" />
+                      PDF
+                    </a>
+                  </Button>
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
                       <Button

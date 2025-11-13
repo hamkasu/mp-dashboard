@@ -287,7 +287,7 @@ export class HansardScraper {
     }
   }
 
-  async downloadAndSavePdf(pdfUrl: string, sessionNumber: string): Promise<{ localPath: string; text: string } | null> {
+  async downloadAndSavePdf(pdfUrl: string, sessionNumber: string): Promise<{ buffer: Buffer; text: string; originalFilename: string } | null> {
     try {
       await this.delay(2000);
       
@@ -302,27 +302,20 @@ export class HansardScraper {
       console.log(`  PDF downloaded, size: ${response.data.byteLength} bytes`);
       const pdfBuffer = Buffer.from(response.data);
       
-      const assetsDir = path.join(process.cwd(), 'attached_assets');
-      if (!fs.existsSync(assetsDir)) {
-        fs.mkdirSync(assetsDir, { recursive: true });
-      }
-      
-      const timestamp = Date.now();
-      const filename = `${sessionNumber.replace(/\./g, '')}_${timestamp}.pdf`;
-      const localPath = `attached_assets/${filename}`;
-      const fullPath = path.join(process.cwd(), localPath);
-      
-      fs.writeFileSync(fullPath, pdfBuffer);
-      console.log(`  Saved PDF to: ${localPath}`);
-      
       console.log(`  Parsing PDF...`);
       const parser = new PDFParse({ data: pdfBuffer });
       const result = await parser.getText();
       
       console.log(`  Extracted ${result.text.length} characters`);
+      
+      // Extract filename from URL or use session number
+      const urlFilename = pdfUrl.split('/').pop() || `${sessionNumber.replace(/\./g, '')}.pdf`;
+      const originalFilename = urlFilename.includes('.pdf') ? urlFilename : `${sessionNumber.replace(/\./g, '')}.pdf`;
+      
       return {
-        localPath,
-        text: result.text
+        buffer: pdfBuffer,
+        text: result.text,
+        originalFilename
       };
     } catch (error: any) {
       if (error.response) {

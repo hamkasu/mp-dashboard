@@ -1,10 +1,11 @@
 import cron from 'node-cron';
 import { storage } from './storage';
 import { HansardScraper } from './hansard-scraper';
-import { InsertHansardRecord } from '@shared/schema';
+import { InsertHansardRecord, hansardPdfFiles } from '@shared/schema';
 import { HansardSpeechAnalyzer } from './hansard-speech-analyzer';
-import { randomUUID } from 'crypto';
+import crypto from 'crypto';
 import { getPublicBaseUrl, buildPdfUrl } from './utils/url-helper';
+import { db } from './db';
 
 export interface HansardSyncResult {
   triggeredBy: 'manual' | 'scheduled';
@@ -80,12 +81,9 @@ export async function runHansardSync(options: { triggeredBy: 'manual' | 'schedul
 
         console.log(`📥 [Hansard Sync] Processing: ${metadata.sessionNumber} on ${metadata.sessionDate.toISOString().split('T')[0]}`);
 
-        // Download PDF, save locally, and extract text with retries
+        // Download PDF and extract text with retries
         const downloadResult = await downloadAndSaveWithRetry(scraper, metadata.pdfUrl, metadata.sessionNumber, 3);
-        const { localPath, text: transcript } = downloadResult;
-        
-        // Convert local path to full URL
-        const pdfUrl = buildPdfUrl(getPublicBaseUrl(), localPath);
+        const { buffer, text: transcript, originalFilename } = downloadResult;
 
         // Extract attendance data
         const attendanceData = scraper.extractAttendanceFromText(transcript);
@@ -118,7 +116,7 @@ export async function runHansardSync(options: { triggeredBy: 'manual' | 'schedul
           parliamentTerm: metadata.parliamentTerm,
           sitting: metadata.sitting,
           transcript,
-          pdfLinks: [pdfUrl],
+          pdfLinks: [], // No longer using pdfLinks
           topics: [],
           speakers: enrichedSpeakers,
           speakerStats: speakerStatsArray,
@@ -136,7 +134,47 @@ export async function runHansardSync(options: { triggeredBy: 'manual' | 'schedul
           new Map(speakerStatsArray.map(s => [s.mpId, s])).values()
         );
         
-        await storage.createHansardRecordWithSpeechStats(hansardRecord, uniqueSpeakerStats);
+        const createdRecord = await storage.createHansardRecordWithSpeechStats(hansardRecord, uniqueSpeakerStats);
+        
+        // Save PDF to database with deduplication
+        const md5Hash = crypto.createHash('md5').update(buffer).digest('hex');
+        
+        // Check if a PDF with this hash already exists for this record
+        const { eq, and } = await import("drizzle-orm");
+        const [existingPdf] = await db.select().from(hansardPdfFiles)
+          .where(and(
+            eq(hansardPdfFiles.hansardRecordId, createdRecord.id),
+            eq(hansardPdfFiles.md5Hash, md5Hash)
+          ));
+        
+        if (existingPdf) {
+          // Duplicate found - ensure it's marked as primary
+          if (!existingPdf.isPrimary) {
+            await db.update(hansardPdfFiles)
+              .set({ isPrimary: false })
+              .where(eq(hansardPdfFiles.hansardRecordId, createdRecord.id));
+            
+            await db.update(hansardPdfFiles)
+              .set({ isPrimary: true })
+              .where(eq(hansardPdfFiles.id, existingPdf.id));
+          }
+        } else {
+          // New PDF - clear previous primary flags and insert
+          await db.update(hansardPdfFiles)
+            .set({ isPrimary: false })
+            .where(eq(hansardPdfFiles.hansardRecordId, createdRecord.id));
+          
+          await db.insert(hansardPdfFiles).values({
+            hansardRecordId: createdRecord.id,
+            originalFilename,
+            fileSizeBytes: buffer.length,
+            contentType: 'application/pdf',
+            pdfData: buffer,
+            md5Hash,
+            isPrimary: true,
+          });
+        }
+        
         result.recordsInserted++;
         
         const recordDuration = Date.now() - recordStartTime;
@@ -191,7 +229,7 @@ async function downloadAndSaveWithRetry(
   pdfUrl: string,
   sessionNumber: string,
   maxRetries: number
-): Promise<{ localPath: string; text: string }> {
+): Promise<{ buffer: Buffer; text: string; originalFilename: string }> {
   let lastError: any;
   
   for (let attempt = 1; attempt <= maxRetries; attempt++) {

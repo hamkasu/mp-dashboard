@@ -16,8 +16,10 @@ import {
   insertParliamentaryQuestionSchema,
   insertHansardRecordSchema,
   updateHansardRecordSchema,
-  mps
+  mps,
+  hansardPdfFiles
 } from "@shared/schema";
+import crypto from "crypto";
 import { HansardScraper, ConstituencyAttendanceCounts } from "./hansard-scraper";
 import { MPNameMatcher } from "./mp-name-matcher";
 import { runHansardSync } from "./hansard-cron";
@@ -842,6 +844,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Download primary PDF file for a Hansard record
+  app.get("/api/hansard-records/:id/pdf", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { eq, and } = await import("drizzle-orm");
+      
+      // Find the primary PDF for this Hansard record
+      const [pdfFile] = await db.select().from(hansardPdfFiles)
+        .where(and(
+          eq(hansardPdfFiles.hansardRecordId, id),
+          eq(hansardPdfFiles.isPrimary, true)
+        ))
+        .limit(1);
+      
+      if (!pdfFile) {
+        return res.status(404).json({ error: "PDF file not found for this Hansard record" });
+      }
+      
+      // Set proper headers for PDF download
+      res.setHeader('Content-Type', pdfFile.contentType);
+      res.setHeader('Content-Length', pdfFile.fileSizeBytes.toString());
+      res.setHeader('Content-Disposition', `inline; filename="${pdfFile.originalFilename}"`);
+      res.setHeader('Cache-Control', 'public, max-age=31536000'); // Cache for 1 year
+      
+      // Send the binary PDF data
+      res.send(pdfFile.pdfData);
+    } catch (error) {
+      console.error("Error downloading PDF:", error);
+      res.status(500).json({ error: "Failed to download PDF" });
+    }
+  });
+
+  // Download PDF file by file ID (direct access)
+  app.get("/api/hansard-pdf/:fileId", async (req, res) => {
+    try {
+      const { fileId } = req.params;
+      const { eq } = await import("drizzle-orm");
+      
+      const [pdfFile] = await db.select().from(hansardPdfFiles).where(eq(hansardPdfFiles.id, fileId));
+      
+      if (!pdfFile) {
+        return res.status(404).json({ error: "PDF file not found" });
+      }
+      
+      // Set proper headers for PDF download
+      res.setHeader('Content-Type', pdfFile.contentType);
+      res.setHeader('Content-Length', pdfFile.fileSizeBytes.toString());
+      res.setHeader('Content-Disposition', `inline; filename="${pdfFile.originalFilename}"`);
+      res.setHeader('Cache-Control', 'public, max-age=31536000'); // Cache for 1 year
+      
+      // Send the binary PDF data
+      res.send(pdfFile.pdfData);
+    } catch (error) {
+      console.error("Error downloading PDF:", error);
+      res.status(500).json({ error: "Failed to download PDF" });
+    }
+  });
+
   // Upload and parse Hansard PDF(s)
   app.post("/api/hansard-records/upload", upload.array('pdfs', 20), handleMulterError, async (req, res) => {
     try {
@@ -852,10 +912,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       console.log(`📤 Received ${files.length} PDF upload(s)`);
-
-      // Ensure attached_assets directory exists
-      const attachedAssetsDir = path.join(process.cwd(), 'attached_assets');
-      await fs.mkdir(attachedAssetsDir, { recursive: true });
 
       // Get all MPs from database once
       const allMps = await db.select().from(mps);
@@ -871,32 +927,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Parse the PDF with filename for better date extraction
           const parsed = await parser.parseHansardPdf(file.buffer, file.originalname);
 
-          // Sanitize filename to prevent path traversal attacks
-          const sanitizedName = path.basename(file.originalname);
-          const timestamp = Date.now();
-          const baseFilename = sanitizedName.replace(/\.pdf$/i, '');
-          const savedFilename = `${baseFilename}_${timestamp}.pdf`;
-          const filePath = path.join(attachedAssetsDir, savedFilename);
-          await fs.writeFile(filePath, file.buffer);
-          
-          // Generate the full URL for the saved PDF
-          const pdfUrl = buildPdfUrl(getPublicBaseUrl(req), `attached_assets/${savedFilename}`);
-          
-          console.log(`💾 Saved PDF to: ${filePath}`);
-          console.log(`🔗 PDF URL: ${pdfUrl}`);
-
-          // Create Hansard record
+          // Create Hansard record first (truncate transcript to match background job behavior)
           const hansardData = {
             sessionNumber: parsed.metadata.sessionNumber,
             sessionDate: parsed.metadata.sessionDate,
             parliamentTerm: parsed.metadata.parliamentTerm,
             sitting: parsed.metadata.sitting,
-            transcript: parsed.transcript,
+            transcript: parsed.transcript.substring(0, 100000), // Truncate to 100k chars
             summary: `Parliamentary session ${parsed.metadata.sessionNumber} with ${parsed.speakers.length} speakers.`,
             summaryLanguage: 'en' as const,
-            pdfLinks: [pdfUrl],
+            pdfLinks: [], // No longer using pdfLinks
             topics: parsed.topics,
             speakers: parsed.speakers,
+            speakerStats: parsed.speakers.map((s, idx) => ({
+              mpId: s.mpId,
+              mpName: s.mpName,
+              totalSpeeches: s.totalSpeeches || 1,
+              speakingOrder: idx + 1,
+            })),
             voteRecords: [],
             attendedMpIds: parsed.attendance.attendedMpIds,
             absentMpIds: parsed.attendance.absentMpIds,
@@ -905,6 +953,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
           };
 
           const record = await storage.createHansardRecord(hansardData);
+          
+          // Calculate MD5 hash and store PDF in database
+          const md5Hash = crypto.createHash('md5').update(file.buffer).digest('hex');
+          
+          // Check if a PDF with this hash already exists for this record
+          const { eq, and } = await import("drizzle-orm");
+          const [existingPdf] = await db.select().from(hansardPdfFiles)
+            .where(and(
+              eq(hansardPdfFiles.hansardRecordId, record.id),
+              eq(hansardPdfFiles.md5Hash, md5Hash)
+            ));
+          
+          if (existingPdf) {
+            // Duplicate found - ensure it's marked as primary if not already
+            if (!existingPdf.isPrimary) {
+              await db.update(hansardPdfFiles)
+                .set({ isPrimary: false })
+                .where(eq(hansardPdfFiles.hansardRecordId, record.id));
+              
+              await db.update(hansardPdfFiles)
+                .set({ isPrimary: true })
+                .where(eq(hansardPdfFiles.id, existingPdf.id));
+            }
+            console.log(`✓ PDF already exists (same MD5 hash), using existing file as primary`);
+          } else {
+            // New PDF - clear previous primary flags and insert
+            await db.update(hansardPdfFiles)
+              .set({ isPrimary: false })
+              .where(eq(hansardPdfFiles.hansardRecordId, record.id));
+            
+            const [pdfFile] = await db.insert(hansardPdfFiles).values({
+              hansardRecordId: record.id,
+              originalFilename: file.originalname,
+              fileSizeBytes: file.size,
+              contentType: 'application/pdf',
+              pdfData: file.buffer,
+              md5Hash,
+              uploadedBy: req.session?.userId,
+              isPrimary: true,
+            }).returning();
+            
+            console.log(`💾 Saved new PDF to database: ${pdfFile.id}`);
+          }
 
           // Update MP speaking statistics
           const speakerIds = parsed.speakers.map(s => s.mpId);

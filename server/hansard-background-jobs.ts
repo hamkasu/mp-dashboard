@@ -3,6 +3,9 @@ import { HansardScraper } from './hansard-scraper';
 import { MPNameMatcher } from './mp-name-matcher';
 import { jobTracker } from './job-tracker';
 import { getPublicBaseUrl, buildPdfUrl } from './utils/url-helper';
+import { db } from './db';
+import { hansardPdfFiles } from '@shared/schema';
+import crypto from 'crypto';
 
 function extractTopics(text: string): string[] {
   const topics: Set<string> = new Set();
@@ -86,7 +89,7 @@ export async function runHansardDownloadJob(
         }
       }
       
-      // Download, save PDF locally, and extract text
+      // Download PDF and extract text
       const result = await scraper.downloadAndSavePdf(metadata.pdfUrl, metadata.sessionNumber);
       
       if (!result) {
@@ -95,10 +98,7 @@ export async function runHansardDownloadJob(
         continue;
       }
       
-      const { localPath, text: transcript } = result;
-      
-      // Convert local path to full URL
-      const pdfUrl = buildPdfUrl(getPublicBaseUrl(), localPath);
+      const { buffer, text: transcript, originalFilename } = result;
       
       try {
         const topics = extractTopics(transcript);
@@ -114,13 +114,14 @@ export async function runHansardDownloadJob(
         console.log(`  Attendance: ${attendedMpIds.length} present, ${absentMpIds.length} absent`);
         console.log(`  Constituencies: ${constituencyCounts.constituenciesPresent} present, ${constituencyCounts.constituenciesAbsent} absent, ${constituencyCounts.constituenciesAbsentRule91} absent (Rule 91)`);
         
-        await storage.createHansardRecord({
+        // Create Hansard record first
+        const hansardRecord = await storage.createHansardRecord({
           sessionNumber: metadata.sessionNumber,
           sessionDate: metadata.sessionDate,
           parliamentTerm: metadata.parliamentTerm,
           sitting: metadata.sitting,
           transcript: transcript.substring(0, 100000),
-          pdfLinks: [pdfUrl],
+          pdfLinks: [], // No longer using pdfLinks
           topics: topics,
           speakers: [],
           speakerStats: [],
@@ -132,7 +133,47 @@ export async function runHansardDownloadJob(
           constituenciesAbsentRule91: constituencyCounts.constituenciesAbsentRule91
         });
         
-        console.log(`  ✓ Saved PDF to ${localPath} (${Math.floor(transcript.length / 1000)}KB of text)`);
+        // Save PDF to database with deduplication
+        const md5Hash = crypto.createHash('md5').update(buffer).digest('hex');
+        
+        // Check if a PDF with this hash already exists for this record
+        const { eq, and } = await import("drizzle-orm");
+        const [existingPdf] = await db.select().from(hansardPdfFiles)
+          .where(and(
+            eq(hansardPdfFiles.hansardRecordId, hansardRecord.id),
+            eq(hansardPdfFiles.md5Hash, md5Hash)
+          ));
+        
+        if (existingPdf) {
+          // Duplicate found - ensure it's marked as primary
+          if (!existingPdf.isPrimary) {
+            await db.update(hansardPdfFiles)
+              .set({ isPrimary: false })
+              .where(eq(hansardPdfFiles.hansardRecordId, hansardRecord.id));
+            
+            await db.update(hansardPdfFiles)
+              .set({ isPrimary: true })
+              .where(eq(hansardPdfFiles.id, existingPdf.id));
+          }
+          console.log(`  ✓ PDF already exists (same MD5 hash), using existing file as primary`);
+        } else {
+          // New PDF - clear previous primary flags and insert
+          await db.update(hansardPdfFiles)
+            .set({ isPrimary: false })
+            .where(eq(hansardPdfFiles.hansardRecordId, hansardRecord.id));
+          
+          await db.insert(hansardPdfFiles).values({
+            hansardRecordId: hansardRecord.id,
+            originalFilename,
+            fileSizeBytes: buffer.length,
+            contentType: 'application/pdf',
+            pdfData: buffer,
+            md5Hash,
+            isPrimary: true,
+          });
+          
+          console.log(`  ✓ Saved new PDF to database (${Math.floor(transcript.length / 1000)}KB of text)`);
+        }
         successCount++;
       } catch (error) {
         console.error(`  ✗ Error saving:`, error);
