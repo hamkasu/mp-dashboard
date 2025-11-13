@@ -43,8 +43,11 @@ export class HansardPdfParser {
     this.speakerParser = new HansardSpeakerParser(allMps);
   }
 
-  async parseHansardPdf(pdfBuffer: Buffer): Promise<ParsedHansard> {
+  async parseHansardPdf(pdfBuffer: Buffer, filename?: string): Promise<ParsedHansard> {
     console.log('📄 Starting Hansard PDF parsing...');
+    if (filename) {
+      console.log(`📄 Filename: ${filename}`);
+    }
     
     // Extract text from PDF using dynamic import
     const { PDFParse } = await import('pdf-parse');
@@ -55,7 +58,7 @@ export class HansardPdfParser {
     console.log(`📄 Extracted ${fullText.length} characters from PDF`);
 
     // Parse all components
-    const metadata = this.parseMetadata(fullText);
+    const metadata = this.parseMetadata(fullText, filename);
     const attendance = this.parseAttendance(fullText);
     const { speakers, allInstances, unmatched } = this.speakerParser.extractSpeakers(fullText);
     const topics = this.parseTopics(fullText);
@@ -79,19 +82,35 @@ export class HansardPdfParser {
     };
   }
 
-  private parseMetadata(text: string): HansardMetadata {
-    // Extract session number (e.g., "DR. 10.11.2025" or "Bil. 63")
-    const sessionMatch = text.match(/(?:DR\.|Bil\.)\s*(\d+\.\d+\.\d+)/i);
-    const sessionNumber = sessionMatch 
-      ? `DR.${sessionMatch[1]}` 
-      : `DR.${new Date().toLocaleDateString('en-GB').replace(/\//g, '.')}`;
-
-    // Extract date from session number
-    const dateMatch = sessionNumber.match(/(\d+)\.(\d+)\.(\d+)/);
+  private parseMetadata(text: string, filename?: string): HansardMetadata {
+    let sessionNumber = '';
     let sessionDate = new Date();
-    if (dateMatch) {
-      const [, day, month, year] = dateMatch;
-      sessionDate = new Date(`${year}-${month}-${day}`);
+
+    // PRIORITY 1: Extract date from filename (e.g., "DR-23102025.pdf" -> "DR.23.10.2025")
+    if (filename) {
+      const filenameMatch = filename.match(/DR-(\d{2})(\d{2})(\d{4})\.pdf/i);
+      if (filenameMatch) {
+        const [, day, month, year] = filenameMatch;
+        sessionNumber = `DR.${day}.${month}.${year}`;
+        sessionDate = new Date(`${year}-${month}-${day}`);
+        console.log(`📅 Date from filename: ${sessionNumber}`);
+      }
+    }
+
+    // FALLBACK: Extract from PDF content if filename didn't work
+    if (!sessionNumber) {
+      const sessionMatch = text.match(/(?:DR\.|Bil\.)\s*(\d+\.\d+\.\d+)/i);
+      sessionNumber = sessionMatch 
+        ? `DR.${sessionMatch[1]}` 
+        : `DR.${new Date().toLocaleDateString('en-GB').replace(/\//g, '.')}`;
+
+      // Extract date from session number
+      const dateMatch = sessionNumber.match(/(\d+)\.(\d+)\.(\d+)/);
+      if (dateMatch) {
+        const [, day, month, year] = dateMatch;
+        sessionDate = new Date(`${year}-${month}-${day}`);
+      }
+      console.log(`📅 Date from PDF content: ${sessionNumber}`);
     }
 
     // Extract parliament term

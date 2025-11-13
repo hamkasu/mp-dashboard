@@ -853,8 +853,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         try {
           console.log(`📄 Processing: ${file.originalname} (${file.size} bytes)`);
           
-          // Parse the PDF
-          const parsed = await parser.parseHansardPdf(file.buffer);
+          // Parse the PDF with filename for better date extraction
+          const parsed = await parser.parseHansardPdf(file.buffer, file.originalname);
 
           // Create Hansard record
           const hansardData = {
@@ -950,7 +950,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Parse using HansardPdfParser - uses canonical speaker identification
       const parser = new HansardPdfParser(allMps);
-      const parsed = await parser.parseHansardPdf(req.file.buffer);
+      const parsed = await parser.parseHansardPdf(req.file.buffer, req.file.originalname);
 
       // Filter unique speakers for target MP (deduplicated)
       const targetSpeakers = parsed.speakers.filter(s => s.mpId === mpId);
