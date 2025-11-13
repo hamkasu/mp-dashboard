@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Search, FileText, Calendar, Download, Sparkles, CheckCircle, Users, UserX, MapPin } from "lucide-react";
+import { Search, FileText, Calendar, Download, Sparkles, CheckCircle, Users, UserX, MapPin, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import type { HansardRecord } from "@shared/schema";
@@ -19,6 +19,17 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { ConstituencyAttendance } from "@/components/ConstituencyAttendance";
 
 export default function HansardPage() {
@@ -69,6 +80,37 @@ export default function HansardPage() {
       toast({
         title: "Summarization Failed",
         description: error.message || "Failed to generate summary. Please try again.",
+        variant: "destructive"
+      });
+    }
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (recordId: string) => {
+      const adminToken = localStorage.getItem('adminToken');
+      const response = await apiRequest(`/api/hansard-records/${recordId}`, {
+        method: 'DELETE',
+        headers: {
+          'x-admin-token': adminToken || ''
+        }
+      });
+      return response;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ 
+        predicate: (query) => 
+          typeof query.queryKey[0] === 'string' && 
+          query.queryKey[0].startsWith('/api/hansard-records')
+      });
+      toast({
+        title: "Record Deleted",
+        description: "The Hansard record has been successfully deleted."
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Delete Failed",
+        description: error.message || "Failed to delete record. Please try again.",
         variant: "destructive"
       });
     }
@@ -212,19 +254,52 @@ export default function HansardPage() {
                     {record.sitting}
                   </CardDescription>
                 </div>
-                {record.pdfLinks && record.pdfLinks.length > 0 && (
-                  <Button
-                    data-testid={`button-download-${record.id}`}
-                    variant="outline"
-                    size="sm"
-                    asChild
-                  >
-                    <a href={record.pdfLinks[0]} target="_blank" rel="noopener noreferrer">
-                      <Download className="w-4 h-4 mr-2" />
-                      PDF
-                    </a>
-                  </Button>
-                )}
+                <div className="flex gap-2">
+                  {record.pdfLinks && record.pdfLinks.length > 0 && (
+                    <Button
+                      data-testid={`button-download-${record.id}`}
+                      variant="outline"
+                      size="sm"
+                      asChild
+                    >
+                      <a href={record.pdfLinks[0]} target="_blank" rel="noopener noreferrer">
+                        <Download className="w-4 h-4 mr-2" />
+                        PDF
+                      </a>
+                    </Button>
+                  )}
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        data-testid={`button-delete-${record.id}`}
+                        variant="outline"
+                        size="sm"
+                        disabled={deleteMutation.isPending}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Delete Hansard Record</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Are you sure you want to delete the Hansard record "{record.sessionNumber}"? 
+                          This action cannot be undone and will permanently remove the record and all associated data.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel data-testid="button-cancel-delete">Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                          data-testid="button-confirm-delete"
+                          onClick={() => deleteMutation.mutate(record.id)}
+                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                          Delete
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
