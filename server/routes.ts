@@ -1371,7 +1371,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Trigger Hansard download (background job)
   app.post("/api/hansard-records/download", async (req, res) => {
     try {
-      const { maxRecords = 200, deleteExisting = false } = req.body;
+      const { maxRecords = 500, deleteExisting = false } = req.body;
       
       // Create a background job
       const jobId = jobTracker.createJob(maxRecords, 'Initializing Hansard download...');

@@ -193,9 +193,9 @@ export default function HansardAdmin() {
   };
 
   const handleDownload = () => {
-    if (confirm("This will download up to 200 hansard records from the 15th Parliament. This may take several minutes. Continue?")) {
+    if (confirm("This will download up to 500 hansard records from the 15th Parliament. This may take several minutes. Continue?")) {
       setDownloadStatus(null);
-      downloadMutation.mutate(200);
+      downloadMutation.mutate(500);
     }
   };
 
@@ -576,7 +576,7 @@ export default function HansardAdmin() {
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <p className="text-sm text-muted-foreground">
-                This will download up to 200 hansard records from the Malaysian Parliament website.
+                This will download up to 500 hansard records from the Malaysian Parliament website.
               </p>
               <Alert>
                 <AlertDescription>

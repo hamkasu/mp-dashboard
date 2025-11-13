@@ -23,7 +23,7 @@ Preferred communication style: Simple, everyday language.
 **Framework**: Express.js with TypeScript (ESM modules).
 **Data Layer**: In-memory storage (MemStorage) for development, Drizzle ORM for PostgreSQL with DbStorage for production (Neon serverless driver).
 **API Design (RESTful)**: Endpoints for MPs, statistics, court cases, SPRM investigations, and Hansard records (including search, single record, and constituency attendance). Admin endpoints for database seeding and status (`/api/admin/seed`, `/api/admin/db-status`).
-**Hansard Scraper**: Utility (`server/hansard-scraper.ts`) to download and extract PDFs from parlimen.gov.my. Uses tree-based traversal to navigate the parliament archive structure, filtering for 15th Parliament ("Parlimen Kelima Belas") only. Includes 2-second delay between requests for politeness. Stores full transcript text, PDF links, topics, speakers, and vote records.
+**Hansard Scraper**: Utility (`server/hansard-scraper.ts`) to download and extract PDFs from parlimen.gov.my. Uses tree-based traversal to navigate the parliament archive structure, filtering for 15th Parliament ("Parlimen Kelima Belas") only. Includes 2-second delay between requests for politeness. Stores full transcript text, PDF links, topics, speakers, and vote records. Default download limit is 500 records per request.
 **Development & Production**: Vite dev server for frontend, esbuild for backend bundling. In-memory storage for dev, PostgreSQL for production.
 
 ### Data Models
