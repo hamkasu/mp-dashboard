@@ -3,6 +3,8 @@ import * as cheerio from 'cheerio';
 import https from 'https';
 import { PDFParse } from 'pdf-parse';
 import { XMLParser } from 'fast-xml-parser';
+import fs from 'fs';
+import path from 'path';
 
 // SECURITY NOTE: The Malaysian Parliament website (parlimen.gov.my) has SSL certificate
 // validation issues in some environments. Since we are ONLY READING public government data
@@ -280,6 +282,56 @@ export class HansardScraper {
         console.error(`  ✗ Timeout downloading PDF: ${pdfUrl}`);
       } else {
         console.error(`  ✗ Error downloading/extracting PDF ${pdfUrl}:`, error.message);
+      }
+      return null;
+    }
+  }
+
+  async downloadAndSavePdf(pdfUrl: string, sessionNumber: string): Promise<{ localPath: string; text: string } | null> {
+    try {
+      await this.delay(2000);
+      
+      console.log(`  Downloading PDF from: ${pdfUrl}`);
+      const response = await axios.get(pdfUrl, {
+        responseType: 'arraybuffer',
+        headers: this.headers,
+        timeout: 30000,
+        httpsAgent
+      });
+      
+      console.log(`  PDF downloaded, size: ${response.data.byteLength} bytes`);
+      const pdfBuffer = Buffer.from(response.data);
+      
+      const assetsDir = path.join(process.cwd(), 'attached_assets');
+      if (!fs.existsSync(assetsDir)) {
+        fs.mkdirSync(assetsDir, { recursive: true });
+      }
+      
+      const timestamp = Date.now();
+      const filename = `${sessionNumber.replace(/\./g, '')}_${timestamp}.pdf`;
+      const localPath = `attached_assets/${filename}`;
+      const fullPath = path.join(process.cwd(), localPath);
+      
+      fs.writeFileSync(fullPath, pdfBuffer);
+      console.log(`  Saved PDF to: ${localPath}`);
+      
+      console.log(`  Parsing PDF...`);
+      const parser = new PDFParse({ data: pdfBuffer });
+      const result = await parser.getText();
+      
+      console.log(`  Extracted ${result.text.length} characters`);
+      return {
+        localPath,
+        text: result.text
+      };
+    } catch (error: any) {
+      if (error.response) {
+        console.error(`  ✗ HTTP Error ${error.response.status} for ${pdfUrl}`);
+        console.error(`  Response headers:`, error.response.headers);
+      } else if (error.code === 'ETIMEDOUT' || error.code === 'ECONNABORTED') {
+        console.error(`  ✗ Timeout downloading PDF: ${pdfUrl}`);
+      } else {
+        console.error(`  ✗ Error downloading/saving PDF ${pdfUrl}:`, error.message);
       }
       return null;
     }

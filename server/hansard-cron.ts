@@ -79,8 +79,9 @@ export async function runHansardSync(options: { triggeredBy: 'manual' | 'schedul
 
         console.log(`📥 [Hansard Sync] Processing: ${metadata.sessionNumber} on ${metadata.sessionDate.toISOString().split('T')[0]}`);
 
-        // Download and extract PDF with retries
-        const transcript = await downloadWithRetry(scraper, metadata.pdfUrl, 3);
+        // Download PDF, save locally, and extract text with retries
+        const downloadResult = await downloadAndSaveWithRetry(scraper, metadata.pdfUrl, metadata.sessionNumber, 3);
+        const { localPath, text: transcript } = downloadResult;
 
         // Extract attendance data
         const attendanceData = scraper.extractAttendanceFromText(transcript);
@@ -113,7 +114,7 @@ export async function runHansardSync(options: { triggeredBy: 'manual' | 'schedul
           parliamentTerm: metadata.parliamentTerm,
           sitting: metadata.sitting,
           transcript,
-          pdfLinks: [metadata.pdfUrl],
+          pdfLinks: [localPath],
           topics: [],
           speakers: enrichedSpeakers,
           speakerStats: speakerStatsArray,
@@ -181,18 +182,19 @@ export async function runHansardSync(options: { triggeredBy: 'manual' | 'schedul
   }
 }
 
-async function downloadWithRetry(
+async function downloadAndSaveWithRetry(
   scraper: HansardScraper,
   pdfUrl: string,
+  sessionNumber: string,
   maxRetries: number
-): Promise<string> {
+): Promise<{ localPath: string; text: string }> {
   let lastError: any;
   
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      const transcript = await scraper.downloadAndExtractPdf(pdfUrl);
-      if (transcript) {
-        return transcript;
+      const result = await scraper.downloadAndSavePdf(pdfUrl, sessionNumber);
+      if (result) {
+        return result;
       }
     } catch (error) {
       lastError = error;

@@ -85,14 +85,16 @@ export async function runHansardDownloadJob(
         }
       }
       
-      // Download and extract PDF
-      const transcript = await scraper.downloadAndExtractPdf(metadata.pdfUrl);
+      // Download, save PDF locally, and extract text
+      const result = await scraper.downloadAndSavePdf(metadata.pdfUrl, metadata.sessionNumber);
       
-      if (!transcript) {
-        console.log(`  ✗ Failed to extract PDF`);
+      if (!result) {
+        console.log(`  ✗ Failed to download/extract PDF`);
         errorCount++;
         continue;
       }
+      
+      const { localPath, text: transcript } = result;
       
       try {
         const topics = extractTopics(transcript);
@@ -114,7 +116,7 @@ export async function runHansardDownloadJob(
           parliamentTerm: metadata.parliamentTerm,
           sitting: metadata.sitting,
           transcript: transcript.substring(0, 100000),
-          pdfLinks: [metadata.pdfUrl],
+          pdfLinks: [localPath],
           topics: topics,
           speakers: [],
           speakerStats: [],
@@ -126,7 +128,7 @@ export async function runHansardDownloadJob(
           constituenciesAbsentRule91: constituencyCounts.constituenciesAbsentRule91
         });
         
-        console.log(`  ✓ Saved (${Math.floor(transcript.length / 1000)}KB of text)`);
+        console.log(`  ✓ Saved PDF to ${localPath} (${Math.floor(transcript.length / 1000)}KB of text)`);
         successCount++;
       } catch (error) {
         console.error(`  ✗ Error saving:`, error);
