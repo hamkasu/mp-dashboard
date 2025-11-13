@@ -131,7 +131,23 @@ export class HansardScraper {
   }
 
   /**
+   * Check if a parliament term is the 15th Parliament
+   * Covers multiple naming variants to future-proof against site changes
+   */
+  private is15thParliament(parliamentText: string): boolean {
+    const text = parliamentText.toLowerCase();
+    return text.includes('kelima belas') || 
+           text.includes('ke lima belas') ||
+           text.includes('ke-15') || 
+           text.includes('ke 15') ||
+           text.includes('15th') ||
+           text.includes('xv') ||
+           text.includes('parlimen ke 15');
+  }
+
+  /**
    * Recursively traverse the archive tree and collect all Hansard records
+   * Only processes 15th Parliament records
    */
   private async traverseArchiveTree(
     nodeId: string | null,
@@ -164,7 +180,13 @@ export class HansardScraper {
 
       // Level 1: Parliament (e.g., "Parlimen Kelima Belas (2022 - Sekarang)")
       if (level === 2) {
-        await this.traverseArchiveTree(node.id, node.text, '', '', maxRecords, collected);
+        // Only process 15th Parliament
+        if (this.is15thParliament(node.text)) {
+          console.log(`✅ Processing 15th Parliament: ${node.text}`);
+          await this.traverseArchiveTree(node.id, node.text, '', '', maxRecords, collected);
+        } else {
+          console.log(`⏭️  Skipping non-15th Parliament: ${node.text}`);
+        }
       }
       // Level 2: Penggal (e.g., "Penggal Pertama")
       else if (level === 3) {
