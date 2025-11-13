@@ -88,12 +88,16 @@ export default function HansardPage() {
   const deleteMutation = useMutation({
     mutationFn: async (recordId: string) => {
       const adminToken = localStorage.getItem('adminToken');
-      const response = await apiRequest(`/api/hansard-records/${recordId}`, {
+      const response = await fetch(`/api/hansard-records/${recordId}`, {
         method: 'DELETE',
         headers: {
           'x-admin-token': adminToken || ''
         }
       });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to delete record");
+      }
       return response;
     },
     onSuccess: () => {
@@ -288,13 +292,30 @@ export default function HansardPage() {
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
-                        <AlertDialogCancel data-testid="button-cancel-delete">Cancel</AlertDialogCancel>
+                        <AlertDialogCancel 
+                          data-testid="button-cancel-delete"
+                          disabled={deleteMutation.isPending}
+                        >
+                          Cancel
+                        </AlertDialogCancel>
                         <AlertDialogAction
                           data-testid="button-confirm-delete"
-                          onClick={() => deleteMutation.mutate(record.id)}
+                          onClick={() => {
+                            const adminToken = localStorage.getItem('adminToken');
+                            if (!adminToken) {
+                              toast({
+                                title: "Authentication Required",
+                                description: "Admin token not found. Please sign in as admin.",
+                                variant: "destructive"
+                              });
+                              return;
+                            }
+                            deleteMutation.mutate(record.id);
+                          }}
+                          disabled={deleteMutation.isPending}
                           className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                         >
-                          Delete
+                          {deleteMutation.isPending ? "Deleting..." : "Delete"}
                         </AlertDialogAction>
                       </AlertDialogFooter>
                     </AlertDialogContent>
