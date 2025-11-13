@@ -730,69 +730,95 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Upload and parse Hansard PDF
-  app.post("/api/hansard-records/upload", upload.single('pdf'), handleMulterError, async (req, res) => {
+  // Upload and parse Hansard PDF(s)
+  app.post("/api/hansard-records/upload", upload.array('pdfs', 20), handleMulterError, async (req, res) => {
     try {
-      if (!req.file) {
-        return res.status(400).json({ error: "No PDF file uploaded. Only PDF files are accepted." });
+      const files = req.files as Express.Multer.File[] | undefined;
+      
+      if (!files || files.length === 0) {
+        return res.status(400).json({ error: "No PDF files uploaded. Only PDF files are accepted." });
       }
 
-      console.log(`📤 Received PDF upload: ${req.file.originalname} (${req.file.size} bytes)`);
+      console.log(`📤 Received ${files.length} PDF upload(s)`);
 
-      // Get all MPs from database
+      // Get all MPs from database once
       const allMps = await db.select().from(mps);
-      
-      // Parse the PDF
       const parser = new HansardPdfParser(allMps);
-      const parsed = await parser.parseHansardPdf(req.file.buffer);
+      
+      const results = [];
+      
+      // Process each file
+      for (const file of files) {
+        try {
+          console.log(`📄 Processing: ${file.originalname} (${file.size} bytes)`);
+          
+          // Parse the PDF
+          const parsed = await parser.parseHansardPdf(file.buffer);
 
-      // Create Hansard record
-      const hansardData = {
-        sessionNumber: parsed.metadata.sessionNumber,
-        sessionDate: parsed.metadata.sessionDate,
-        parliamentTerm: parsed.metadata.parliamentTerm,
-        sitting: parsed.metadata.sitting,
-        transcript: parsed.transcript,
-        summary: `Parliamentary session ${parsed.metadata.sessionNumber} with ${parsed.speakers.length} speakers.`,
-        summaryLanguage: 'en' as const,
-        pdfLinks: [req.file.originalname],
-        topics: parsed.topics,
-        speakers: parsed.speakers,
-        voteRecords: [],
-        attendedMpIds: parsed.attendance.attendedMpIds,
-        absentMpIds: parsed.attendance.absentMpIds,
-        constituenciesPresent: parsed.attendance.attendedConstituencies.length,
-        constituenciesAbsent: parsed.attendance.absentConstituencies.length,
-      };
+          // Create Hansard record
+          const hansardData = {
+            sessionNumber: parsed.metadata.sessionNumber,
+            sessionDate: parsed.metadata.sessionDate,
+            parliamentTerm: parsed.metadata.parliamentTerm,
+            sitting: parsed.metadata.sitting,
+            transcript: parsed.transcript,
+            summary: `Parliamentary session ${parsed.metadata.sessionNumber} with ${parsed.speakers.length} speakers.`,
+            summaryLanguage: 'en' as const,
+            pdfLinks: [file.originalname],
+            topics: parsed.topics,
+            speakers: parsed.speakers,
+            voteRecords: [],
+            attendedMpIds: parsed.attendance.attendedMpIds,
+            absentMpIds: parsed.attendance.absentMpIds,
+            constituenciesPresent: parsed.attendance.attendedConstituencies.length,
+            constituenciesAbsent: parsed.attendance.absentConstituencies.length,
+          };
 
-      const record = await storage.createHansardRecord(hansardData);
+          const record = await storage.createHansardRecord(hansardData);
 
-      // Update MP speaking statistics
-      const speakerIds = parsed.speakers.map(s => s.mpId);
-      for (const mpId of speakerIds) {
-        const mp = allMps.find(m => m.id === mpId);
-        if (mp) {
-          const { eq } = await import("drizzle-orm");
-          await db.update(mps)
-            .set({ hansardSessionsSpoke: mp.hansardSessionsSpoke + 1 })
-            .where(eq(mps.id, mpId));
+          // Update MP speaking statistics
+          const speakerIds = parsed.speakers.map(s => s.mpId);
+          for (const mpId of speakerIds) {
+            const mp = allMps.find(m => m.id === mpId);
+            if (mp) {
+              const { eq } = await import("drizzle-orm");
+              await db.update(mps)
+                .set({ hansardSessionsSpoke: mp.hansardSessionsSpoke + 1 })
+                .where(eq(mps.id, mpId));
+            }
+          }
+
+          console.log(`✅ Successfully created Hansard record ${parsed.metadata.sessionNumber}`);
+
+          results.push({
+            success: true,
+            fileName: file.originalname,
+            sessionNumber: parsed.metadata.sessionNumber,
+            speakersFound: parsed.speakers.length,
+            unmatchedSpeakers: parsed.unmatchedSpeakers,
+            attendedCount: parsed.attendance.attendedMpIds.length,
+            absentCount: parsed.attendance.absentMpIds.length,
+          });
+        } catch (error) {
+          console.error(`❌ Error processing ${file.originalname}:`, error);
+          results.push({
+            success: false,
+            fileName: file.originalname,
+            error: error instanceof Error ? error.message : 'Unknown error',
+          });
         }
       }
 
-      console.log(`✅ Successfully created Hansard record ${parsed.metadata.sessionNumber}`);
+      const successCount = results.filter(r => r.success).length;
+      console.log(`✅ Upload complete: ${successCount}/${files.length} successful`);
 
-      res.status(201).json({
-        success: true,
-        sessionNumber: parsed.metadata.sessionNumber,
-        speakersFound: parsed.speakers.length,
-        unmatchedSpeakers: parsed.unmatchedSpeakers,
-        attendedCount: parsed.attendance.attendedMpIds.length,
-        absentCount: parsed.attendance.absentMpIds.length,
-      });
+      // Return appropriate status code based on results
+      const statusCode = successCount === 0 ? 400 : successCount === files.length ? 201 : 207;
+      res.status(statusCode).json({ results });
     } catch (error) {
-      console.error("Error processing Hansard PDF:", error);
+      console.error("Error processing Hansard PDFs:", error);
       res.status(500).json({ 
-        error: "Failed to process Hansard PDF", 
+        error: "Failed to process Hansard PDFs", 
         details: error instanceof Error ? error.message : 'Unknown error' 
       });
     }

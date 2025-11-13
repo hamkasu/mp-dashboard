@@ -21,9 +21,9 @@ interface UploadResult {
 export default function HansardAdmin() {
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [isDragging, setIsDragging] = useState(false);
-  const [uploadResult, setUploadResult] = useState<UploadResult | null>(null);
+  const [uploadResults, setUploadResults] = useState<(UploadResult & { fileName: string })[]>([]);
   const [downloadStatus, setDownloadStatus] = useState<{
     total?: number;
     successful?: number;
@@ -207,32 +207,54 @@ export default function HansardAdmin() {
   };
 
   const uploadMutation = useMutation({
-    mutationFn: async (file: File) => {
+    mutationFn: async (files: File[]) => {
+      // Clear previous results when starting new upload
+      setUploadResults([]);
+      
       const formData = new FormData();
-      formData.append('pdf', file);
+      files.forEach(file => {
+        formData.append('pdfs', file);
+      });
       
       const response = await fetch('/api/hansard-records/upload', {
         method: 'POST',
         body: formData,
       });
       
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Upload failed');
+      const data = await response.json();
+      
+      // Handle partial or complete failure
+      if (!response.ok && response.status !== 207) {
+        throw new Error(data.error || 'Upload failed');
       }
       
-      return await response.json();
+      return data;
     },
-    onSuccess: (data: UploadResult) => {
+    onSuccess: (data: { results: (UploadResult & { fileName: string })[] }) => {
       queryClient.invalidateQueries({ queryKey: ["/api/hansard-records"] });
-      setUploadResult(data);
-      setSelectedFile(null);
-      toast({
-        title: "Upload Successful",
-        description: `Successfully parsed Hansard ${data.sessionNumber}. Found ${data.speakersFound} speakers.`,
-      });
+      
+      // Backend now includes fileName in each result
+      setUploadResults(data.results);
+      setSelectedFiles([]);
+      
+      const successCount = data.results.filter(r => r.success).length;
+      const failCount = data.results.length - successCount;
+      
+      if (successCount === 0) {
+        toast({
+          title: "Upload Failed",
+          description: `All ${failCount} file${failCount !== 1 ? 's' : ''} failed to upload`,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Upload Complete",
+          description: `Successfully parsed ${successCount} file${successCount !== 1 ? 's' : ''}${failCount > 0 ? `, ${failCount} failed` : ''}`,
+        });
+      }
     },
     onError: (error: Error) => {
+      setUploadResults([]);
       toast({
         title: "Upload Failed",
         description: error.message,
@@ -241,17 +263,21 @@ export default function HansardAdmin() {
     },
   });
 
-  const handleFileSelect = (file: File) => {
-    if (file.type !== 'application/pdf') {
+  const handleFilesSelect = (newFiles: File[]) => {
+    const pdfFiles = newFiles.filter(file => file.type === 'application/pdf');
+    
+    if (pdfFiles.length !== newFiles.length) {
       toast({
-        title: "Invalid File",
-        description: "Please select a PDF file",
+        title: "Invalid Files",
+        description: `${newFiles.length - pdfFiles.length} non-PDF file(s) were skipped`,
         variant: "destructive",
       });
-      return;
     }
-    setSelectedFile(file);
-    setUploadResult(null);
+    
+    if (pdfFiles.length > 0) {
+      setSelectedFiles(prev => [...prev, ...pdfFiles]);
+      setUploadResults([]);
+    }
   };
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -270,20 +296,24 @@ export default function HansardAdmin() {
     
     const files = Array.from(e.dataTransfer.files);
     if (files.length > 0) {
-      handleFileSelect(files[0]);
+      handleFilesSelect(files);
     }
   };
 
   const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files && files.length > 0) {
-      handleFileSelect(files[0]);
+      handleFilesSelect(Array.from(files));
     }
   };
 
+  const handleRemoveFile = (index: number) => {
+    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
   const handleUpload = () => {
-    if (selectedFile) {
-      uploadMutation.mutate(selectedFile);
+    if (selectedFiles.length > 0) {
+      uploadMutation.mutate(selectedFiles);
     }
   };
 
@@ -322,53 +352,71 @@ export default function HansardAdmin() {
             onDrop={handleDrop}
             data-testid="dropzone-upload"
           >
-            {selectedFile ? (
+            {selectedFiles.length > 0 ? (
               <div className="space-y-4">
-                <div className="flex items-center justify-center gap-3">
-                  <FileText className="h-10 w-10 text-primary" />
-                  <div className="text-left">
-                    <p className="font-medium">{selectedFile.name}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
-                    </p>
-                  </div>
+                <div className="max-h-60 overflow-y-auto space-y-2">
+                  {selectedFiles.map((file, index) => (
+                    <div 
+                      key={`${file.name}-${index}`}
+                      className="flex items-center gap-3 p-3 bg-muted/50 rounded-md"
+                      data-testid={`file-item-${index}`}
+                    >
+                      <FileText className="h-8 w-8 text-primary flex-shrink-0" />
+                      <div className="text-left flex-1 min-w-0">
+                        <p className="font-medium truncate">{file.name}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {(file.size / 1024 / 1024).toFixed(2)} MB
+                        </p>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleRemoveFile(index)}
+                        data-testid={`button-remove-file-${index}`}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex gap-2">
                   <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setSelectedFile(null)}
-                    data-testid="button-remove-file"
+                    variant="outline"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="flex-1"
+                    data-testid="button-add-more-files"
                   >
-                    <X className="h-4 w-4" />
+                    Add More Files
+                  </Button>
+                  <Button
+                    onClick={handleUpload}
+                    disabled={uploadMutation.isPending}
+                    className="flex-1"
+                    data-testid="button-upload-pdf"
+                  >
+                    {uploadMutation.isPending ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Parsing {selectedFiles.length} PDF{selectedFiles.length !== 1 ? 's' : ''}...
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="mr-2 h-4 w-4" />
+                        Upload {selectedFiles.length} File{selectedFiles.length !== 1 ? 's' : ''}
+                      </>
+                    )}
                   </Button>
                 </div>
-                <Button
-                  onClick={handleUpload}
-                  disabled={uploadMutation.isPending}
-                  className="w-full"
-                  data-testid="button-upload-pdf"
-                >
-                  {uploadMutation.isPending ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Parsing PDF...
-                    </>
-                  ) : (
-                    <>
-                      <Upload className="mr-2 h-4 w-4" />
-                      Upload and Parse
-                    </>
-                  )}
-                </Button>
               </div>
             ) : (
               <div className="space-y-4">
                 <Upload className="h-12 w-12 text-muted-foreground mx-auto" />
                 <div>
                   <p className="text-lg font-medium">
-                    Drag and drop your Hansard PDF here
+                    Drag and drop your Hansard PDFs here
                   </p>
                   <p className="text-sm text-muted-foreground mt-1">
-                    or click to browse files
+                    or click to browse files (multiple files supported)
                   </p>
                 </div>
                 <Button
@@ -382,6 +430,7 @@ export default function HansardAdmin() {
                   ref={fileInputRef}
                   type="file"
                   accept=".pdf"
+                  multiple
                   onChange={handleFileInputChange}
                   className="hidden"
                   data-testid="input-file"
@@ -390,27 +439,35 @@ export default function HansardAdmin() {
             )}
           </div>
 
-          {uploadResult && (
-            <Alert>
-              <CheckCircle2 className="h-4 w-4" />
-              <AlertDescription>
-                <div className="space-y-2">
-                  <p className="font-medium">
-                    Successfully parsed Hansard {uploadResult.sessionNumber}
-                  </p>
-                  <div className="text-sm space-y-1">
-                    <p>✅ {uploadResult.speakersFound} MPs detected as speakers</p>
-                    <p>✅ {uploadResult.attendedCount} MPs attended</p>
-                    <p>✅ {uploadResult.absentCount} MPs absent</p>
-                    {uploadResult.unmatchedSpeakers && uploadResult.unmatchedSpeakers.length > 0 && (
-                      <p className="text-yellow-600">
-                        ⚠️ {uploadResult.unmatchedSpeakers.length} speakers could not be matched
+          {uploadResults.length > 0 && (
+            <div className="space-y-2">
+              {uploadResults.map((result, index) => (
+                <Alert key={index} variant={result.success ? "default" : "destructive"}>
+                  {result.success ? <CheckCircle2 className="h-4 w-4" /> : <AlertTriangle className="h-4 w-4" />}
+                  <AlertDescription>
+                    <div className="space-y-2">
+                      <p className="font-medium">
+                        {result.fileName}: {result.success ? `Hansard ${result.sessionNumber}` : 'Failed'}
                       </p>
-                    )}
-                  </div>
-                </div>
-              </AlertDescription>
-            </Alert>
+                      {result.success ? (
+                        <div className="text-sm space-y-1">
+                          <p>✅ {result.speakersFound} MPs detected as speakers</p>
+                          <p>✅ {result.attendedCount} MPs attended</p>
+                          <p>✅ {result.absentCount} MPs absent</p>
+                          {result.unmatchedSpeakers && result.unmatchedSpeakers.length > 0 && (
+                            <p className="text-yellow-600">
+                              ⚠️ {result.unmatchedSpeakers.length} speakers could not be matched
+                            </p>
+                          )}
+                        </div>
+                      ) : (
+                        <p className="text-sm">{result.error || 'Unknown error'}</p>
+                      )}
+                    </div>
+                  </AlertDescription>
+                </Alert>
+              ))}
+            </div>
           )}
         </CardContent>
       </Card>
