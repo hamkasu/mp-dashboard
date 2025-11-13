@@ -120,6 +120,9 @@ Current session-based authentication provides:
 -   `DATABASE_URL`: Auto-configured by Railway PostgreSQL addon
 -   `ADMIN_USERNAME` & `ADMIN_PASSWORD`: Optional custom admin credentials
 -   `NODE_ENV=production`: Auto-configured by Railway
+-   `PUBLIC_BASE_URL` or `RAILWAY_STATIC_URL`: **Critical** - Your app's public URL (e.g., https://your-app.up.railway.app) - required for PDF links in background jobs to work correctly
+
+**Important**: Without setting a public base URL environment variable, PDF downloads from Hansard records will fail in production because background cron jobs will generate `localhost` URLs instead of your actual domain.
 
 See `RAILWAY_DEPLOYMENT.md` for complete deployment guide.
 
