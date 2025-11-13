@@ -10,9 +10,10 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar, ChevronDown, ChevronUp, UserX, Users, TrendingDown, MapPin } from "lucide-react";
+import { Calendar, ChevronDown, ChevronUp, UserX, Users, TrendingDown, MapPin, History } from "lucide-react";
 import type { Mp } from "@shared/schema";
 import { ConstituencyAttendance } from "@/components/ConstituencyAttendance";
+import { ConstituencyAttendanceHistory } from "@/components/ConstituencyAttendanceHistory";
 
 interface AttendanceSession {
   id: string;
@@ -227,14 +228,18 @@ export default function AttendancePage() {
           </div>
 
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid w-full max-w-md grid-cols-2">
+            <TabsList className="grid w-full max-w-2xl grid-cols-3">
               <TabsTrigger value="mp" data-testid="tab-mp-view">
                 <Users className="w-4 h-4 mr-2" />
                 By MP
               </TabsTrigger>
               <TabsTrigger value="constituency" data-testid="tab-constituency-view">
                 <MapPin className="w-4 h-4 mr-2" />
-                By Constituency
+                By Session
+              </TabsTrigger>
+              <TabsTrigger value="history" data-testid="tab-history-view">
+                <History className="w-4 h-4 mr-2" />
+                Historical Overview
               </TabsTrigger>
             </TabsList>
 
@@ -355,6 +360,16 @@ export default function AttendancePage() {
                   );
                 })
               )}
+            </TabsContent>
+
+            <TabsContent value="history" className="mt-6">
+              <h2 className="text-2xl font-bold mb-4">Historical Constituency Attendance</h2>
+              <ConstituencyAttendanceHistory 
+                startDate={startDate}
+                endDate={endDate}
+                selectedParty={selectedParty}
+                selectedState={selectedState}
+              />
             </TabsContent>
           </Tabs>
         </>

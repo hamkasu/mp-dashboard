@@ -1288,6 +1288,123 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get historical constituency attendance across all Hansard sessions
+  app.get("/api/constituencies/attendance-history", async (req, res) => {
+    try {
+      const { startDate, endDate, party, state } = req.query;
+      
+      const allMps = await storage.getAllMps();
+      let records = await storage.getAllHansardRecords();
+      
+      // Apply date filters
+      if (startDate && typeof startDate === 'string') {
+        const start = new Date(startDate);
+        records = records.filter(r => new Date(r.sessionDate) >= start);
+      }
+      
+      if (endDate && typeof endDate === 'string') {
+        const end = new Date(endDate);
+        records = records.filter(r => new Date(r.sessionDate) <= end);
+      }
+      
+      // Group MPs by constituency
+      const constituencyMap = new Map<string, {
+        constituency: string;
+        state: string;
+        mps: Array<{
+          id: string;
+          name: string;
+          party: string;
+          swornInDate: Date;
+        }>;
+      }>();
+      
+      for (const mp of allMps) {
+        if (!constituencyMap.has(mp.constituency)) {
+          constituencyMap.set(mp.constituency, {
+            constituency: mp.constituency,
+            state: mp.state,
+            mps: []
+          });
+        }
+        constituencyMap.get(mp.constituency)!.mps.push({
+          id: mp.id,
+          name: mp.name,
+          party: mp.party,
+          swornInDate: mp.swornInDate
+        });
+      }
+      
+      // Calculate attendance for each constituency
+      const constituencyData = Array.from(constituencyMap.values()).map(data => {
+        // Sort MPs by swornInDate descending (most recent first)
+        const sortedMps = data.mps.sort((a, b) => b.swornInDate.getTime() - a.swornInDate.getTime());
+        
+        let totalSessionsRelevant = 0;
+        let sessionsAttended = 0;
+        let sessionsAbsent = 0;
+        
+        for (const record of records) {
+          const recordDate = new Date(record.sessionDate);
+          const absentMpIds = new Set(record.absentMpIds || []);
+          
+          // Find the MP who was representing this constituency at the time of this session
+          // This is the most recent MP whose swornInDate is before or equal to the session date
+          const activeMp = sortedMps.find(mp => recordDate >= mp.swornInDate);
+          
+          if (activeMp) {
+            totalSessionsRelevant++;
+            if (absentMpIds.has(activeMp.id)) {
+              sessionsAbsent++;
+            } else {
+              sessionsAttended++;
+            }
+          }
+        }
+        
+        const attendanceRate = totalSessionsRelevant > 0 
+          ? (sessionsAttended / totalSessionsRelevant) * 100 
+          : 0;
+        
+        return {
+          constituency: data.constituency,
+          state: data.state,
+          currentMps: sortedMps,
+          totalSessions: totalSessionsRelevant,
+          sessionsAttended,
+          sessionsAbsent,
+          attendanceRate
+        };
+      });
+      
+      // Apply filters
+      let filteredData = constituencyData;
+      
+      if (party && typeof party === 'string') {
+        // Filter by the current (most recent) MP's party
+        filteredData = filteredData.filter(c => 
+          c.currentMps.length > 0 && c.currentMps[0].party === party
+        );
+      }
+      
+      if (state && typeof state === 'string') {
+        filteredData = filteredData.filter(c => c.state === state);
+      }
+      
+      // Sort by attendance rate (worst to best)
+      filteredData.sort((a, b) => a.attendanceRate - b.attendanceRate);
+      
+      res.json({
+        totalConstituencies: filteredData.length,
+        totalSessions: records.length,
+        constituencies: filteredData
+      });
+    } catch (error) {
+      console.error("Error fetching constituency attendance history:", error);
+      res.status(500).json({ error: "Failed to fetch constituency attendance history" });
+    }
+  });
+
   // Get attendance report across all Hansard sessions
   app.get("/api/attendance/report", async (req, res) => {
     try {
