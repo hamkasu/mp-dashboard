@@ -1,0 +1,55 @@
+✅ [Hansard Cron] Daily sync scheduled at 02:00 Malaysia time (Asia/Kuala_Lumpur)
+Error calculating stats: error: column "term_end_date" does not exist
+    at /app/node_modules/pg-pool/index.js:45:11
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async file:///app/node_modules/drizzle-orm/node-postgres/session.js:83:22
+    at async DbStorage.getAllMps (file:///app/dist/index.js:1559:20)
+    at async file:///app/dist/index.js:3673:20 {
+  length: 114,
+  severity: 'ERROR',
+  code: '42703',
+  detail: undefined,
+  hint: undefined,
+  position: '132',
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'parse_relation.c',
+  line: '3716',
+  routine: 'errorMissingColumn'
+}
+6:32:03 AM [express] GET /api/stats 500 in 296ms :: {"error":"Failed to calculate statistics"}
+6:32:03 AM [express] GET /api/sprm-investigations 304 in 307ms :: [{"id":"4aeb1a09-30b0-477a-ae5f-f6…
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'parse_relation.c',
+  line: '3716',
+  routine: 'errorMissingColumn'
+}
+6:32:03 AM [express] GET /api/mps 500 in 342ms :: {"error":"Failed to fetch MPs"}
+6:32:03 AM [express] GET /api/page-views/home 200 in 311ms :: {"count":434}
+Error fetching MPs: error: column "term_end_date" does not exist
+    at /app/node_modules/pg-pool/index.js:45:11
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async file:///app/node_modules/drizzle-orm/node-postgres/session.js:83:22
+    at async DbStorage.getAllMps (file:///app/dist/index.js:1559:20)
+    at async file:///app/dist/index.js:3641:20 {
+  length: 114,
+  severity: 'ERROR',
+  code: '42703',
+  detail: undefined,
+  hint: undefined,
+  position: '132',
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: undefined,
+  table: undefined,
+6:32:03 AM [express] GET /api/court-cases 304 in 288ms :: [{"id":"44f99a30-7413-4906-ac18-879d30cd12…
+6:32:03 AM [express] POST /api/page-views 200 in 292ms :: {"count":435}
