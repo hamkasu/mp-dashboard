@@ -170,19 +170,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const mps = await storage.getAllMps();
       const hansardRecords = await storage.getAllHansardRecords();
       
-      // Calculate speaking participation for each MP
-      const mpsWithSpeaking = mps.map(mp => {
-        const sessionsSpoke = hansardRecords.filter(record => 
+      // Calculate speaking participation and Hansard-based attendance for each MP
+      const mpsWithAttendance = mps.map(mp => {
+        // Normalize dates to YYYY-MM-DD for accurate comparison
+        const mpSwornInDate = new Date(mp.swornInDate).toISOString().split('T')[0];
+        
+        // Get sessions after MP was sworn in
+        const relevantSessions = hansardRecords.filter(record => {
+          const sessionDate = new Date(record.sessionDate).toISOString().split('T')[0];
+          return sessionDate >= mpSwornInDate;
+        });
+        
+        const totalHansardSessions = relevantSessions.length;
+        
+        // Count sessions where MP was NOT absent
+        const sessionsAttended = relevantSessions.filter(record => 
+          !record.absentMpIds || !record.absentMpIds.includes(mp.id)
+        ).length;
+        
+        // Count sessions where MP spoke (only from relevant sessions)
+        const sessionsSpoke = relevantSessions.filter(record => 
           record.speakers && record.speakers.some(speaker => speaker.mpId === mp.id)
         ).length;
         
         return {
           ...mp,
+          totalHansardSessions,
+          hansardSessionsAttended: sessionsAttended,
           hansardSessionsSpoke: sessionsSpoke
         };
       });
       
-      res.json(mpsWithSpeaking);
+      res.json(mpsWithAttendance);
     } catch (error) {
       console.error("Error fetching MPs:", error);
       res.status(500).json({ error: "Failed to fetch MPs" });

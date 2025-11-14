@@ -46,16 +46,21 @@ export function MPCard({ mp }: MPCardProps) {
   const partyColor = PARTY_COLORS[mp.party] || "bg-muted text-muted-foreground";
   const monthlySalary = mp.mpAllowance + mp.ministerSalary;
   const yearlySalary = monthlySalary * 12;
-  const totalSalary = calculateTotalSalary(mp.swornInDate, monthlySalary, mp.daysAttended, mp.parliamentSittingAllowance);
   
-  const attendanceRate = mp.totalParliamentDays > 0 
-    ? (mp.daysAttended / mp.totalParliamentDays) * 100 
+  // Use Hansard-based attendance if available, otherwise fall back to static fields
+  const totalSessions = (mp as any).totalHansardSessions ?? mp.totalParliamentDays;
+  const sessionsAttended = (mp as any).hansardSessionsAttended ?? mp.daysAttended;
+  
+  const totalSalary = calculateTotalSalary(mp.swornInDate, monthlySalary, sessionsAttended, mp.parliamentSittingAllowance);
+  
+  const attendanceRate = totalSessions > 0 
+    ? (sessionsAttended / totalSessions) * 100 
     : 0;
   const attendanceColor = getAttendanceColor(attendanceRate);
   
-  // Calculate speaking participation rate (compared to days attended)
-  const speakingRate = mp.daysAttended > 0
-    ? (mp.hansardSessionsSpoke / mp.daysAttended) * 100
+  // Calculate speaking participation rate (compared to sessions attended)
+  const speakingRate = sessionsAttended > 0
+    ? (mp.hansardSessionsSpoke / sessionsAttended) * 100
     : 0;
   const speakingColor = getSpeakingColor(speakingRate);
 
@@ -135,11 +140,11 @@ export function MPCard({ mp }: MPCardProps) {
               <Calendar className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
               <div className="flex-1 min-w-0">
                 <p className={`font-semibold ${attendanceColor}`} data-testid={`text-attendance-${mp.id}`}>
-                  {mp.daysAttended}/{mp.totalParliamentDays} days
+                  {sessionsAttended}/{totalSessions} sessions
                 </p>
-                <p className="text-xs text-muted-foreground">Parliament attendance (since sworn in)</p>
+                <p className="text-xs text-muted-foreground">Hansard attendance ({attendanceRate.toFixed(1)}% since sworn in)</p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  {formatCurrency(mp.parliamentSittingAllowance * mp.daysAttended)} - Parliament sitting allowance
+                  {formatCurrency(mp.parliamentSittingAllowance * sessionsAttended)} - Parliament sitting allowance
                 </p>
               </div>
             </div>

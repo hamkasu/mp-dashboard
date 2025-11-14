@@ -76,14 +76,26 @@ export default function Home() {
     // Apply sorting
     if (sortBy === "attendance-best") {
       filtered = [...filtered].sort((a, b) => {
-        const rateA = a.totalParliamentDays > 0 ? (a.daysAttended / a.totalParliamentDays) : 0;
-        const rateB = b.totalParliamentDays > 0 ? (b.daysAttended / b.totalParliamentDays) : 0;
+        // Use Hansard-based attendance if available
+        const totalA = (a as any).totalHansardSessions ?? a.totalParliamentDays;
+        const attendedA = (a as any).hansardSessionsAttended ?? a.daysAttended;
+        const totalB = (b as any).totalHansardSessions ?? b.totalParliamentDays;
+        const attendedB = (b as any).hansardSessionsAttended ?? b.daysAttended;
+        
+        const rateA = totalA > 0 ? (attendedA / totalA) : 0;
+        const rateB = totalB > 0 ? (attendedB / totalB) : 0;
         return rateB - rateA;
       });
     } else if (sortBy === "attendance-worst") {
       filtered = [...filtered].sort((a, b) => {
-        const rateA = a.totalParliamentDays > 0 ? (a.daysAttended / a.totalParliamentDays) : 0;
-        const rateB = b.totalParliamentDays > 0 ? (b.daysAttended / b.totalParliamentDays) : 0;
+        // Use Hansard-based attendance if available
+        const totalA = (a as any).totalHansardSessions ?? a.totalParliamentDays;
+        const attendedA = (a as any).hansardSessionsAttended ?? a.daysAttended;
+        const totalB = (b as any).totalHansardSessions ?? b.totalParliamentDays;
+        const attendedB = (b as any).hansardSessionsAttended ?? b.daysAttended;
+        
+        const rateA = totalA > 0 ? (attendedA / totalA) : 0;
+        const rateB = totalB > 0 ? (attendedB / totalB) : 0;
         return rateA - rateB;
       });
     } else {
