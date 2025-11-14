@@ -1029,24 +1029,32 @@ export class MemStorage implements IStorage {
   }> {
     const allRecords = Array.from(this.hansardRecords.values());
     
-    const parliament15Records = allRecords.filter(r => r.parliamentTerm === '15');
+    const parliament15Records = allRecords.filter(r => r.parliamentTerm === '15th Parliament');
     const totalSessions = parliament15Records.length;
     
     const sessionsWithMp = parliament15Records
-      .filter(record => record.speakerStats?.some((stat: any) => stat.mpId === mpId))
-      .sort((a, b) => new Date(b.sessionDate).getTime() - new Date(a.sessionDate).getTime());
+      .map(record => {
+        const speakerStats = record.speakerStats || [];
+        const mpStats = speakerStats.find((stat: any) => stat.mpId === mpId || stat.mp_id === mpId);
+        const speechCount = mpStats?.totalSpeeches || mpStats?.total_speeches || 0;
+        
+        return {
+          record,
+          speechCount,
+          hasMp: speechCount > 0
+        };
+      })
+      .filter(item => item.hasMp)
+      .sort((a, b) => new Date(b.record.sessionDate).getTime() - new Date(a.record.sessionDate).getTime());
     
-    const sessions = sessionsWithMp.map(record => {
-      const mpStats = record.speakerStats?.find((stat: any) => stat.mpId === mpId);
-      return {
-        id: record.id,
-        sessionNumber: record.sessionNumber,
-        sessionDate: record.sessionDate.toISOString(),
-        sitting: record.sitting,
-        topics: record.topics || [],
-        speechCount: mpStats?.totalSpeeches || 0
-      };
-    });
+    const sessions = sessionsWithMp.map(({ record, speechCount }) => ({
+      id: record.id,
+      sessionNumber: record.sessionNumber,
+      sessionDate: record.sessionDate.toISOString(),
+      sitting: record.sitting,
+      topics: record.topics || [],
+      speechCount
+    }));
     
     const totalSpeeches = sessions.reduce((sum, s) => sum + s.speechCount, 0);
     const sessionsSpoke = sessions.length;
@@ -1986,7 +1994,7 @@ export class DbStorage implements IStorage {
       const totalSessionsResult = await db.execute(sql`
         SELECT COUNT(*) as count
         FROM hansard_records
-        WHERE parliament_term = '15'
+        WHERE parliament_term = '15th Parliament'
       `);
       const totalSessions = Number(totalSessionsResult.rows[0]?.count || 0);
 
@@ -1999,7 +2007,7 @@ export class DbStorage implements IStorage {
           topics,
           speaker_stats
         FROM hansard_records
-        WHERE parliament_term = '15'
+        WHERE parliament_term = '15th Parliament'
         ORDER BY session_date DESC
       `);
 
