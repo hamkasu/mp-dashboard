@@ -1,5 +1,6 @@
 import { Mp } from '@shared/schema';
 import { HansardSpeakerParser } from './hansard-speaker-parser';
+import { normalizeParliamentTerm } from '../shared/utils';
 
 interface HansardMetadata {
   sessionNumber: string;
@@ -113,9 +114,10 @@ export class HansardPdfParser {
       console.log(`📅 Date from PDF content: ${sessionNumber}`);
     }
 
-    // Extract parliament term
+    // Extract parliament term and normalize it to canonical format
     const termMatch = text.match(/PARLIMEN\s+([A-Z\s]+)/i);
-    const parliamentTerm = termMatch ? termMatch[1].trim() : 'Unknown';
+    const rawParliamentTerm = termMatch ? termMatch[1].trim() : 'Unknown';
+    const parliamentTerm = normalizeParliamentTerm(rawParliamentTerm);
 
     // Extract sitting info
     const sittingMatch = text.match(/PENGGAL\s+([^\n]+)/i);

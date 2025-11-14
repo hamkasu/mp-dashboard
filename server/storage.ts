@@ -8,6 +8,7 @@ import { MPNameMatcher } from "./mp-name-matcher";
 import { HansardScraper } from "./hansard-scraper";
 import { ConstituencyMatcher } from "./constituency-matcher";
 import { scrapeMpPhotos } from "./utils/scrape-mp-photos";
+import { normalizeParliamentTerm } from "../shared/utils";
 
 export interface IStorage {
   // User methods
@@ -2398,7 +2399,12 @@ export class DbStorage implements IStorage {
   }
   
   async createHansardRecord(record: InsertHansardRecord): Promise<HansardRecord> {
-    const result = await db.insert(hansardRecords).values(record).returning();
+    // Normalize parliament term to canonical format before insertion
+    const normalizedRecord = {
+      ...record,
+      parliamentTerm: normalizeParliamentTerm(record.parliamentTerm)
+    };
+    const result = await db.insert(hansardRecords).values(normalizedRecord).returning();
     return result[0];
   }
 
@@ -2407,8 +2413,14 @@ export class DbStorage implements IStorage {
     speakerStats: Array<{mpId: string; totalSpeeches: number}>
   ): Promise<HansardRecord> {
     return await db.transaction(async (tx) => {
+      // Normalize parliament term to canonical format before insertion
+      const normalizedRecord = {
+        ...record,
+        parliamentTerm: normalizeParliamentTerm(record.parliamentTerm)
+      };
+      
       // Insert hansard record
-      const inserted = await tx.insert(hansardRecords).values(record).returning();
+      const inserted = await tx.insert(hansardRecords).values(normalizedRecord).returning();
       const hansardRecord = inserted[0];
 
       // Update MP speech statistics atomically
@@ -2431,7 +2443,12 @@ export class DbStorage implements IStorage {
   }
   
   async updateHansardRecord(id: string, record: UpdateHansardRecord): Promise<HansardRecord | undefined> {
-    const result = await db.update(hansardRecords).set(record).where(eq(hansardRecords.id, id)).returning();
+    // Normalize parliament term if it's being updated
+    const normalizedRecord = record.parliamentTerm 
+      ? { ...record, parliamentTerm: normalizeParliamentTerm(record.parliamentTerm) }
+      : record;
+    
+    const result = await db.update(hansardRecords).set(normalizedRecord).where(eq(hansardRecords.id, id)).returning();
     return result[0];
   }
   
