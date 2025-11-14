@@ -1,0 +1,113 @@
+    at /app/node_modules/pg-pool/index.js:45:11
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async DbStorage.getAllHansardRecords (file:///app/dist/index.js:2034:22)
+    at async file:///app/dist/index.js:4805:23 {
+  length: 122,
+  severity: 'ERROR',
+  code: '42703',
+  detail: undefined,
+  hint: undefined,
+  position: '371',
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'parse_relation.c',
+  line: '3716',
+  routine: 'errorMissingColumn'
+}
+4:27:23 PM [express] GET /api/hansard-records 304 in 16ms :: []
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: undefined,
+  table: undefined,
+  length: 122,
+4:27:25 PM [express] GET /api/jobs/3862a374-f08e-47c2-b712-81c2a14ca961 304 in 0ms :: {"jobId":"3862…
+  severity: 'ERROR',
+Error in getAllHansardRecords: error: column "session_speaker_stats" does not exist
+    at /app/node_modules/pg-pool/index.js:45:11
+  code: '42703',
+  detail: undefined,
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async DbStorage.getAllHansardRecords (file:///app/dist/index.js:2034:22)
+  hint: undefined,
+    at async file:///app/dist/index.js:4805:23 {
+  position: '371',
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'parse_relation.c',
+  line: '3716',
+  routine: 'errorMissingColumn'
+}
+4:27:25 PM [express] GET /api/hansard-records 304 in 188ms :: []
+  routine: 'errorMissingColumn'
+}
+4:27:27 PM [express] GET /api/hansard-records 304 in 26ms :: []
+4:27:27 PM [express] GET /api/jobs/3862a374-f08e-47c2-b712-81c2a14ca961 304 in 0ms :: {"jobId":"3862…
+Error in getAllHansardRecords: error: column "session_speaker_stats" does not exist
+    at /app/node_modules/pg-pool/index.js:45:11
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async DbStorage.getAllHansardRecords (file:///app/dist/index.js:2034:22)
+    at async file:///app/dist/index.js:4805:23 {
+  length: 122,
+  severity: 'ERROR',
+  code: '42703',
+  detail: undefined,
+  hint: undefined,
+  position: '371',
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'parse_relation.c',
+  line: '3716',
+4:27:29 PM [express] GET /api/jobs/3862a374-f08e-47c2-b712-81c2a14ca961 304 in 0ms :: {"jobId":"3862…
+Error in getAllHansardRecords: error: column "session_speaker_stats" does not exist
+    at /app/node_modules/pg-pool/index.js:45:11
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async DbStorage.getAllHansardRecords (file:///app/dist/index.js:2034:22)
+    at async file:///app/dist/index.js:4805:23 {
+  length: 122,
+  severity: 'ERROR',
+  code: '42703',
+  detail: undefined,
+  hint: undefined,
+  position: '371',
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'parse_relation.c',
+  line: '3716',
+  routine: 'errorMissingColumn'
+}
+4:27:29 PM [express] GET /api/hansard-records 304 in 190ms :: []
+4:27:31 PM [express] GET /api/jobs/3862a374-f08e-47c2-b712-81c2a14ca961 304 in 0ms :: {"jobId":"3862…
+Error in getAllHansardRecords: error: column "session_speaker_stats" does not exist
+    at /app/node_modules/pg-pool/index.js:45:11
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async DbStorage.getAllHansardRecords (file:///app/dist/index.js:2034:22)
+    at async file:///app/dist/index.js:4805:23 {
+  length: 122,
+  severity: 'ERROR',
+  code: '42703',
+  detail: undefined,
+  hint: undefined,
+  position: '371',
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
