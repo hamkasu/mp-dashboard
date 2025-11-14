@@ -109,6 +109,7 @@ export interface IStorage {
   deleteHansardRecord(id: string): Promise<boolean>;
   deleteBulkHansardRecords(ids: string[]): Promise<number>;
   deleteAllHansardRecords(): Promise<number>;
+  checkPdfExistsByMd5(md5Hash: string): Promise<{ exists: boolean; sessionNumber?: string; originalFilename?: string }>;
   
   // Page View methods
   incrementPageView(page: string): Promise<number>;
@@ -1324,6 +1325,10 @@ export class MemStorage implements IStorage {
     this.hansardRecords.clear();
     return count;
   }
+
+  async checkPdfExistsByMd5(md5Hash: string): Promise<{ exists: boolean; sessionNumber?: string; originalFilename?: string }> {
+    return { exists: false };
+  }
   
   // Page View methods
   private pageViewCounts: Map<string, number> = new Map();
@@ -2523,6 +2528,34 @@ export class DbStorage implements IStorage {
   async deleteAllHansardRecords(): Promise<number> {
     const result = await db.delete(hansardRecords).returning();
     return result.length;
+  }
+
+  async checkPdfExistsByMd5(md5Hash: string): Promise<{ exists: boolean; sessionNumber?: string; originalFilename?: string }> {
+    try {
+      const result = await db.execute(sql`
+        SELECT 
+          hpf.original_filename,
+          hr.session_number
+        FROM hansard_pdf_files hpf
+        JOIN hansard_records hr ON hpf.hansard_record_id = hr.id
+        WHERE hpf.md5_hash = ${md5Hash}
+        LIMIT 1
+      `);
+      
+      if (result.rows && result.rows.length > 0) {
+        const row: any = result.rows[0];
+        return {
+          exists: true,
+          sessionNumber: row.session_number,
+          originalFilename: row.original_filename
+        };
+      }
+      
+      return { exists: false };
+    } catch (error) {
+      console.error("Error checking PDF by MD5:", error);
+      return { exists: false };
+    }
   }
   
   // Page View methods
