@@ -2413,18 +2413,58 @@ export class DbStorage implements IStorage {
     speakerStats: Array<{mpId: string; totalSpeeches: number}>
   ): Promise<HansardRecord> {
     return await db.transaction(async (tx) => {
-      // Normalize parliament term to canonical format before insertion
+      // CRITICAL SECURITY FIX: Normalize speaker_stats MP IDs BEFORE insertion
+      // Never trust caller-supplied MP IDs - they may be stale from old seeds
+      
+      // Step 1: Get all current MPs and build name matcher
+      const allMps = await tx.select().from(mps);
+      const nameMatcher = new MPNameMatcher(allMps);
+      
+      // Step 2: Normalize speaker_stats by matching MP names to current IDs
+      const normalizedSpeakerStats = [];
+      const recordSpeakerStats = record.speakerStats || [];
+      
+      for (const stat of recordSpeakerStats) {
+        const mpName = (stat as any).mpName;
+        const totalSpeeches = (stat as any).totalSpeeches || 0;
+        const speakingOrder = (stat as any).speakingOrder;
+        
+        if (!mpName) continue;
+        
+        // Match MP name to current ID
+        const currentMpId = nameMatcher.matchName(mpName);
+        
+        if (currentMpId) {
+          normalizedSpeakerStats.push({
+            mpId: currentMpId,
+            mpName,
+            totalSpeeches,
+            speakingOrder
+          });
+        } else {
+          console.warn(`Warning: Could not match MP name "${mpName}" in hansard record - skipping`);
+        }
+      }
+      
+      // Step 3: Create normalized record with rewritten speaker_stats
       const normalizedRecord = {
         ...record,
-        parliamentTerm: normalizeParliamentTerm(record.parliamentTerm)
+        parliamentTerm: normalizeParliamentTerm(record.parliamentTerm),
+        speakerStats: normalizedSpeakerStats
       };
       
-      // Insert hansard record
+      // Step 4: Insert hansard record with normalized data
       const inserted = await tx.insert(hansardRecords).values(normalizedRecord).returning();
       const hansardRecord = inserted[0];
 
-      // Update MP speech statistics atomically
-      for (const { mpId, totalSpeeches } of speakerStats) {
+      // Step 5: Update MP speech statistics using normalized IDs from the record we just inserted
+      const statsMap = new Map<string, number>();
+      
+      for (const stat of normalizedSpeakerStats) {
+        statsMap.set(stat.mpId, stat.totalSpeeches);
+      }
+
+      for (const [mpId, totalSpeeches] of statsMap.entries()) {
         const updated = await tx.update(mps)
           .set({
             hansardSessionsSpoke: sql`${mps.hansardSessionsSpoke} + 1`,
