@@ -240,12 +240,12 @@ export default function HansardAnalysis() {
                     disabled={analyzeMutation.isPending}
                   >
                     <SelectTrigger id="mp-select" data-testid="select-mp">
-                      <SelectValue placeholder="Choose an MP" />
+                      <SelectValue placeholder="Choose a Constituency" />
                     </SelectTrigger>
                     <SelectContent>
-                      {mps?.map((mp) => (
+                      {[...(mps ?? [])].sort((a, b) => a.constituency.localeCompare(b.constituency)).map((mp) => (
                         <SelectItem key={mp.id} value={mp.id}>
-                          {mp.name} ({mp.constituency})
+                          {mp.constituency} - {mp.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
