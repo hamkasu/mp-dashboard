@@ -319,7 +319,7 @@ export default function MPProfile() {
                 </div>
                 <Separator />
                 <p className="text-xs text-muted-foreground italic" data-testid="text-attendance-source">
-                  Source: Malaysian Parliament Records
+                  Source: Official Hansard Records
                 </p>
               </CardContent>
             </Card>
