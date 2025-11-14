@@ -127,12 +127,17 @@ export default function MPProfile() {
   const partyColor = PARTY_COLORS[mp.party] || "bg-muted text-muted-foreground";
   const monthlySalary = mp.mpAllowance + mp.ministerSalary;
   const yearlySalary = monthlySalary * 12;
-  const totalSalary = calculateTotalSalary(mp.swornInDate, monthlySalary, mp.daysAttended, mp.parliamentSittingAllowance);
+  
+  // Use real attendance from Hansard records
+  const totalSessions = (mp as any).totalHansardSessions || mp.totalParliamentDays || 0;
+  const sessionsAttended = (mp as any).hansardSessionsAttended || mp.daysAttended || 0;
+  
+  const totalSalary = calculateTotalSalary(mp.swornInDate, monthlySalary, sessionsAttended, mp.parliamentSittingAllowance);
   const formattedSwornInDate = format(new Date(mp.swornInDate), "MMMM d, yyyy");
   const yearlyBreakdown = calculateYearlyBreakdown(mp.swornInDate, monthlySalary);
   
-  const attendanceRate = mp.totalParliamentDays > 0 
-    ? (mp.daysAttended / mp.totalParliamentDays) * 100 
+  const attendanceRate = totalSessions > 0 
+    ? (sessionsAttended / totalSessions) * 100 
     : 0;
   const attendanceColor = getAttendanceColor(attendanceRate);
   const attendanceLabel = getAttendanceLabel(attendanceRate);
@@ -293,9 +298,9 @@ export default function MPProfile() {
                 <div>
                   <p className="text-sm text-muted-foreground mb-2">Attendance Record</p>
                   <p className={`text-3xl font-bold ${attendanceColor}`} data-testid="text-attendance-fraction">
-                    {mp.daysAttended}/{mp.totalParliamentDays}
+                    {sessionsAttended}/{totalSessions}
                   </p>
-                  <p className="text-sm text-muted-foreground mt-1">days attended</p>
+                  <p className="text-sm text-muted-foreground mt-1">parliamentary sessions</p>
                 </div>
                 <Separator />
                 <div className="grid grid-cols-2 gap-3">

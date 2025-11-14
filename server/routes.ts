@@ -218,7 +218,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "MP not found" });
       }
       
-      res.json(mp);
+      // Calculate real attendance from Hansard records
+      const hansardRecords = await storage.getAllHansardRecords();
+      
+      // Normalize dates to YYYY-MM-DD for accurate comparison
+      const mpSwornInDate = new Date(mp.swornInDate).toISOString().split('T')[0];
+      
+      // Get sessions after MP was sworn in
+      const relevantSessions = hansardRecords.filter(record => {
+        const sessionDate = new Date(record.sessionDate).toISOString().split('T')[0];
+        return sessionDate >= mpSwornInDate;
+      });
+      
+      const totalHansardSessions = relevantSessions.length;
+      
+      // Count sessions where MP was NOT absent
+      const sessionsAttended = relevantSessions.filter(record => 
+        !record.absentMpIds || !record.absentMpIds.includes(mp.id)
+      ).length;
+      
+      // Count sessions where MP spoke (only from relevant sessions)
+      const sessionsSpoke = relevantSessions.filter(record => 
+        record.speakers && record.speakers.some(speaker => speaker.mpId === mp.id)
+      ).length;
+      
+      res.json({
+        ...mp,
+        totalHansardSessions,
+        hansardSessionsAttended: sessionsAttended,
+        hansardSessionsSpoke: sessionsSpoke
+      });
     } catch (error) {
       console.error("Error fetching MP:", error);
       res.status(500).json({ error: "Failed to fetch MP" });
