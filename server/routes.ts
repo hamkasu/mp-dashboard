@@ -735,6 +735,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get MP Hansard speaking record with recent sessions
+  app.get("/api/mps/:id/hansard-speaking-record", async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      const mp = await storage.getMp(id);
+      if (!mp) {
+        return res.status(404).json({ error: "MP not found" });
+      }
+      
+      const record = await storage.getMpHansardSpeakingRecord(id);
+      res.json(record);
+    } catch (error) {
+      console.error("Error fetching Hansard speaking record:", error);
+      res.status(500).json({ error: "Failed to fetch Hansard speaking record" });
+    }
+  });
+
+  // Get constituency-level Hansard participation for 15th Parliament
+  app.get("/api/constituencies/hansard-participation-15th", async (req, res) => {
+    try {
+      const data = await storage.getConstituencyHansardParticipation15th();
+      res.json(data);
+    } catch (error) {
+      console.error("Error fetching constituency Hansard participation:", error);
+      res.status(500).json({ error: "Failed to fetch constituency Hansard participation" });
+    }
+  });
+
   // Get single parliamentary question by ID
   app.get("/api/parliamentary-questions/:id", async (req, res) => {
     try {

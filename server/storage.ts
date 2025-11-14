@@ -82,6 +82,26 @@ export interface IStorage {
       speechCount: number;
     }>;
   }>;
+  getMpHansardSpeakingRecord(mpId: string): Promise<{
+    sessionsSpoken: number;
+    totalSessions: number;
+    recentSessions: Array<{
+      id: string;
+      sessionNumber: string;
+      sessionDate: string;
+      speechCount: number;
+    }>;
+  }>;
+  getConstituencyHansardParticipation15th(): Promise<Array<{
+    constituency: string;
+    state: string;
+    totalSessions: number;
+    sessionsSpoke: number;
+    totalSpeeches: number;
+    participationRate: number;
+    mpIds: string[];
+    mpNames: string[];
+  }>>;
   createHansardRecord(record: InsertHansardRecord): Promise<HansardRecord>;
   createHansardRecordWithSpeechStats(record: InsertHansardRecord, speakerStats: Array<{mpId: string; totalSpeeches: number}>): Promise<HansardRecord>;
   updateHansardRecord(id: string, record: UpdateHansardRecord): Promise<HansardRecord | undefined>;
@@ -1050,7 +1070,7 @@ export class MemStorage implements IStorage {
     const sessions = sessionsWithMp.map(({ record, speechCount }) => ({
       id: record.id,
       sessionNumber: record.sessionNumber,
-      sessionDate: record.sessionDate.toISOString(),
+      sessionDate: new Date(record.sessionDate).toISOString(),
       sitting: record.sitting,
       topics: record.topics || [],
       speechCount
@@ -1067,6 +1087,115 @@ export class MemStorage implements IStorage {
       averageSpeeches: Math.round(averageSpeeches * 100) / 100,
       sessions
     };
+  }
+
+  async getMpHansardSpeakingRecord(mpId: string): Promise<{
+    sessionsSpoken: number;
+    totalSessions: number;
+    recentSessions: Array<{
+      id: string;
+      sessionNumber: string;
+      sessionDate: string;
+      speechCount: number;
+    }>;
+  }> {
+    const allRecords = Array.from(this.hansardRecords.values())
+      .sort((a, b) => new Date(b.sessionDate).getTime() - new Date(a.sessionDate).getTime());
+    
+    const totalSessions = allRecords.length;
+    
+    const sessionsWithMp = allRecords
+      .map(record => {
+        const speakerStats = record.speakerStats || [];
+        const mpStats = speakerStats.find((stat: any) => stat.mpId === mpId || stat.mp_id === mpId);
+        const speechCount = mpStats?.totalSpeeches || 0;
+        
+        return {
+          id: record.id,
+          sessionNumber: record.sessionNumber,
+          sessionDate: new Date(record.sessionDate).toISOString(),
+          speechCount,
+          hasMp: speechCount > 0
+        };
+      })
+      .filter(item => item.hasMp);
+    
+    const sessionsSpoken = sessionsWithMp.length;
+    const recentSessions = sessionsWithMp.slice(0, 10);
+    
+    return {
+      sessionsSpoken,
+      totalSessions,
+      recentSessions
+    };
+  }
+
+  async getConstituencyHansardParticipation15th(): Promise<Array<{
+    constituency: string;
+    state: string;
+    totalSessions: number;
+    sessionsSpoke: number;
+    totalSpeeches: number;
+    participationRate: number;
+    mpIds: string[];
+    mpNames: string[];
+  }>> {
+    const allMps = Array.from(this.mps.values());
+    const allRecords = Array.from(this.hansardRecords.values());
+    const parliament15Records = allRecords.filter(r => r.parliamentTerm === '15th Parliament');
+    const totalSessions = parliament15Records.length;
+    
+    const constituencyMap = new Map<string, {
+      constituency: string;
+      state: string;
+      mpIds: Set<string>;
+      mpNames: Set<string>;
+      sessionsSpoke: Set<string>;
+      totalSpeeches: number;
+    }>();
+    
+    for (const record of parliament15Records) {
+      const speakerStats = record.speakerStats || [];
+      
+      for (const stat of speakerStats) {
+        const mpId = (stat as any).mpId || (stat as any).mp_id;
+        const mp = allMps.find(m => m.id === mpId);
+        
+        if (mp && (stat as any).totalSpeeches > 0) {
+          const key = `${mp.constituency}|${mp.state}`;
+          
+          if (!constituencyMap.has(key)) {
+            constituencyMap.set(key, {
+              constituency: mp.constituency,
+              state: mp.state,
+              mpIds: new Set(),
+              mpNames: new Set(),
+              sessionsSpoke: new Set(),
+              totalSpeeches: 0
+            });
+          }
+          
+          const data = constituencyMap.get(key)!;
+          data.mpIds.add(mpId);
+          data.mpNames.add(mp.name);
+          data.sessionsSpoke.add(record.id);
+          data.totalSpeeches += (stat as any).totalSpeeches;
+        }
+      }
+    }
+    
+    const result = Array.from(constituencyMap.values()).map(data => ({
+      constituency: data.constituency,
+      state: data.state,
+      totalSessions,
+      sessionsSpoke: data.sessionsSpoke.size,
+      totalSpeeches: data.totalSpeeches,
+      participationRate: totalSessions > 0 ? (data.sessionsSpoke.size / totalSessions) * 100 : 0,
+      mpIds: Array.from(data.mpIds),
+      mpNames: Array.from(data.mpNames)
+    }));
+    
+    return result.sort((a, b) => b.participationRate - a.participationRate);
   }
   
   async createHansardRecord(insertRecord: InsertHansardRecord): Promise<HansardRecord> {
@@ -2074,6 +2203,154 @@ export class DbStorage implements IStorage {
         averageSpeeches: 0,
         sessions: []
       };
+    }
+  }
+
+  async getMpHansardSpeakingRecord(mpId: string): Promise<{
+    sessionsSpoken: number;
+    totalSessions: number;
+    recentSessions: Array<{
+      id: string;
+      sessionNumber: string;
+      sessionDate: string;
+      speechCount: number;
+    }>;
+  }> {
+    try {
+      const totalSessionsResult = await db.execute(sql`
+        SELECT COUNT(*) as count
+        FROM hansard_records
+      `);
+      const totalSessions = Number(totalSessionsResult.rows[0]?.count || 0);
+
+      const result = await db.execute(sql`
+        SELECT 
+          id,
+          session_number,
+          to_char(session_date, 'YYYY-MM-DD"T"HH24:MI:SS"Z"') as session_date,
+          speaker_stats
+        FROM hansard_records
+        ORDER BY session_date DESC
+      `);
+
+      const sessionsWithMp = result.rows
+        .map((row: any) => {
+          const speakerStats = row.speaker_stats || [];
+          const mpStats = speakerStats.find((s: any) => s.mpId === mpId || s.mp_id === mpId);
+          const speechCount = mpStats?.totalSpeeches || mpStats?.total_speeches || 0;
+
+          return {
+            id: row.id,
+            sessionNumber: row.session_number,
+            sessionDate: row.session_date,
+            speechCount,
+            hasMp: speechCount > 0
+          };
+        })
+        .filter((session: any) => session.hasMp);
+
+      const sessionsSpoken = sessionsWithMp.length;
+      const recentSessions = sessionsWithMp.slice(0, 10).map(({ hasMp, ...session }) => session);
+
+      return {
+        sessionsSpoken,
+        totalSessions,
+        recentSessions
+      };
+    } catch (error) {
+      console.error("Error in getMpHansardSpeakingRecord:", error);
+      return {
+        sessionsSpoken: 0,
+        totalSessions: 0,
+        recentSessions: []
+      };
+    }
+  }
+
+  async getConstituencyHansardParticipation15th(): Promise<Array<{
+    constituency: string;
+    state: string;
+    totalSessions: number;
+    sessionsSpoke: number;
+    totalSpeeches: number;
+    participationRate: number;
+    mpIds: string[];
+    mpNames: string[];
+  }>> {
+    try {
+      const totalSessionsResult = await db.execute(sql`
+        SELECT COUNT(*) as count
+        FROM hansard_records
+        WHERE parliament_term = '15th Parliament'
+      `);
+      const totalSessions = Number(totalSessionsResult.rows[0]?.count || 0);
+
+      const mpsResult = await db.select().from(mps);
+      const allMps = mpsResult;
+
+      const hansardResult = await db.execute(sql`
+        SELECT 
+          id,
+          speaker_stats
+        FROM hansard_records
+        WHERE parliament_term = '15th Parliament'
+      `);
+
+      const constituencyMap = new Map<string, {
+        constituency: string;
+        state: string;
+        mpIds: Set<string>;
+        mpNames: Set<string>;
+        sessionsSpoke: Set<string>;
+        totalSpeeches: number;
+      }>();
+
+      for (const row of hansardResult.rows) {
+        const speakerStats = (row as any).speaker_stats || [];
+
+        for (const stat of speakerStats) {
+          const mpId = (stat as any).mpId || (stat as any).mp_id;
+          const mp = allMps.find(m => m.id === mpId);
+          const totalSpeeches = (stat as any).totalSpeeches || (stat as any).total_speeches || 0;
+
+          if (mp && totalSpeeches > 0) {
+            const key = `${mp.constituency}|${mp.state}`;
+
+            if (!constituencyMap.has(key)) {
+              constituencyMap.set(key, {
+                constituency: mp.constituency,
+                state: mp.state,
+                mpIds: new Set(),
+                mpNames: new Set(),
+                sessionsSpoke: new Set(),
+                totalSpeeches: 0
+              });
+            }
+
+            const data = constituencyMap.get(key)!;
+            data.mpIds.add(mpId);
+            data.mpNames.add(mp.name);
+            data.sessionsSpoke.add((row as any).id);
+            data.totalSpeeches += totalSpeeches;
+          }
+        }
+      }
+
+      const result = Array.from(constituencyMap.values()).map(data => ({
+        constituency: data.constituency,
+        state: data.state,
+        totalSessions,
+        sessionsSpoke: data.sessionsSpoke.size,
+        totalSpeeches: data.totalSpeeches,
+        participationRate: totalSessions > 0 ? (data.sessionsSpoke.size / totalSessions) * 100 : 0,
+        mpIds: Array.from(data.mpIds),
+        mpNames: Array.from(data.mpNames)
+      }));
+
+      return result.sort((a, b) => b.participationRate - a.participationRate);
+    } catch (error) {
+      console.error("Error in getConstituencyHansardParticipation15th:", error);
+      return [];
     }
   }
   

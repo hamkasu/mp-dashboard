@@ -9,6 +9,7 @@ import ParliamentaryActivity from "@/pages/ParliamentaryActivity";
 import Hansard from "@/pages/hansard";
 import HansardAdmin from "@/pages/HansardAdmin";
 import HansardAnalysis from "@/pages/hansard-analysis";
+import ConstituencyAnalysis from "@/pages/ConstituencyAnalysis";
 import Attendance from "@/pages/attendance";
 import Allowances from "@/pages/Allowances";
 import Login from "@/pages/login";
@@ -26,6 +27,7 @@ function Router() {
       <Route path="/login" component={Login} />
       <Route path="/hansard-admin" component={HansardAdmin} />
       <Route path="/hansard-analysis" component={HansardAnalysis} />
+      <Route path="/constituency-analysis" component={ConstituencyAnalysis} />
       <Route component={NotFound} />
     </Switch>
   );

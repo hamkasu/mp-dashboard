@@ -11,6 +11,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Summarizer } from "@/components/Summarizer";
 import { HansardParticipation15th } from "@/components/HansardParticipation15th";
+import { HansardSpeakingRecord } from "@/components/HansardSpeakingRecord";
 import type { Mp, CourtCase, SprmInvestigation, LegislativeProposal, DebateParticipation, ParliamentaryQuestion, HansardRecord } from "@shared/schema";
 import { calculateTotalSalary, calculateYearlyBreakdown, formatCurrency, getPublicationName } from "@/lib/utils";
 import { format } from "date-fns";
@@ -1136,6 +1137,9 @@ export default function MPProfile() {
             <div className="md:col-span-2">
               <HansardParticipation15th mpId={mp.id} mpName={mp.name} />
             </div>
+
+            {/* Hansard Speaking Record Section */}
+            <HansardSpeakingRecord mpId={mp.id} />
 
             {/* Sources & References Section */}
             {(() => {
