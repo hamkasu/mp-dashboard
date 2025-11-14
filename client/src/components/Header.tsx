@@ -1,4 +1,4 @@
-import { Search, Menu, Home, FileText, BookOpen, UserCheck, Calculator, BarChart3 } from "lucide-react";
+import { Search, Menu, Home, FileText, BookOpen, UserCheck, Calculator, BarChart3, ExternalLink } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Link, useLocation } from "wouter";
@@ -121,6 +121,17 @@ export function Header({ searchQuery, onSearchChange, onMenuClick }: HeaderProps
               <span>Analysis</span>
             </Button>
           </Link>
+          <a href="https://open.dosm.gov.my/" target="_blank" rel="noopener noreferrer">
+            <Button
+              variant="ghost"
+              size="sm"
+              data-testid="nav-dosm"
+              className="gap-2"
+            >
+              <ExternalLink className="w-4 h-4" />
+              <span>DOSM</span>
+            </Button>
+          </a>
         </nav>
 
         {onSearchChange && (
