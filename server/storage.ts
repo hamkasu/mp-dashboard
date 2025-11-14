@@ -1036,7 +1036,7 @@ export class MemStorage implements IStorage {
       .map(record => {
         const speakerStats = record.speakerStats || [];
         const mpStats = speakerStats.find((stat: any) => stat.mpId === mpId || stat.mp_id === mpId);
-        const speechCount = mpStats?.totalSpeeches || mpStats?.total_speeches || 0;
+        const speechCount = mpStats?.totalSpeeches || 0;
         
         return {
           record,
@@ -1324,6 +1324,24 @@ export class MemStorage implements IStorage {
     
     console.log(`Seeding Hansard DR.6.11.2025: ${absentMpIds.length} absent MPs, ${attendedMpIds.length} attended MPs`);
     
+    const nancyShukri = mpsArray.find(mp => mp.name === "Nancy Shukri");
+    const aaronAgoDagang = mpsArray.find(mp => mp.name === "Aaron Ago Dagang");
+    
+    const hansard3Speakers = [
+      ...(nancyShukri ? [{
+        mpId: nancyShukri.id,
+        mpName: nancyShukri.name,
+        speakingOrder: 1,
+        duration: 25,
+      }] : []),
+      ...(aaronAgoDagang ? [{
+        mpId: aaronAgoDagang.id,
+        mpName: aaronAgoDagang.name,
+        speakingOrder: 2,
+        duration: 20,
+      }] : []),
+    ];
+    
     this.createHansardRecord({
       sessionNumber: "DR.6.11.2025",
       sessionDate: new Date("2025-11-06"),
@@ -1332,7 +1350,13 @@ export class MemStorage implements IStorage {
       transcript: "Naskah belum disemak DEWAN RAKYAT PARLIMEN KELIMA BELAS PENGGAL KEEMPAT MESYUARAT KETIGA Bil. 62 Khamis 6 November 2025 K A N D U N G A N WAKTU PERTANYAAN-PERTANYAAN MENTERI (Halaman 1) PERTANYAAN-PERTANYAAN BAGI JAWAB LISAN (Halaman 12) USUL: Waktu Mesyuarat dan Urusan Dibebaskan Daripada Peraturan...",
       pdfLinks: ["https://hansard.parliament.gov.my/files/DR-06112025.pdf"],
       topics: ["Rang Undang-Undang", "Perlembagaan", "Constitution", "Soalan", "Question", "Parlimen", "Parliament", "Ekonomi", "Economy"],
-      speakers: [],
+      speakers: hansard3Speakers,
+      speakerStats: hansard3Speakers.map(speaker => ({
+        mpId: speaker.mpId,
+        mpName: speaker.mpName,
+        totalSpeeches: speaker.speakingOrder === 1 ? 3 : 2,
+        speakingOrder: speaker.speakingOrder,
+      })),
       voteRecords: [],
       attendedMpIds,
       absentMpIds,

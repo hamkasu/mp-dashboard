@@ -5,6 +5,7 @@ import { PDFParse } from 'pdf-parse';
 import { XMLParser } from 'fast-xml-parser';
 import fs from 'fs';
 import path from 'path';
+import { normalizeParliamentTerm } from '../shared/utils';
 
 // SECURITY NOTE: The Malaysian Parliament website (parlimen.gov.my) has SSL certificate
 // validation issues in some environments. Since we are ONLY READING public government data
@@ -135,6 +136,7 @@ export class HansardScraper {
   /**
    * Check if a parliament term is the 15th Parliament
    * Covers multiple naming variants to future-proof against site changes
+   * Uses word boundaries to avoid false positives (e.g., XVI for 16th Parliament)
    */
   private is15thParliament(parliamentText: string): boolean {
     const text = parliamentText.toLowerCase();
@@ -143,7 +145,7 @@ export class HansardScraper {
            text.includes('ke-15') || 
            text.includes('ke 15') ||
            text.includes('15th') ||
-           text.includes('xv') ||
+           /\bxv\b/.test(text) ||  // Word boundary to match "XV" but not "XVI"
            text.includes('parlimen ke 15');
   }
 
@@ -176,8 +178,9 @@ export class HansardScraper {
       if (level === 2) {
         // Only process 15th Parliament
         if (this.is15thParliament(node.text)) {
-          console.log(`✅ Processing 15th Parliament: ${node.text}`);
-          await this.traverseArchiveTree(node.id, node.text, '', '', collected);
+          const normalizedTerm = normalizeParliamentTerm(node.text);
+          console.log(`✅ Processing 15th Parliament: ${node.text} -> ${normalizedTerm}`);
+          await this.traverseArchiveTree(node.id, normalizedTerm, '', '', collected);
         } else {
           console.log(`⏭️  Skipping non-15th Parliament: ${node.text}`);
         }
