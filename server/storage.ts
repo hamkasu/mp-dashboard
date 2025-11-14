@@ -1047,46 +1047,69 @@ export class MemStorage implements IStorage {
       speechCount: number;
     }>;
   }> {
-    const allRecords = Array.from(this.hansardRecords.values());
-    
-    const parliament15Records = allRecords.filter(r => r.parliamentTerm === '15th Parliament');
-    const totalSessions = parliament15Records.length;
-    
-    const sessionsWithMp = parliament15Records
-      .map(record => {
-        const speakerStats = record.speakerStats || [];
-        const mpStats = speakerStats.find((stat: any) => stat.mpId === mpId || stat.mp_id === mpId);
-        const speechCount = mpStats?.totalSpeeches || 0;
-        
-        return {
-          record,
-          speechCount,
-          hasMp: speechCount > 0
-        };
-      })
-      .filter(item => item.hasMp)
-      .sort((a, b) => new Date(b.record.sessionDate).getTime() - new Date(a.record.sessionDate).getTime());
-    
-    const sessions = sessionsWithMp.map(({ record, speechCount }) => ({
-      id: record.id,
-      sessionNumber: record.sessionNumber,
-      sessionDate: new Date(record.sessionDate).toISOString(),
-      sitting: record.sitting,
-      topics: record.topics || [],
-      speechCount
-    }));
-    
-    const totalSpeeches = sessions.reduce((sum, s) => sum + s.speechCount, 0);
-    const sessionsSpoke = sessions.length;
-    const averageSpeeches = sessionsSpoke > 0 ? totalSpeeches / sessionsSpoke : 0;
-    
-    return {
-      totalSessions,
-      totalSpeeches,
-      sessionsSpoke,
-      averageSpeeches: Math.round(averageSpeeches * 100) / 100,
-      sessions
-    };
+    try {
+      const allRecords = Array.from(this.hansardRecords.values());
+      
+      const parliament15Records = allRecords.filter(r => r.parliamentTerm === '15th Parliament');
+      const totalSessions = parliament15Records.length;
+      
+      const sessionsWithMp = parliament15Records
+        .map(record => {
+          try {
+            const speakerStats = record.speakerStats || [];
+            const mpStats = speakerStats.find((stat: any) => stat.mpId === mpId || stat.mp_id === mpId);
+            const speechCount = mpStats?.totalSpeeches || 0;
+            
+            const sessionDate = new Date(record.sessionDate);
+            if (isNaN(sessionDate.getTime())) {
+              console.warn(`Invalid date in 15th Parliament record ${record.id}: ${record.sessionDate}`);
+              return null;
+            }
+            
+            return {
+              record,
+              sessionDate: sessionDate.toISOString(),
+              speechCount,
+              hasMp: speechCount > 0
+            };
+          } catch (error) {
+            console.warn(`Error processing 15th Parliament record ${record.id}:`, error);
+            return null;
+          }
+        })
+        .filter((item): item is NonNullable<typeof item> => item !== null && item.hasMp)
+        .sort((a, b) => new Date(b.sessionDate).getTime() - new Date(a.sessionDate).getTime());
+      
+      const sessions = sessionsWithMp.map(item => ({
+        id: item.record.id,
+        sessionNumber: item.record.sessionNumber,
+        sessionDate: item.sessionDate,
+        sitting: item.record.sitting,
+        topics: item.record.topics || [],
+        speechCount: item.speechCount
+      }));
+      
+      const totalSpeeches = sessions.reduce((sum, s) => sum + s.speechCount, 0);
+      const sessionsSpoke = sessions.length;
+      const averageSpeeches = sessionsSpoke > 0 ? totalSpeeches / sessionsSpoke : 0;
+      
+      return {
+        totalSessions,
+        totalSpeeches,
+        sessionsSpoke,
+        averageSpeeches: Math.round(averageSpeeches * 100) / 100,
+        sessions
+      };
+    } catch (error) {
+      console.error("Error in get15thParliamentParticipationByMpId:", error);
+      return {
+        totalSessions: 0,
+        totalSpeeches: 0,
+        sessionsSpoke: 0,
+        averageSpeeches: 0,
+        sessions: []
+      };
+    }
   }
 
   async getMpHansardSpeakingRecord(mpId: string): Promise<{
@@ -1099,35 +1122,55 @@ export class MemStorage implements IStorage {
       speechCount: number;
     }>;
   }> {
-    const allRecords = Array.from(this.hansardRecords.values())
-      .sort((a, b) => new Date(b.sessionDate).getTime() - new Date(a.sessionDate).getTime());
-    
-    const totalSessions = allRecords.length;
-    
-    const sessionsWithMp = allRecords
-      .map(record => {
-        const speakerStats = record.speakerStats || [];
-        const mpStats = speakerStats.find((stat: any) => stat.mpId === mpId || stat.mp_id === mpId);
-        const speechCount = mpStats?.totalSpeeches || 0;
-        
-        return {
-          id: record.id,
-          sessionNumber: record.sessionNumber,
-          sessionDate: new Date(record.sessionDate).toISOString(),
-          speechCount,
-          hasMp: speechCount > 0
-        };
-      })
-      .filter(item => item.hasMp);
-    
-    const sessionsSpoken = sessionsWithMp.length;
-    const recentSessions = sessionsWithMp.slice(0, 10);
-    
-    return {
-      sessionsSpoken,
-      totalSessions,
-      recentSessions
-    };
+    try {
+      const allRecords = Array.from(this.hansardRecords.values())
+        .sort((a, b) => new Date(b.sessionDate).getTime() - new Date(a.sessionDate).getTime());
+      
+      const totalSessions = allRecords.length;
+      
+      const sessionsWithMp = allRecords
+        .map(record => {
+          try {
+            const speakerStats = record.speakerStats || [];
+            const mpStats = speakerStats.find((stat: any) => stat.mpId === mpId || stat.mp_id === mpId);
+            const speechCount = mpStats?.totalSpeeches || 0;
+            
+            const sessionDate = new Date(record.sessionDate);
+            if (isNaN(sessionDate.getTime())) {
+              console.warn(`Invalid date in record ${record.id}: ${record.sessionDate}`);
+              return null;
+            }
+            
+            return {
+              id: record.id,
+              sessionNumber: record.sessionNumber,
+              sessionDate: sessionDate.toISOString(),
+              speechCount,
+              hasMp: speechCount > 0
+            };
+          } catch (error) {
+            console.warn(`Error processing record ${record.id}:`, error);
+            return null;
+          }
+        })
+        .filter((item): item is NonNullable<typeof item> => item !== null && item.hasMp);
+      
+      const sessionsSpoken = sessionsWithMp.length;
+      const recentSessions = sessionsWithMp.slice(0, 10);
+      
+      return {
+        sessionsSpoken,
+        totalSessions,
+        recentSessions
+      };
+    } catch (error) {
+      console.error("Error in getMpHansardSpeakingRecord:", error);
+      return {
+        sessionsSpoken: 0,
+        totalSessions: 0,
+        recentSessions: []
+      };
+    }
   }
 
   async getConstituencyHansardParticipation15th(): Promise<Array<{
