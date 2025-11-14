@@ -16,20 +16,33 @@ interface AttendanceData {
   absentConstituencies: string[];
 }
 
+interface SpeakerStatistics {
+  totalUniqueSpeakers: number;
+  speakingMpIds: string[];
+  speakingConstituencies: string[];
+  constituenciesAttended: number;
+  constituenciesSpoke: number;
+  constituenciesAttendedButSilent: string[];
+  attendanceRate: number; // % of attendees who spoke
+}
+
 interface ParsedHansard {
   metadata: HansardMetadata;
   attendance: AttendanceData;
   speakers: Array<{
     mpId: string;
     mpName: string;
+    constituency: string;
     speakingOrder: number;
   }>;
   allSpeakingInstances: Array<{
     mpId: string;
     mpName: string;
+    constituency: string;
     instanceNumber: number;
     lineNumber: number;
   }>;
+  speakerStats: SpeakerStatistics;
   unmatchedSpeakers: string[];
   transcript: string;
   topics: string[];
@@ -64,11 +77,17 @@ export class HansardPdfParser {
     const { speakers, allInstances, unmatched } = this.speakerParser.extractSpeakers(fullText);
     const topics = this.parseTopics(fullText);
 
+    // Calculate speaker statistics
+    const speakerStats = this.calculateSpeakerStatistics(speakers, attendance);
+
     console.log('✅ Hansard parsing complete');
     console.log(`   - Session: ${metadata.sessionNumber}`);
     console.log(`   - Attended: ${attendance.attendedMpIds.length} MPs`);
     console.log(`   - Absent: ${attendance.absentMpIds.length} MPs`);
     console.log(`   - Speakers: ${speakers.length} unique MPs`);
+    console.log(`   - Speaking constituencies: ${speakerStats.speakingConstituencies.length}`);
+    console.log(`   - Constituencies attended but silent: ${speakerStats.constituenciesAttendedButSilent.length}`);
+    console.log(`   - Attendance rate: ${speakerStats.attendanceRate.toFixed(1)}%`);
     console.log(`   - All speaking instances: ${allInstances.length} total`);
     console.log(`   - Unmatched: ${unmatched.length} speakers`);
 
@@ -77,9 +96,59 @@ export class HansardPdfParser {
       attendance,
       speakers,
       allSpeakingInstances: allInstances,
+      speakerStats,
       unmatchedSpeakers: unmatched,
       transcript: fullText.substring(0, 10000), // Store first 10k chars for transcript
       topics,
+    };
+  }
+
+  private calculateSpeakerStatistics(
+    speakers: Array<{ mpId: string; mpName: string; constituency: string; speakingOrder: number }>,
+    attendance: AttendanceData
+  ): SpeakerStatistics {
+    // Extract unique speaking MP IDs and constituencies (already normalized via MP lookup)
+    const speakingMpIds = speakers.map(s => s.mpId);
+    const speakingConstituenciesSet = new Set(speakers.map(s => s.constituency));
+    const speakingConstituencies = Array.from(speakingConstituenciesSet);
+
+    // Normalize attended constituencies to canonical MP names for accurate comparison
+    // Map each raw PDF constituency string to its canonical MP constituency name
+    const normalizedAttendedConstituencies = attendance.attendedConstituencies.map(rawConstituency => {
+      const normalized = this.normalizeConstituency(rawConstituency);
+      // Find MP with matching normalized constituency
+      const mp = this.allMps.find(mp => 
+        this.normalizeConstituency(mp.constituency) === normalized
+      );
+      // Return canonical MP constituency name if found, otherwise return normalized raw string
+      return mp ? mp.constituency : rawConstituency.replace(/\s+/g, ' ').trim();
+    });
+
+    // Create normalized speaking constituencies set for fast lookup
+    const normalizedSpeakingSet = new Set(
+      speakingConstituencies.map(c => this.normalizeConstituency(c))
+    );
+
+    // Find constituencies that attended but didn't speak (using normalized comparison)
+    const constituenciesAttendedButSilent = normalizedAttendedConstituencies.filter(
+      constituency => !normalizedSpeakingSet.has(this.normalizeConstituency(constituency))
+    );
+
+    // Calculate participation rate
+    const constituenciesAttended = normalizedAttendedConstituencies.length;
+    const constituenciesSpoke = speakingConstituencies.length;
+    const attendanceRate = constituenciesAttended > 0 
+      ? (constituenciesSpoke / constituenciesAttended) * 100 
+      : 0;
+
+    return {
+      totalUniqueSpeakers: speakers.length,
+      speakingMpIds,
+      speakingConstituencies,
+      constituenciesAttended,
+      constituenciesSpoke,
+      constituenciesAttendedButSilent,
+      attendanceRate
     };
   }
 

@@ -1022,6 +1022,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Parse the PDF with filename for better date extraction
           const parsed = await parser.parseHansardPdf(file.buffer, file.originalname);
 
+          // Count speeches per MP from allSpeakingInstances
+          const speechesPerMp = new Map<string, number>();
+          for (const instance of parsed.allSpeakingInstances) {
+            speechesPerMp.set(instance.mpId, (speechesPerMp.get(instance.mpId) || 0) + 1);
+          }
+
           // Create Hansard record first (truncate transcript to match background job behavior)
           const hansardData = {
             sessionNumber: parsed.metadata.sessionNumber,
@@ -1029,7 +1035,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             parliamentTerm: parsed.metadata.parliamentTerm,
             sitting: parsed.metadata.sitting,
             transcript: parsed.transcript.substring(0, 100000), // Truncate to 100k chars
-            summary: `Parliamentary session ${parsed.metadata.sessionNumber} with ${parsed.speakers.length} speakers.`,
+            summary: `Parliamentary session ${parsed.metadata.sessionNumber} with ${parsed.speakerStats.constituenciesSpoke} constituencies speaking out of ${parsed.speakerStats.constituenciesAttended} attended (${parsed.speakerStats.attendanceRate.toFixed(1)}% participation rate).`,
             summaryLanguage: 'en' as const,
             pdfLinks: [], // No longer using pdfLinks
             topics: parsed.topics,
@@ -1037,7 +1043,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             speakerStats: parsed.speakers.map((s, idx) => ({
               mpId: s.mpId,
               mpName: s.mpName,
-              totalSpeeches: s.totalSpeeches || 1,
+              totalSpeeches: speechesPerMp.get(s.mpId) || 1,
               speakingOrder: idx + 1,
             })),
             voteRecords: [],
@@ -1175,10 +1181,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const allSpeechInstances = parsed.allSpeakingInstances
         .filter(inst => inst.mpId === mpId)
         .map(inst => ({
-          position: inst.charOffsetStart || inst.lineNumber * 100, // Approximate position
+          position: inst.lineNumber * 100, // Approximate position based on line number
           capturedName: inst.mpName,
           context: `Speaking instance ${inst.instanceNumber} at line ${inst.lineNumber}`,
-          speakingOrder: inst.instanceNumber
+          speakingOrder: inst.instanceNumber,
+          constituency: inst.constituency
         }));
 
       console.log(`📊 Found ${targetSpeakers.length} unique speaking slots and ${allSpeechInstances.length} total speech instances for ${targetMp.name} (via parser canonical data)`);
@@ -1225,6 +1232,66 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`✅ Analysis complete: ${targetSpeakers.length} unique speaking instances, ${allSpeechInstances.length} total speeches`);
     } catch (error) {
       console.error("Error analyzing Hansard PDF:", error);
+      res.status(500).json({ 
+        error: "Failed to analyze Hansard PDF", 
+        details: error instanceof Error ? error.message : 'Unknown error' 
+      });
+    }
+  });
+
+  // Analyze Hansard PDF for speaker statistics (attendance vs participation)
+  app.post("/api/hansard-speaker-stats", upload.single('pdf'), handleMulterError, async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: "No PDF file uploaded. Only PDF files are accepted." });
+      }
+
+      console.log(`📊 Analyzing speaker statistics for: ${req.file.originalname}`);
+
+      // Get all MPs from database
+      const allMps = await db.select().from(mps);
+      
+      // Parse using HansardPdfParser
+      const parser = new HansardPdfParser(allMps);
+      const parsed = await parser.parseHansardPdf(req.file.buffer, req.file.originalname);
+
+      console.log(`✅ Analysis complete: ${parsed.speakerStats.constituenciesSpoke} constituencies spoke out of ${parsed.speakerStats.constituenciesAttended} attended`);
+
+      // Return detailed speaker statistics
+      res.json({
+        success: true,
+        filename: req.file.originalname,
+        metadata: {
+          sessionNumber: parsed.metadata.sessionNumber,
+          sessionDate: parsed.metadata.sessionDate,
+          parliamentTerm: parsed.metadata.parliamentTerm,
+          sitting: parsed.metadata.sitting,
+        },
+        speakerStatistics: {
+          totalUniqueSpeakers: parsed.speakerStats.totalUniqueSpeakers,
+          constituenciesAttended: parsed.speakerStats.constituenciesAttended,
+          constituenciesSpoke: parsed.speakerStats.constituenciesSpoke,
+          attendanceRate: parseFloat(parsed.speakerStats.attendanceRate.toFixed(1)),
+          speakingConstituencies: parsed.speakerStats.speakingConstituencies,
+          constituenciesAttendedButSilent: parsed.speakerStats.constituenciesAttendedButSilent,
+        },
+        attendance: {
+          attendedMpIds: parsed.attendance.attendedMpIds,
+          absentMpIds: parsed.attendance.absentMpIds,
+          attendedConstituencies: parsed.attendance.attendedConstituencies,
+          absentConstituencies: parsed.attendance.absentConstituencies,
+        },
+        speakers: parsed.speakers.map(s => ({
+          mpId: s.mpId,
+          mpName: s.mpName,
+          constituency: s.constituency,
+          speakingOrder: s.speakingOrder,
+        })),
+        topics: parsed.topics,
+        unmatchedSpeakers: parsed.unmatchedSpeakers,
+      });
+    } catch (error) {
+      console.error("Error analyzing Hansard speaker statistics:", error);
       res.status(500).json({ 
         error: "Failed to analyze Hansard PDF", 
         details: error instanceof Error ? error.message : 'Unknown error' 

@@ -2,13 +2,14 @@ import { Mp, HansardSpeaker } from '@shared/schema';
 import { MPNameMatcher } from './mp-name-matcher';
 
 type SpeakerMatchResult = 
-  | { kind: 'matched'; speaker: HansardSpeaker }
+  | { kind: 'matched'; speaker: HansardSpeaker; constituency: string }
   | { kind: 'unmatched'; name: string; constituency?: string }
   | { kind: 'skip' };
 
 interface SpeakingInstance {
   mpId: string;
   mpName: string;
+  constituency: string;
   instanceNumber: number;
   lineNumber: number;
 }
@@ -49,11 +50,16 @@ export class HansardSpeakerParser {
    * Returns array of speakers in order of appearance
    */
   public extractSpeakers(transcript: string): { 
-    speakers: HansardSpeaker[]; 
+    speakers: Array<{
+      mpId: string;
+      mpName: string;
+      constituency: string;
+      speakingOrder: number;
+    }>; 
     allInstances: SpeakingInstance[];
     unmatched: string[] 
   } {
-    const speakerMap = new Map<string, HansardSpeaker>();
+    const speakerMap = new Map<string, { mpId: string; mpName: string; constituency: string; speakingOrder: number }>();
     const allInstances: SpeakingInstance[] = [];
     const unmatchedSpeakers: string[] = [];
     const instanceCountMap = new Map<string, number>(); // Track instance number per MP
@@ -91,7 +97,7 @@ export class HansardSpeakerParser {
 
   private extractSpeakersFromChunk(
     chunk: string,
-    speakerMap: Map<string, HansardSpeaker>,
+    speakerMap: Map<string, { mpId: string; mpName: string; constituency: string; speakingOrder: number }>,
     allInstances: SpeakingInstance[],
     instanceCountMap: Map<string, number>,
     speakingOrder: number,
@@ -110,10 +116,14 @@ export class HansardSpeakerParser {
         
         if (result.kind === 'matched') {
           const mpId = result.speaker.mpId;
+          const speakerWithConstituency = {
+            ...result.speaker,
+            constituency: result.constituency
+          };
           
           // Add to unique speakers map if first occurrence
           if (!speakerMap.has(mpId)) {
-            speakerMap.set(mpId, result.speaker);
+            speakerMap.set(mpId, speakerWithConstituency);
             speakingOrder++;
           }
           
@@ -129,6 +139,7 @@ export class HansardSpeakerParser {
           allInstances.push({
             mpId: result.speaker.mpId,
             mpName: result.speaker.mpName,
+            constituency: result.constituency,
             instanceNumber: currentInstanceCount + 1,
             lineNumber
           });
@@ -195,7 +206,8 @@ export class HansardSpeakerParser {
           mpId: mp.id,
           mpName: mp.name,
           speakingOrder
-        }
+        },
+        constituency: mp.constituency
       };
     }
 
