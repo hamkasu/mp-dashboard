@@ -121,15 +121,15 @@ export function Header({ searchQuery, onSearchChange, onMenuClick }: HeaderProps
               <span>Analysis</span>
             </Button>
           </Link>
-          <a href="https://open.dosm.gov.my/" target="_blank" rel="noopener noreferrer">
+          <a href="https://open.dosm.gov.my/ms-MY/dashboard/kawasanku" target="_blank" rel="noopener noreferrer">
             <Button
               variant="ghost"
               size="sm"
-              data-testid="nav-dosm"
+              data-testid="nav-kawanku"
               className="gap-2"
             >
               <ExternalLink className="w-4 h-4" />
-              <span>DOSM</span>
+              <span>KAWANKU</span>
             </Button>
           </a>
         </nav>
