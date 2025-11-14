@@ -68,6 +68,20 @@ export interface IStorage {
   getHansardRecordsBySessionNumber(sessionNumber: string): Promise<HansardRecord[]>;
   getLatestHansardRecord(): Promise<HansardRecord | undefined>;
   getHansardSpeakingParticipationByMpId(mpId: string): Promise<{ count: number; sessions: HansardRecord[] }>;
+  get15thParliamentParticipationByMpId(mpId: string): Promise<{
+    totalSessions: number;
+    totalSpeeches: number;
+    sessionsSpoke: number;
+    averageSpeeches: number;
+    sessions: Array<{
+      id: string;
+      sessionNumber: string;
+      sessionDate: string;
+      sitting: string;
+      topics: string[];
+      speechCount: number;
+    }>;
+  }>;
   createHansardRecord(record: InsertHansardRecord): Promise<HansardRecord>;
   createHansardRecordWithSpeechStats(record: InsertHansardRecord, speakerStats: Array<{mpId: string; totalSpeeches: number}>): Promise<HansardRecord>;
   updateHansardRecord(id: string, record: UpdateHansardRecord): Promise<HansardRecord | undefined>;
@@ -998,6 +1012,54 @@ export class MemStorage implements IStorage {
       sessions: sortedSessions.slice(0, 10)
     };
   }
+
+  async get15thParliamentParticipationByMpId(mpId: string): Promise<{
+    totalSessions: number;
+    totalSpeeches: number;
+    sessionsSpoke: number;
+    averageSpeeches: number;
+    sessions: Array<{
+      id: string;
+      sessionNumber: string;
+      sessionDate: string;
+      sitting: string;
+      topics: string[];
+      speechCount: number;
+    }>;
+  }> {
+    const allRecords = Array.from(this.hansardRecords.values());
+    
+    const parliament15Records = allRecords.filter(r => r.parliamentTerm === '15');
+    const totalSessions = parliament15Records.length;
+    
+    const sessionsWithMp = parliament15Records
+      .filter(record => record.speakerStats?.some((stat: any) => stat.mpId === mpId))
+      .sort((a, b) => new Date(b.sessionDate).getTime() - new Date(a.sessionDate).getTime());
+    
+    const sessions = sessionsWithMp.map(record => {
+      const mpStats = record.speakerStats?.find((stat: any) => stat.mpId === mpId);
+      return {
+        id: record.id,
+        sessionNumber: record.sessionNumber,
+        sessionDate: record.sessionDate.toISOString(),
+        sitting: record.sitting,
+        topics: record.topics || [],
+        speechCount: mpStats?.totalSpeeches || 0
+      };
+    });
+    
+    const totalSpeeches = sessions.reduce((sum, s) => sum + s.speechCount, 0);
+    const sessionsSpoke = sessions.length;
+    const averageSpeeches = sessionsSpoke > 0 ? totalSpeeches / sessionsSpoke : 0;
+    
+    return {
+      totalSessions,
+      totalSpeeches,
+      sessionsSpoke,
+      averageSpeeches: Math.round(averageSpeeches * 100) / 100,
+      sessions
+    };
+  }
   
   async createHansardRecord(insertRecord: InsertHansardRecord): Promise<HansardRecord> {
     const id = randomUUID();
@@ -1903,6 +1965,83 @@ export class DbStorage implements IStorage {
     } catch (error) {
       console.error("Error in getHansardSpeakingParticipationByMpId:", error);
       return { count: 0, sessions: [] };
+    }
+  }
+
+  async get15thParliamentParticipationByMpId(mpId: string): Promise<{
+    totalSessions: number;
+    totalSpeeches: number;
+    sessionsSpoke: number;
+    averageSpeeches: number;
+    sessions: Array<{
+      id: string;
+      sessionNumber: string;
+      sessionDate: string;
+      sitting: string;
+      topics: string[];
+      speechCount: number;
+    }>;
+  }> {
+    try {
+      const totalSessionsResult = await db.execute(sql`
+        SELECT COUNT(*) as count
+        FROM hansard_records
+        WHERE parliament_term = '15'
+      `);
+      const totalSessions = Number(totalSessionsResult.rows[0]?.count || 0);
+
+      const result = await db.execute(sql`
+        SELECT 
+          id,
+          session_number,
+          to_char(session_date, 'YYYY-MM-DD"T"HH24:MI:SS"Z"') as session_date,
+          sitting,
+          topics,
+          speaker_stats
+        FROM hansard_records
+        WHERE parliament_term = '15'
+        ORDER BY session_date DESC
+      `);
+
+      const sessions = result.rows
+        .map((row: any) => {
+          const speakerStats = row.speaker_stats || [];
+          const mpStats = speakerStats.find((s: any) => s.mpId === mpId || s.mp_id === mpId);
+          const speechCount = mpStats?.totalSpeeches || mpStats?.total_speeches || 0;
+
+          return {
+            id: row.id,
+            sessionNumber: row.session_number,
+            sessionDate: row.session_date,
+            sitting: row.sitting,
+            topics: row.topics || [],
+            speechCount,
+            hasMp: speechCount > 0
+          };
+        })
+        .filter((session: any) => session.hasMp)
+        .map(({ hasMp, ...session }) => session);
+
+      const totalSpeeches = sessions.reduce((sum, s) => sum + s.speechCount, 0);
+      const sessionsSpoke = sessions.length;
+      const averageSpeeches = sessionsSpoke > 0 ? totalSpeeches / sessionsSpoke : 0;
+
+      return {
+        totalSessions,
+        totalSpeeches,
+        sessionsSpoke,
+        averageSpeeches: Math.round(averageSpeeches * 100) / 100,
+        sessions
+      };
+    } catch (error) {
+      console.error("Error in get15thParliamentParticipationByMpId:", error);
+      return {
+        totalSessions: 0,
+        totalSpeeches: 0,
+        sessionsSpoke: 0,
+        averageSpeeches: 0,
+        sessions: []
+      };
     }
   }
   

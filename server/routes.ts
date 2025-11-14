@@ -717,6 +717,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get 15th Parliament Hansard participation by MP ID
+  app.get("/api/mps/:id/hansard-participation-15th", async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      const mp = await storage.getMp(id);
+      if (!mp) {
+        return res.status(404).json({ error: "MP not found" });
+      }
+      
+      const participation = await storage.get15thParliamentParticipationByMpId(id);
+      res.json(participation);
+    } catch (error) {
+      console.error("Error fetching 15th Parliament Hansard participation:", error);
+      res.status(500).json({ error: "Failed to fetch 15th Parliament Hansard participation" });
+    }
+  });
+
   // Get single parliamentary question by ID
   app.get("/api/parliamentary-questions/:id", async (req, res) => {
     try {
