@@ -1,6 +1,12 @@
-import { Search, Menu, Home, FileText, BookOpen, UserCheck, Calculator, BarChart3, ExternalLink } from "lucide-react";
+import { Search, Menu, Home, FileText, BookOpen, UserCheck, Calculator, BarChart3, ExternalLink, ChevronDown } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Link, useLocation } from "wouter";
 
 interface HeaderProps {
@@ -10,7 +16,7 @@ interface HeaderProps {
 }
 
 export function Header({ searchQuery, onSearchChange, onMenuClick }: HeaderProps) {
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shadow-sm">
@@ -88,17 +94,6 @@ export function Header({ searchQuery, onSearchChange, onMenuClick }: HeaderProps
               <span>Attendance</span>
             </Button>
           </Link>
-          <Link href="/allowances">
-            <Button
-              variant={location === "/allowances" ? "secondary" : "ghost"}
-              size="sm"
-              data-testid="nav-allowances"
-              className="gap-2"
-            >
-              <Calculator className="w-4 h-4" />
-              <span>Allowances</span>
-            </Button>
-          </Link>
           <Link href="/hansard-admin">
             <Button
               variant={location === "/hansard-admin" ? "secondary" : "ghost"}
@@ -110,17 +105,36 @@ export function Header({ searchQuery, onSearchChange, onMenuClick }: HeaderProps
               <span>Admin</span>
             </Button>
           </Link>
-          <Link href="/hansard-analysis">
-            <Button
-              variant={location === "/hansard-analysis" ? "secondary" : "ghost"}
-              size="sm"
-              data-testid="nav-hansard-analysis"
-              className="gap-2"
-            >
-              <BarChart3 className="w-4 h-4" />
-              <span>Analysis</span>
-            </Button>
-          </Link>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant={location === "/hansard-analysis" || location === "/allowances" ? "secondary" : "ghost"}
+                size="sm"
+                data-testid="nav-analysis-dropdown"
+                className="gap-2"
+              >
+                <BarChart3 className="w-4 h-4" />
+                <span>Analysis</span>
+                <ChevronDown className="w-3 h-3 ml-1" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start">
+              <DropdownMenuItem 
+                onSelect={() => setLocation("/hansard-analysis")}
+                data-testid="nav-hansard-analysis"
+              >
+                <BarChart3 className="w-4 h-4 mr-2" />
+                <span>Hansard Analysis</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                onSelect={() => setLocation("/allowances")}
+                data-testid="nav-allowances"
+              >
+                <Calculator className="w-4 h-4 mr-2" />
+                <span>Allowances</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <a href="https://open.dosm.gov.my/ms-MY/dashboard/kawasanku" target="_blank" rel="noopener noreferrer">
             <Button
               variant="ghost"
