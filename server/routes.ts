@@ -1046,10 +1046,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
               totalSpeeches: speechesPerMp.get(s.mpId) || 1,
               speakingOrder: idx + 1,
             })),
+            sessionSpeakerStats: parsed.speakerStats, // Session-level speaker statistics
             voteRecords: [],
             attendedMpIds: parsed.attendance.attendedMpIds,
             absentMpIds: parsed.attendance.absentMpIds,
-            constituenciesPresent: parsed.attendance.attendedConstituencies.length,
+            constituenciesPresent: parsed.speakerStats.constituenciesAttended, // Matches sessionSpeakerStats for consistency
             constituenciesAbsent: parsed.attendance.absentConstituencies.length,
           };
 

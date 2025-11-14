@@ -194,6 +194,16 @@ export interface HansardSpeakerStats {
   speakingOrder: number | null;
 }
 
+export interface SessionSpeakerStats {
+  totalUniqueSpeakers: number;
+  speakingMpIds: string[];
+  speakingConstituencies: string[];
+  constituenciesAttended: number;
+  constituenciesSpoke: number;
+  constituenciesAttendedButSilent: string[];
+  attendanceRate: number;
+}
+
 export interface HansardVoteRecord {
   voteType: string;
   motion: string;
@@ -218,6 +228,7 @@ export const hansardRecords = pgTable("hansard_records", {
   topics: jsonb("topics").$type<string[]>().notNull().default(sql`'[]'::jsonb`),
   speakers: jsonb("speakers").$type<HansardSpeaker[]>().notNull().default(sql`'[]'::jsonb`),
   speakerStats: jsonb("speaker_stats").$type<HansardSpeakerStats[]>().notNull().default(sql`'[]'::jsonb`),
+  sessionSpeakerStats: jsonb("session_speaker_stats").$type<SessionSpeakerStats | null>().default(null),
   voteRecords: jsonb("vote_records").$type<HansardVoteRecord[]>().notNull().default(sql`'[]'::jsonb`),
   attendedMpIds: jsonb("attended_mp_ids").$type<string[]>().notNull().default(sql`'[]'::jsonb`),
   absentMpIds: jsonb("absent_mp_ids").$type<string[]>().notNull().default(sql`'[]'::jsonb`),
@@ -250,6 +261,15 @@ export const insertHansardRecordSchema = createInsertSchema(hansardRecords).omit
     totalSpeeches: z.number(),
     speakingOrder: z.number().nullable(),
   })).optional().default([]),
+  sessionSpeakerStats: z.object({
+    totalUniqueSpeakers: z.number(),
+    speakingMpIds: z.array(z.string()),
+    speakingConstituencies: z.array(z.string()),
+    constituenciesAttended: z.number(),
+    constituenciesSpoke: z.number(),
+    constituenciesAttendedButSilent: z.array(z.string()),
+    attendanceRate: z.number(),
+  }).nullable().optional(),
   voteRecords: z.array(z.object({
     voteType: z.string(),
     motion: z.string(),
