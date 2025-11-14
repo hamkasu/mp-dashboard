@@ -1019,8 +1019,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
         try {
           console.log(`📄 Processing: ${file.originalname} (${file.size} bytes)`);
           
+          // Calculate MD5 hash first to check for duplicates
+          const md5Hash = crypto.createHash('md5').update(file.buffer).digest('hex');
+          
+          // Check if this exact PDF already exists
+          const pdfCheck = await storage.checkPdfExistsByMd5(md5Hash);
+          if (pdfCheck.exists) {
+            console.log(`⏭️  Skipping: ${file.originalname} - Duplicate PDF already exists (Session: ${pdfCheck.sessionNumber})`);
+            results.push({
+              success: true,
+              fileName: file.originalname,
+              skipped: true,
+              reason: `Duplicate file already exists for session ${pdfCheck.sessionNumber}`,
+              sessionNumber: pdfCheck.sessionNumber,
+            });
+            continue;
+          }
+          
           // Parse the PDF with filename for better date extraction
           const parsed = await parser.parseHansardPdf(file.buffer, file.originalname);
+
+          // Check if this session already exists
+          const existingSession = await storage.getHansardRecordsBySessionNumber(parsed.metadata.sessionNumber);
+          if (existingSession.length > 0) {
+            console.log(`⏭️  Skipping: ${file.originalname} - Session ${parsed.metadata.sessionNumber} already exists`);
+            results.push({
+              success: true,
+              fileName: file.originalname,
+              skipped: true,
+              reason: `Session ${parsed.metadata.sessionNumber} already exists in database`,
+              sessionNumber: parsed.metadata.sessionNumber,
+            });
+            continue;
+          }
 
           // Count speeches per MP from allSpeakingInstances
           const speechesPerMp = new Map<string, number>();
@@ -1056,9 +1087,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           const record = await storage.createHansardRecord(hansardData);
           
-          // Calculate MD5 hash and store PDF in database
-          const md5Hash = crypto.createHash('md5').update(file.buffer).digest('hex');
-          
+          // Store PDF in database (md5Hash already calculated earlier)
           // Check if a PDF with this hash already exists for this record
           const { eq, and } = await import("drizzle-orm");
           const [existingPdf] = await db.select().from(hansardPdfFiles)

@@ -16,6 +16,8 @@ interface UploadResult {
   attendedCount?: number;
   absentCount?: number;
   error?: string;
+  skipped?: boolean;
+  reason?: string;
 }
 
 export default function HansardAdmin() {
@@ -237,19 +239,26 @@ export default function HansardAdmin() {
       setUploadResults(data.results);
       setSelectedFiles([]);
       
-      const successCount = data.results.filter(r => r.success).length;
-      const failCount = data.results.length - successCount;
+      const successCount = data.results.filter(r => r.success && !r.skipped).length;
+      const skippedCount = data.results.filter(r => r.skipped).length;
+      const failCount = data.results.filter(r => !r.success).length;
       
-      if (successCount === 0) {
+      if (successCount === 0 && failCount > 0) {
         toast({
           title: "Upload Failed",
-          description: `All ${failCount} file${failCount !== 1 ? 's' : ''} failed to upload`,
+          description: `All ${failCount} file${failCount !== 1 ? 's' : ''} failed to upload${skippedCount > 0 ? `, ${skippedCount} skipped` : ''}`,
           variant: "destructive",
         });
       } else {
+        const parts = [];
+        if (successCount > 0) parts.push(`${successCount} uploaded`);
+        if (skippedCount > 0) parts.push(`${skippedCount} skipped`);
+        if (failCount > 0) parts.push(`${failCount} failed`);
+        
         toast({
           title: "Upload Complete",
-          description: `Successfully parsed ${successCount} file${successCount !== 1 ? 's' : ''}${failCount > 0 ? `, ${failCount} failed` : ''}`,
+          description: parts.join(', '),
+          variant: failCount > 0 ? "destructive" : "default",
         });
       }
     },
@@ -442,14 +451,28 @@ export default function HansardAdmin() {
           {uploadResults.length > 0 && (
             <div className="space-y-2">
               {uploadResults.map((result, index) => (
-                <Alert key={index} variant={result.success ? "default" : "destructive"}>
-                  {result.success ? <CheckCircle2 className="h-4 w-4" /> : <AlertTriangle className="h-4 w-4" />}
+                <Alert 
+                  key={index} 
+                  variant={result.success ? (result.skipped ? "default" : "default") : "destructive"}
+                  className={result.skipped ? "border-yellow-500 bg-yellow-50 dark:bg-yellow-950/20" : ""}
+                >
+                  {result.success ? (
+                    result.skipped ? (
+                      <AlertTriangle className="h-4 w-4 text-yellow-600" />
+                    ) : (
+                      <CheckCircle2 className="h-4 w-4" />
+                    )
+                  ) : (
+                    <AlertTriangle className="h-4 w-4" />
+                  )}
                   <AlertDescription>
                     <div className="space-y-2">
                       <p className="font-medium">
-                        {result.fileName}: {result.success ? `Hansard ${result.sessionNumber}` : 'Failed'}
+                        {result.fileName}: {result.skipped ? 'Skipped' : (result.success ? `Hansard ${result.sessionNumber}` : 'Failed')}
                       </p>
-                      {result.success ? (
+                      {result.skipped ? (
+                        <p className="text-sm text-yellow-700 dark:text-yellow-400">{result.reason}</p>
+                      ) : result.success ? (
                         <div className="text-sm space-y-1">
                           <p>✅ {result.speakersFound} MPs detected as speakers</p>
                           <p>✅ {result.attendedCount} MPs attended</p>
