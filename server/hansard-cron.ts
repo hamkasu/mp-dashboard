@@ -259,10 +259,10 @@ export function startHansardCron(): void {
     return;
   }
 
-  // Schedule cron job to run daily at 2 AM Malaysia time (Asia/Kuala_Lumpur)
-  // Cron expression: "0 2 * * *" = At 02:00 every day
+  // Schedule cron job to run daily at 12 PM Malaysia time (Asia/Kuala_Lumpur)
+  // Cron expression: "0 12 * * *" = At 12:00 every day
   cronJob = cron.schedule(
-    '0 2 * * *',
+    '0 12 * * *',
     async () => {
       console.log('\n⏰ [Hansard Cron] Scheduled sync triggered');
       await runHansardSync({ triggeredBy: 'scheduled' });
@@ -272,7 +272,7 @@ export function startHansardCron(): void {
     }
   );
 
-  console.log('✅ [Hansard Cron] Daily sync scheduled at 02:00 Malaysia time (Asia/Kuala_Lumpur)');
+  console.log('✅ [Hansard Cron] Daily sync scheduled at 12:00 Malaysia time (Asia/Kuala_Lumpur)');
 }
 
 export function stopHansardCron(): void {
