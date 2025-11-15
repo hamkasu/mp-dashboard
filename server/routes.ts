@@ -1177,18 +1177,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Analyze Hansard PDF for specific MP speeches (transient analysis, no persistence)
-  app.post("/api/hansard-analysis", upload.single('pdf'), handleMulterError, async (req, res) => {
+  app.post("/api/hansard-analysis", async (req, res) => {
     try {
-      if (!req.file) {
-        return res.status(400).json({ error: "No PDF file uploaded. Only PDF files are accepted." });
+      const requestSchema = z.object({
+        hansardRecordId: z.string(),
+        mpId: z.string(),
+      });
+
+      const validation = requestSchema.safeParse(req.body);
+      if (!validation.success) {
+        return res.status(400).json({ 
+          error: "Invalid request", 
+          details: validation.error.errors.map(e => e.message).join(", ")
+        });
       }
 
-      const mpId = req.body.mpId;
-      if (!mpId) {
-        return res.status(400).json({ error: "MP ID is required" });
+      const { hansardRecordId, mpId } = validation.data;
+
+      // Fetch the Hansard record from database
+      const hansardRecord = await storage.getHansardRecord(hansardRecordId);
+      if (!hansardRecord) {
+        return res.status(404).json({ error: "Hansard record not found" });
       }
 
-      console.log(`📊 Analyzing Hansard PDF: ${req.file.originalname} for MP: ${mpId}`);
+      // Check if record has PDF links
+      if (!hansardRecord.pdfLinks || hansardRecord.pdfLinks.length === 0) {
+        return res.status(400).json({ 
+          error: "No PDF available for this Hansard record",
+          details: "This session does not have any PDF files stored"
+        });
+      }
+
+      console.log(`📊 Analyzing Hansard session ${hansardRecord.sessionNumber} for MP: ${mpId}`);
 
       // Get all MPs from database
       const allMps = await db.select().from(mps);
@@ -1199,9 +1219,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "MP not found" });
       }
 
+      // Download PDF from the stored URL
+      const pdfUrl = hansardRecord.pdfLinks[0];
+      let pdfBuffer: Buffer;
+
+      try {
+        const axios = await import('axios');
+        console.log(`📥 Downloading PDF from: ${pdfUrl}`);
+        const response = await axios.default.get(pdfUrl, {
+          responseType: 'arraybuffer',
+          timeout: 30000, // 30 second timeout
+        });
+        pdfBuffer = Buffer.from(response.data);
+        console.log(`✅ Downloaded PDF: ${(pdfBuffer.length / 1024 / 1024).toFixed(2)} MB`);
+      } catch (downloadError) {
+        console.error("Error downloading PDF:", downloadError);
+        return res.status(500).json({ 
+          error: "Failed to download PDF from stored URL", 
+          details: downloadError instanceof Error ? downloadError.message : 'Network error'
+        });
+      }
+
       // Parse using HansardPdfParser - uses canonical speaker identification
       const parser = new HansardPdfParser(allMps);
-      const parsed = await parser.parseHansardPdf(req.file.buffer, req.file.originalname);
+      const parsed = await parser.parseHansardPdf(pdfBuffer, hansardRecord.sessionNumber);
 
       // Filter unique speakers for target MP (deduplicated)
       const targetSpeakers = parsed.speakers.filter(s => s.mpId === mpId);
