@@ -1,0 +1,69 @@
+{
+  "metadata": {
+    "parliamentTerm": "15th Parliament",
+    "totalSessions": 3,
+    "totalConstituencies": 5,
+    "generatedAt": "2025-11-15T13:20:22.711Z",
+    "sessions": [
+      {
+        "sessionNumber": "DR.11.04.2022",
+        "sessionDate": "2022-04-11T00:00:00.000Z"
+      },
+      {
+        "sessionNumber": "DR.13.10.2023",
+        "sessionDate": "2023-10-13T00:00:00.000Z"
+      },
+      {
+        "sessionNumber": "DR.6.11.2025",
+        "sessionDate": "2025-11-06T00:00:00.000Z"
+      }
+    ]
+  },
+  "constituencies": [
+    {
+      "rank": 1,
+      "constituency": "Tambun",
+      "totalSpeeches": 7,
+      "sessionsSpoke": 1,
+      "mps": [
+        "Anwar Ibrahim"
+      ]
+    },
+    {
+      "rank": 2,
+      "constituency": "Pandan",
+      "totalSpeeches": 5,
+      "sessionsSpoke": 1,
+      "mps": [
+        "Rafizi Ramli"
+      ]
+    },
+    {
+      "rank": 3,
+      "constituency": "Bagan Datuk",
+      "totalSpeeches": 4,
+      "sessionsSpoke": 1,
+      "mps": [
+        "Ahmad Zahid Hamidi"
+      ]
+    },
+    {
+      "rank": 4,
+      "constituency": "Santubong",
+      "totalSpeeches": 3,
+      "sessionsSpoke": 1,
+      "mps": [
+        "Nancy Shukri"
+      ]
+    },
+    {
+      "rank": 5,
+      "constituency": "Kanowit",
+      "totalSpeeches": 2,
+      "sessionsSpoke": 1,
+      "mps": [
+        "Aaron Ago Dagang"
+      ]
+    }
+  ]
+}
