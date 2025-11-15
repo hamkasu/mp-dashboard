@@ -764,6 +764,94 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get constituency speech statistics for 15th Parliament
+  app.get("/api/constituency-speech-stats", async (req, res) => {
+    try {
+      // Fetch all 15th Parliament Hansard records
+      const hansards = await storage.getHansardRecordsByParliament('15th Parliament');
+      
+      // Fetch all MPs for constituency mapping
+      const allMps = await storage.getAllMps();
+      const mpLookup = new Map(allMps.map(mp => [mp.id, mp]));
+      
+      // Track constituency speech counts
+      const constituencySpeechData = new Map<string, {
+        totalSpeeches: number;
+        sessionsSpoke: number;
+        mpNames: string[];
+      }>();
+      
+      // Process each Hansard record
+      for (const hansard of hansards) {
+        const speakerStats = hansard.speakerStats as Array<{
+          mpId: string;
+          mpName: string;
+          totalSpeeches: number;
+          speakingOrder: number | null;
+        }>;
+        
+        if (!speakerStats || speakerStats.length === 0) continue;
+        
+        const constituenciesInSession = new Set<string>();
+        
+        for (const stat of speakerStats) {
+          const mp = mpLookup.get(stat.mpId);
+          if (!mp) continue;
+          
+          const constituency = mp.constituency;
+          
+          if (!constituencySpeechData.has(constituency)) {
+            constituencySpeechData.set(constituency, {
+              totalSpeeches: 0,
+              sessionsSpoke: 0,
+              mpNames: [],
+            });
+          }
+          
+          const data = constituencySpeechData.get(constituency)!;
+          data.totalSpeeches += stat.totalSpeeches || 0;
+          
+          if (!data.mpNames.includes(mp.name)) {
+            data.mpNames.push(mp.name);
+          }
+          
+          constituenciesInSession.add(constituency);
+        }
+        
+        // Increment session count for constituencies that spoke in this session
+        for (const constituency of constituenciesInSession) {
+          const data = constituencySpeechData.get(constituency);
+          if (data) {
+            data.sessionsSpoke++;
+          }
+        }
+      }
+      
+      // Convert to array and sort by total speeches
+      const sortedConstituencies = Array.from(constituencySpeechData.entries())
+        .map(([constituency, data]) => ({
+          constituency,
+          totalSpeeches: data.totalSpeeches,
+          sessionsSpoke: data.sessionsSpoke,
+          mps: data.mpNames,
+        }))
+        .sort((a, b) => b.totalSpeeches - a.totalSpeeches);
+      
+      res.json({
+        metadata: {
+          parliamentTerm: '15th Parliament',
+          totalSessions: hansards.length,
+          totalConstituencies: constituencySpeechData.size,
+          generatedAt: new Date().toISOString(),
+        },
+        constituencies: sortedConstituencies,
+      });
+    } catch (error) {
+      console.error("Error fetching constituency speech stats:", error);
+      res.status(500).json({ error: "Failed to fetch constituency speech stats" });
+    }
+  });
+
   // Get single parliamentary question by ID
   app.get("/api/parliamentary-questions/:id", async (req, res) => {
     try {
