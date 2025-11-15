@@ -16,6 +16,7 @@ Preferred communication style: Simple, everyday language.
 -   **MP Profile Page**: Detailed individual MP information, monthly/yearly allowance calculations, attendance section with color-coded days, allowance information table, court cases section with status badges, SPRM investigations section, Hansard speech participation metrics.
 -   **Parliamentary Activity Page**: Browse legislative proposals, debate participations, parliamentary questions, court cases, and SPRM investigations with search and filters.
 -   **Hansard Records Page**: Browse parliamentary session transcripts with search/filter, collapsible sections for speakers, vote records, full transcripts, PDF links, topics, vote tallies, and a "View by Constituency" dialog showing attendance grouped by state and party.
+-   **Hansard Analysis Page**: Analyze individual MP speech participation from database-stored Hansard PDFs. Users select a Hansard session (from existing database records) and an MP, then the system downloads the PDF from stored URLs, parses all speeches, and displays detailed statistics including total speeches, word count, attendance status, speech excerpts, question summaries, and mentioned MPs. Backend uses axios to fetch PDFs from stored URLs and pdf-parse for text extraction.
 -   **MP Attendance Report Page**: Tracks MP and constituency participation; filter by date range, party, state; view attendance statistics; toggle between "By MP" and "By Constituency" views.
 **State Management**: Server state by TanStack Query; local UI state by React hooks.
 
