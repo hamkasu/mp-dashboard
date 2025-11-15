@@ -1200,14 +1200,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Hansard record not found" });
       }
 
-      // Check if record has PDF links
-      if (!hansardRecord.pdfLinks || hansardRecord.pdfLinks.length === 0) {
-        return res.status(400).json({ 
-          error: "No PDF available for this Hansard record",
-          details: "This session does not have any PDF files stored"
-        });
-      }
-
       console.log(`📊 Analyzing Hansard session ${hansardRecord.sessionNumber} for MP: ${mpId}`);
 
       // Get all MPs from database
@@ -1219,24 +1211,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "MP not found" });
       }
 
-      // Download PDF from the stored URL
-      const pdfUrl = hansardRecord.pdfLinks[0];
+      // Get PDF data - first try from database, then fall back to downloading from URL
       let pdfBuffer: Buffer;
 
       try {
-        const axios = await import('axios');
-        console.log(`📥 Downloading PDF from: ${pdfUrl}`);
-        const response = await axios.default.get(pdfUrl, {
-          responseType: 'arraybuffer',
-          timeout: 30000, // 30 second timeout
-        });
-        pdfBuffer = Buffer.from(response.data);
-        console.log(`✅ Downloaded PDF: ${(pdfBuffer.length / 1024 / 1024).toFixed(2)} MB`);
-      } catch (downloadError) {
-        console.error("Error downloading PDF:", downloadError);
+        // Try to get PDF from database first (new approach)
+        const { eq, desc } = await import("drizzle-orm");
+        const [pdfFile] = await db.select().from(hansardPdfFiles)
+          .where(eq(hansardPdfFiles.hansardRecordId, hansardRecordId))
+          .orderBy(desc(hansardPdfFiles.isPrimary))
+          .limit(1);
+
+        if (pdfFile && pdfFile.pdfData) {
+          pdfBuffer = pdfFile.pdfData;
+          console.log(`✅ Using stored PDF from database: ${(pdfBuffer.length / 1024 / 1024).toFixed(2)} MB`);
+        } else if (hansardRecord.pdfLinks && hansardRecord.pdfLinks.length > 0) {
+          // Fall back to downloading from URL (old approach for backwards compatibility)
+          const pdfUrl = hansardRecord.pdfLinks[0];
+          const axios = await import('axios');
+          console.log(`📥 Downloading PDF from: ${pdfUrl}`);
+          const response = await axios.default.get(pdfUrl, {
+            responseType: 'arraybuffer',
+            timeout: 30000, // 30 second timeout
+          });
+          pdfBuffer = Buffer.from(response.data);
+          console.log(`✅ Downloaded PDF: ${(pdfBuffer.length / 1024 / 1024).toFixed(2)} MB`);
+        } else {
+          return res.status(400).json({ 
+            error: "No PDF available for this Hansard record",
+            details: "This session does not have any PDF files stored in the database or linked URLs"
+          });
+        }
+      } catch (pdfError) {
+        console.error("Error getting PDF:", pdfError);
         return res.status(500).json({ 
-          error: "Failed to download PDF from stored URL", 
-          details: downloadError instanceof Error ? downloadError.message : 'Network error'
+          error: "Failed to retrieve PDF data", 
+          details: pdfError instanceof Error ? pdfError.message : 'Unknown error'
         });
       }
 
