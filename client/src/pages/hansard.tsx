@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Search, FileText, Calendar, Download, Sparkles, CheckCircle, Users, UserX, MapPin, Trash2 } from "lucide-react";
+import { Search, FileText, Calendar, Download, Sparkles, CheckCircle, Users, UserX, MapPin, Trash2, BarChart3 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import type { HansardRecord } from "@shared/schema";
@@ -31,6 +31,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { ConstituencyAttendance } from "@/components/ConstituencyAttendance";
+import { HansardAnalysisDialog } from "@/components/HansardAnalysisDialog";
 
 export default function HansardPage() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -267,6 +268,19 @@ export default function HansardPage() {
                       PDF
                     </a>
                   </Button>
+                  <HansardAnalysisDialog
+                    hansardRecord={record}
+                    trigger={
+                      <Button
+                        data-testid={`button-analysis-${record.id}`}
+                        variant="outline"
+                        size="sm"
+                      >
+                        <BarChart3 className="w-4 h-4 mr-2" />
+                        Analysis
+                      </Button>
+                    }
+                  />
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
                       <Button
