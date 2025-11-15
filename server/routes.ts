@@ -819,7 +819,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         
         // Increment session count for constituencies that spoke in this session
-        for (const constituency of constituenciesInSession) {
+        for (const constituency of Array.from(constituenciesInSession)) {
           const data = constituencySpeechData.get(constituency);
           if (data) {
             data.sessionsSpoke++;

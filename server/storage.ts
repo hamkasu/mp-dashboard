@@ -2550,7 +2550,7 @@ export class DbStorage implements IStorage {
         statsMap.set(stat.mpId, stat.totalSpeeches);
       }
 
-      for (const [mpId, totalSpeeches] of statsMap.entries()) {
+      for (const [mpId, totalSpeeches] of Array.from(statsMap.entries())) {
         const updated = await tx.update(mps)
           .set({
             hansardSessionsSpoke: sql`${mps.hansardSessionsSpoke} + 1`,
