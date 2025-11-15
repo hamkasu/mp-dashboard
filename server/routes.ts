@@ -190,7 +190,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // Count sessions where MP spoke (only from relevant sessions)
         const sessionsSpoke = relevantSessions.filter(record => 
-          record.speakers && record.speakers.some(speaker => speaker.mpId === mp.id)
+          (record.speakerStats && record.speakerStats.some((stat: any) => stat.mpId === mp.id)) ||
+          (record.speakers && record.speakers.some(speaker => speaker.mpId === mp.id))
         ).length;
         
         return {
@@ -239,7 +240,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Count sessions where MP spoke (only from relevant sessions)
       const sessionsSpoke = relevantSessions.filter(record => 
-        record.speakers && record.speakers.some(speaker => speaker.mpId === mp.id)
+        (record.speakerStats && record.speakerStats.some((stat: any) => stat.mpId === mp.id)) ||
+        (record.speakers && record.speakers.some(speaker => speaker.mpId === mp.id))
       ).length;
       
       res.json({
