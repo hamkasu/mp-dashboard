@@ -28,8 +28,9 @@ export class HansardSpeakerParser {
     // This must come FIRST to catch ministerial titles without constituencies
     /(?:Menteri|Timbalan Menteri|Datuk Seri|Dato' Sri|Datuk|Dato'|Tan Sri|Toh Puan|Tuan|Puan|Dr\.?|Yang Berhormat|Y\.Bhg\.|YB)\s+(?:Haji|Hajjah)?\s*([^:]{10,80}):\s+/gi,
     
-    // Pattern: "[P###] Constituency - Name" or "[Constituency - Name]"
-    /\[(?:P\d{3}\s+)?([A-Za-z\s]+?)\s*[-–]\s*([^\]]+)\]/gi,
+    // Pattern: "[P###] Constituency - Name]:" or "[Constituency - Name]:" at line start
+    // FIXED: Anchored to line start, limited length to prevent runaway matches, requires closing ]:
+    /^\[(?:P\d{3}\s+)?([^\]\n]{1,60})\s*[-–]\s*([^\]\n]{1,60})\]:/gm,
     
     // Pattern: "Tuan/Puan/YB/Datuk [Name] ([Constituency]):"
     /(?:Tuan|Puan|Yang Berhormat|Y\.Bhg\.|Datuk|Dato'|Tan Sri|Toh Puan|YB|Dr\.?)\s+([^(:\[]+?)\s*\(([^)]+)\)\s*:/gi,
@@ -250,6 +251,11 @@ export class HansardSpeakerParser {
 
     if (!name) return { kind: 'skip' };
 
+    // Filter out parliamentary officials (Speaker/Deputy Speaker) - they are not MPs
+    if (this.isParliamentaryOfficial(name)) {
+      return { kind: 'skip' };
+    }
+
     // Try to match MP
     const mp = this.matchMp(name, constituency);
     
@@ -310,7 +316,24 @@ export class HansardSpeakerParser {
   private cleanText(text: string): string {
     return text.trim()
       .replace(/\s+/g, ' ')
-      .replace(/^[:\-\s]+|[:\-\s]+$/g, '');
+      .replace(/^[:\-\s]+|[:\-\s]+$/g, '')
+      .replace(/[\[\]()]+$/g, '')  // Strip trailing brackets and parentheses
+      .replace(/^[\[\]()]+/g, '')  // Strip leading brackets and parentheses
+      .trim();
+  }
+
+  private isParliamentaryOfficial(name: string): boolean {
+    const normalized = name.toLowerCase();
+    const officialTitles = [
+      'yang di-pertua',
+      'timbalan yang di-pertua',
+      'speaker',
+      'deputy speaker',
+      'yang amat berhormat',
+      'ramli bin dato\' mohd nor',
+      'ramli mohd nor'
+    ];
+    return officialTitles.some(title => normalized.includes(title));
   }
 
   private normalizeName(name: string): string {

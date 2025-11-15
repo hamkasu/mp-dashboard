@@ -6,6 +6,7 @@ import { HansardSpeechAnalyzer } from './hansard-speech-analyzer';
 import crypto from 'crypto';
 import { getPublicBaseUrl, buildPdfUrl } from './utils/url-helper';
 import { db } from './db';
+import { aggregateSpeechesForAllMps } from './aggregate-speeches';
 
 export interface HansardSyncResult {
   triggeredBy: 'manual' | 'scheduled';
@@ -205,6 +206,18 @@ export async function runHansardSync(options: { triggeredBy: 'manual' | 'schedul
       result.errors.forEach(err => {
         console.log(`   - ${err.sessionNumber}: ${err.error}`);
       });
+    }
+
+    // Run speech aggregation if new records were inserted
+    if (result.recordsInserted > 0) {
+      console.log(`\n📊 [Hansard Sync] Running speech aggregation for ${result.recordsInserted} new records...`);
+      try {
+        const aggregationResult = await aggregateSpeechesForAllMps();
+        console.log(`✅ [Hansard Sync] Aggregation complete: ${aggregationResult.totalMpsUpdated} MPs updated`);
+      } catch (error: any) {
+        console.error(`❌ [Hansard Sync] Aggregation failed: ${error.message}`);
+        // Don't fail the entire sync if aggregation fails
+      }
     }
 
     return result;
