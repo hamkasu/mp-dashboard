@@ -41,6 +41,10 @@ interface ParsedHansard {
     constituency: string;
     instanceNumber: number;
     lineNumber: number;
+    headerPosition: number;
+    headerLength: number;
+    capturedHeader: string;
+    speechText?: string;
   }>;
   speakerStats: SpeakerStatistics;
   unmatchedSpeakers: string[];

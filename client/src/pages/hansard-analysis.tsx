@@ -1,9 +1,8 @@
 import { useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { apiRequest } from "@/lib/queryClient";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
@@ -12,8 +11,6 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
-  FileText, 
-  Upload, 
   Loader2, 
   CheckCircle, 
   XCircle, 
@@ -23,6 +20,7 @@ import {
   Users
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import type { HansardRecord } from "@shared/schema";
 
 interface MP {
   id: string;
@@ -74,7 +72,7 @@ interface AnalysisResult {
 
 export default function HansardAnalysis() {
   const { toast } = useToast();
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [selectedHansardId, setSelectedHansardId] = useState<string>("");
   const [selectedMpId, setSelectedMpId] = useState<string>("");
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
 
@@ -82,24 +80,18 @@ export default function HansardAnalysis() {
     queryKey: ["/api/mps"],
   });
 
+  const { data: hansardRecords, isLoading: hansardLoading } = useQuery<HansardRecord[]>({
+    queryKey: ["/api/hansard-records"],
+  });
+
   const analyzeMutation = useMutation({
-    mutationFn: async (data: { file: File; mpId: string }) => {
-      // Validate file on frontend before sending
-      if (!data.file.name.toLowerCase().endsWith('.pdf')) {
-        throw new Error("Invalid file type. Please select a PDF file.");
-      }
-      
-      if (data.file.size > 50 * 1024 * 1024) {
-        throw new Error("File too large. Maximum size is 50MB.");
-      }
-
-      const formData = new FormData();
-      formData.append("pdf", data.file);
-      formData.append("mpId", data.mpId);
-
+    mutationFn: async (data: { hansardRecordId: string; mpId: string }) => {
       const response = await fetch("/api/hansard-analysis", {
         method: "POST",
-        body: formData,
+        body: JSON.stringify(data),
+        headers: {
+          "Content-Type": "application/json",
+        },
         credentials: "include",
       });
 
@@ -126,34 +118,11 @@ export default function HansardAnalysis() {
     },
   });
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      if (file.type !== "application/pdf") {
-        toast({
-          title: "Invalid File",
-          description: "Please select a PDF file",
-          variant: "destructive",
-        });
-        return;
-      }
-      if (file.size > 50 * 1024 * 1024) {
-        toast({
-          title: "File Too Large",
-          description: "Maximum file size is 50MB",
-          variant: "destructive",
-        });
-        return;
-      }
-      setSelectedFile(file);
-    }
-  };
-
   const handleAnalyze = () => {
-    if (!selectedFile) {
+    if (!selectedHansardId) {
       toast({
-        title: "No File Selected",
-        description: "Please select a Hansard PDF file",
+        title: "No Session Selected",
+        description: "Please select a Hansard session",
         variant: "destructive",
       });
       return;
@@ -167,7 +136,7 @@ export default function HansardAnalysis() {
       return;
     }
 
-    analyzeMutation.mutate({ file: selectedFile, mpId: selectedMpId });
+    analyzeMutation.mutate({ hansardRecordId: selectedHansardId, mpId: selectedMpId });
   };
 
   const getAttendanceIcon = (status: string) => {
@@ -197,7 +166,7 @@ export default function HansardAnalysis() {
       <div className="mb-6">
         <h1 className="text-3xl font-bold mb-2">Hansard Speech Analysis</h1>
         <p className="text-muted-foreground">
-          Upload a Hansard PDF to analyze speaking instances for a specific MP
+          Select a Hansard session to analyze speaking instances for a specific MP
         </p>
       </div>
 
@@ -206,28 +175,38 @@ export default function HansardAnalysis() {
           <Card>
             <CardHeader>
               <CardTitle>Upload & Analyze</CardTitle>
-              <CardDescription>Select a PDF and MP to analyze</CardDescription>
+              <CardDescription>Select a session and MP to analyze</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="pdf-upload">Hansard PDF File</Label>
-                <div className="flex items-center gap-2">
-                  <Input
-                    id="pdf-upload"
-                    data-testid="input-pdf-file"
-                    type="file"
-                    accept=".pdf"
-                    onChange={handleFileChange}
+                <Label htmlFor="hansard-select">Hansard Session</Label>
+                {hansardLoading ? (
+                  <Skeleton className="h-10 w-full" />
+                ) : (
+                  <Select
+                    value={selectedHansardId}
+                    onValueChange={setSelectedHansardId}
                     disabled={analyzeMutation.isPending}
-                  />
-                  {selectedFile && (
-                    <FileText className="w-5 h-5 text-muted-foreground flex-shrink-0" />
-                  )}
-                </div>
-                {selectedFile && (
-                  <p className="text-sm text-muted-foreground" data-testid="text-selected-file">
-                    {selectedFile.name} ({(selectedFile.size / 1024 / 1024).toFixed(2)} MB)
-                  </p>
+                  >
+                    <SelectTrigger id="hansard-select" data-testid="select-hansard">
+                      <SelectValue placeholder="Choose a Hansard session" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {hansardRecords && hansardRecords.length > 0 ? (
+                        [...hansardRecords]
+                          .sort((a, b) => new Date(b.sessionDate).getTime() - new Date(a.sessionDate).getTime())
+                          .map((record) => (
+                            <SelectItem key={record.id} value={record.id}>
+                              {record.sessionNumber} - {new Date(record.sessionDate).toLocaleDateString('en-MY')}
+                            </SelectItem>
+                          ))
+                      ) : (
+                        <SelectItem value="none" disabled>
+                          No Hansard sessions available
+                        </SelectItem>
+                      )}
+                    </SelectContent>
+                  </Select>
                 )}
               </div>
 
@@ -258,7 +237,7 @@ export default function HansardAnalysis() {
               <Button
                 data-testid="button-analyze"
                 onClick={handleAnalyze}
-                disabled={!selectedFile || !selectedMpId || analyzeMutation.isPending}
+                disabled={!selectedHansardId || !selectedMpId || analyzeMutation.isPending}
                 className="w-full"
               >
                 {analyzeMutation.isPending ? (
@@ -296,11 +275,11 @@ export default function HansardAnalysis() {
             <Card>
               <CardContent className="p-12">
                 <div className="flex flex-col items-center justify-center space-y-4 text-center">
-                  <Upload className="h-12 w-12 text-muted-foreground" />
+                  <BarChart3 className="h-12 w-12 text-muted-foreground" />
                   <div>
-                    <p className="text-lg font-medium mb-2">No Analysis Yet</p>
+                    <p className="text-lg font-medium mb-2">Ready to Analyze</p>
                     <p className="text-sm text-muted-foreground">
-                      Upload a Hansard PDF and select an MP to begin analysis
+                      Select a Hansard session and an MP to begin analysis
                     </p>
                   </div>
                 </div>

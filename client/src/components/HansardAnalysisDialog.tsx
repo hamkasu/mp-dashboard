@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
@@ -19,7 +19,6 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { 
-  FileText, 
   Loader2, 
   CheckCircle, 
   XCircle, 
@@ -87,12 +86,16 @@ interface HansardAnalysisDialogProps {
 export function HansardAnalysisDialog({ hansardRecord, trigger }: HansardAnalysisDialogProps) {
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [selectedHansardId, setSelectedHansardId] = useState<string>(hansardRecord?.id || "");
   const [selectedMpId, setSelectedMpId] = useState<string>("");
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
 
   const { data: mps, isLoading: mpsLoading } = useQuery<MP[]>({
     queryKey: ["/api/mps"],
+  });
+
+  const { data: hansardRecords, isLoading: hansardLoading } = useQuery<HansardRecord[]>({
+    queryKey: ["/api/hansard-records"],
   });
 
   const filteredMps = (() => {
@@ -116,22 +119,13 @@ export function HansardAnalysisDialog({ hansardRecord, trigger }: HansardAnalysi
   })();
 
   const analyzeMutation = useMutation({
-    mutationFn: async (data: { file: File; mpId: string }) => {
-      if (!data.file.name.toLowerCase().endsWith('.pdf')) {
-        throw new Error("Invalid file type. Please select a PDF file.");
-      }
-      
-      if (data.file.size > 50 * 1024 * 1024) {
-        throw new Error("File too large. Maximum size is 50MB.");
-      }
-
-      const formData = new FormData();
-      formData.append("pdf", data.file);
-      formData.append("mpId", data.mpId);
-
+    mutationFn: async (data: { hansardRecordId: string; mpId: string }) => {
       const response = await fetch("/api/hansard-analysis", {
         method: "POST",
-        body: formData,
+        body: JSON.stringify(data),
+        headers: {
+          "Content-Type": "application/json",
+        },
         credentials: "include",
       });
 
@@ -158,34 +152,11 @@ export function HansardAnalysisDialog({ hansardRecord, trigger }: HansardAnalysi
     },
   });
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      if (file.type !== "application/pdf") {
-        toast({
-          title: "Invalid File",
-          description: "Please select a PDF file",
-          variant: "destructive",
-        });
-        return;
-      }
-      if (file.size > 50 * 1024 * 1024) {
-        toast({
-          title: "File Too Large",
-          description: "Maximum file size is 50MB",
-          variant: "destructive",
-        });
-        return;
-      }
-      setSelectedFile(file);
-    }
-  };
-
   const handleAnalyze = () => {
-    if (!selectedFile) {
+    if (!selectedHansardId) {
       toast({
-        title: "No File Selected",
-        description: "Please select a Hansard PDF file",
+        title: "No Session Selected",
+        description: "Please select a Hansard session",
         variant: "destructive",
       });
       return;
@@ -199,7 +170,7 @@ export function HansardAnalysisDialog({ hansardRecord, trigger }: HansardAnalysi
       return;
     }
 
-    analyzeMutation.mutate({ file: selectedFile, mpId: selectedMpId });
+    analyzeMutation.mutate({ hansardRecordId: selectedHansardId, mpId: selectedMpId });
   };
 
   const getAttendanceIcon = (status: string) => {
@@ -227,7 +198,7 @@ export function HansardAnalysisDialog({ hansardRecord, trigger }: HansardAnalysi
   const handleOpenChange = (newOpen: boolean) => {
     setOpen(newOpen);
     if (!newOpen) {
-      setSelectedFile(null);
+      setSelectedHansardId(hansardRecord?.id || "");
       setSelectedMpId("");
       setAnalysisResult(null);
     }
@@ -242,7 +213,7 @@ export function HansardAnalysisDialog({ hansardRecord, trigger }: HansardAnalysi
         <DialogHeader>
           <DialogTitle>Hansard Speech Analysis</DialogTitle>
           <DialogDescription>
-            {hansardRecord.sessionNumber} - Upload PDF to analyze speaking instances for MPs who spoke in this session
+            {hansardRecord?.sessionNumber || "Select a session"} - Analyze speaking instances for MPs who spoke in this session
           </DialogDescription>
         </DialogHeader>
 
@@ -251,28 +222,38 @@ export function HansardAnalysisDialog({ hansardRecord, trigger }: HansardAnalysi
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg">Upload & Analyze</CardTitle>
-                <CardDescription>Select a PDF and MP to analyze</CardDescription>
+                <CardDescription>Select a session and MP to analyze</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="pdf-upload-dialog">Hansard PDF File</Label>
-                  <div className="flex items-center gap-2">
-                    <Input
-                      id="pdf-upload-dialog"
-                      data-testid="input-pdf-file-dialog"
-                      type="file"
-                      accept=".pdf"
-                      onChange={handleFileChange}
+                  <Label htmlFor="hansard-select-dialog">Hansard Session</Label>
+                  {hansardLoading ? (
+                    <Skeleton className="h-10 w-full" />
+                  ) : (
+                    <Select
+                      value={selectedHansardId}
+                      onValueChange={setSelectedHansardId}
                       disabled={analyzeMutation.isPending}
-                    />
-                    {selectedFile && (
-                      <FileText className="w-5 h-5 text-muted-foreground flex-shrink-0" />
-                    )}
-                  </div>
-                  {selectedFile && (
-                    <p className="text-sm text-muted-foreground" data-testid="text-selected-file-dialog">
-                      {selectedFile.name} ({(selectedFile.size / 1024 / 1024).toFixed(2)} MB)
-                    </p>
+                    >
+                      <SelectTrigger id="hansard-select-dialog" data-testid="select-hansard-dialog">
+                        <SelectValue placeholder="Choose a Hansard session" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {hansardRecords && hansardRecords.length > 0 ? (
+                          [...hansardRecords]
+                            .sort((a, b) => new Date(b.sessionDate).getTime() - new Date(a.sessionDate).getTime())
+                            .map((record) => (
+                              <SelectItem key={record.id} value={record.id}>
+                                {record.sessionNumber} - {new Date(record.sessionDate).toLocaleDateString('en-MY')}
+                              </SelectItem>
+                            ))
+                        ) : (
+                          <SelectItem value="none" disabled>
+                            No Hansard sessions available
+                          </SelectItem>
+                        )}
+                      </SelectContent>
+                    </Select>
                   )}
                 </div>
 
@@ -314,7 +295,7 @@ export function HansardAnalysisDialog({ hansardRecord, trigger }: HansardAnalysi
                 <Button
                   data-testid="button-analyze-dialog"
                   onClick={handleAnalyze}
-                  disabled={!selectedFile || !selectedMpId || analyzeMutation.isPending || filteredMps.length === 0}
+                  disabled={!selectedHansardId || !selectedMpId || analyzeMutation.isPending || filteredMps.length === 0}
                   className="w-full"
                 >
                   {analyzeMutation.isPending ? (
