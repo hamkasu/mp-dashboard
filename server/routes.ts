@@ -1212,10 +1212,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .filter(inst => inst.mpId === mpId)
         .map(inst => ({
           position: inst.lineNumber * 100, // Approximate position based on line number
-          capturedName: inst.mpName,
+          capturedName: inst.capturedHeader,
           context: `Speaking instance ${inst.instanceNumber} at line ${inst.lineNumber}`,
           speakingOrder: inst.instanceNumber,
-          constituency: inst.constituency
+          constituency: inst.constituency,
+          speechText: inst.speechText || '(No speech content captured)'
         }));
 
       console.log(`📊 Found ${targetSpeakers.length} unique speaking slots and ${allSpeechInstances.length} total speech instances for ${targetMp.name} (via parser canonical data)`);

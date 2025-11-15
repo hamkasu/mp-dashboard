@@ -12,6 +12,10 @@ interface SpeakingInstance {
   constituency: string;
   instanceNumber: number;
   lineNumber: number;
+  headerPosition: number; // Absolute position in transcript where speaker header starts
+  headerLength: number; // Length of the speaker header match
+  capturedHeader: string; // The actual header text as it appeared in the transcript
+  speechText?: string; // Actual speech content (populated after all headers are found)
 }
 
 export class HansardSpeakerParser {
@@ -82,17 +86,62 @@ export class HansardSpeakerParser {
       );
     }
 
+    // Dedupe instances by headerPosition to avoid duplicates from multiple pattern matches
+    const uniqueInstancesMap = new Map<number, SpeakingInstance>();
+    for (const instance of allInstances) {
+      if (!uniqueInstancesMap.has(instance.headerPosition)) {
+        uniqueInstancesMap.set(instance.headerPosition, instance);
+      }
+    }
+    const dedupedInstances = Array.from(uniqueInstancesMap.values());
+    
+    // Sort instances by position to extract speech text sequentially
+    const sortedInstances = dedupedInstances.sort((a, b) => a.headerPosition - b.headerPosition);
+    
+    // Reassign instance numbers after deduplication to ensure correct sequential numbering per MP
+    const mpInstanceNumbers = new Map<string, number>();
+    for (const instance of sortedInstances) {
+      const currentCount = mpInstanceNumbers.get(instance.mpId) || 0;
+      instance.instanceNumber = currentCount + 1;
+      mpInstanceNumbers.set(instance.mpId, currentCount + 1);
+    }
+    
+    // Extract speech text for each instance
+    for (let i = 0; i < sortedInstances.length; i++) {
+      const currentInstance = sortedInstances[i];
+      const nextInstance = sortedInstances[i + 1];
+      
+      // Find where this speech starts (after the speaker header, using header length)
+      const speechStart = currentInstance.headerPosition + currentInstance.headerLength;
+      
+      // Find where this speech ends (at the next speaker or end of transcript)
+      const speechEnd = nextInstance ? nextInstance.headerPosition : transcript.length;
+      
+      // Extract just the speech content (header is already excluded by using headerLength)
+      const rawSpeech = transcript.substring(speechStart, speechEnd);
+      
+      // Clean up the speech text
+      const cleanedSpeech = rawSpeech
+        .trim()
+        .replace(/\s+\n/g, '\n') // Remove trailing spaces before newlines
+        .replace(/\n{3,}/g, '\n\n'); // Collapse multiple blank lines
+      
+      // Attach to instance (only use fallback if truly empty after trim)
+      currentInstance.speechText = cleanedSpeech.length > 0 ? cleanedSpeech : '(No speech content captured)';
+    }
+
     // Convert map to array and sort by speaking order
     const speakers = Array.from(speakerMap.values()).sort(
       (a, b) => a.speakingOrder - b.speakingOrder
     );
 
     console.log(`✅ Extracted ${speakers.length} unique speakers from transcript`);
+    console.log(`✅ Extracted speech text for ${sortedInstances.length} speaking instances`);
     if (unmatchedSpeakers.length > 0) {
       console.log(`⚠️  ${unmatchedSpeakers.length} speakers could not be matched to MPs`);
     }
     
-    return { speakers, allInstances, unmatched: unmatchedSpeakers };
+    return { speakers, allInstances: sortedInstances, unmatched: unmatchedSpeakers };
   }
 
   private extractSpeakersFromChunk(
@@ -131,17 +180,22 @@ export class HansardSpeakerParser {
           const currentInstanceCount = instanceCountMap.get(mpId) || 0;
           instanceCountMap.set(mpId, currentInstanceCount + 1);
           
-          // Calculate line number from position
+          // Calculate line number and position
           const position = offset + (match.index || 0);
           const lineNumber = this.calculateLineNumber(fullTranscript, position);
+          const headerLength = match[0].length;
+          const capturedHeader = match[0].trim(); // Store the actual captured header text
           
-          // Always track this speaking instance
+          // Always track this speaking instance with header position, length, and captured text
           allInstances.push({
             mpId: result.speaker.mpId,
             mpName: result.speaker.mpName,
             constituency: result.constituency,
             instanceNumber: currentInstanceCount + 1,
-            lineNumber
+            lineNumber,
+            headerPosition: position,
+            headerLength,
+            capturedHeader
           });
         } else if (result.kind === 'unmatched') {
           // Track unmatched speakers (avoid duplicates)

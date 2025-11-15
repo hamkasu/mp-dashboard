@@ -10,6 +10,7 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
   FileText, 
   Upload, 
@@ -59,6 +60,7 @@ interface AnalysisResult {
       position: number;
       capturedName: string;
       context: string;
+      speechText: string;
     }>;
   };
   sessionStats: {
@@ -416,20 +418,29 @@ export default function HansardAnalysis() {
                       <Separator />
                       <div>
                         <h3 className="text-lg font-semibold mb-3">Speech Instances</h3>
-                        <div className="space-y-3 max-h-96 overflow-y-auto">
+                        <div className="space-y-3 max-h-[600px] overflow-y-auto">
                           {analysisResult.allSpeechInstances.instances.map((instance, idx) => (
                             <Card key={idx} data-testid={`card-speech-${idx}`}>
                               <CardContent className="p-4">
-                                <div className="flex items-start gap-3">
+                                <div className="flex items-start gap-3 mb-3">
                                   <Badge variant="outline" className="flex-shrink-0">#{idx + 1}</Badge>
                                   <div className="space-y-1 flex-1 min-w-0">
                                     <p className="text-sm font-medium">
                                       Captured as: "{instance.capturedName}"
                                     </p>
-                                    <p className="text-xs text-muted-foreground break-words">
-                                      {instance.context}...
+                                    <p className="text-xs text-muted-foreground">
+                                      {instance.context}
                                     </p>
                                   </div>
+                                </div>
+                                <Separator className="mb-3" />
+                                <div className="space-y-2">
+                                  <p className="text-xs font-semibold text-muted-foreground uppercase">Speech Content</p>
+                                  <ScrollArea className="h-48 w-full rounded-md border p-3" data-testid={`speech-text-${idx}`}>
+                                    <p className="text-sm whitespace-pre-wrap leading-relaxed">
+                                      {instance.speechText}
+                                    </p>
+                                  </ScrollArea>
                                 </div>
                               </CardContent>
                             </Card>
