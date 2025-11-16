@@ -5,14 +5,16 @@
   "license": "MIT",
   "scripts": {
     "dev": "NODE_ENV=development tsx server/index.ts",
-    "build": "vite build && esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist && esbuild scripts/aggregate-all-speeches.ts --platform=node --packages=external --bundle --format=esm --outdir=dist/scripts && npm run prerender",
+    "build": "vite build && esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist && esbuild scripts/fix-hansard-speaker-ids.ts --platform=node --packages=external --bundle --format=esm --outdir=dist/scripts && esbuild scripts/aggregate-all-speeches.ts --platform=node --packages=external --bundle --format=esm --outdir=dist/scripts && esbuild scripts/aggregate-constituency-speeches.ts --platform=node --packages=external --bundle --format=esm --outdir=dist/scripts && npm run prerender",
     "prerender": "tsx server/prerender.ts",
-    "start": "npm run db:push && (node dist/scripts/aggregate-all-speeches.js || true) && NODE_ENV=production node dist/index.js",
+    "start": "npm run db:push && (node dist/scripts/fix-hansard-speaker-ids.js || true) && (node dist/scripts/aggregate-all-speeches.js || true) && (node dist/scripts/aggregate-constituency-speeches.js || true) && NODE_ENV=production node dist/index.js",
     "check": "tsc",
     "db:push": "drizzle-kit push",
     "backfill-speakers": "tsx scripts/backfill-hansard-speakers.ts",
     "reprocess-hansard-pdfs": "tsx scripts/reprocess-all-hansard-pdfs.ts",
-    "aggregate-speeches": "tsx scripts/aggregate-all-speeches.ts"
+    "aggregate-speeches": "tsx scripts/aggregate-all-speeches.ts",
+    "aggregate-constituency": "tsx scripts/aggregate-constituency-speeches.ts",
+    "fix-hansard-ids": "tsx scripts/fix-hansard-speaker-ids.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
