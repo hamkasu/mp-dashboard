@@ -16,7 +16,8 @@ import {
   insertHansardRecordSchema,
   updateHansardRecordSchema,
   mps,
-  hansardPdfFiles
+  hansardPdfFiles,
+  hansardRecords
 } from "@shared/schema";
 import crypto from "crypto";
 import { HansardScraper, ConstituencyAttendanceCounts } from "./hansard-scraper";
@@ -24,6 +25,7 @@ import { MPNameMatcher } from "./mp-name-matcher";
 import { runHansardSync } from "./hansard-cron";
 import { HansardPdfParser } from "./hansard-pdf-parser";
 import { db } from "./db";
+import { eq } from "drizzle-orm";
 import { jobTracker } from "./job-tracker";
 import { runHansardDownloadJob } from "./hansard-background-jobs";
 
@@ -2376,6 +2378,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         if (stats.length === 0) {
           withoutSpeakers.push({
+            id: record.id,
             sessionNumber: record.sessionNumber,
             sessionDate: record.sessionDate,
             attendedCount: attended.length,
@@ -2408,6 +2411,97 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error getting Hansard diagnostics:", error);
       res.status(500).json({ error: "Failed to get diagnostics", details: String(error) });
+    }
+  });
+
+  // Endpoint to reprocess Hansard records without speaker stats
+  app.post("/api/admin/reprocess-hansards", async (req, res) => {
+    try {
+      console.log("🔄 Reprocessing Hansard records without speaker stats...");
+      
+      // Get all Hansard records
+      const allRecords = await db.select().from(hansardRecords);
+      const recordsNeedingReprocessing = allRecords.filter(r => {
+        const stats = r.speakerStats as any[] || [];
+        return stats.length === 0;
+      });
+
+      if (recordsNeedingReprocessing.length === 0) {
+        return res.json({
+          message: "No records need reprocessing",
+          processed: 0,
+          total: allRecords.length
+        });
+      }
+
+      console.log(`📊 Found ${recordsNeedingReprocessing.length} records without speaker stats`);
+
+      // Get all MPs
+      const allMps = await db.select().from(mps);
+      const parser = new HansardPdfParser(allMps);
+      
+      let successCount = 0;
+      let errorCount = 0;
+      const errors = [];
+
+      for (const record of recordsNeedingReprocessing) {
+        try {
+          // Get the PDF file for this Hansard
+          const pdfFile = await db.select().from(hansardPdfFiles)
+            .where(eq(hansardPdfFiles.hansardRecordId, record.id))
+            .limit(1);
+
+          if (pdfFile.length === 0) {
+            console.warn(`⚠️  No PDF found for ${record.sessionNumber}`);
+            errors.push(`No PDF file for ${record.sessionNumber}`);
+            errorCount++;
+            continue;
+          }
+
+          console.log(`📄 Reprocessing ${record.sessionNumber}...`);
+          
+          // Re-parse the PDF
+          const parsed = await parser.parseHansardPdf(pdfFile[0].pdfData);
+
+          // Map speaker stats to the format needed for database
+          const speakerStatsForDb = parsed.speakers.map((speaker, index) => ({
+            mpId: speaker.mpId,
+            mpName: speaker.mpName,
+            totalSpeeches: parsed.allSpeakingInstances.filter(inst => inst.mpId === speaker.mpId).length,
+            speakingOrder: speaker.speakingOrder
+          }));
+
+          // Update the record with new speaker stats
+          await db.update(hansardRecords)
+            .set({
+              speakerStats: speakerStatsForDb,
+              speakers: parsed.speakers,
+              attendedMpIds: parsed.attendance.attendedMpIds,
+              absentMpIds: parsed.attendance.absentMpIds
+            })
+            .where(eq(hansardRecords.id, record.id));
+
+          console.log(`✅ Updated ${record.sessionNumber} - ${parsed.speakers.length} speakers found`);
+          successCount++;
+        } catch (error) {
+          console.error(`❌ Error reprocessing ${record.sessionNumber}:`, error);
+          errors.push(`${record.sessionNumber}: ${String(error)}`);
+          errorCount++;
+        }
+      }
+
+      console.log(`✅ Reprocessing complete: ${successCount} success, ${errorCount} errors`);
+
+      res.json({
+        message: "Reprocessing complete",
+        total: recordsNeedingReprocessing.length,
+        successful: successCount,
+        failed: errorCount,
+        errors: errors
+      });
+    } catch (error) {
+      console.error("Error reprocessing Hansards:", error);
+      res.status(500).json({ error: "Failed to reprocess", details: String(error) });
     }
   });
 
