@@ -134,6 +134,13 @@ export class ConstituencyMatcher {
     return null;
   }
 
+  getMpByConstituency(scrapedConstituency: string): Mp | null {
+    const mpId = this.matchConstituency(scrapedConstituency);
+    if (!mpId) return null;
+    
+    return this.mps.find(mp => mp.id === mpId) || null;
+  }
+
   matchConstituencies(scrapedConstituencies: string[]): string[] {
     const matchedIds: string[] = [];
     const uniqueIds = new Set<string>();

@@ -1,5 +1,6 @@
 import { Mp, HansardSpeaker } from '@shared/schema';
 import { MPNameMatcher } from './mp-name-matcher';
+import { ConstituencyMatcher } from './constituency-matcher';
 
 type SpeakerMatchResult = 
   | { kind: 'matched'; speaker: HansardSpeaker; constituency: string }
@@ -20,34 +21,32 @@ interface SpeakingInstance {
 
 export class HansardSpeakerParser {
   private mpNameMatcher: MPNameMatcher;
+  private constituencyMatcher: ConstituencyMatcher;
   private allMps: Mp[];
   
   // Common speaker patterns in Malaysian Hansard
+  // PRIORITY ORDER: Constituency-based patterns first (most reliable)
   private readonly SPEAKER_PATTERNS = [
-    // Pattern: "Datuk/Dato'/Tuan/etc [Full Name]: " (without constituency)
-    // This must come FIRST to catch ministerial titles without constituencies
+    // Pattern 1: "Name [Constituency]:" - Most reliable, standardized format
+    /([^[\n]+?)\s*\[([^\]]+)\]\s*:/gi,
+    
+    // Pattern 2: "Title Name (Constituency):" - Common format with parens
+    /(?:Tuan|Puan|Yang Berhormat|Y\.Bhg\.|Datuk|Dato'|Tan Sri|Toh Puan|YB|Dr\.?|Senator|Kapten|Ir\.|Ts\.)\s+([^(:\[]+?)\s*\(([^)]+)\)\s*:/gi,
+    
+    // Pattern 3: "[Constituency - Name]:" or "[Name - Constituency]:"
+    /^\[([^\]\n]{1,60})\s*[-–]\s*([^\]\n]{1,60})\]:/gm,
+    
+    // Pattern 4: Simple "Name (Constituency):" at line start
+    /^([A-Z][^(:\[]+?)\s*\(([^)]+)\)\s*:/gm,
+    
+    // Pattern 5: "Title Name:" without constituency (lowest priority)
     /(?:Menteri|Timbalan Menteri|Datuk Seri|Dato' Sri|Datuk|Dato'|Tan Sri|Toh Puan|Tuan|Puan|Dr\.?|Yang Berhormat|Y\.Bhg\.|YB)\s+(?:Haji|Hajjah)?\s*([^:]{10,80}):\s+/gi,
-    
-    // Pattern: "[P###] Constituency - Name]:" or "[Constituency - Name]:" at line start
-    // FIXED: Anchored to line start, limited length to prevent runaway matches, requires closing ]:
-    /^\[(?:P\d{3}\s+)?([^\]\n]{1,60})\s*[-–]\s*([^\]\n]{1,60})\]:/gm,
-    
-    // Pattern: "Tuan/Puan/YB/Datuk [Name] ([Constituency]):"
-    /(?:Tuan|Puan|Yang Berhormat|Y\.Bhg\.|Datuk|Dato'|Tan Sri|Toh Puan|YB|Dr\.?)\s+([^(:\[]+?)\s*\(([^)]+)\)\s*:/gi,
-    
-    // Pattern: "Yang Berhormat Name [Constituency]:"
-    /Yang Berhormat\s+([^[:(]+?)\s*\[([^\]]+)\]\s*:/gi,
-    
-    // Pattern: All caps NAME followed by constituency in parens
-    /^([A-Z\s]{3,})\s*\(([^)]+)\)\s*:/gm,
-    
-    // Pattern: Simple "Name (Constituency):" at line start
-    /^([A-Z][a-z]+(?:\s+[A-Z](?:[a-z]+|\.))(?:\s+[A-Z][a-z]+)*)\s*\(([^)]+)\)\s*:/gm
   ];
 
   constructor(allMps: Mp[]) {
     this.allMps = allMps;
     this.mpNameMatcher = new MPNameMatcher(allMps);
+    this.constituencyMatcher = new ConstituencyMatcher(allMps);
   }
 
   /**
@@ -234,15 +233,30 @@ export class HansardSpeakerParser {
       const part1 = this.cleanText(match[1]);
       const part2 = this.cleanText(match[2]);
       
-      // Check if part1 looks like a constituency (usually shorter, title case)
-      const part1IsConstituency = this.looksLikeConstituency(part1);
+      // IMPORTANT: Try constituency matching first for both parts to determine order
+      // This ensures we don't misassign based on heuristics alone
+      const part1AsMp = this.constituencyMatcher.getMpByConstituency(part1);
+      const part2AsMp = this.constituencyMatcher.getMpByConstituency(part2);
       
-      if (part1IsConstituency) {
+      if (part1AsMp && !part2AsMp) {
+        // Part1 is a constituency, Part2 is name
         constituency = part1;
         name = part2;
-      } else {
+      } else if (part2AsMp && !part1AsMp) {
+        // Part2 is a constituency, Part1 is name
         name = part1;
         constituency = part2;
+      } else {
+        // Fallback to heuristics if constituency matching fails for both
+        const part1IsConstituency = this.looksLikeConstituency(part1);
+        
+        if (part1IsConstituency) {
+          constituency = part1;
+          name = part2;
+        } else {
+          name = part1;
+          constituency = part2;
+        }
       }
     } else if (match[1]) {
       // Only name captured
@@ -281,13 +295,11 @@ export class HansardSpeakerParser {
 
   private matchMp(name: string, constituency?: string): Mp | null {
     // PRIORITY 1: Match by constituency if provided (most reliable)
-    // Constituencies are less prone to spelling variations than names
+    // Constituencies are standardized and less prone to variations than names
     if (constituency) {
-      const mpByConstituency = this.allMps.find(mp => 
-        this.normalizeConstituency(mp.constituency) === this.normalizeConstituency(constituency)
-      );
-      if (mpByConstituency) {
-        return mpByConstituency;
+      const mp = this.constituencyMatcher.getMpByConstituency(constituency);
+      if (mp) {
+        return mp;
       }
     }
 
@@ -324,16 +336,30 @@ export class HansardSpeakerParser {
   }
 
   private isParliamentaryOfficial(name: string): boolean {
-    const normalized = name.toLowerCase();
+    const normalized = name.toLowerCase().trim();
+    
+    // Filter out Speaker and Deputy Speaker references
     const officialTitles = [
       'yang di-pertua',
       'timbalan yang di-pertua',
       'speaker',
       'deputy speaker',
+      'pengerusi',
+      'tuan pengerusi',
+      'puan pengerusi',
       'yang amat berhormat',
       'ramli bin dato\' mohd nor',
-      'ramli mohd nor'
+      'ramli mohd nor',
+      'dato\' dr. ramli',
+      'alice lau kiong yieng'
     ];
+    
+    // Check if it's just "Pengerusi" or "Tuan Pengerusi" without other context
+    if (normalized === 'pengerusi' || normalized === 'tuan pengerusi' || normalized === 'puan pengerusi') {
+      return true;
+    }
+    
+    // Check if name contains any official title
     return officialTitles.some(title => normalized.includes(title));
   }
 

@@ -1224,9 +1224,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const mp = allMps.find(m => m.id === mpId);
             if (mp) {
               const { eq } = await import("drizzle-orm");
-              await db.update(mps)
-                .set({ hansardSessionsSpoke: mp.hansardSessionsSpoke + 1 })
-                .where(eq(mps.id, mpId));
+              const speechCount = speechesPerMp.get(mpId) || 0;
+              
+              // Only increment if MP actually spoke (has speech instances)
+              if (speechCount > 0) {
+                await db.update(mps)
+                  .set({ 
+                    hansardSessionsSpoke: mp.hansardSessionsSpoke + 1,
+                    totalSpeechInstances: mp.totalSpeechInstances + speechCount
+                  })
+                  .where(eq(mps.id, mpId));
+              }
             }
           }
 
