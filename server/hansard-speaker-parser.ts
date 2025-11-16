@@ -229,34 +229,22 @@ export class HansardSpeakerParser {
 
     // Different patterns have different capture groups
     if (match[1] && match[2]) {
-      // Could be [Name, Constituency] or [Constituency, Name]
+      // For bracket patterns like [Name - Constituency]: or [Name [Constituency]]:
+      // Assume match[2] is ALWAYS the constituency (most reliable)
       const part1 = this.cleanText(match[1]);
       const part2 = this.cleanText(match[2]);
       
-      // IMPORTANT: Try constituency matching first for both parts to determine order
-      // This ensures we don't misassign based on heuristics alone
+      // Check if part1 is definitively a constituency (swap case)
       const part1AsMp = this.constituencyMatcher.getMpByConstituency(part1);
-      const part2AsMp = this.constituencyMatcher.getMpByConstituency(part2);
       
-      if (part1AsMp && !part2AsMp) {
-        // Part1 is a constituency, Part2 is name
+      if (part1AsMp) {
+        // Rare case: Part1 is constituency, Part2 is name (swap needed)
         constituency = part1;
         name = part2;
-      } else if (part2AsMp && !part1AsMp) {
-        // Part2 is a constituency, Part1 is name
+      } else {
+        // Normal case: Part1 is name, Part2 is constituency
         name = part1;
         constituency = part2;
-      } else {
-        // Fallback to heuristics if constituency matching fails for both
-        const part1IsConstituency = this.looksLikeConstituency(part1);
-        
-        if (part1IsConstituency) {
-          constituency = part1;
-          name = part2;
-        } else {
-          name = part1;
-          constituency = part2;
-        }
       }
     } else if (match[1]) {
       // Only name captured

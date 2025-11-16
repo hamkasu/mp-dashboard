@@ -47,6 +47,10 @@ export class MPNameMatcher {
       'yusuf abd wahab': 'Fadillah Yusof',
       'gapari katingan': 'Geoffrey Kitingan',
       'ali biju': 'Ali Biju',
+      // Full name variations for MPs with abbreviated names in database
+      'sanisvara nethaji rayer': 'RSN Rayer',
+      'sanisvara rayer': 'RSN Rayer',
+      'r s n rayer': 'RSN Rayer',
     };
 
     for (const [normalized, actualName] of Object.entries(overrideNames)) {
