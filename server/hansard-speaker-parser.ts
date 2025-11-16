@@ -280,13 +280,8 @@ export class HansardSpeakerParser {
   }
 
   private matchMp(name: string, constituency?: string): Mp | null {
-    // First try: Use MPNameMatcher
-    const mpIds = this.mpNameMatcher.matchNames([name]);
-    if (mpIds.length > 0) {
-      return this.allMps.find(mp => mp.id === mpIds[0]) || null;
-    }
-
-    // Second try: Match by constituency if provided
+    // PRIORITY 1: Match by constituency if provided (most reliable)
+    // Constituencies are less prone to spelling variations than names
     if (constituency) {
       const mpByConstituency = this.allMps.find(mp => 
         this.normalizeConstituency(mp.constituency) === this.normalizeConstituency(constituency)
@@ -296,7 +291,13 @@ export class HansardSpeakerParser {
       }
     }
 
-    // Third try: Fuzzy match on name
+    // PRIORITY 2: Use MPNameMatcher for exact name matching
+    const mpIds = this.mpNameMatcher.matchNames([name]);
+    if (mpIds.length > 0) {
+      return this.allMps.find(mp => mp.id === mpIds[0]) || null;
+    }
+
+    // PRIORITY 3: Fuzzy match on name (last resort)
     const normalizedName = this.normalizeName(name);
     const mpByFuzzyName = this.allMps.find(mp => {
       const mpNormalized = this.normalizeName(mp.name);
