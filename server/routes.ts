@@ -2403,6 +2403,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin endpoint to refresh all MP data (attendance, speeches, Hansard performance)
+  app.post("/api/admin/refresh-mp-data", ensureAuthenticated, async (req, res) => {
+    try {
+      console.log("Manual MP data refresh triggered via API...");
+      const { refreshAllMpData } = await import('./aggregate-speeches');
+      const results = await refreshAllMpData();
+
+      res.json({
+        message: "MP data refreshed successfully",
+        results: {
+          attendance: {
+            mpsUpdated: results.attendance.totalMpsUpdated,
+            recordsProcessed: results.attendance.totalRecordsProcessed
+          },
+          speeches: {
+            mpsUpdated: results.speeches.totalMpsUpdated,
+            mpsWithNoSpeeches: results.speeches.mpsWithNoSpeeches,
+            recordsProcessed: results.speeches.totalRecordsProcessed
+          }
+        }
+      });
+    } catch (error) {
+      console.error("Error refreshing MP data:", error);
+      res.status(500).json({ error: "Failed to refresh MP data", details: String(error) });
+    }
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;

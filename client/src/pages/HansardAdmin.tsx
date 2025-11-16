@@ -4,7 +4,7 @@ import { Header } from "@/components/Header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, Download, Trash2, AlertTriangle, CheckCircle2, RefreshCw, Upload, FileText, X } from "lucide-react";
+import { Loader2, Download, Trash2, AlertTriangle, CheckCircle2, RefreshCw, Upload, FileText, X, Database } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
@@ -205,6 +205,33 @@ export default function HansardAdmin() {
     if (confirm("This will DELETE all existing hansard records and download fresh data from the 15th Parliament. This may take several minutes. Continue?")) {
       setDownloadStatus(null);
       refreshMutation.mutate(1000);
+    }
+  };
+
+  const refreshMpDataMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/admin/refresh-mp-data");
+      return await res.json();
+    },
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/mps"] });
+      toast({
+        title: "Success",
+        description: `Updated ${data.results.attendance.mpsUpdated} MPs with attendance and speech data`,
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to refresh MP data",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleRefreshMpData = () => {
+    if (confirm("This will recalculate all MP attendance, speech counts, and performance metrics from Hansard records. Continue?")) {
+      refreshMpDataMutation.mutate();
     }
   };
 
@@ -679,6 +706,48 @@ export default function HansardAdmin() {
                 <>
                   <Download className="mr-2 h-4 w-4" />
                   Download 15th Parliament Hansard
+                </>
+              )}
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Database className="h-5 w-5" />
+              Refresh MP Data
+            </CardTitle>
+            <CardDescription>
+              Update MP attendance and performance metrics from Hansard records
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <p className="text-sm text-muted-foreground">
+                This will recalculate attendance rates, speech counts, and Hansard participation metrics for all MPs based on existing Hansard records.
+              </p>
+              <Alert>
+                <AlertDescription>
+                  Use this after uploading new Hansard records to update MP cards with the latest data.
+                </AlertDescription>
+              </Alert>
+            </div>
+            <Button
+              onClick={handleRefreshMpData}
+              disabled={refreshMpDataMutation.isPending}
+              className="w-full"
+              data-testid="button-refresh-mp-data"
+            >
+              {refreshMpDataMutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Refreshing...
+                </>
+              ) : (
+                <>
+                  <Database className="mr-2 h-4 w-4" />
+                  Refresh MP Data
                 </>
               )}
             </Button>
