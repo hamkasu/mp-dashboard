@@ -119,11 +119,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
           (record.speakers && record.speakers.some(speaker => speaker.mpId === mp.id))
         ).length;
         
+        // Calculate total speeches from speakerStats
+        const totalSpeeches = relevantSessions.reduce((total, record) => {
+          if (record.speakerStats) {
+            const mpStat = record.speakerStats.find((stat: any) => stat.mpId === mp.id);
+            if (mpStat && (mpStat as any).totalSpeeches) {
+              return total + (mpStat as any).totalSpeeches;
+            }
+          }
+          return total;
+        }, 0);
+        
         return {
           ...mp,
           totalHansardSessions,
           hansardSessionsAttended: sessionsAttended,
-          hansardSessionsSpoke: sessionsSpoke
+          hansardSessionsSpoke: sessionsSpoke,
+          totalSpeechInstances: totalSpeeches
         };
       });
       

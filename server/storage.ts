@@ -2766,6 +2766,12 @@ export async function seedDatabase() {
       .map(oldId => mpIdMap.get(oldId))
       .filter((id): id is string => id !== undefined);
     
+    // Update MP IDs in speakerStats array
+    const updatedSpeakerStats = (recordData.speakerStats || []).map((stat: any) => {
+      const newMpId = mpIdMap.get(stat.mpId);
+      return newMpId ? { ...stat, mpId: newMpId } : stat;
+    });
+    
     console.log(`Seeding Hansard ${record.sessionNumber}: ${updatedAbsentMpIds.length} absent MPs, ${updatedAttendedMpIds.length} attended MPs`);
     
     await dbStorage.createHansardRecord({
@@ -2773,6 +2779,7 @@ export async function seedDatabase() {
       speakers: updatedSpeakers,
       attendedMpIds: updatedAttendedMpIds,
       absentMpIds: updatedAbsentMpIds,
+      speakerStats: updatedSpeakerStats,
     });
   }
   
