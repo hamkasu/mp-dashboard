@@ -39,7 +39,8 @@ function ensureAuthenticated(req: Request, res: Response, next: NextFunction) {
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
-    fileSize: 50 * 1024 * 1024, // 50MB limit
+    fileSize: 50 * 1024 * 1024, // 50MB per file
+    files: 25, // Max 25 files per request (balanced for 24-file uploads while managing memory)
   },
   fileFilter: (req, file, cb) => {
     if (file.mimetype === 'application/pdf') {
@@ -54,7 +55,13 @@ const upload = multer({
 function handleMulterError(err: any, req: any, res: any, next: any) {
   if (err instanceof multer.MulterError) {
     if (err.code === 'LIMIT_FILE_SIZE') {
-      return res.status(400).json({ error: 'File too large. Maximum size is 50MB.' });
+      return res.status(400).json({ error: 'File too large. Maximum size is 50MB per file.' });
+    }
+    if (err.code === 'LIMIT_FILE_COUNT') {
+      return res.status(400).json({ error: 'Too many files. Maximum is 25 files per upload. Please upload in batches.' });
+    }
+    if (err.code === 'LIMIT_UNEXPECTED_FILE') {
+      return res.status(400).json({ error: 'Unexpected field. Make sure you are uploading to the correct field name.' });
     }
     return res.status(400).json({ error: `Upload error: ${err.message}` });
   } else if (err) {
@@ -1088,7 +1095,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Upload and parse Hansard PDF(s)
-  app.post("/api/hansard-records/upload", upload.array('pdfs', 20), handleMulterError, async (req, res) => {
+  app.post("/api/hansard-records/upload", upload.array('pdfs', 25), handleMulterError, async (req, res) => {
     try {
       const files = req.files as Express.Multer.File[] | undefined;
       
