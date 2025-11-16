@@ -1,7 +1,4 @@
 import express, { type Request, Response, NextFunction } from "express";
-import session from "express-session";
-import connectPgSimple from "connect-pg-simple";
-import pg from "pg";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { seedDatabase } from "./storage";
@@ -9,64 +6,11 @@ import { startHansardCron } from "./hansard-cron";
 
 const app = express();
 
-declare global {
-  namespace Express {
-    interface User {
-      id: string;
-      username: string;
-      isAdmin: boolean;
-    }
-  }
-}
-
-declare module 'express-session' {
-  interface SessionData {
-    userId?: string;
-  }
-}
-
 declare module 'http' {
   interface IncomingMessage {
     rawBody: unknown
   }
 }
-
-app.set('trust proxy', 1);
-
-const PgSession = connectPgSimple(session);
-const isProduction = process.env.NODE_ENV === 'production';
-
-let sessionStore: session.Store | undefined;
-
-if (process.env.DATABASE_URL) {
-  const pgPool = new pg.Pool({
-    connectionString: process.env.DATABASE_URL,
-    ssl: isProduction ? { rejectUnauthorized: false } : false
-  });
-  
-  sessionStore = new PgSession({
-    pool: pgPool,
-    tableName: 'session',
-    createTableIfMissing: true
-  });
-  
-  log('Using PostgreSQL session store for persistent sessions');
-} else {
-  log('WARNING: Using MemoryStore for sessions (development only). Sessions will not persist across restarts.');
-}
-
-app.use(session({
-  store: sessionStore,
-  secret: process.env.SESSION_SECRET || 'dev-secret-change-in-production',
-  resave: false,
-  saveUninitialized: false,
-  cookie: {
-    secure: isProduction,
-    httpOnly: true,
-    maxAge: 24 * 60 * 60 * 1000,
-    sameSite: 'lax'
-  }
-}));
 
 app.use(express.json({
   verify: (req, _res, buf) => {

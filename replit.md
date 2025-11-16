@@ -28,12 +28,11 @@ Preferred communication style: Simple, everyday language.
 **Hansard Speech Parser**: Advanced speaker extraction (`server/hansard-speaker-parser.ts`) parses MP speeches from Hansard PDFs using regex patterns to identify speaker brackets (e.g., "[Dato' Sri Anwar Ibrahim]:"), extracts MP names with titles, cleans text by removing parentheses/brackets, filters out parliamentary officials (Speaker/Deputy Speaker), deduplicates speakers per session, and tallies total speeches per MP. Reprocessing all 192 Hansard PDFs achieved 100% success rate (vs 0.5% before fixes).
 **Constituency-Based Matching** (November 2025): Hansard speaker matching prioritizes constituency names over MP names to avoid misspelling issues. Hansard transcripts often contain name spelling variations (e.g., missing titles, different transliterations), but constituencies in brackets (e.g., "[Paya Besar - Dato' Sri Anwar Ibrahim]") are more reliable. The parser now matches by: (1) Constituency first (most reliable), (2) Exact name via MPNameMatcher (fallback), (3) Fuzzy name matching (last resort). Test validation across 6 Hansard sessions identified 115 unique constituencies with accurate speech counts. This approach significantly improves accuracy by avoiding name misspelling errors while preserving coverage for non-bracketed speaker formats.
 **Speech Aggregation**: Automatic system (`server/aggregate-speeches.ts`) tallies MP speech participation across all Hansard records. Runs automatically after daily Hansard sync cron job. Updates MP fields `hansardSessionsSpoke` (unique sessions where MP spoke) and `totalSpeechInstances` (total speeches across all sessions). Deduplicates speakers per session to prevent overcounting. Results: 221 MPs updated, top speaker Alice Lau with 8,028 speeches across 183 sessions.
-**MP Data Refresh** (November 2025): Authenticated admin endpoint `/api/admin/refresh-mp-data` allows manual recalculation of all MP statistics from Hansard records. System aggregates both attendance (days attended, total parliament days) and speech participation (sessions spoke, total speeches) for all 222 MPs. Respects each MP's `swornInDate` to only count sessions after they were sworn in, preventing incorrect attribution for mid-term MPs. Updates all MP records including zeros to prevent stale data. Accessible via Hansard Admin page with real-time progress feedback. Requires authentication via `ensureAuthenticated` middleware.
+**MP Data Refresh** (November 2025): Admin endpoint `/api/admin/refresh-mp-data` allows manual recalculation of all MP statistics from Hansard records. System aggregates both attendance (days attended, total parliament days) and speech participation (sessions spoke, total speeches) for all 222 MPs. Respects each MP's `swornInDate` to only count sessions after they were sworn in, preventing incorrect attribution for mid-term MPs. Updates all MP records including zeros to prevent stale data. Accessible via Hansard Admin page with real-time progress feedback.
 **Development & Production**: Vite dev server for frontend, esbuild for backend bundling. In-memory storage for dev, PostgreSQL for production.
 
 ### Data Models
 **MP Schema**: Core details (`id`, `name`, `party`, `constituency`, `gender`, `role`, etc.), financial data (`mpAllowance`, `ministerSalary`, etc.), performance (`daysAttended`, `hansardSessionsSpoke`, `totalSpeechInstances`).
-**User Schema**: `id`, `username`, `password` (authentication schema defined).
 **Court Case Schema**: `id`, `mpId`, `caseNumber`, `title`, `courtLevel`, `status`, `filingDate`, `outcome`, `charges`, `documentLinks`.
 **SPRM Investigation Schema**: `id`, `mpId`, `caseNumber`, `title`, `status`, `startDate`, `endDate`, `outcome`, `charges`.
 **Hansard Record Schema**: `id`, `sessionNumber`, `sessionDate`, `parliamentTerm`, `transcript`, `pdfLinks`, `topics`, `speakers`, `speakerStats`, `voteRecords`.
@@ -77,59 +76,32 @@ Preferred communication style: Simple, everyday language.
 -   PostCSS
 -   esbuild
 
-### Session & Authentication
--   express-session (session middleware)
--   connect-pg-simple (PostgreSQL session store)
--   bcryptjs (password hashing)
--   passport (authentication middleware - optional)
+## Authentication Removal (November 16, 2025)
 
-## Authentication & Security (November 2025)
+**All authentication has been removed from the application.**
 
-### Session-Based Authentication
--   **Authentication Method**: Secure session-based authentication using express-session with PostgreSQL persistence
--   **Session Storage**: PostgreSQL-based session store (connect-pg-simple) for production reliability
--   **Session Persistence**: Sessions survive server restarts and Railway dyno recycling
--   **Session Lifetime**: 24-hour expiration with automatic cleanup
--   **Cookie Security**: httpOnly, secure (HTTPS in production), SameSite=lax for CSRF protection
+### Changes Made:
+-   **Removed session-based authentication** - express-session, connect-pg-simple, and bcryptjs dependencies removed
+-   **Removed login system** - Login page (`/login`), authentication endpoints (`/api/auth/*`), and admin credentials removed
+-   **Removed authentication middleware** - `ensureAuthenticated` middleware removed from all endpoints
+-   **Removed User schema** - User database table and related code removed
+-   **Public admin endpoints** - All admin operations (`/api/admin/*`, Hansard upload, delete operations) are now publicly accessible without authentication
 
-### Admin Authentication
--   **Login Endpoint**: POST `/api/auth/login` (username/password)
--   **Logout Endpoint**: POST `/api/auth/logout` (destroys session)
--   **Status Endpoint**: GET `/api/auth/me` (check authentication status)
--   **Login Page**: `/login` - dedicated admin login interface
--   **Default Credentials**: admin/admin123 (override with ADMIN_USERNAME and ADMIN_PASSWORD env vars)
+### Security Implications:
+⚠️ **WARNING**: Admin operations are now publicly accessible. Anyone who accesses the following endpoints can perform destructive operations:
+-   DELETE `/api/hansard-records/:id` - Delete Hansard records
+-   POST `/api/admin/seed` - Seed/reseed database
+-   POST `/api/admin/trigger-hansard-check` - Trigger Hansard scraper (expensive operation)
+-   POST `/api/admin/refresh-mp-data` - Recalculate all MP statistics
+-   POST `/api/hansard-records/bulk-delete` - Bulk delete operations
+-   POST `/api/hansard-records/upload` - Upload Hansard PDFs
 
-### Protected Endpoints
-All admin endpoints require authentication via `ensureAuthenticated` middleware:
--   DELETE `/api/hansard-records/:id` - Delete Hansard record
--   POST `/api/admin/seed` - Seed database
--   POST `/api/admin/trigger-hansard-check` - Trigger Hansard scraper
--   POST `/api/hansard-records/bulk-delete` - Bulk delete Hansard records
-
-### Security Improvements (Token Auth Removed)
-Previous token-based authentication was **removed** (November 2025) due to:
--   XSS vulnerability (tokens stored in localStorage)
--   No session expiration
--   Difficult to revoke access
--   Not suitable for production deployment
-
-Current session-based authentication provides:
--   ✅ Secure httpOnly cookies (protected from XSS)
--   ✅ Automatic session expiration
--   ✅ Database-backed persistence (survives restarts)
--   ✅ CSRF protection
--   ✅ Production-ready for Railway deployment
-
-### Railway Deployment Requirements
--   `SESSION_SECRET`: 32+ character random string (required for secure sessions)
+### Railway Deployment Requirements:
 -   `DATABASE_URL`: Auto-configured by Railway PostgreSQL addon
--   `ADMIN_USERNAME` & `ADMIN_PASSWORD`: Optional custom admin credentials
 -   `NODE_ENV=production`: Auto-configured by Railway
 -   `PUBLIC_BASE_URL` or `RAILWAY_STATIC_URL`: **Critical** - Your app's public URL (e.g., https://your-app.up.railway.app) - required for PDF links in background jobs to work correctly
 
 **Important**: Without setting a public base URL environment variable, PDF downloads from Hansard records will fail in production because background cron jobs will generate `localhost` URLs instead of your actual domain.
-
-See `RAILWAY_DEPLOYMENT.md` for complete deployment guide.
 
 ## SEO Implementation (November 2025)
 
@@ -142,7 +114,7 @@ See `RAILWAY_DEPLOYMENT.md` for complete deployment guide.
 
 ### Sitemap & Robots.txt
 -   **Static Sitemap**: Generated at build time (`dist/public/sitemap.xml`) with all 227 pre-rendered URLs
--   **Robots.txt**: Located at `dist/public/robots.txt`, allows public pages while blocking `/login`, `/hansard-admin`, and `/api/`, blocks AI bots (GPTBot, CCBot, anthropic-ai)
+-   **Robots.txt**: Located at `dist/public/robots.txt`, allows public pages while blocking `/hansard-admin` and `/api/`, blocks AI bots (GPTBot, CCBot, anthropic-ai)
 -   **Sitemap Reference**: robots.txt points to sitemap.xml for search engine discovery
 
 ### Structured Data (JSON-LD)

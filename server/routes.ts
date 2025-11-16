@@ -3,7 +3,6 @@ import { createServer, type Server } from "http";
 import { storage, seedDatabase } from "./storage";
 import { z } from "zod";
 import multer from "multer";
-import bcrypt from "bcryptjs";
 import { promises as fs } from "fs";
 import path from "path";
 import { getPublicBaseUrl, buildPdfUrl, fixHansardPdfUrls } from "./utils/url-helper";
@@ -27,13 +26,6 @@ import { HansardPdfParser } from "./hansard-pdf-parser";
 import { db } from "./db";
 import { jobTracker } from "./job-tracker";
 import { runHansardDownloadJob } from "./hansard-background-jobs";
-
-function ensureAuthenticated(req: Request, res: Response, next: NextFunction) {
-  if (req.session && req.session.userId) {
-    return next();
-  }
-  return res.status(401).json({ error: "Authentication required" });
-}
 
 // Configure multer for file uploads
 const upload = multer({
@@ -95,82 +87,6 @@ function extractTopics(transcript: string): string[] {
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Authentication routes
-  app.post("/api/auth/login", async (req, res) => {
-    try {
-      const { username, password } = req.body;
-      
-      if (!username || !password) {
-        return res.status(400).json({ error: "Username and password are required" });
-      }
-      
-      const user = await storage.getUserByUsername(username);
-      
-      if (!user) {
-        return res.status(401).json({ error: "Invalid username or password" });
-      }
-      
-      const isValidPassword = await bcrypt.compare(password, user.password);
-      
-      if (!isValidPassword) {
-        return res.status(401).json({ error: "Invalid username or password" });
-      }
-      
-      if (!user.isAdmin) {
-        return res.status(403).json({ error: "Admin access required" });
-      }
-      
-      req.session.userId = user.id;
-      
-      res.json({
-        user: {
-          id: user.id,
-          username: user.username,
-          isAdmin: user.isAdmin
-        }
-      });
-    } catch (error) {
-      console.error("Login error:", error);
-      res.status(500).json({ error: "Login failed" });
-    }
-  });
-  
-  app.post("/api/auth/logout", (req, res) => {
-    req.session.destroy((err) => {
-      if (err) {
-        return res.status(500).json({ error: "Logout failed" });
-      }
-      res.clearCookie('connect.sid');
-      res.json({ message: "Logged out successfully" });
-    });
-  });
-  
-  app.get("/api/auth/me", async (req, res) => {
-    try {
-      if (!req.session || !req.session.userId) {
-        return res.status(401).json({ error: "Not authenticated" });
-      }
-      
-      const user = await storage.getUser(req.session.userId);
-      
-      if (!user) {
-        req.session.destroy(() => {});
-        return res.status(401).json({ error: "User not found" });
-      }
-      
-      res.json({
-        user: {
-          id: user.id,
-          username: user.username,
-          isAdmin: user.isAdmin
-        }
-      });
-    } catch (error) {
-      console.error("Auth check error:", error);
-      res.status(500).json({ error: "Authentication check failed" });
-    }
-  });
-
   // Get all MPs
   app.get("/api/mps", async (_req, res) => {
     try {
@@ -1095,7 +1011,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Upload and parse Hansard PDF(s)
-  app.post("/api/hansard-records/upload", upload.array('pdfs', 25), handleMulterError, async (req, res) => {
+  app.post("/api/hansard-records/upload", upload.array('pdfs', 25), handleMulterError, async (req: Request, res: Response) => {
     try {
       const files = req.files as Express.Multer.File[] | undefined;
       
@@ -1218,7 +1134,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               contentType: 'application/pdf',
               pdfData: file.buffer,
               md5Hash,
-              uploadedBy: req.session?.userId,
+              uploadedBy: null,
               isPrimary: true,
             }).returning();
             
@@ -1427,7 +1343,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Analyze Hansard PDF for speaker statistics (attendance vs participation)
-  app.post("/api/hansard-speaker-stats", upload.single('pdf'), handleMulterError, async (req, res) => {
+  app.post("/api/hansard-speaker-stats", upload.single('pdf'), handleMulterError, async (req: Request, res: Response) => {
     try {
       if (!req.file) {
         return res.status(400).json({ error: "No PDF file uploaded. Only PDF files are accepted." });
@@ -2411,7 +2327,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin endpoint to refresh all MP data (attendance, speeches, Hansard performance)
-  app.post("/api/admin/refresh-mp-data", ensureAuthenticated, async (req, res) => {
+  app.post("/api/admin/refresh-mp-data", async (req, res) => {
     try {
       console.log("Manual MP data refresh triggered via API...");
       const { refreshAllMpData } = await import('./aggregate-speeches');

@@ -51,23 +51,6 @@ export const insertMpSchema = createInsertSchema(mps).omit({
 export type InsertMp = z.infer<typeof insertMpSchema>;
 export type Mp = typeof mps.$inferSelect;
 
-export const users = pgTable("users", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  username: text("username").notNull().unique(),
-  password: text("password").notNull(),
-  isAdmin: boolean("is_admin").notNull().default(false),
-});
-
-export const insertUserSchema = createInsertSchema(users).pick({
-  username: true,
-  password: true,
-}).extend({
-  isAdmin: z.boolean().optional().default(false),
-});
-
-export type InsertUser = z.infer<typeof insertUserSchema>;
-export type User = typeof users.$inferSelect;
-
 export const courtCases = pgTable("court_cases", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   mpId: varchar("mp_id").notNull().references(() => mps.id),
@@ -301,7 +284,7 @@ export const hansardPdfFiles = pgTable("hansard_pdf_files", {
   pdfData: bytea("pdf_data").notNull(),
   md5Hash: text("md5_hash"),
   uploadedAt: timestamp("uploaded_at").notNull().default(sql`NOW()`),
-  uploadedBy: varchar("uploaded_by").references(() => users.id),
+  uploadedBy: varchar("uploaded_by"),
   isPrimary: boolean("is_primary").notNull().default(true),
 });
 

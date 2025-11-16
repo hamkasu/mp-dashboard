@@ -1,8 +1,7 @@
-import { type User, type InsertUser, type Mp, type InsertMp, type CourtCase, type InsertCourtCase, type SprmInvestigation, type InsertSprmInvestigation, type LegislativeProposal, type InsertLegislativeProposal, type DebateParticipation, type InsertDebateParticipation, type ParliamentaryQuestion, type InsertParliamentaryQuestion, type HansardRecord, type InsertHansardRecord, type UpdateHansardRecord, type PageView } from "@shared/schema";
+import { type Mp, type InsertMp, type CourtCase, type InsertCourtCase, type SprmInvestigation, type InsertSprmInvestigation, type LegislativeProposal, type InsertLegislativeProposal, type DebateParticipation, type InsertDebateParticipation, type ParliamentaryQuestion, type InsertParliamentaryQuestion, type HansardRecord, type InsertHansardRecord, type UpdateHansardRecord, type PageView } from "@shared/schema";
 import { randomUUID } from "crypto";
-import bcrypt from "bcryptjs";
 import { db } from "./db";
-import { mps, users, courtCases, sprmInvestigations, legislativeProposals, debateParticipations, parliamentaryQuestions, hansardRecords, pageViews } from "@shared/schema";
+import { mps, courtCases, sprmInvestigations, legislativeProposals, debateParticipations, parliamentaryQuestions, hansardRecords, pageViews } from "@shared/schema";
 import { eq, sql } from "drizzle-orm";
 import { MPNameMatcher } from "./mp-name-matcher";
 import { HansardScraper } from "./hansard-scraper";
@@ -11,11 +10,6 @@ import { scrapeMpPhotos } from "./utils/scrape-mp-photos";
 import { normalizeParliamentTerm } from "../shared/utils";
 
 export interface IStorage {
-  // User methods
-  getUser(id: string): Promise<User | undefined>;
-  getUserByUsername(username: string): Promise<User | undefined>;
-  createUser(user: InsertUser): Promise<User>;
-  
   // MP methods
   getMp(id: string): Promise<Mp | undefined>;
   getAllMps(): Promise<Mp[]>;
@@ -118,7 +112,6 @@ export interface IStorage {
 }
 
 export class MemStorage implements IStorage {
-  private users: Map<string, User>;
   private mps: Map<string, Mp>;
   private courtCases: Map<string, CourtCase>;
   private sprmInvestigations: Map<string, SprmInvestigation>;
@@ -128,7 +121,6 @@ export class MemStorage implements IStorage {
   private hansardRecords: Map<string, HansardRecord>;
 
   constructor() {
-    this.users = new Map();
     this.mps = new Map();
     this.courtCases = new Map();
     this.sprmInvestigations = new Map();
@@ -136,7 +128,6 @@ export class MemStorage implements IStorage {
     this.debateParticipations = new Map();
     this.parliamentaryQuestions = new Map();
     this.hansardRecords = new Map();
-    this.seedAdminUser();
     this.seedMps();
     this.seedCourtCases();
     this.seedSprmInvestigations();
@@ -144,117 +135,6 @@ export class MemStorage implements IStorage {
     this.seedDebateParticipations();
     this.seedParliamentaryQuestions();
     this.seedHansardRecords();
-  }
-
-  private validatePassword(password: string): { valid: boolean; errors: string[] } {
-    // Environment-driven security bypass for testing ONLY
-    // Defaults to SECURE (validation enabled) unless explicitly disabled
-    const disableValidation = process.env.DISABLE_PASSWORD_VALIDATION === 'true';
-    
-    if (disableValidation) {
-      console.warn('⚠️⚠️⚠️ PASSWORD VALIDATION BYPASSED via DISABLE_PASSWORD_VALIDATION=true ⚠️⚠️⚠️');
-      console.warn('   This is for TESTING ONLY - Remove this flag before production!');
-      return {
-        valid: true,
-        errors: []
-      };
-    }
-    
-    // SECURE by default - Full password validation
-    const errors: string[] = [];
-    
-    if (password.length < 8) {
-      errors.push('Password must be at least 8 characters long');
-    }
-    
-    if (!/[A-Z]/.test(password)) {
-      errors.push('Password must contain at least one uppercase letter');
-    }
-    
-    if (!/[a-z]/.test(password)) {
-      errors.push('Password must contain at least one lowercase letter');
-    }
-    
-    if (!/[0-9]/.test(password)) {
-      errors.push('Password must contain at least one number');
-    }
-    
-    if (!/[^A-Za-z0-9]/.test(password)) {
-      errors.push('Password must contain at least one special character');
-    }
-    
-    return {
-      valid: errors.length === 0,
-      errors
-    };
-  }
-
-  private seedAdminUser() {
-    const isProduction = process.env.NODE_ENV === 'production';
-    
-    // Get admin credentials from environment variables
-    const adminUsername = process.env.ADMIN_USERNAME;
-    const adminPassword = process.env.ADMIN_PASSWORD;
-    
-    // In production, require environment variables
-    if (isProduction) {
-      if (!adminUsername || !adminPassword) {
-        throw new Error(
-          'ADMIN_USERNAME and ADMIN_PASSWORD environment variables must be set in production'
-        );
-      }
-    }
-    
-    // Use environment variables or fallback to defaults (dev only)
-    const username = adminUsername || 'admin';
-    const password = adminPassword || '061167@abcdeF1';
-    
-    // Validate password strength (defaults to enabled for security)
-    const validation = this.validatePassword(password);
-    if (!validation.valid) {
-      const errorMessage = `Admin password does not meet security requirements:\n${validation.errors.join('\n')}`;
-      if (isProduction) {
-        throw new Error(errorMessage);
-      } else {
-        console.warn(`⚠️  WARNING: ${errorMessage}`);
-      }
-    }
-    
-    // Warn if using defaults in development
-    if (!adminUsername || !adminPassword) {
-      console.warn('⚠️  WARNING: Using default admin credentials (development only)');
-      console.warn('   Set ADMIN_USERNAME and ADMIN_PASSWORD environment variables for production');
-    }
-    
-    // Hash the password
-    const hashedPassword = bcrypt.hashSync(password, 10);
-    
-    const adminUser: User = {
-      id: randomUUID(),
-      username: username,
-      password: hashedPassword,
-      isAdmin: true
-    };
-    
-    this.users.set(adminUser.id, adminUser);
-    console.log(`✅ Admin user created - Username: ${username}`);
-  }
-
-  async getUser(id: string): Promise<User | undefined> {
-    return this.users.get(id);
-  }
-
-  async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username,
-    );
-  }
-
-  async createUser(insertUser: InsertUser): Promise<User> {
-    const id = randomUUID();
-    const user: User = { ...insertUser, id };
-    this.users.set(id, user);
-    return user;
   }
 
   async getMp(id: string): Promise<Mp | undefined> {
@@ -1644,22 +1524,6 @@ export class MemStorage implements IStorage {
 
 // Database storage implementation using Drizzle ORM
 export class DbStorage implements IStorage {
-  // User methods
-  async getUser(id: string): Promise<User | undefined> {
-    const result = await db.select().from(users).where(eq(users.id, id));
-    return result[0];
-  }
-
-  async getUserByUsername(username: string): Promise<User | undefined> {
-    const result = await db.select().from(users).where(eq(users.username, username));
-    return result[0];
-  }
-
-  async createUser(user: InsertUser): Promise<User> {
-    const result = await db.insert(users).values(user).returning();
-    return result[0];
-  }
-
   // MP methods
   async getMp(id: string): Promise<Mp | undefined> {
     const result = await db.select().from(mps).where(eq(mps.id, id));
@@ -2657,22 +2521,6 @@ export class DbStorage implements IStorage {
 export async function seedDatabase() {
   const memStorage = new MemStorage();
   const dbStorage = new DbStorage();
-  
-  // Seed admin user if not exists
-  try {
-    const existingAdmin = await dbStorage.getUserByUsername('admin');
-    if (!existingAdmin) {
-      const hashedPassword = bcrypt.hashSync('061167@abcdeF1', 10);
-      await dbStorage.createUser({
-        username: 'admin',
-        password: hashedPassword,
-        isAdmin: true
-      });
-      console.log('✅ Admin user created - Username: admin');
-    }
-  } catch (error) {
-    console.log('Admin user seeding skipped or already exists');
-  }
   
   let mpIdMap = new Map<string, string>();
   let shouldSeedMps = false;
