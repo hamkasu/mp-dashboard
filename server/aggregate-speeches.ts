@@ -6,6 +6,9 @@ export async function aggregateSpeechesForAllMps(): Promise<{
   totalMpsUpdated: number;
   mpsWithNoSpeeches: number;
   totalRecordsProcessed: number;
+  recordsWithSpeakers: number;
+  recordsWithoutSpeakers: number;
+  skippedSessions: string[];
 }> {
   console.log('📊 [Aggregation] Aggregating speech data from all Hansard records...');
 
@@ -31,6 +34,10 @@ export async function aggregateSpeechesForAllMps(): Promise<{
     });
   });
 
+  let recordsWithSpeakers = 0;
+  let recordsWithoutSpeakers = 0;
+  const skippedSessions: string[] = [];
+
   for (const record of allHansardRecords) {
     const sessionDate = new Date(record.sessionDate);
     const speakerStats = record.speakerStats as Array<{
@@ -41,8 +48,13 @@ export async function aggregateSpeechesForAllMps(): Promise<{
     }>;
 
     if (!speakerStats || speakerStats.length === 0) {
+      recordsWithoutSpeakers++;
+      skippedSessions.push(record.sessionNumber);
+      console.warn(`⚠️  [Aggregation] Skipping ${record.sessionNumber} (${sessionDate.toISOString().split('T')[0]}) - No speakerStats found`);
       continue;
     }
+
+    recordsWithSpeakers++;
 
     const uniqueSpeakersInSession = new Map<string, {
       mpId: string;
@@ -91,11 +103,19 @@ export async function aggregateSpeechesForAllMps(): Promise<{
   }
 
   console.log(`✅ [Aggregation] Complete: ${updatedCount} MPs updated, ${mpsWithNoSpeeches} MPs with no speeches`);
+  console.log(`📊 [Aggregation] Records with speakers: ${recordsWithSpeakers}/${allHansardRecords.length}`);
+  console.log(`⚠️  [Aggregation] Records without speakers: ${recordsWithoutSpeakers}/${allHansardRecords.length}`);
+  if (skippedSessions.length > 0) {
+    console.log(`⚠️  [Aggregation] Skipped sessions: ${skippedSessions.join(', ')}`);
+  }
 
   return {
     totalMpsUpdated: updatedCount,
     mpsWithNoSpeeches,
-    totalRecordsProcessed: allHansardRecords.length
+    totalRecordsProcessed: allHansardRecords.length,
+    recordsWithSpeakers,
+    recordsWithoutSpeakers,
+    skippedSessions
   };
 }
 

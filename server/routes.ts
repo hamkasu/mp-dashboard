@@ -2343,13 +2343,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
           speeches: {
             mpsUpdated: results.speeches.totalMpsUpdated,
             mpsWithNoSpeeches: results.speeches.mpsWithNoSpeeches,
-            recordsProcessed: results.speeches.totalRecordsProcessed
+            recordsProcessed: results.speeches.totalRecordsProcessed,
+            recordsWithSpeakers: results.speeches.recordsWithSpeakers,
+            recordsWithoutSpeakers: results.speeches.recordsWithoutSpeakers,
+            skippedSessions: results.speeches.skippedSessions
           }
         }
       });
     } catch (error) {
       console.error("Error refreshing MP data:", error);
       res.status(500).json({ error: "Failed to refresh MP data", details: String(error) });
+    }
+  });
+
+  // Diagnostic endpoint to identify Hansard records with missing speaker data
+  app.get("/api/admin/hansard-diagnostics", async (req, res) => {
+    try {
+      const allRecords = await db.select({
+        id: hansardRecords.id,
+        sessionNumber: hansardRecords.sessionNumber,
+        sessionDate: hansardRecords.sessionDate,
+        speakerStats: hansardRecords.speakerStats,
+        attendedMpIds: hansardRecords.attendedMpIds
+      }).from(hansardRecords);
+
+      const withSpeakers = [];
+      const withoutSpeakers = [];
+
+      for (const record of allRecords) {
+        const stats = record.speakerStats as any[] || [];
+        const attended = record.attendedMpIds as any[] || [];
+        
+        if (stats.length === 0) {
+          withoutSpeakers.push({
+            sessionNumber: record.sessionNumber,
+            sessionDate: record.sessionDate,
+            attendedCount: attended.length,
+            speakerCount: 0
+          });
+        } else {
+          withSpeakers.push({
+            sessionNumber: record.sessionNumber,
+            sessionDate: record.sessionDate,
+            attendedCount: attended.length,
+            speakerCount: stats.length
+          });
+        }
+      }
+
+      // Sort by date
+      withSpeakers.sort((a, b) => new Date(a.sessionDate).getTime() - new Date(b.sessionDate).getTime());
+      withoutSpeakers.sort((a, b) => new Date(a.sessionDate).getTime() - new Date(b.sessionDate).getTime());
+
+      res.json({
+        summary: {
+          total: allRecords.length,
+          withSpeakers: withSpeakers.length,
+          withoutSpeakers: withoutSpeakers.length,
+          percentageWithSpeakers: ((withSpeakers.length / allRecords.length) * 100).toFixed(1)
+        },
+        recordsWithSpeakers: withSpeakers,
+        recordsWithoutSpeakers: withoutSpeakers
+      });
+    } catch (error) {
+      console.error("Error getting Hansard diagnostics:", error);
+      res.status(500).json({ error: "Failed to get diagnostics", details: String(error) });
     }
   });
 
