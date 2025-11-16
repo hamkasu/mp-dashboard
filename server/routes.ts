@@ -2417,7 +2417,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Endpoint to reprocess Hansard records without speaker stats
-  app.post("/api/admin/reprocess-hansards", async (req, res) => {
+  app.post("/api/admin/reprocess-hansard-speakers", async (req, res) => {
     try {
       console.log("🔄 Reprocessing Hansard records without speaker stats...");
       
