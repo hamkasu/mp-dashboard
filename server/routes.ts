@@ -2399,14 +2399,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       withoutSpeakers.sort((a, b) => new Date(a.sessionDate).getTime() - new Date(b.sessionDate).getTime());
 
       res.json({
-        summary: {
-          total: allRecords.length,
-          withSpeakers: withSpeakers.length,
-          withoutSpeakers: withoutSpeakers.length,
-          percentageWithSpeakers: ((withSpeakers.length / allRecords.length) * 100).toFixed(1)
-        },
-        recordsWithSpeakers: withSpeakers,
-        recordsWithoutSpeakers: withoutSpeakers
+        totalRecords: allRecords.length,
+        recordsWithSpeakers: withSpeakers.length,
+        recordsNeedingReprocessing: withoutSpeakers.length,
+        percentageWithSpeakers: allRecords.length > 0 ? ((withSpeakers.length / allRecords.length) * 100).toFixed(1) : "0",
+        problematicRecords: withoutSpeakers.map(r => ({
+          id: r.id,
+          sessionNumber: r.sessionNumber,
+          date: r.sessionDate,
+          attendedCount: r.attendedCount
+        }))
       });
     } catch (error) {
       console.error("Error getting Hansard diagnostics:", error);
@@ -2463,6 +2465,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Re-parse the PDF
           const parsed = await parser.parseHansardPdf(pdfFile[0].pdfData);
 
+          // Validate that parsing succeeded
+          if (!parsed || !parsed.speakers || parsed.speakers.length === 0) {
+            console.warn(`⚠️  Parsing produced no speakers for ${record.sessionNumber}`);
+            errors.push(`${record.sessionNumber}: Parsing produced no speakers`);
+            errorCount++;
+            continue;
+          }
+
           // Map speaker stats to the format needed for database
           const speakerStatsForDb = parsed.speakers.map((speaker, index) => ({
             mpId: speaker.mpId,
@@ -2471,7 +2481,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
             speakingOrder: speaker.speakingOrder
           }));
 
-          // Update the record with new speaker stats
+          // Validate we have valid speaker stats
+          if (speakerStatsForDb.length === 0) {
+            console.warn(`⚠️  No valid speaker stats for ${record.sessionNumber}`);
+            errors.push(`${record.sessionNumber}: No valid speaker stats after parsing`);
+            errorCount++;
+            continue;
+          }
+
+          // Update the record with new speaker stats (only if parsing succeeded)
           await db.update(hansardRecords)
             .set({
               speakerStats: speakerStatsForDb,
@@ -2492,12 +2510,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log(`✅ Reprocessing complete: ${successCount} success, ${errorCount} errors`);
 
+      // If we successfully reprocessed any records, trigger MP data refresh
+      if (successCount > 0) {
+        try {
+          console.log("🔄 Triggering MP data refresh after reprocessing...");
+          const refreshResult = await refreshMpDataFromHansards();
+          console.log(`✅ MP data refreshed: ${refreshResult.attendance.mpsUpdated} MPs updated`);
+        } catch (refreshError) {
+          console.error("⚠️  Failed to auto-refresh MP data after reprocessing:", refreshError);
+          // Don't fail the whole request if refresh fails
+        }
+      }
+
       res.json({
-        message: "Reprocessing complete",
+        message: successCount > 0 ? "Reprocessing complete - MP data refreshed" : "Reprocessing complete",
         total: recordsNeedingReprocessing.length,
-        successful: successCount,
-        failed: errorCount,
-        errors: errors
+        successCount,
+        errorCount,
+        errors: errorCount > 0 ? errors : undefined
       });
     } catch (error) {
       console.error("Error reprocessing Hansards:", error);

@@ -48,6 +48,8 @@ export default function HansardAdmin() {
     error?: string;
   } | null>(null);
   const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(null);
+  const [diagnosticsResult, setDiagnosticsResult] = useState<any>(null);
+  const [reprocessResult, setReprocessResult] = useState<any>(null);
 
   // Cleanup polling interval on unmount
   useEffect(() => {
@@ -232,6 +234,60 @@ export default function HansardAdmin() {
   const handleRefreshMpData = () => {
     if (confirm("This will recalculate all MP attendance, speech counts, and performance metrics from Hansard records. Continue?")) {
       refreshMpDataMutation.mutate();
+    }
+  };
+
+  const diagnosticsMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("GET", "/api/admin/hansard-diagnostics");
+      return await res.json();
+    },
+    onSuccess: (data: any) => {
+      setDiagnosticsResult(data);
+      toast({
+        title: "Diagnostics Complete",
+        description: `Found ${data.recordsNeedingReprocessing} records needing reprocessing`,
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to run diagnostics",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const reprocessMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/admin/reprocess-hansard-speakers");
+      return await res.json();
+    },
+    onSuccess: (data: any) => {
+      setReprocessResult(data);
+      queryClient.invalidateQueries({ queryKey: ["/api/hansard-records"] });
+      toast({
+        title: "Reprocessing Complete",
+        description: `Successfully reprocessed ${data.successCount} records`,
+      });
+      setDiagnosticsResult(null);
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to reprocess Hansard records",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleRunDiagnostics = () => {
+    diagnosticsMutation.mutate();
+  };
+
+  const handleReprocess = () => {
+    if (confirm(`This will reprocess ${diagnosticsResult?.recordsNeedingReprocessing || 0} Hansard records to extract speaker data. Continue?`)) {
+      reprocessMutation.mutate();
     }
   };
 
@@ -753,7 +809,148 @@ export default function HansardAdmin() {
             </Button>
           </CardContent>
         </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5" />
+              Hansard Diagnostics
+            </CardTitle>
+            <CardDescription>
+              Identify and fix Hansard records with missing speech data
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <p className="text-sm text-muted-foreground">
+                Some older Hansard records may have empty speaker data arrays, causing MPs to show 0 speeches even though they participated.
+              </p>
+              <Alert>
+                <AlertDescription>
+                  Run diagnostics to identify problematic records, then reprocess them to extract speaker data from the PDFs.
+                </AlertDescription>
+              </Alert>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                onClick={handleRunDiagnostics}
+                disabled={diagnosticsMutation.isPending}
+                className="flex-1"
+                variant="outline"
+                data-testid="button-run-diagnostics"
+              >
+                {diagnosticsMutation.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Scanning...
+                  </>
+                ) : (
+                  <>
+                    <FileText className="mr-2 h-4 w-4" />
+                    Run Diagnostics
+                  </>
+                )}
+              </Button>
+              <Button
+                onClick={handleReprocess}
+                disabled={reprocessMutation.isPending || !diagnosticsResult}
+                className="flex-1"
+                data-testid="button-reprocess"
+              >
+                {reprocessMutation.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Reprocessing...
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="mr-2 h-4 w-4" />
+                    Reprocess All
+                  </>
+                )}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
+
+      {diagnosticsResult && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              {diagnosticsResult.recordsNeedingReprocessing > 0 ? (
+                <AlertTriangle className="h-5 w-5 text-yellow-600" />
+              ) : (
+                <CheckCircle2 className="h-5 w-5 text-green-600" />
+              )}
+              Diagnostic Results
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Total records:</span>
+                <strong>{diagnosticsResult.totalRecords}</strong>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">With speaker data:</span>
+                <strong className="text-green-600">{diagnosticsResult.recordsWithSpeakers}</strong>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Missing speaker data:</span>
+                <strong className="text-yellow-600">{diagnosticsResult.recordsNeedingReprocessing}</strong>
+              </div>
+            </div>
+            {diagnosticsResult.problematicRecords && diagnosticsResult.problematicRecords.length > 0 && (
+              <div className="mt-4">
+                <h4 className="text-sm font-medium mb-2">Records needing reprocessing:</h4>
+                <div className="max-h-40 overflow-y-auto space-y-1 text-xs">
+                  {diagnosticsResult.problematicRecords.map((record: any) => (
+                    <div key={record.id} className="flex justify-between py-1 border-b">
+                      <span>{record.sessionNumber}</span>
+                      <span className="text-muted-foreground">{record.date}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {reprocessResult && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <CheckCircle2 className="h-5 w-5 text-green-600" />
+              Reprocessing Complete
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Records processed:</span>
+                <strong className="text-green-600">{reprocessResult.successCount}</strong>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Errors:</span>
+                <strong className="text-red-600">{reprocessResult.errorCount}</strong>
+              </div>
+            </div>
+            {reprocessResult.errors && reprocessResult.errors.length > 0 && (
+              <Alert className="mt-4" variant="destructive">
+                <AlertDescription>
+                  <div className="text-xs space-y-1">
+                    {reprocessResult.errors.map((error: string, i: number) => (
+                      <div key={i}>{error}</div>
+                    ))}
+                  </div>
+                </AlertDescription>
+              </Alert>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {downloadStatus && (
         <Card>
