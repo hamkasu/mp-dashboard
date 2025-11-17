@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -10,6 +10,17 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { 
   Loader2, 
   CheckCircle, 
@@ -17,7 +28,8 @@ import {
   HelpCircle,
   BarChart3,
   MessageSquare,
-  Users
+  Users,
+  RefreshCw
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { HansardRecord } from "@shared/schema";
@@ -112,6 +124,28 @@ export default function HansardAnalysis() {
     onError: (error: Error) => {
       toast({
         title: "Analysis Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const reextractActivitiesMutation = useMutation({
+    mutationFn: async () => {
+      return await apiRequest("POST", "/api/admin/reextract-activities");
+    },
+    onSuccess: (data: any) => {
+      toast({
+        title: "Re-extraction Complete",
+        description: `Extracted ${data.results.bills.total} bills, ${data.results.motions.total} motions, and ${data.results.questions.total} questions from ${data.results.recordsProcessed} Hansard records`,
+      });
+      // Invalidate queries to refresh data
+      queryClient.invalidateQueries({ queryKey: ["/api/legislative-proposals"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/parliamentary-questions"] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Re-extraction Failed",
         description: error.message,
         variant: "destructive",
       });
@@ -252,6 +286,59 @@ export default function HansardAnalysis() {
                   </>
                 )}
               </Button>
+
+              <Separator />
+
+              <div className="space-y-2">
+                <Label>Admin Actions</Label>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="w-full"
+                      data-testid="button-reextract-activities"
+                      disabled={reextractActivitiesMutation.isPending}
+                    >
+                      {reextractActivitiesMutation.isPending ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Re-extracting...
+                        </>
+                      ) : (
+                        <>
+                          <RefreshCw className="mr-2 h-4 w-4" />
+                          Re-extract Activities
+                        </>
+                      )}
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Re-extract Bills, Motions, and Questions?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This will re-process all existing Hansard records to extract Bills, Motions, and Questions.
+                        All current activities will be cleared and re-extracted from the transcript data.
+                        This is useful when parsing logic has been improved.
+                        <br /><br />
+                        <strong>Warning:</strong> This operation may take several minutes depending on the number of Hansard records.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel data-testid="button-cancel-reextract">Cancel</AlertDialogCancel>
+                      <AlertDialogAction
+                        data-testid="button-confirm-reextract"
+                        onClick={() => reextractActivitiesMutation.mutate()}
+                        disabled={reextractActivitiesMutation.isPending}
+                      >
+                        {reextractActivitiesMutation.isPending ? "Re-extracting..." : "Re-extract"}
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+                <p className="text-xs text-muted-foreground">
+                  Re-extract parliamentary activities from existing Hansard records using improved parsing logic
+                </p>
+              </div>
             </CardContent>
           </Card>
         </div>

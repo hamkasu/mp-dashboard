@@ -2574,6 +2574,229 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin endpoint to re-extract Bills, Motions, and Questions from existing Hansard records
+  app.post("/api/admin/reextract-activities", async (req, res) => {
+    try {
+      console.log("🔄 Re-extracting Bills, Motions, and Questions from Hansard records...");
+      
+      // Import parsers and schema
+      const { HansardSectionParser } = await import('./hansard-section-parser');
+      const { HansardQuestionParser } = await import('./hansard-question-parser');
+      const { HansardBillMotionParser } = await import('./hansard-bill-motion-parser');
+      const { legislativeProposals, debateParticipations, parliamentaryQuestions } = await import('@shared/schema');
+      const { sql } = await import('drizzle-orm');
+      
+      // Get all MPs for parser initialization
+      const allMps = await db.select().from(mps);
+      
+      // Initialize parsers
+      const sectionParser = new HansardSectionParser();
+      const questionParser = new HansardQuestionParser(allMps);
+      const billMotionParser = new HansardBillMotionParser(allMps);
+      
+      // Get all Hansard records
+      const allRecords = await db.select().from(hansardRecords);
+      console.log(`📊 Found ${allRecords.length} Hansard records to process`);
+      
+      // Track statistics
+      let recordsProcessed = 0;
+      let totalBills = 0;
+      let totalMotions = 0;
+      let totalQuestions = 0;
+      let billsWithMpMatch = 0;
+      let motionsWithMpMatch = 0;
+      let questionsWithMpMatch = 0;
+      let skippedRecords = 0;
+      const errors: string[] = [];
+      
+      // Use a transaction to ensure data consistency
+      await db.transaction(async (tx) => {
+        // Step 1: Clear existing activities (they will be re-extracted)
+        console.log("🗑️  Clearing existing activities...");
+        await tx.delete(legislativeProposals);
+        await tx.delete(parliamentaryQuestions);
+        // Note: debateParticipations are not currently extracted from transcripts, so we don't clear them
+        console.log("✅ Existing activities cleared");
+        
+        // Step 2: Re-extract from each Hansard record
+        for (const record of allRecords) {
+          try {
+            const transcript = record.transcript as string;
+            if (!transcript || transcript.length < 100) {
+              console.warn(`⚠️  Skipping ${record.sessionNumber} - No transcript data`);
+              skippedRecords++;
+              continue;
+            }
+            
+            console.log(`📄 Processing ${record.sessionNumber}...`);
+            
+            // Parse sections
+            const sections = sectionParser.parseSections(transcript);
+            
+            // Extract questions from question sections
+            for (const section of sections) {
+              if (section.type === 'questions_oral') {
+                const questions = questionParser.parseQuestions(section.content, 'oral');
+                for (const q of questions) {
+                  // Only insert if MP ID is matched - skip unmatched questions to avoid data corruption
+                  if (q.mpId) {
+                    await tx.insert(parliamentaryQuestions).values({
+                      mpId: q.mpId,
+                      questionText: q.questionText,
+                      dateAsked: record.sessionDate,
+                      ministry: q.ministry,
+                      topic: q.topic,
+                      answerStatus: q.answerStatus,
+                      hansardReference: record.sessionNumber,
+                      questionType: 'oral',
+                      questionNumber: q.questionNumber,
+                      hansardRecordId: record.id
+                    });
+                    totalQuestions++;
+                    questionsWithMpMatch++;
+                  } else {
+                    totalQuestions++;
+                  }
+                }
+              } else if (section.type === 'questions_written') {
+                const questions = questionParser.parseQuestions(section.content, 'written');
+                for (const q of questions) {
+                  if (q.mpId) {
+                    await tx.insert(parliamentaryQuestions).values({
+                      mpId: q.mpId,
+                      questionText: q.questionText,
+                      dateAsked: record.sessionDate,
+                      ministry: q.ministry,
+                      topic: q.topic,
+                      answerStatus: q.answerStatus,
+                      hansardReference: record.sessionNumber,
+                      questionType: 'written',
+                      questionNumber: q.questionNumber,
+                      hansardRecordId: record.id
+                    });
+                    totalQuestions++;
+                    questionsWithMpMatch++;
+                  } else {
+                    totalQuestions++;
+                  }
+                }
+              } else if (section.type === 'questions_minister') {
+                const questions = questionParser.parseQuestions(section.content, 'minister');
+                for (const q of questions) {
+                  if (q.mpId) {
+                    await tx.insert(parliamentaryQuestions).values({
+                      mpId: q.mpId,
+                      questionText: q.questionText,
+                      dateAsked: record.sessionDate,
+                      ministry: q.ministry,
+                      topic: q.topic,
+                      answerStatus: q.answerStatus,
+                      hansardReference: record.sessionNumber,
+                      questionType: 'minister',
+                      questionNumber: q.questionNumber,
+                      hansardRecordId: record.id
+                    });
+                    totalQuestions++;
+                    questionsWithMpMatch++;
+                  } else {
+                    totalQuestions++;
+                  }
+                }
+              } else if (section.type === 'bill') {
+                const bills = billMotionParser.parseBills(section.content);
+                for (const bill of bills) {
+                  if (bill.mpId) {
+                    await tx.insert(legislativeProposals).values({
+                      mpId: bill.mpId,
+                      title: bill.title,
+                      type: 'Bill',
+                      dateProposed: record.sessionDate,
+                      status: bill.status,
+                      description: bill.description,
+                      hansardReference: record.sessionNumber,
+                      billNumber: bill.billNumber,
+                      coSponsors: bill.coSponsors || [],
+                      hansardRecordId: record.id
+                    });
+                    totalBills++;
+                    billsWithMpMatch++;
+                  } else {
+                    totalBills++;
+                  }
+                }
+              } else if (section.type === 'motion') {
+                const motions = billMotionParser.parseMotions(section.content);
+                for (const motion of motions) {
+                  if (motion.mpId) {
+                    await tx.insert(legislativeProposals).values({
+                      mpId: motion.mpId,
+                      title: motion.title,
+                      type: 'Motion',
+                      dateProposed: record.sessionDate,
+                      status: motion.status,
+                      description: motion.description,
+                      hansardReference: record.sessionNumber,
+                      coSponsors: motion.coSponsors || [],
+                      hansardRecordId: record.id
+                    });
+                    totalMotions++;
+                    motionsWithMpMatch++;
+                  } else {
+                    totalMotions++;
+                  }
+                }
+              }
+            }
+            
+            recordsProcessed++;
+          } catch (error) {
+            console.error(`❌ Error processing ${record.sessionNumber}:`, error);
+            errors.push(`${record.sessionNumber}: ${String(error)}`);
+            // Don't throw - continue processing other records
+          }
+        }
+      });
+      
+      console.log("✅ Re-extraction complete!");
+      console.log(`   - Records processed: ${recordsProcessed}/${allRecords.length}`);
+      console.log(`   - Records skipped: ${skippedRecords}`);
+      console.log(`   - Bills extracted: ${totalBills} (${billsWithMpMatch} with MP match)`);
+      console.log(`   - Motions extracted: ${totalMotions} (${motionsWithMpMatch} with MP match)`);
+      console.log(`   - Questions extracted: ${totalQuestions} (${questionsWithMpMatch} with MP match)`);
+      
+      res.json({
+        message: "Activities re-extracted successfully",
+        results: {
+          recordsProcessed,
+          totalRecords: allRecords.length,
+          skippedRecords,
+          bills: {
+            total: totalBills,
+            withMpMatch: billsWithMpMatch,
+            withoutMpMatch: totalBills - billsWithMpMatch,
+            matchRate: totalBills > 0 ? ((billsWithMpMatch / totalBills) * 100).toFixed(1) + '%' : '0%'
+          },
+          motions: {
+            total: totalMotions,
+            withMpMatch: motionsWithMpMatch,
+            withoutMpMatch: totalMotions - motionsWithMpMatch,
+            matchRate: totalMotions > 0 ? ((motionsWithMpMatch / totalMotions) * 100).toFixed(1) + '%' : '0%'
+          },
+          questions: {
+            total: totalQuestions,
+            withMpMatch: questionsWithMpMatch,
+            withoutMpMatch: totalQuestions - questionsWithMpMatch,
+            matchRate: totalQuestions > 0 ? ((questionsWithMpMatch / totalQuestions) * 100).toFixed(1) + '%' : '0%'
+          },
+          errors: errors.length > 0 ? errors.slice(0, 10) : undefined // Limit error list to first 10
+        }
+      });
+    } catch (error) {
+      console.error("Error re-extracting activities:", error);
+      res.status(500).json({ error: "Failed to re-extract activities", details: String(error) });
+    }
+  });
+
   // Diagnostic endpoint to identify Hansard records with missing speaker data
   app.get("/api/admin/hansard-diagnostics", async (req, res) => {
     try {
