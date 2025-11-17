@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useRoute, Link } from "wouter";
-import { ArrowLeft, MapPin, UserCircle, Flag, FileText, Wallet, Calendar, Scale, ExternalLink, AlertTriangle, Info, MessageSquare, HelpCircle } from "lucide-react";
+import { ArrowLeft, MapPin, UserCircle, Flag, FileText, Wallet, Calendar, Scale, ExternalLink, AlertTriangle, Info, MessageSquare, HelpCircle, Gavel, FileQuestion, ScrollText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -80,7 +80,7 @@ export default function MPProfile() {
     enabled: !!mpId,
   });
 
-  const [activityTab, setActivityTab] = useState("legislation");
+  const [activityTab, setActivityTab] = useState("bills");
 
   if (isLoading) {
     return (
@@ -440,7 +440,182 @@ export default function MPProfile() {
                 </div>
               </CardContent>
             </Card>
+          </div>
 
+          {/* Legislative Activity Summary */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h2 className="text-2xl font-bold tracking-tight">Legislative Activity</h2>
+              <Tooltip>
+                <TooltipTrigger>
+                  <Info className="h-4 w-4 text-muted-foreground" />
+                </TooltipTrigger>
+                <TooltipContent className="max-w-sm">
+                  <p>Parliamentary activities including questions asked, bills sponsored, and motions proposed based on official Hansard records.</p>
+                </TooltipContent>
+              </Tooltip>
+            </div>
+            
+            <div className="grid md:grid-cols-3 gap-6">
+              {/* Questions Asked Card */}
+              <Card className="hover-elevate transition-shadow" data-testid="card-questions-summary">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <HelpCircle className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                    Questions Asked
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {isLoadingQuestions ? (
+                    <div className="animate-pulse space-y-2">
+                      <div className="h-10 bg-muted rounded" />
+                      <div className="h-6 bg-muted rounded" />
+                    </div>
+                  ) : (
+                    <>
+                      <div>
+                        <p className="text-4xl font-bold text-blue-600 dark:text-blue-400" data-testid="text-total-questions">
+                          {parliamentaryQuestions.length}
+                        </p>
+                        <p className="text-sm text-muted-foreground mt-1">total questions</p>
+                      </div>
+                      {parliamentaryQuestions.length > 0 && (
+                        <>
+                          <Separator />
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-muted-foreground">Oral Questions</span>
+                              <Badge variant="outline" data-testid="badge-oral-count">
+                                {parliamentaryQuestions.filter(q => q.questionType?.toLowerCase() === 'oral').length}
+                              </Badge>
+                            </div>
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-muted-foreground">Written Questions</span>
+                              <Badge variant="outline" data-testid="badge-written-count">
+                                {parliamentaryQuestions.filter(q => q.questionType?.toLowerCase() === 'written').length}
+                              </Badge>
+                            </div>
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-muted-foreground">Minister Questions</span>
+                              <Badge variant="outline" data-testid="badge-minister-count">
+                                {parliamentaryQuestions.filter(q => q.questionType?.toLowerCase() === 'minister').length}
+                              </Badge>
+                            </div>
+                          </div>
+                        </>
+                      )}
+                    </>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Bills Sponsored Card */}
+              <Card className="hover-elevate transition-shadow" data-testid="card-bills-summary">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <ScrollText className="h-5 w-5 text-green-600 dark:text-green-400" />
+                    Bills Sponsored
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {isLoadingProposals ? (
+                    <div className="animate-pulse space-y-2">
+                      <div className="h-10 bg-muted rounded" />
+                      <div className="h-6 bg-muted rounded" />
+                    </div>
+                  ) : (
+                    <>
+                      <div>
+                        <p className="text-4xl font-bold text-green-600 dark:text-green-400" data-testid="text-total-bills">
+                          {legislativeProposals.filter(p => p.type?.toLowerCase() === 'bill').length}
+                        </p>
+                        <p className="text-sm text-muted-foreground mt-1">bills proposed</p>
+                      </div>
+                      {legislativeProposals.filter(p => p.type?.toLowerCase() === 'bill').length > 0 && (
+                        <>
+                          <Separator />
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-muted-foreground">Pending</span>
+                              <Badge variant="outline" data-testid="badge-bills-pending">
+                                {legislativeProposals.filter(p => p.type?.toLowerCase() === 'bill' && p.status?.toLowerCase() === 'pending').length}
+                              </Badge>
+                            </div>
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-muted-foreground">Approved / Passed</span>
+                              <Badge variant="outline" data-testid="badge-bills-approved">
+                                {legislativeProposals.filter(p => p.type?.toLowerCase() === 'bill' && (p.status?.toLowerCase() === 'approved' || p.status?.toLowerCase() === 'passed')).length}
+                              </Badge>
+                            </div>
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-muted-foreground">Rejected</span>
+                              <Badge variant="outline" data-testid="badge-bills-rejected">
+                                {legislativeProposals.filter(p => p.type?.toLowerCase() === 'bill' && p.status?.toLowerCase() === 'rejected').length}
+                              </Badge>
+                            </div>
+                          </div>
+                        </>
+                      )}
+                    </>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Motions Proposed Card */}
+              <Card className="hover-elevate transition-shadow" data-testid="card-motions-summary">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <Gavel className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                    Motions Proposed
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {isLoadingProposals ? (
+                    <div className="animate-pulse space-y-2">
+                      <div className="h-10 bg-muted rounded" />
+                      <div className="h-6 bg-muted rounded" />
+                    </div>
+                  ) : (
+                    <>
+                      <div>
+                        <p className="text-4xl font-bold text-purple-600 dark:text-purple-400" data-testid="text-total-motions">
+                          {legislativeProposals.filter(p => p.type?.toLowerCase() === 'motion').length}
+                        </p>
+                        <p className="text-sm text-muted-foreground mt-1">motions proposed</p>
+                      </div>
+                      {legislativeProposals.filter(p => p.type?.toLowerCase() === 'motion').length > 0 && (
+                        <>
+                          <Separator />
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-muted-foreground">Pending</span>
+                              <Badge variant="outline" data-testid="badge-motions-pending">
+                                {legislativeProposals.filter(p => p.type?.toLowerCase() === 'motion' && p.status?.toLowerCase() === 'pending').length}
+                              </Badge>
+                            </div>
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-muted-foreground">Approved / Passed</span>
+                              <Badge variant="outline" data-testid="badge-motions-approved">
+                                {legislativeProposals.filter(p => p.type?.toLowerCase() === 'motion' && (p.status?.toLowerCase() === 'approved' || p.status?.toLowerCase() === 'passed')).length}
+                              </Badge>
+                            </div>
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-muted-foreground">Rejected</span>
+                              <Badge variant="outline" data-testid="badge-motions-rejected">
+                                {legislativeProposals.filter(p => p.type?.toLowerCase() === 'motion' && p.status?.toLowerCase() === 'rejected').length}
+                              </Badge>
+                            </div>
+                          </div>
+                        </>
+                      )}
+                    </>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-6">
             <Card className="md:col-span-2">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -990,10 +1165,14 @@ export default function MPProfile() {
                     </div>
                   ) : (
                     <Tabs value={activityTab} onValueChange={setActivityTab}>
-                      <TabsList className="grid w-full grid-cols-3">
-                        <TabsTrigger value="legislation" data-testid="tab-activity-legislation">
-                          <FileText className="w-4 h-4 mr-2" />
-                          Legislation ({legislativeProposals.length})
+                      <TabsList className="grid w-full grid-cols-4">
+                        <TabsTrigger value="bills" data-testid="tab-activity-bills">
+                          <ScrollText className="w-4 h-4 mr-2" />
+                          Bills ({legislativeProposals.filter(p => p.type?.toLowerCase() === 'bill').length})
+                        </TabsTrigger>
+                        <TabsTrigger value="motions" data-testid="tab-activity-motions">
+                          <Gavel className="w-4 h-4 mr-2" />
+                          Motions ({legislativeProposals.filter(p => p.type?.toLowerCase() === 'motion').length})
                         </TabsTrigger>
                         <TabsTrigger value="debates" data-testid="tab-activity-debates">
                           <MessageSquare className="w-4 h-4 mr-2" />
@@ -1005,48 +1184,122 @@ export default function MPProfile() {
                         </TabsTrigger>
                       </TabsList>
 
-                      <TabsContent value="legislation" className="mt-4 space-y-3">
-                        {legislativeProposals.length === 0 ? (
+                      <TabsContent value="bills" className="mt-4 space-y-3">
+                        {legislativeProposals.filter(p => p.type?.toLowerCase() === 'bill').length === 0 ? (
                           <div className="text-center py-8 text-muted-foreground">
-                            <FileText className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                            <p>No legislative proposals on record for this MP.</p>
+                            <ScrollText className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                            <p>No bills on record for this MP.</p>
                           </div>
                         ) : (
-                          legislativeProposals.map((proposal) => (
-                            <div
-                              key={proposal.id}
-                              data-testid={`activity-proposal-${proposal.id}`}
-                              className="border rounded-lg p-4 hover:bg-muted/30 transition-colors"
-                            >
-                              <div className="flex items-start justify-between gap-4 mb-2">
-                                <div className="flex-1">
-                                  <div className="flex items-center gap-2 mb-1">
-                                    <Badge variant="outline">{proposal.status}</Badge>
-                                    <Badge variant="secondary">{proposal.type}</Badge>
+                          legislativeProposals
+                            .filter(p => p.type?.toLowerCase() === 'bill')
+                            .map((bill) => (
+                              <div
+                                key={bill.id}
+                                data-testid={`activity-bill-${bill.id}`}
+                                className="border rounded-lg p-4 hover:bg-muted/30 transition-colors"
+                              >
+                                <div className="flex items-start justify-between gap-4 mb-2">
+                                  <div className="flex-1">
+                                    <div className="flex items-center gap-2 mb-1">
+                                      <Badge 
+                                        variant={
+                                          bill.status?.toLowerCase() === 'approved' || bill.status?.toLowerCase() === 'passed' ? 'default' : 
+                                          bill.status?.toLowerCase() === 'rejected' ? 'destructive' : 
+                                          'outline'
+                                        }
+                                        data-testid={`badge-bill-status-${bill.id}`}
+                                      >
+                                        {bill.status}
+                                      </Badge>
+                                      {bill.billNumber && (
+                                        <Badge variant="secondary" data-testid={`badge-bill-number-${bill.id}`}>
+                                          {bill.billNumber}
+                                        </Badge>
+                                      )}
+                                    </div>
+                                    <h5 className="font-semibold mb-1" data-testid={`text-bill-title-${bill.id}`}>
+                                      {bill.title}
+                                    </h5>
+                                    <p className="text-sm text-muted-foreground mb-2">
+                                      {bill.description}
+                                    </p>
                                   </div>
-                                  <h5 className="font-semibold mb-1">{proposal.title}</h5>
-                                  <p className="text-sm text-muted-foreground mb-2">
-                                    {proposal.description}
-                                  </p>
                                 </div>
+                                <div className="text-xs text-muted-foreground mb-2">
+                                  <span>Proposed: {format(new Date(bill.dateProposed), "MMM d, yyyy")}</span>
+                                </div>
+                                {bill.outcome && (
+                                  <p className="text-sm mb-2">
+                                    <span className="font-medium">Outcome: </span>
+                                    {bill.outcome}
+                                  </p>
+                                )}
+                                {bill.hansardReference && (
+                                  <p className="text-xs text-muted-foreground">
+                                    <span className="font-medium">Hansard: </span>
+                                    {bill.hansardReference}
+                                  </p>
+                                )}
                               </div>
-                              <div className="text-xs text-muted-foreground mb-2">
-                                <span>Proposed: {format(new Date(proposal.dateProposed), "MMM d, yyyy")}</span>
+                            ))
+                        )}
+                      </TabsContent>
+
+                      <TabsContent value="motions" className="mt-4 space-y-3">
+                        {legislativeProposals.filter(p => p.type?.toLowerCase() === 'motion').length === 0 ? (
+                          <div className="text-center py-8 text-muted-foreground">
+                            <Gavel className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                            <p>No motions on record for this MP.</p>
+                          </div>
+                        ) : (
+                          legislativeProposals
+                            .filter(p => p.type?.toLowerCase() === 'motion')
+                            .map((motion) => (
+                              <div
+                                key={motion.id}
+                                data-testid={`activity-motion-${motion.id}`}
+                                className="border rounded-lg p-4 hover:bg-muted/30 transition-colors"
+                              >
+                                <div className="flex items-start justify-between gap-4 mb-2">
+                                  <div className="flex-1">
+                                    <div className="flex items-center gap-2 mb-1">
+                                      <Badge 
+                                        variant={
+                                          motion.status?.toLowerCase() === 'approved' || motion.status?.toLowerCase() === 'passed' ? 'default' : 
+                                          motion.status?.toLowerCase() === 'rejected' ? 'destructive' : 
+                                          'outline'
+                                        }
+                                        data-testid={`badge-motion-status-${motion.id}`}
+                                      >
+                                        {motion.status}
+                                      </Badge>
+                                    </div>
+                                    <h5 className="font-semibold mb-1" data-testid={`text-motion-title-${motion.id}`}>
+                                      {motion.title}
+                                    </h5>
+                                    <p className="text-sm text-muted-foreground mb-2">
+                                      {motion.description}
+                                    </p>
+                                  </div>
+                                </div>
+                                <div className="text-xs text-muted-foreground mb-2">
+                                  <span>Proposed: {format(new Date(motion.dateProposed), "MMM d, yyyy")}</span>
+                                </div>
+                                {motion.outcome && (
+                                  <p className="text-sm mb-2">
+                                    <span className="font-medium">Outcome: </span>
+                                    {motion.outcome}
+                                  </p>
+                                )}
+                                {motion.hansardReference && (
+                                  <p className="text-xs text-muted-foreground">
+                                    <span className="font-medium">Hansard: </span>
+                                    {motion.hansardReference}
+                                  </p>
+                                )}
                               </div>
-                              {proposal.outcome && (
-                                <p className="text-sm mb-2">
-                                  <span className="font-medium">Outcome: </span>
-                                  {proposal.outcome}
-                                </p>
-                              )}
-                              {proposal.hansardReference && (
-                                <p className="text-xs text-muted-foreground">
-                                  <span className="font-medium">Hansard: </span>
-                                  {proposal.hansardReference}
-                                </p>
-                              )}
-                            </div>
-                          ))
+                            ))
                         )}
                       </TabsContent>
 
@@ -1084,47 +1337,103 @@ export default function MPProfile() {
                         )}
                       </TabsContent>
 
-                      <TabsContent value="questions" className="mt-4 space-y-3">
+                      <TabsContent value="questions" className="mt-4 space-y-4">
                         {parliamentaryQuestions.length === 0 ? (
                           <div className="text-center py-8 text-muted-foreground">
                             <HelpCircle className="h-12 w-12 mx-auto mb-3 opacity-50" />
                             <p>No parliamentary questions on record for this MP.</p>
                           </div>
                         ) : (
-                          parliamentaryQuestions.map((question) => (
-                            <div
-                              key={question.id}
-                              data-testid={`activity-question-${question.id}`}
-                              className="border rounded-lg p-4 hover:bg-muted/30 transition-colors"
-                            >
-                              <div className="flex items-center gap-2 mb-1">
-                                <Badge variant="outline">{question.answerStatus}</Badge>
-                                <Badge variant="secondary">{question.ministry}</Badge>
+                          <>
+                            {/* Ministry Breakdown */}
+                            <div className="bg-muted/30 rounded-lg p-4">
+                              <h4 className="font-semibold text-sm mb-3">Questions by Ministry</h4>
+                              <div className="flex flex-wrap gap-2">
+                                {Array.from(new Set(parliamentaryQuestions.map(q => q.ministry)))
+                                  .sort()
+                                  .map(ministry => (
+                                    <Badge 
+                                      key={ministry} 
+                                      variant="secondary"
+                                      data-testid={`badge-ministry-${ministry.toLowerCase().replace(/\s+/g, '-')}`}
+                                    >
+                                      {ministry} ({parliamentaryQuestions.filter(q => q.ministry === ministry).length})
+                                    </Badge>
+                                  ))}
                               </div>
-                              <h5 className="font-semibold mb-1">{question.topic}</h5>
-                              <div className="text-xs text-muted-foreground mb-2">
-                                <span>Asked: {format(new Date(question.dateAsked), "MMM d, yyyy")}</span>
-                              </div>
-                              <p className="text-sm mb-2">
-                                <span className="font-medium">Question: </span>
-                                {question.questionText}
-                              </p>
-                              {question.answerText && (
-                                <div className="bg-muted p-3 rounded-md mb-2">
-                                  <p className="text-sm">
-                                    <span className="font-medium">Answer: </span>
-                                    {question.answerText}
-                                  </p>
-                                </div>
-                              )}
-                              {question.hansardReference && (
-                                <p className="text-xs text-muted-foreground">
-                                  <span className="font-medium">Hansard: </span>
-                                  {question.hansardReference}
-                                </p>
-                              )}
                             </div>
-                          ))
+
+                            {/* Questions List */}
+                            <div className="space-y-3">
+                              {parliamentaryQuestions
+                                .sort((a, b) => new Date(b.dateAsked).getTime() - new Date(a.dateAsked).getTime())
+                                .map((question) => (
+                                  <div
+                                    key={question.id}
+                                    data-testid={`activity-question-${question.id}`}
+                                    className="border rounded-lg p-4 hover:bg-muted/30 transition-colors"
+                                  >
+                                    <div className="flex items-center gap-2 mb-2 flex-wrap">
+                                      {question.questionType && (
+                                        <Badge 
+                                          variant={
+                                            question.questionType?.toLowerCase() === 'oral' ? 'default' : 
+                                            question.questionType?.toLowerCase() === 'written' ? 'outline' : 
+                                            'secondary'
+                                          }
+                                          className={
+                                            question.questionType?.toLowerCase() === 'oral' ? 'bg-blue-600 text-white dark:bg-blue-500' : 
+                                            question.questionType?.toLowerCase() === 'minister' ? 'bg-purple-600 text-white dark:bg-purple-500' : 
+                                            ''
+                                          }
+                                          data-testid={`badge-question-type-${question.id}`}
+                                        >
+                                          {question.questionType.charAt(0).toUpperCase() + question.questionType.slice(1)}
+                                        </Badge>
+                                      )}
+                                      <Badge 
+                                        variant={question.answerStatus === 'Answered' ? 'default' : 'outline'}
+                                        data-testid={`badge-answer-status-${question.id}`}
+                                      >
+                                        {question.answerStatus}
+                                      </Badge>
+                                      <Badge variant="secondary" data-testid={`badge-ministry-${question.id}`}>
+                                        {question.ministry}
+                                      </Badge>
+                                      {question.questionNumber && (
+                                        <Badge variant="outline" className="font-mono" data-testid={`badge-question-number-${question.id}`}>
+                                          #{question.questionNumber}
+                                        </Badge>
+                                      )}
+                                    </div>
+                                    <h5 className="font-semibold mb-1" data-testid={`text-question-topic-${question.id}`}>
+                                      {question.topic}
+                                    </h5>
+                                    <div className="text-xs text-muted-foreground mb-2">
+                                      <span>Asked: {format(new Date(question.dateAsked), "MMM d, yyyy")}</span>
+                                    </div>
+                                    <p className="text-sm mb-2">
+                                      <span className="font-medium">Question: </span>
+                                      {question.questionText}
+                                    </p>
+                                    {question.answerText && (
+                                      <div className="bg-muted p-3 rounded-md mb-2">
+                                        <p className="text-sm">
+                                          <span className="font-medium">Answer: </span>
+                                          {question.answerText}
+                                        </p>
+                                      </div>
+                                    )}
+                                    {question.hansardReference && (
+                                      <p className="text-xs text-muted-foreground">
+                                        <span className="font-medium">Hansard: </span>
+                                        {question.hansardReference}
+                                      </p>
+                                    )}
+                                  </div>
+                                ))}
+                            </div>
+                          </>
                         )}
                       </TabsContent>
                     </Tabs>
