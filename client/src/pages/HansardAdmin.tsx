@@ -7,6 +7,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, Download, Trash2, AlertTriangle, CheckCircle2, RefreshCw, Upload, FileText, X, Database } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { UnmatchedSpeakersManager } from "@/components/UnmatchedSpeakersManager";
 
 interface UploadResult {
   success: boolean;
@@ -873,6 +874,8 @@ export default function HansardAdmin() {
           </CardContent>
         </Card>
       </div>
+
+      <UnmatchedSpeakersManager />
 
       {diagnosticsResult && (
         <Card>
