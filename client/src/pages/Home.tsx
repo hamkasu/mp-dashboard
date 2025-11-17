@@ -13,7 +13,7 @@ import { Link } from "wouter";
 import type { Mp, CourtCase, SprmInvestigation } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 
-type SortOption = "name" | "attendance-best" | "attendance-worst";
+type SortOption = "name" | "attendance-best" | "attendance-worst" | "speeches-most" | "speeches-fewest";
 
 export default function Home() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -97,6 +97,14 @@ export default function Home() {
         const rateA = totalA > 0 ? (attendedA / totalA) : 0;
         const rateB = totalB > 0 ? (attendedB / totalB) : 0;
         return rateA - rateB;
+      });
+    } else if (sortBy === "speeches-most") {
+      filtered = [...filtered].sort((a, b) => {
+        return b.totalSpeechInstances - a.totalSpeechInstances;
+      });
+    } else if (sortBy === "speeches-fewest") {
+      filtered = [...filtered].sort((a, b) => {
+        return a.totalSpeechInstances - b.totalSpeechInstances;
       });
     } else {
       filtered = [...filtered].sort((a, b) => a.name.localeCompare(b.name));

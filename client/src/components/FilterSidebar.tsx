@@ -6,7 +6,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 
-type SortOption = "name" | "attendance-best" | "attendance-worst";
+type SortOption = "name" | "attendance-best" | "attendance-worst" | "speeches-most" | "speeches-fewest";
 
 interface FilterSidebarProps {
   parties: { party: string; count: number }[];
@@ -75,6 +75,18 @@ export function FilterSidebar({
                 <RadioGroupItem value="attendance-worst" id="sort-attendance-worst" data-testid="radio-sort-attendance-worst" />
                 <Label htmlFor="sort-attendance-worst" className="text-sm font-normal cursor-pointer">
                   Worst Attendance
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="speeches-most" id="sort-speeches-most" data-testid="radio-sort-speeches-most" />
+                <Label htmlFor="sort-speeches-most" className="text-sm font-normal cursor-pointer">
+                  Most Speeches
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="speeches-fewest" id="sort-speeches-fewest" data-testid="radio-sort-speeches-fewest" />
+                <Label htmlFor="sort-speeches-fewest" className="text-sm font-normal cursor-pointer">
+                  Fewest Speeches
                 </Label>
               </div>
             </RadioGroup>
