@@ -108,10 +108,19 @@ export const legislativeProposals = pgTable("legislative_proposals", {
   description: text("description").notNull(),
   hansardReference: text("hansard_reference"),
   outcome: text("outcome"),
+  billNumber: text("bill_number"),
+  coSponsors: jsonb("co_sponsors").$type<string[]>().default(sql`'[]'::jsonb`),
+  hansardRecordId: varchar("hansard_record_id"),
+  createdAt: timestamp("created_at").notNull().default(sql`NOW()`),
 });
 
 export const insertLegislativeProposalSchema = createInsertSchema(legislativeProposals).omit({
   id: true,
+  createdAt: true,
+}).extend({
+  coSponsors: z.array(z.string()).default([]).optional(),
+  hansardRecordId: z.string().nullable().optional(),
+  billNumber: z.string().nullable().optional(),
 });
 
 export type InsertLegislativeProposal = z.infer<typeof insertLegislativeProposalSchema>;
@@ -144,10 +153,19 @@ export const parliamentaryQuestions = pgTable("parliamentary_questions", {
   answerStatus: text("answer_status").notNull(),
   hansardReference: text("hansard_reference"),
   answerText: text("answer_text"),
+  questionType: text("question_type"),
+  questionNumber: text("question_number"),
+  hansardRecordId: varchar("hansard_record_id"),
+  createdAt: timestamp("created_at").notNull().default(sql`NOW()`),
 });
 
 export const insertParliamentaryQuestionSchema = createInsertSchema(parliamentaryQuestions).omit({
   id: true,
+  createdAt: true,
+}).extend({
+  questionType: z.string().nullable().optional(),
+  questionNumber: z.string().nullable().optional(),
+  hansardRecordId: z.string().nullable().optional(),
 });
 
 export type InsertParliamentaryQuestion = z.infer<typeof insertParliamentaryQuestionSchema>;

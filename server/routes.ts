@@ -1135,6 +1135,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
               });
             }
           }
+
+          // Save parliamentary questions
+          if (parsed.questions && parsed.questions.length > 0) {
+            console.log(`💾 Saving ${parsed.questions.length} parliamentary questions`);
+            for (const question of parsed.questions) {
+              if (question.mpId) {
+                await storage.createParliamentaryQuestion({
+                  mpId: question.mpId,
+                  questionText: question.questionText,
+                  dateAsked: parsed.metadata.sessionDate,
+                  ministry: question.ministry,
+                  topic: question.topic,
+                  answerStatus: question.answerStatus,
+                  hansardReference: parsed.metadata.sessionNumber,
+                  answerText: question.answerText || null,
+                  questionType: question.questionType,
+                  questionNumber: question.questionNumber || null,
+                  hansardRecordId: record.id,
+                });
+              }
+            }
+          }
+
+          // Save bills and motions
+          if (parsed.bills && parsed.bills.length > 0) {
+            console.log(`💾 Saving ${parsed.bills.length} bills`);
+            for (const bill of parsed.bills) {
+              if (bill.mpId) {
+                await storage.createLegislativeProposal({
+                  mpId: bill.mpId,
+                  title: bill.title,
+                  type: 'Bill',
+                  dateProposed: parsed.metadata.sessionDate,
+                  status: bill.status,
+                  description: bill.description,
+                  hansardReference: parsed.metadata.sessionNumber,
+                  outcome: null,
+                  billNumber: bill.billNumber || null,
+                  coSponsors: bill.coSponsors || [],
+                  hansardRecordId: record.id,
+                });
+              }
+            }
+          }
+
+          if (parsed.motions && parsed.motions.length > 0) {
+            console.log(`💾 Saving ${parsed.motions.length} motions`);
+            for (const motion of parsed.motions) {
+              if (motion.mpId) {
+                await storage.createLegislativeProposal({
+                  mpId: motion.mpId,
+                  title: motion.title,
+                  type: 'Motion',
+                  dateProposed: parsed.metadata.sessionDate,
+                  status: motion.status,
+                  description: motion.description,
+                  hansardReference: parsed.metadata.sessionNumber,
+                  outcome: null,
+                  billNumber: null,
+                  coSponsors: motion.coSponsors || [],
+                  hansardRecordId: record.id,
+                });
+              }
+            }
+          }
           
           // Store PDF in database (md5Hash already calculated earlier)
           // Check if a PDF with this hash already exists for this record

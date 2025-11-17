@@ -1,5 +1,8 @@
 import { Mp } from '@shared/schema';
 import { HansardSpeakerParser } from './hansard-speaker-parser';
+import { HansardSectionParser } from './hansard-section-parser';
+import { HansardQuestionParser, ParsedQuestion } from './hansard-question-parser';
+import { HansardBillMotionParser, ParsedBillOrMotion } from './hansard-bill-motion-parser';
 import { normalizeParliamentTerm } from '../shared/utils';
 
 interface HansardMetadata {
@@ -58,15 +61,24 @@ interface ParsedHansard {
   }>;
   transcript: string;
   topics: string[];
+  questions: ParsedQuestion[];
+  bills: ParsedBillOrMotion[];
+  motions: ParsedBillOrMotion[];
 }
 
 export class HansardPdfParser {
   private allMps: Mp[];
   private speakerParser: HansardSpeakerParser;
+  private sectionParser: HansardSectionParser;
+  private questionParser: HansardQuestionParser;
+  private billMotionParser: HansardBillMotionParser;
 
   constructor(allMps: Mp[]) {
     this.allMps = allMps;
     this.speakerParser = new HansardSpeakerParser(allMps);
+    this.sectionParser = new HansardSectionParser();
+    this.questionParser = new HansardQuestionParser(allMps);
+    this.billMotionParser = new HansardBillMotionParser(allMps);
   }
 
   async parseHansardPdf(pdfBuffer: Buffer, filename?: string): Promise<ParsedHansard> {
@@ -92,6 +104,11 @@ export class HansardPdfParser {
     // Calculate speaker statistics
     const speakerStats = this.calculateSpeakerStatistics(speakers, attendance);
 
+    // Parse questions, bills, and motions
+    const questions = this.parseQuestions(fullText);
+    const bills = this.parseBills(fullText);
+    const motions = this.parseMotions(fullText);
+
     console.log('✅ Hansard parsing complete');
     console.log(`   - Session: ${metadata.sessionNumber}`);
     console.log(`   - Attended: ${attendance.attendedMpIds.length} MPs`);
@@ -102,6 +119,9 @@ export class HansardPdfParser {
     console.log(`   - Attendance rate: ${speakerStats.attendanceRate.toFixed(1)}%`);
     console.log(`   - All speaking instances: ${allInstances.length} total`);
     console.log(`   - Unmatched: ${unmatched.length} speakers`);
+    console.log(`   - Questions: ${questions.length} total`);
+    console.log(`   - Bills: ${bills.length} total`);
+    console.log(`   - Motions: ${motions.length} total`);
 
     return {
       metadata,
@@ -113,6 +133,9 @@ export class HansardPdfParser {
       unmatchedSpeakersDetailed: unmatchedDetailed,
       transcript: fullText.substring(0, 10000), // Store first 10k chars for transcript
       topics,
+      questions,
+      bills,
+      motions,
     };
   }
 
@@ -341,5 +364,51 @@ export class HansardPdfParser {
       .toLowerCase()
       .replace(/\s+/g, '')
       .replace(/[^a-z]/g, '');
+  }
+
+  private parseQuestions(fullText: string): ParsedQuestion[] {
+    const allQuestions: ParsedQuestion[] = [];
+    
+    const questionSections = this.sectionParser.extractQuestionsSections(fullText);
+    
+    for (const section of questionSections) {
+      let questionType: 'oral' | 'written' | 'minister' = 'oral';
+      if (section.type === 'questions_written') {
+        questionType = 'written';
+      } else if (section.type === 'questions_minister') {
+        questionType = 'minister';
+      }
+      
+      const questions = this.questionParser.parseQuestions(section.content, questionType);
+      allQuestions.push(...questions);
+    }
+    
+    return allQuestions;
+  }
+
+  private parseBills(fullText: string): ParsedBillOrMotion[] {
+    const allBills: ParsedBillOrMotion[] = [];
+    
+    const billSections = this.sectionParser.extractBillsSections(fullText);
+    
+    for (const section of billSections) {
+      const bills = this.billMotionParser.parseBills(section.content);
+      allBills.push(...bills);
+    }
+    
+    return allBills;
+  }
+
+  private parseMotions(fullText: string): ParsedBillOrMotion[] {
+    const allMotions: ParsedBillOrMotion[] = [];
+    
+    const motionSections = this.sectionParser.extractMotionsSections(fullText);
+    
+    for (const section of motionSections) {
+      const motions = this.billMotionParser.parseMotions(section.content);
+      allMotions.push(...motions);
+    }
+    
+    return allMotions;
   }
 }
