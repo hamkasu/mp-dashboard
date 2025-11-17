@@ -17,7 +17,11 @@ import {
   updateHansardRecordSchema,
   mps,
   hansardPdfFiles,
-  hansardRecords
+  hansardRecords,
+  unmatchedSpeakers,
+  insertUnmatchedSpeakerSchema,
+  speakerMappings,
+  insertSpeakerMappingSchema
 } from "@shared/schema";
 import crypto from "crypto";
 import { HansardScraper, ConstituencyAttendanceCounts } from "./hansard-scraper";
@@ -1114,6 +1118,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           const record = await storage.createHansardRecord(hansardData);
           
+          // Save unmatched speakers for diagnostics and manual mapping
+          if (parsed.unmatchedSpeakersDetailed && parsed.unmatchedSpeakersDetailed.length > 0) {
+            console.log(`💾 Saving ${parsed.unmatchedSpeakersDetailed.length} unmatched speakers for diagnostic purposes`);
+            
+            for (const unmatched of parsed.unmatchedSpeakersDetailed) {
+              await db.insert(unmatchedSpeakers).values({
+                hansardRecordId: record.id,
+                extractedName: unmatched.extractedName,
+                extractedConstituency: unmatched.extractedConstituency || null,
+                matchFailureReason: unmatched.failureReason,
+                speakingOrder: unmatched.speakingOrder,
+                rawHeaderText: unmatched.rawHeaderText,
+                suggestedMpIds: unmatched.suggestedMpIds,
+                isMapped: false,
+              });
+            }
+          }
+          
           // Store PDF in database (md5Hash already calculated earlier)
           // Check if a PDF with this hash already exists for this record
           const { eq, and } = await import("drizzle-orm");
@@ -1472,6 +1494,123 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       console.error("Error bulk deleting Hansard records:", error);
       res.status(500).json({ error: "Failed to delete Hansard records" });
+    }
+  });
+
+  // Get unmatched speakers for a specific Hansard record
+  app.get("/api/hansard-records/:id/unmatched-speakers", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { desc } = await import("drizzle-orm");
+      
+      const speakers = await db.select()
+        .from(unmatchedSpeakers)
+        .where(eq(unmatchedSpeakers.hansardRecordId, id))
+        .orderBy(unmatchedSpeakers.speakingOrder);
+      
+      res.json(speakers);
+    } catch (error) {
+      console.error("Error fetching unmatched speakers:", error);
+      res.status(500).json({ error: "Failed to fetch unmatched speakers" });
+    }
+  });
+
+  // Get all unmatched speakers across all Hansard records
+  app.get("/api/unmatched-speakers", async (req, res) => {
+    try {
+      const { unmappedOnly } = req.query;
+      const { desc } = await import("drizzle-orm");
+      
+      let query = db.select()
+        .from(unmatchedSpeakers)
+        .orderBy(desc(unmatchedSpeakers.createdAt));
+      
+      if (unmappedOnly === 'true') {
+        query = query.where(eq(unmatchedSpeakers.isMapped, false));
+      }
+      
+      const speakers = await query;
+      
+      res.json(speakers);
+    } catch (error) {
+      console.error("Error fetching unmatched speakers:", error);
+      res.status(500).json({ error: "Failed to fetch unmatched speakers" });
+    }
+  });
+
+  // Create a manual speaker mapping
+  app.post("/api/speaker-mappings", async (req, res) => {
+    try {
+      const validatedData = insertSpeakerMappingSchema.parse(req.body);
+      
+      // Create the mapping
+      const [mapping] = await db.insert(speakerMappings)
+        .values({
+          ...validatedData,
+          mappedBy: validatedData.mappedBy || null,
+          confidence: validatedData.confidence || 1.0,
+          notes: validatedData.notes || null,
+        })
+        .returning();
+      
+      // Mark the unmatched speaker as mapped
+      await db.update(unmatchedSpeakers)
+        .set({ 
+          isMapped: true,
+          mappedMpId: validatedData.mpId,
+        })
+        .where(eq(unmatchedSpeakers.id, validatedData.unmatchedSpeakerId));
+      
+      res.status(201).json(mapping);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid data", details: error.errors });
+      }
+      console.error("Error creating speaker mapping:", error);
+      res.status(500).json({ error: "Failed to create speaker mapping" });
+    }
+  });
+
+  // Get suggested MP matches for an unmatched speaker
+  app.get("/api/unmatched-speakers/:id/suggestions", async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      // Fetch the unmatched speaker
+      const [unmatchedSpeaker] = await db.select()
+        .from(unmatchedSpeakers)
+        .where(eq(unmatchedSpeakers.id, id))
+        .limit(1);
+      
+      if (!unmatchedSpeaker) {
+        return res.status(404).json({ error: "Unmatched speaker not found" });
+      }
+      
+      // Get all MPs
+      const allMps = await db.select().from(mps);
+      
+      // Use the MP name matcher to find suggestions
+      const matcher = new MPNameMatcher(allMps);
+      const suggestions = matcher.findSuggestedMatches(
+        unmatchedSpeaker.extractedName,
+        unmatchedSpeaker.extractedConstituency || undefined,
+        5 // Return top 5 suggestions
+      );
+      
+      res.json({
+        unmatchedSpeaker,
+        suggestions: suggestions.map(s => ({
+          mpId: s.mpId,
+          mpName: s.mpName,
+          constituency: s.constituency,
+          party: s.party,
+          score: s.score,
+          reason: s.reason,
+        }))
+      });
+    } catch (error) {
+      console.error("Error fetching speaker suggestions:", error);
+      res.status(500).json({ error: "Failed to fetch suggestions" });
     }
   });
 

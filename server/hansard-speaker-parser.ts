@@ -4,7 +4,7 @@ import { ConstituencyMatcher } from './constituency-matcher';
 
 type SpeakerMatchResult = 
   | { kind: 'matched'; speaker: HansardSpeaker; constituency: string }
-  | { kind: 'unmatched'; name: string; constituency?: string }
+  | { kind: 'unmatched'; name: string; constituency?: string; failureReason: string; rawHeaderText: string; suggestedMpIds: string[] }
   | { kind: 'skip' };
 
 interface SpeakingInstance {
@@ -61,11 +61,27 @@ export class HansardSpeakerParser {
       speakingOrder: number;
     }>; 
     allInstances: SpeakingInstance[];
-    unmatched: string[] 
+    unmatched: string[];
+    unmatchedDetailed: Array<{
+      extractedName: string;
+      extractedConstituency?: string;
+      failureReason: string;
+      rawHeaderText: string;
+      suggestedMpIds: string[];
+      speakingOrder: number;
+    }>
   } {
     const speakerMap = new Map<string, { mpId: string; mpName: string; constituency: string; speakingOrder: number }>();
     const allInstances: SpeakingInstance[] = [];
     const unmatchedSpeakers: string[] = [];
+    const unmatchedDetailed: Array<{
+      extractedName: string;
+      extractedConstituency?: string;
+      failureReason: string;
+      rawHeaderText: string;
+      suggestedMpIds: string[];
+      speakingOrder: number;
+    }> = [];
     const instanceCountMap = new Map<string, number>(); // Track instance number per MP
     let speakingOrder = 1;
 
@@ -82,7 +98,8 @@ export class HansardSpeakerParser {
         speakingOrder, 
         unmatchedSpeakers,
         offset,
-        transcript
+        transcript,
+        unmatchedDetailed
       );
     }
 
@@ -141,7 +158,7 @@ export class HansardSpeakerParser {
       console.log(`⚠️  ${unmatchedSpeakers.length} speakers could not be matched to MPs`);
     }
     
-    return { speakers, allInstances: sortedInstances, unmatched: unmatchedSpeakers };
+    return { speakers, allInstances: sortedInstances, unmatched: unmatchedSpeakers, unmatchedDetailed };
   }
 
   private extractSpeakersFromChunk(
@@ -152,7 +169,15 @@ export class HansardSpeakerParser {
     speakingOrder: number,
     unmatchedSpeakers: string[],
     offset: number,
-    fullTranscript: string
+    fullTranscript: string,
+    unmatchedDetailed?: Array<{
+      extractedName: string;
+      extractedConstituency?: string;
+      failureReason: string;
+      rawHeaderText: string;
+      suggestedMpIds: string[];
+      speakingOrder: number;
+    }>
   ): number {
     // Try each pattern
     for (const pattern of this.SPEAKER_PATTERNS) {
@@ -204,6 +229,18 @@ export class HansardSpeakerParser {
             : result.name;
           if (!unmatchedSpeakers.includes(unmatchedKey)) {
             unmatchedSpeakers.push(unmatchedKey);
+            
+            // Add detailed information for database storage
+            if (unmatchedDetailed) {
+              unmatchedDetailed.push({
+                extractedName: result.name,
+                extractedConstituency: result.constituency,
+                failureReason: result.failureReason,
+                rawHeaderText: result.rawHeaderText,
+                suggestedMpIds: result.suggestedMpIds,
+                speakingOrder
+              });
+            }
           }
         }
       }
@@ -234,17 +271,24 @@ export class HansardSpeakerParser {
       const part1 = this.cleanText(match[1]);
       const part2 = this.cleanText(match[2]);
       
-      // Check if part1 is definitively a constituency (swap case)
-      const part1AsMp = this.constituencyMatcher.getMpByConstituency(part1);
-      
-      if (part1AsMp) {
-        // Rare case: Part1 is constituency, Part2 is name (swap needed)
-        constituency = part1;
-        name = part2;
-      } else {
-        // Normal case: Part1 is name, Part2 is constituency
+      // Filter out non-constituency roles from part2 (common case)
+      if (this.isNonConstituencyRole(part2)) {
+        // Part2 is a role, not a constituency - treat as name only
         name = part1;
-        constituency = part2;
+        constituency = '';
+      } else {
+        // Check if part1 is definitively a constituency (swap case)
+        const part1AsMp = this.constituencyMatcher.getMpByConstituency(part1);
+        
+        if (part1AsMp) {
+          // Rare case: Part1 is constituency, Part2 is name (swap needed)
+          constituency = part1;
+          name = part2;
+        } else {
+          // Normal case: Part1 is name, Part2 is constituency
+          name = part1;
+          constituency = part2;
+        }
       }
     } else if (match[1]) {
       // Only name captured
@@ -273,11 +317,17 @@ export class HansardSpeakerParser {
       };
     }
 
-    // Could not match - return unmatched
+    // Could not match - return unmatched with diagnostic info
+    const failureReason = this.getMatchFailureReason(name, constituency);
+    const suggestedMpIds = this.getSuggestedMatches(name, constituency);
+    
     return {
       kind: 'unmatched',
       name,
-      constituency: constituency || undefined
+      constituency: constituency || undefined,
+      failureReason,
+      rawHeaderText: match[0],
+      suggestedMpIds
     };
   }
 
@@ -321,6 +371,37 @@ export class HansardSpeakerParser {
       .replace(/[\[\]()]+$/g, '')  // Strip trailing brackets and parentheses
       .replace(/^[\[\]()]+/g, '')  // Strip leading brackets and parentheses
       .trim();
+  }
+
+  private isNonConstituencyRole(text: string): boolean {
+    const normalized = text.toLowerCase().trim();
+    
+    // Filter out non-constituency roles that appear in place of constituencies
+    const nonConstituencyRoles = [
+      // Parliamentary officials
+      'yang di-pertua',
+      'timbalan yang di-pertua',
+      'speaker',
+      'deputy speaker',
+      'pengerusi',
+      'tuan pengerusi',
+      'puan pengerusi',
+      
+      // Ministers and deputies
+      'menteri',
+      'timbalan menteri',
+      'menteri besar',
+      'ketua menteri',
+      
+      // Generic titles
+      'tuan',
+      'puan',
+      'datuk',
+      'dato\'',
+      'senator',
+    ];
+    
+    return nonConstituencyRoles.some(role => normalized.includes(role));
   }
 
   private isParliamentaryOfficial(name: string): boolean {
@@ -378,5 +459,59 @@ export class HansardSpeakerParser {
     const wordCount = text.split(/\s+/).length;
     
     return !hasNameIndicator && wordCount <= 3;
+  }
+
+  private getMatchFailureReason(name: string, constituency?: string): string {
+    if (constituency) {
+      // Had constituency but couldn't match
+      const mpByConstituency = this.constituencyMatcher.getMpByConstituency(constituency);
+      if (!mpByConstituency) {
+        return `Constituency not recognized: "${constituency}"`;
+      }
+      return `Constituency matched but name mismatch (expected: ${mpByConstituency.name}, got: ${name})`;
+    }
+    
+    // No constituency provided
+    const mpIds = this.mpNameMatcher.matchNames([name]);
+    if (mpIds.length > 0) {
+      // This shouldn't happen since matchMp would have found it
+      return 'Name matched but verification failed';
+    }
+    
+    return 'No constituency provided and name not found in database';
+  }
+
+  private getSuggestedMatches(name: string, constituency?: string): string[] {
+    const suggestions: string[] = [];
+    const normalizedName = this.normalizeName(name);
+    
+    // If constituency provided but not recognized, find similar constituencies
+    if (constituency) {
+      const mpByConstituency = this.constituencyMatcher.getMpByConstituency(constituency);
+      if (mpByConstituency) {
+        suggestions.push(mpByConstituency.id);
+        return suggestions;
+      }
+    }
+    
+    // Fuzzy match on name using improved scoring
+    const nameWords = normalizedName.split(' ').filter((w: string) => w.length > 2);
+    const scoredMps: Array<{ mp: Mp; score: number }> = [];
+    
+    for (const mp of this.allMps) {
+      const mpNormalized = this.normalizeName(mp.name);
+      const mpWords = mpNormalized.split(' ').filter((w: string) => w.length > 2);
+      
+      const matchCount = nameWords.filter((w: string) => mpWords.includes(w)).length;
+      const score = matchCount / Math.max(nameWords.length, mpWords.length);
+      
+      if (matchCount >= 1 && score >= 0.3) {
+        scoredMps.push({ mp, score });
+      }
+    }
+    
+    // Sort by score and return top 3 suggestions
+    scoredMps.sort((a, b) => b.score - a.score);
+    return scoredMps.slice(0, 3).map(item => item.mp.id);
   }
 }

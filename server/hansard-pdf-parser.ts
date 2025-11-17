@@ -48,6 +48,14 @@ interface ParsedHansard {
   }>;
   speakerStats: SpeakerStatistics;
   unmatchedSpeakers: string[];
+  unmatchedSpeakersDetailed: Array<{
+    extractedName: string;
+    extractedConstituency?: string;
+    failureReason: string;
+    rawHeaderText: string;
+    suggestedMpIds: string[];
+    speakingOrder: number;
+  }>;
   transcript: string;
   topics: string[];
 }
@@ -78,7 +86,7 @@ export class HansardPdfParser {
     // Parse all components
     const metadata = this.parseMetadata(fullText, filename);
     const attendance = this.parseAttendance(fullText);
-    const { speakers, allInstances, unmatched } = this.speakerParser.extractSpeakers(fullText);
+    const { speakers, allInstances, unmatched, unmatchedDetailed } = this.speakerParser.extractSpeakers(fullText);
     const topics = this.parseTopics(fullText);
 
     // Calculate speaker statistics
@@ -102,6 +110,7 @@ export class HansardPdfParser {
       allSpeakingInstances: allInstances,
       speakerStats,
       unmatchedSpeakers: unmatched,
+      unmatchedSpeakersDetailed: unmatchedDetailed,
       transcript: fullText.substring(0, 10000), // Store first 10k chars for transcript
       topics,
     };

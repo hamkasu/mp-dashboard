@@ -137,4 +137,81 @@ export class MPNameMatcher {
 
     return matchedIds;
   }
+
+  findSuggestedMatches(
+    extractedName: string,
+    extractedConstituency?: string,
+    limit: number = 5
+  ): Array<{
+    mpId: string;
+    mpName: string;
+    constituency: string;
+    party: string;
+    score: number;
+    reason: string;
+  }> {
+    const normalized = this.normalizeName(extractedName);
+    const words = normalized.split(' ').filter((w: string) => w.length > 2);
+    
+    const candidates: Array<{
+      mpId: string;
+      mpName: string;
+      constituency: string;
+      party: string;
+      score: number;
+      reason: string;
+    }> = [];
+
+    // If constituency is provided, prioritize MPs from that constituency
+    if (extractedConstituency) {
+      const normalizedConstituency = this.normalizeName(extractedConstituency);
+      const constituencyMps = this.mps.filter(mp => 
+        this.normalizeName(mp.constituency).includes(normalizedConstituency) ||
+        normalizedConstituency.includes(this.normalizeName(mp.constituency))
+      );
+
+      for (const mp of constituencyMps) {
+        const mpWords = this.normalizeName(mp.name).split(' ').filter((w: string) => w.length > 2);
+        const matchCount = words.filter((w: string) => mpWords.includes(w)).length;
+        const nameScore = matchCount / Math.max(words.length, mpWords.length);
+
+        if (matchCount > 0) {
+          candidates.push({
+            mpId: mp.id,
+            mpName: mp.name,
+            constituency: mp.constituency,
+            party: mp.party,
+            score: nameScore + 0.5, // Boost score for constituency match
+            reason: `Constituency match (${mp.constituency}) with ${matchCount} name word(s) matching`
+          });
+        }
+      }
+    }
+
+    // Find fuzzy name matches across all MPs
+    for (const mp of this.mps) {
+      // Skip if already added from constituency match
+      if (candidates.some(c => c.mpId === mp.id)) continue;
+
+      const mpWords = this.normalizeName(mp.name).split(' ').filter((w: string) => w.length > 2);
+      const matchCount = words.filter((w: string) => mpWords.includes(w)).length;
+      const score = matchCount / Math.max(words.length, mpWords.length);
+
+      if (matchCount >= 2 && score >= 0.4) {
+        candidates.push({
+          mpId: mp.id,
+          mpName: mp.name,
+          constituency: mp.constituency,
+          party: mp.party,
+          score,
+          reason: `${matchCount} name word(s) matching (${(score * 100).toFixed(0)}% similarity)`
+        });
+      }
+    }
+
+    // Sort by score descending and return top N
+    return candidates
+      .sort((a, b) => b.score - a.score)
+      .slice(0, limit);
+  }
 }

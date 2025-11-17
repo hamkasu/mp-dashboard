@@ -315,3 +315,57 @@ export const insertPageViewSchema = createInsertSchema(pageViews).omit({
 
 export type InsertPageView = z.infer<typeof insertPageViewSchema>;
 export type PageView = typeof pageViews.$inferSelect;
+
+export const unmatchedSpeakers = pgTable("unmatched_speakers", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  hansardRecordId: varchar("hansard_record_id").notNull().references(() => hansardRecords.id, { onDelete: "cascade" }),
+  extractedName: text("extracted_name").notNull(),
+  extractedConstituency: text("extracted_constituency"),
+  matchFailureReason: text("match_failure_reason").notNull(),
+  speakingOrder: integer("speaking_order"),
+  rawHeaderText: text("raw_header_text"),
+  suggestedMpIds: jsonb("suggested_mp_ids").$type<string[]>().default(sql`'[]'::jsonb`),
+  isMapped: boolean("is_mapped").notNull().default(false),
+  mappedMpId: varchar("mapped_mp_id").references(() => mps.id),
+  mappedAt: timestamp("mapped_at"),
+  createdAt: timestamp("created_at").notNull().default(sql`NOW()`),
+});
+
+export const insertUnmatchedSpeakerSchema = createInsertSchema(unmatchedSpeakers).omit({
+  id: true,
+  createdAt: true,
+  mappedAt: true,
+}).extend({
+  extractedConstituency: z.string().nullable().optional(),
+  speakingOrder: z.number().nullable().optional(),
+  rawHeaderText: z.string().nullable().optional(),
+  suggestedMpIds: z.array(z.string()).optional().default([]),
+  isMapped: z.boolean().optional().default(false),
+  mappedMpId: z.string().nullable().optional(),
+});
+
+export type InsertUnmatchedSpeaker = z.infer<typeof insertUnmatchedSpeakerSchema>;
+export type UnmatchedSpeaker = typeof unmatchedSpeakers.$inferSelect;
+
+export const speakerMappings = pgTable("speaker_mappings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  unmatchedSpeakerId: varchar("unmatched_speaker_id").notNull().references(() => unmatchedSpeakers.id, { onDelete: "cascade" }),
+  mpId: varchar("mp_id").notNull().references(() => mps.id),
+  mappingType: text("mapping_type").notNull(),
+  confidence: integer("confidence"),
+  notes: text("notes"),
+  createdBy: text("created_by"),
+  createdAt: timestamp("created_at").notNull().default(sql`NOW()`),
+});
+
+export const insertSpeakerMappingSchema = createInsertSchema(speakerMappings).omit({
+  id: true,
+  createdAt: true,
+}).extend({
+  confidence: z.number().min(0).max(100).nullable().optional(),
+  notes: z.string().nullable().optional(),
+  createdBy: z.string().nullable().optional(),
+});
+
+export type InsertSpeakerMapping = z.infer<typeof insertSpeakerMappingSchema>;
+export type SpeakerMapping = typeof speakerMappings.$inferSelect;
