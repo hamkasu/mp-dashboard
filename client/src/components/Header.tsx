@@ -1,4 +1,4 @@
-import { Search, Menu, Home, FileText, BookOpen, UserCheck, Calculator, BarChart3, ExternalLink, ChevronDown, AlertCircle } from "lucide-react";
+import { Search, Menu, Home, FileText, BookOpen, UserCheck, Calculator, BarChart3, ExternalLink, ChevronDown, AlertCircle, GraduationCap } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -81,6 +81,17 @@ export function Header({ searchQuery, onSearchChange, onMenuClick }: HeaderProps
             >
               <BookOpen className="w-4 h-4" />
               <span>Hansard</span>
+            </Button>
+          </Link>
+          <Link href="/parliament-guide">
+            <Button
+              variant={location === "/parliament-guide" ? "secondary" : "ghost"}
+              size="sm"
+              data-testid="nav-parliament-guide"
+              className="gap-2"
+            >
+              <GraduationCap className="w-4 h-4" />
+              <span>How It Works</span>
             </Button>
           </Link>
           <Link href="/attendance">
