@@ -47,7 +47,10 @@ export class HansardSectionParser {
     }> = [];
 
     for (const { type, pattern, title } of sectionPatterns) {
-      const matches = Array.from(fullText.matchAll(new RegExp(pattern, 'gi')));
+      // Preserve original flags and add 'g' for global matching
+      const flags = pattern.flags.includes('g') ? pattern.flags : pattern.flags + 'g';
+      const globalPattern = new RegExp(pattern.source, flags);
+      const matches = Array.from(fullText.matchAll(globalPattern));
       for (const match of matches) {
         if (match.index !== undefined) {
           sectionMatches.push({
