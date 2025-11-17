@@ -1,4 +1,4 @@
-import { Search, Menu, Home, FileText, BookOpen, UserCheck, Calculator, BarChart3, ExternalLink, ChevronDown } from "lucide-react";
+import { Search, Menu, Home, FileText, BookOpen, UserCheck, Calculator, BarChart3, ExternalLink, ChevronDown, AlertCircle } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -108,7 +108,7 @@ export function Header({ searchQuery, onSearchChange, onMenuClick }: HeaderProps
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
-                variant={location === "/hansard-analysis" || location === "/allowances" ? "secondary" : "ghost"}
+                variant={location === "/hansard-analysis" || location === "/allowances" || location === "/disclaimer" ? "secondary" : "ghost"}
                 size="sm"
                 data-testid="nav-analysis-dropdown"
                 className="gap-2"
@@ -132,6 +132,13 @@ export function Header({ searchQuery, onSearchChange, onMenuClick }: HeaderProps
               >
                 <Calculator className="w-4 h-4 mr-2" />
                 <span>Allowances</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                onSelect={() => setLocation("/disclaimer")}
+                data-testid="nav-disclaimer"
+              >
+                <AlertCircle className="w-4 h-4 mr-2" />
+                <span>Disclaimer</span>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
