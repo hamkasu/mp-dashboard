@@ -12,6 +12,7 @@
     "db:push": "drizzle-kit push",
     "backfill-speakers": "tsx scripts/backfill-hansard-speakers.ts",
     "reprocess-hansard-pdfs": "tsx scripts/reprocess-all-hansard-pdfs.ts",
+    "batch-process-pdfs": "tsx scripts/batch-process-hansard-pdfs.ts",
     "aggregate-speeches": "tsx scripts/aggregate-all-speeches.ts",
     "aggregate-constituency": "tsx scripts/aggregate-constituency-speeches.ts",
     "fix-hansard-ids": "tsx scripts/fix-hansard-speaker-ids.ts"
