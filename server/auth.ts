@@ -6,6 +6,7 @@ import session from "express-session";
 import { storage } from "./storage";
 import { User as SelectUser, insertUserSchema } from "@shared/schema";
 import { hashPassword, comparePasswords } from "./utils/password";
+import { authRateLimit, setCsrfToken, auditLog } from "./middleware/security";
 
 declare global {
   namespace Express {
@@ -49,13 +50,14 @@ export function setupAuth(app: Express) {
     done(null, user);
   });
 
-  app.post("/api/register", async (req, res, next) => {
+  app.post("/api/register", authRateLimit, async (req, res, next) => {
     try {
       // Validate request body against schema
-      const validatedData = insertUserSchema.parse(req.body);
+      const validatedData = insertUserSchema.parse(req.body) as { username: string; password: string };
       
       const existingUser = await storage.getUserByUsername(validatedData.username);
       if (existingUser) {
+        auditLog(req, 'REGISTER', 'user', validatedData.username, false, 'Username already exists');
         return res.status(400).send("Username already exists");
       }
 
@@ -65,12 +67,17 @@ export function setupAuth(app: Express) {
       });
 
       req.login(user, (err) => {
-        if (err) return next(err);
+        if (err) {
+          auditLog(req, 'REGISTER', 'user', user.id, false, err.message);
+          return next(err);
+        }
+        auditLog(req, 'REGISTER', 'user', user.id, true);
         // Strip password from response for security
         const { password, ...userWithoutPassword } = user;
         res.status(201).json(userWithoutPassword);
       });
     } catch (error) {
+      auditLog(req, 'REGISTER', 'user', undefined, false, error instanceof Error ? error.message : 'Unknown error');
       if (error instanceof Error && 'issues' in error) {
         return res.status(400).json({ error: "Invalid input data", details: error });
       }
@@ -78,18 +85,24 @@ export function setupAuth(app: Express) {
     }
   });
 
-  app.post("/api/login", passport.authenticate("local"), (req, res) => {
+  app.post("/api/login", authRateLimit, passport.authenticate("local"), (req, res) => {
+    auditLog(req, 'LOGIN', 'user', req.user?.id, true);
     res.status(200).json(req.user);
   });
 
   app.post("/api/logout", (req, res, next) => {
+    const userId = req.user?.id;
     req.logout((err) => {
-      if (err) return next(err);
+      if (err) {
+        auditLog(req, 'LOGOUT', 'user', userId, false, err.message);
+        return next(err);
+      }
+      auditLog(req, 'LOGOUT', 'user', userId, true);
       res.sendStatus(200);
     });
   });
 
-  app.get("/api/user", (req, res) => {
+  app.get("/api/user", setCsrfToken, (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     res.json(req.user);
   });

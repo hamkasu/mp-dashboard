@@ -4,6 +4,8 @@ import { setupVite, serveStatic, log } from "./vite";
 import { seedDatabase } from "./storage";
 import { startHansardCron } from "./hansard-cron";
 import { trackVisitorAnalytics } from "./analytics-middleware";
+import { helmetConfig, readRateLimit } from "./middleware/security";
+import cookieParser from "cookie-parser";
 
 const app = express();
 
@@ -12,6 +14,15 @@ declare module 'http' {
     rawBody: unknown
   }
 }
+
+// Security headers
+app.use(helmetConfig);
+
+// Cookie parser for CSRF tokens
+app.use(cookieParser());
+
+// Global rate limiting for all requests
+app.use(readRateLimit);
 
 app.use(express.json({
   verify: (req, _res, buf) => {
