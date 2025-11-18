@@ -394,12 +394,16 @@ export const users = pgTable("users", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
+  role: text("role").notNull().default("user"),
   createdAt: timestamp("created_at").notNull().default(sql`NOW()`),
 });
 
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
   createdAt: true,
+  role: true,
+}).extend({
+  role: z.enum(["admin", "user"]).optional(),
 });
 
 export type InsertUser = z.infer<typeof insertUserSchema>;

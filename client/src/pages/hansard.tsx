@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Search, FileText, Calendar, Download, Sparkles, CheckCircle, Users, UserX, MapPin, Trash2, BarChart3 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import type { HansardRecord } from "@shared/schema";
 import {
@@ -39,6 +40,7 @@ export default function HansardPage() {
   const [endDate, setEndDate] = useState("");
   const [openDialogId, setOpenDialogId] = useState<string | null>(null);
   const { toast } = useToast();
+  const { user } = useAuth();
 
   const queryUrl = useMemo(() => {
     const params = new URLSearchParams();
@@ -281,43 +283,45 @@ export default function HansardPage() {
                       </Button>
                     }
                   />
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button
-                        data-testid={`button-delete-${record.id}`}
-                        variant="outline"
-                        size="sm"
-                        disabled={deleteMutation.isPending}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Delete Hansard Record</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          Are you sure you want to delete the Hansard record "{record.sessionNumber}"? 
-                          This action cannot be undone and will permanently remove the record and all associated data.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel 
-                          data-testid="button-cancel-delete"
+                  {user?.role === "admin" && (
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          data-testid={`button-delete-${record.id}`}
+                          variant="outline"
+                          size="sm"
                           disabled={deleteMutation.isPending}
                         >
-                          Cancel
-                        </AlertDialogCancel>
-                        <AlertDialogAction
-                          data-testid="button-confirm-delete"
-                          onClick={() => deleteMutation.mutate(record.id)}
-                          disabled={deleteMutation.isPending}
-                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                        >
-                          {deleteMutation.isPending ? "Deleting..." : "Delete"}
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Delete Hansard Record</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Are you sure you want to delete the Hansard record "{record.sessionNumber}"? 
+                            This action cannot be undone and will permanently remove the record and all associated data.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel 
+                            data-testid="button-cancel-delete"
+                            disabled={deleteMutation.isPending}
+                          >
+                            Cancel
+                          </AlertDialogCancel>
+                          <AlertDialogAction
+                            data-testid="button-confirm-delete"
+                            onClick={() => deleteMutation.mutate(record.id)}
+                            disabled={deleteMutation.isPending}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          >
+                            {deleteMutation.isPending ? "Deleting..." : "Delete"}
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  )}
                 </div>
               </div>
             </CardHeader>
