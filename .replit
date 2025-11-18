@@ -16,10 +16,6 @@ localPort = 5000
 externalPort = 80
 
 [[ports]]
-localPort = 41247
-externalPort = 8081
-
-[[ports]]
 localPort = 42253
 externalPort = 9000
 
@@ -75,6 +71,10 @@ externalPort = 3000
 localPort = 46585
 externalPort = 3003
 
+[[ports]]
+localPort = 46873
+externalPort = 8081
+
 [env]
 PORT = "5000"
 
@@ -103,5 +103,5 @@ args = "npm run dev"
 waitForPort = 5000
 
 [agent]
-integrations = ["javascript_mem_db:1.0.0"]
+integrations = ["javascript_mem_db:1.0.0", "javascript_auth_all_persistance:1.0.0"]
 expertMode = true

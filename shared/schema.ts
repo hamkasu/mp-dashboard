@@ -387,3 +387,20 @@ export const insertSpeakerMappingSchema = createInsertSchema(speakerMappings).om
 
 export type InsertSpeakerMapping = z.infer<typeof insertSpeakerMappingSchema>;
 export type SpeakerMapping = typeof speakerMappings.$inferSelect;
+
+// Reference: blueprint:javascript_auth_all_persistance
+// Users table for authentication
+export const users = pgTable("users", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  username: text("username").notNull().unique(),
+  password: text("password").notNull(),
+  createdAt: timestamp("created_at").notNull().default(sql`NOW()`),
+});
+
+export const insertUserSchema = createInsertSchema(users).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertUser = z.infer<typeof insertUserSchema>;
+export type User = typeof users.$inferSelect;

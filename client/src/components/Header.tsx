@@ -1,4 +1,4 @@
-import { Search, Menu, Home, FileText, BookOpen, UserCheck, Calculator, BarChart3, ExternalLink, ChevronDown, AlertCircle, GraduationCap } from "lucide-react";
+import { Search, Menu, Home, FileText, BookOpen, UserCheck, Calculator, BarChart3, ExternalLink, ChevronDown, AlertCircle, GraduationCap, LogIn, LogOut, Shield } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -8,6 +8,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Link, useLocation } from "wouter";
+import { useAuth } from "@/hooks/use-auth";
 
 interface HeaderProps {
   searchQuery?: string;
@@ -17,6 +18,7 @@ interface HeaderProps {
 
 export function Header({ searchQuery, onSearchChange, onMenuClick }: HeaderProps) {
   const [location, setLocation] = useLocation();
+  const { user, logoutMutation } = useAuth();
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shadow-sm">
@@ -105,17 +107,19 @@ export function Header({ searchQuery, onSearchChange, onMenuClick }: HeaderProps
               <span>Attendance</span>
             </Button>
           </Link>
-          <Link href="/hansard-admin">
-            <Button
-              variant={location === "/hansard-admin" ? "secondary" : "ghost"}
-              size="sm"
-              data-testid="nav-hansard-admin"
-              className="gap-2"
-            >
-              <FileText className="w-4 h-4" />
-              <span>Admin</span>
-            </Button>
-          </Link>
+          {user && (
+            <Link href="/hansard-admin">
+              <Button
+                variant={location === "/hansard-admin" ? "secondary" : "ghost"}
+                size="sm"
+                data-testid="nav-hansard-admin"
+                className="gap-2"
+              >
+                <Shield className="w-4 h-4" />
+                <span>Admin</span>
+              </Button>
+            </Link>
+          )}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
@@ -181,6 +185,34 @@ export function Header({ searchQuery, onSearchChange, onMenuClick }: HeaderProps
             </div>
           </div>
         )}
+
+        <div className="ml-auto md:ml-4 flex items-center gap-2">
+          {user ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => logoutMutation.mutate()}
+              disabled={logoutMutation.isPending}
+              data-testid="button-logout"
+              className="gap-2"
+            >
+              <LogOut className="w-4 h-4" />
+              <span className="hidden sm:inline">Logout</span>
+            </Button>
+          ) : (
+            <Link href="/auth">
+              <Button
+                variant="ghost"
+                size="sm"
+                data-testid="button-login"
+                className="gap-2"
+              >
+                <LogIn className="w-4 h-4" />
+                <span className="hidden sm:inline">Login</span>
+              </Button>
+            </Link>
+          )}
+        </div>
       </div>
     </header>
   );

@@ -1,13 +1,16 @@
-import { type Mp, type InsertMp, type CourtCase, type InsertCourtCase, type SprmInvestigation, type InsertSprmInvestigation, type LegislativeProposal, type InsertLegislativeProposal, type DebateParticipation, type InsertDebateParticipation, type ParliamentaryQuestion, type InsertParliamentaryQuestion, type HansardRecord, type InsertHansardRecord, type UpdateHansardRecord, type PageView } from "@shared/schema";
+import { type Mp, type InsertMp, type CourtCase, type InsertCourtCase, type SprmInvestigation, type InsertSprmInvestigation, type LegislativeProposal, type InsertLegislativeProposal, type DebateParticipation, type InsertDebateParticipation, type ParliamentaryQuestion, type InsertParliamentaryQuestion, type HansardRecord, type InsertHansardRecord, type UpdateHansardRecord, type PageView, type User, type InsertUser } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
-import { mps, courtCases, sprmInvestigations, legislativeProposals, debateParticipations, parliamentaryQuestions, hansardRecords, pageViews } from "@shared/schema";
+import { mps, courtCases, sprmInvestigations, legislativeProposals, debateParticipations, parliamentaryQuestions, hansardRecords, pageViews, users } from "@shared/schema";
 import { eq, sql } from "drizzle-orm";
 import { MPNameMatcher } from "./mp-name-matcher";
 import { HansardScraper } from "./hansard-scraper";
 import { ConstituencyMatcher } from "./constituency-matcher";
 import { scrapeMpPhotos } from "./utils/scrape-mp-photos";
 import { normalizeParliamentTerm } from "../shared/utils";
+import session from "express-session";
+import createMemoryStore from "memorystore";
+import connectPg from "connect-pg-simple";
 
 export interface IStorage {
   // MP methods
@@ -109,6 +112,15 @@ export interface IStorage {
   // Page View methods
   incrementPageView(page: string): Promise<number>;
   getPageViewCount(page: string): Promise<number>;
+
+  // Reference: blueprint:javascript_auth_all_persistance
+  // User authentication methods
+  getUser(id: number): Promise<User | undefined>;
+  getUserByUsername(username: string): Promise<User | undefined>;
+  createUser(user: InsertUser): Promise<User>;
+  
+  // Session store for authentication
+  sessionStore: session.Store;
 }
 
 export class MemStorage implements IStorage {
@@ -119,6 +131,10 @@ export class MemStorage implements IStorage {
   private debateParticipations: Map<string, DebateParticipation>;
   private parliamentaryQuestions: Map<string, ParliamentaryQuestion>;
   private hansardRecords: Map<string, HansardRecord>;
+  private users: Map<number, User>;
+  private userIdCounter: number = 1;
+  private pageViewCounts: Map<string, number> = new Map();
+  sessionStore: session.Store;
 
   constructor() {
     this.mps = new Map();
@@ -128,6 +144,12 @@ export class MemStorage implements IStorage {
     this.debateParticipations = new Map();
     this.parliamentaryQuestions = new Map();
     this.hansardRecords = new Map();
+    this.users = new Map();
+    
+    // Initialize in-memory session store synchronously
+    const MemoryStore = createMemoryStore(session);
+    this.sessionStore = new MemoryStore({ checkPeriod: 86400000 });
+    
     this.seedMps();
     this.seedCourtCases();
     this.seedSprmInvestigations();
@@ -1230,6 +1252,30 @@ export class MemStorage implements IStorage {
   async getPageViewCount(page: string): Promise<number> {
     return this.pageViewCounts.get(page) || 0;
   }
+
+  // Reference: blueprint:javascript_auth_all_persistance
+  // User authentication methods
+  async getUser(id: number): Promise<User | undefined> {
+    return this.users.get(id);
+  }
+
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    return Array.from(this.users.values()).find(u => u.username === username);
+  }
+
+  async createUser(user: InsertUser): Promise<User> {
+    const id = this.userIdCounter++;
+    const newUser: User = {
+      ...user,
+      id,
+      createdAt: new Date(),
+    };
+    this.users.set(id, newUser);
+    return newUser;
+  }
+
+  // Session store for in-memory sessions
+  sessionStore: session.Store;
 
   private seedHansardRecords() {
     const mpsArray = Array.from(this.mps.values());
@@ -2514,6 +2560,36 @@ export class DbStorage implements IStorage {
   async getPageViewCount(page: string): Promise<number> {
     const result = await db.select().from(pageViews).where(eq(pageViews.page, page));
     return result.length > 0 ? result[0].viewCount : 0;
+  }
+
+  // Reference: blueprint:javascript_auth_all_persistance
+  // User authentication methods
+  async getUser(id: number): Promise<User | undefined> {
+    const result = await db.select().from(users).where(eq(users.id, id));
+    return result[0];
+  }
+
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    const result = await db.select().from(users).where(eq(users.username, username));
+    return result[0];
+  }
+
+  async createUser(user: InsertUser): Promise<User> {
+    const result = await db.insert(users).values(user).returning();
+    return result[0];
+  }
+
+  // Session store for PostgreSQL-backed sessions
+  sessionStore: session.Store;
+
+  constructor() {
+    // Create PostgreSQL session store synchronously
+    const PostgresSessionStore = connectPg(session);
+    // @ts-ignore - db._.session.client is the underlying pg pool
+    this.sessionStore = new PostgresSessionStore({ 
+      pool: db._.session.client as any,
+      createTableIfMissing: true,
+    });
   }
 }
 

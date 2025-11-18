@@ -32,6 +32,8 @@ import { db } from "./db";
 import { eq } from "drizzle-orm";
 import { jobTracker } from "./job-tracker";
 import { runHansardDownloadJob } from "./hansard-background-jobs";
+// Reference: blueprint:javascript_auth_all_persistance
+import { setupAuth, requireAuth } from "./auth";
 
 // Configure multer for file uploads
 const upload = multer({
@@ -93,6 +95,10 @@ function extractTopics(transcript: string): string[] {
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Reference: blueprint:javascript_auth_all_persistance
+  // Set up authentication routes (/api/login, /api/register, /api/logout, /api/user)
+  setupAuth(app);
+
   // Get all MPs
   app.get("/api/mps", async (_req, res) => {
     try {
@@ -2396,7 +2402,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin endpoint to manually trigger database seeding (for Railway/production)
-  app.post("/api/admin/seed", async (req, res) => {
+  app.post("/api/admin/seed", requireAuth, async (req, res) => {
     try {
       if (!process.env.DATABASE_URL) {
         return res.status(400).json({ error: "No database configured - using in-memory storage" });
@@ -2434,14 +2440,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin endpoint to verify database state
-  app.get("/api/admin/db-status", async (req, res) => {
+  app.get("/api/admin/db-status", requireAuth, async (req, res) => {
     try {
-      // Require admin token for security
-      const adminToken = req.headers['x-admin-token'];
-      if (!adminToken || adminToken !== process.env.ADMIN_TOKEN) {
-        return res.status(403).json({ error: "Unauthorized - valid admin token required" });
-      }
-      
       const allMps = await storage.getAllMps();
       const hansardRecords = await storage.getAllHansardRecords();
       const recordsWithAbsent = hansardRecords.filter(r => r.absentMpIds && r.absentMpIds.length > 0);
@@ -2518,7 +2518,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin endpoint to manually trigger Hansard sync
-  app.post("/api/admin/trigger-hansard-check", async (req, res) => {
+  app.post("/api/admin/trigger-hansard-check", requireAuth, async (req, res) => {
     try {
       console.log("Manual Hansard sync triggered via API...");
       const result = await runHansardSync({ triggeredBy: 'manual' });
@@ -2545,7 +2545,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin endpoint to refresh all MP data (attendance, speeches, Hansard performance)
-  app.post("/api/admin/refresh-mp-data", async (req, res) => {
+  app.post("/api/admin/refresh-mp-data", requireAuth, async (req, res) => {
     try {
       console.log("Manual MP data refresh triggered via API...");
       const { refreshAllMpData } = await import('./aggregate-speeches');
@@ -2575,7 +2575,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin endpoint to re-extract Bills, Motions, and Questions from existing Hansard records
-  app.post("/api/admin/reextract-activities", async (req, res) => {
+  app.post("/api/admin/reextract-activities", requireAuth, async (req, res) => {
     try {
       console.log("🔄 Re-extracting Bills, Motions, and Questions from Hansard records...");
       
@@ -2798,7 +2798,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Diagnostic endpoint to identify Hansard records with missing speaker data
-  app.get("/api/admin/hansard-diagnostics", async (req, res) => {
+  app.get("/api/admin/hansard-diagnostics", requireAuth, async (req, res) => {
     try {
       const allRecords = await db.select({
         id: hansardRecords.id,
@@ -2856,7 +2856,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Endpoint to reprocess Hansard records without speaker stats
-  app.post("/api/admin/reprocess-hansard-speakers", async (req, res) => {
+  app.post("/api/admin/reprocess-hansard-speakers", requireAuth, async (req, res) => {
     try {
       console.log("🔄 Reprocessing Hansard records without speaker stats...");
       
