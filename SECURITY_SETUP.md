@@ -10,9 +10,15 @@ This Malaysian Parliament Dashboard application has been hardened with comprehen
 - **Password Hashing**: bcrypt-based password hashing for user credentials
 
 ### 2. CSRF Protection
-- **Double-Submit Cookie Pattern**: Protects against Cross-Site Request Forgery attacks
+- **Double-Submit Cookie Pattern**: Protects against Cross-Site Request Forgery attacks by validating that cookie token matches header token
+- **Origin/Referer Validation**: Enforces same-origin policy by checking Origin and Referer headers
+- **Signature Verification**: Server signs tokens with CSRF_SECRET and validates signature on each request
+- **Token Lifecycle**: New tokens generated on login/registration, cleared on logout
 - **Automatic Token Management**: Frontend automatically includes CSRF tokens in all mutations
 - **Token Expiration**: CSRF tokens expire after 24 hours
+- **Validation**: Origin must match, both cookie and header must exist, tokens must match exactly, and signature must be valid
+- **DoS Protection**: Buffer length validation prevents crashes from malformed tokens
+- **Scope**: CSRF protection defends against cross-site attacks. XSS prevention is handled separately via CSP headers and input sanitization
 
 ### 3. Rate Limiting
 Four tiers of rate limiting protect against abuse:
@@ -66,6 +72,16 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 # Add to your .env file
 CSRF_SECRET=your-generated-secret-here
 ```
+
+#### ALLOWED_ORIGINS (Production Only)
+Comma-separated list of trusted origins for CSRF protection. Replit automatically provides `REPLIT_DOMAINS` when deployed.
+
+```bash
+# For custom domains or non-Replit deployments
+ALLOWED_ORIGINS=https://yourdomain.com,https://www.yourdomain.com
+```
+
+**Note**: In development, only `http://localhost:5000` is trusted. In production without `REPLIT_DOMAINS` or `ALLOWED_ORIGINS`, CSRF protection will reject all requests.
 
 ### Example .env Configuration
 

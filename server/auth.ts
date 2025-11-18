@@ -6,7 +6,7 @@ import session from "express-session";
 import { storage } from "./storage";
 import { User as SelectUser, insertUserSchema } from "@shared/schema";
 import { hashPassword, comparePasswords } from "./utils/password";
-import { authRateLimit, setCsrfToken, auditLog } from "./middleware/security";
+import { authRateLimit, setCsrfToken, auditLog, generateCsrfToken } from "./middleware/security";
 
 declare global {
   namespace Express {
@@ -72,6 +72,17 @@ export function setupAuth(app: Express) {
           return next(err);
         }
         auditLog(req, 'REGISTER', 'user', user.id, true);
+        
+        // Generate new CSRF token on registration
+        const csrfToken = generateCsrfToken(req);
+        res.cookie('XSRF-TOKEN', csrfToken, {
+          httpOnly: false, // Frontend needs to read this for header submission
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'strict',
+          maxAge: 24 * 60 * 60 * 1000, // 24 hours
+        });
+        // Token not set in header to minimize XSS exposure
+        
         // Strip password from response for security
         const { password, ...userWithoutPassword } = user;
         res.status(201).json(userWithoutPassword);
@@ -87,6 +98,17 @@ export function setupAuth(app: Express) {
 
   app.post("/api/login", authRateLimit, passport.authenticate("local"), (req, res) => {
     auditLog(req, 'LOGIN', 'user', req.user?.id, true);
+    
+    // Generate new CSRF token on login
+    const csrfToken = generateCsrfToken(req);
+    res.cookie('XSRF-TOKEN', csrfToken, {
+      httpOnly: false, // Frontend needs to read this for header submission
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    });
+    // Token not set in header to minimize XSS exposure
+    
     res.status(200).json(req.user);
   });
 
@@ -98,6 +120,10 @@ export function setupAuth(app: Express) {
         return next(err);
       }
       auditLog(req, 'LOGOUT', 'user', userId, true);
+      
+      // Clear CSRF token on logout
+      res.clearCookie('XSRF-TOKEN');
+      
       res.sendStatus(200);
     });
   });

@@ -81,10 +81,15 @@ export function verifyCsrfToken(token: string): boolean {
     .update(`${tokenValue}:${timestamp}`)
     .digest('hex');
   
-  return crypto.timingSafeEqual(
-    Buffer.from(signature),
-    Buffer.from(expectedSignature)
-  );
+  // Ensure buffers are same length before timingSafeEqual to prevent DoS
+  const signatureBuffer = Buffer.from(signature);
+  const expectedBuffer = Buffer.from(expectedSignature);
+  
+  if (signatureBuffer.length !== expectedBuffer.length) {
+    return false;
+  }
+  
+  return crypto.timingSafeEqual(signatureBuffer, expectedBuffer);
 }
 
 // CSRF middleware for state-changing operations
@@ -99,26 +104,93 @@ export function csrfProtection(req: Request, res: Response, next: NextFunction) 
     return next();
   }
   
-  const token = req.headers['x-csrf-token'] as string;
+  // Verify Origin/Referer header against TRUSTED allowlist to prevent cross-origin CSRF attacks
+  const origin = req.headers.origin;
+  const referer = req.headers.referer;
   
-  if (!token || !verifyCsrfToken(token)) {
+  // Build and normalize trusted origins from environment - NEVER use request headers
+  const trustedOrigins: string[] = [];
+  
+  if (process.env.NODE_ENV === 'production') {
+    // In production, use Replit deployment URL or configured origins
+    if (process.env.REPLIT_DEPLOYMENT) {
+      const replitDomains = process.env.REPLIT_DOMAINS?.split(',') || [];
+      trustedOrigins.push(...replitDomains.map(d => `https://${d.trim().toLowerCase()}`));
+    }
+    // Allow custom configured origins (must be explicitly set by admin)
+    if (process.env.ALLOWED_ORIGINS) {
+      trustedOrigins.push(...process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim().toLowerCase()));
+    }
+  } else {
+    // In development, only trust localhost on port 5000 (canonical URLs)
+    trustedOrigins.push('http://localhost:5000', 'http://127.0.0.1:5000');
+  }
+  
+  // Reject requests with no trusted origins configured (defense in depth)
+  if (trustedOrigins.length === 0) {
+    return res.status(403).json({ error: 'No trusted origins configured' });
+  }
+  
+  // Validate Origin header (preferred) with strict canonicalization
+  if (origin) {
+    const normalizedOrigin = origin.trim().toLowerCase();
+    if (!trustedOrigins.includes(normalizedOrigin)) {
+      return res.status(403).json({ error: 'Untrusted origin' });
+    }
+  }
+  // Fallback to Referer if Origin is missing (use URL API for robust parsing)
+  else if (referer) {
+    let refererOrigin: string;
+    try {
+      const refererUrl = new URL(referer);
+      refererOrigin = `${refererUrl.protocol}//${refererUrl.host}`.toLowerCase();
+    } catch {
+      // Invalid referer URL
+      return res.status(403).json({ error: 'Invalid referer format' });
+    }
+    
+    if (!trustedOrigins.includes(refererOrigin)) {
+      return res.status(403).json({ error: 'Untrusted referer' });
+    }
+  }
+  // Reject if neither Origin nor Referer present (likely direct API access or old browser)
+  else {
+    return res.status(403).json({ error: 'Missing Origin and Referer headers' });
+  }
+  
+  const headerToken = req.headers['x-csrf-token'] as string;
+  const cookieToken = req.cookies['XSRF-TOKEN'] as string;
+  
+  // Both header and cookie must exist
+  if (!headerToken || !cookieToken) {
     return res.status(403).json({ error: 'Invalid or missing CSRF token' });
+  }
+  
+  // Tokens must match (double-submit pattern)
+  if (headerToken !== cookieToken) {
+    return res.status(403).json({ error: 'CSRF token mismatch' });
+  }
+  
+  // Token signature and expiry must be valid
+  if (!verifyCsrfToken(headerToken)) {
+    return res.status(403).json({ error: 'Invalid or expired CSRF token' });
   }
   
   next();
 }
 
-// Middleware to set CSRF token in cookie and response header
+// Middleware to set CSRF token in cookie only (not in header to prevent XSS reading)
 export function setCsrfToken(req: Request, res: Response, next: NextFunction) {
   if (req.isAuthenticated && req.isAuthenticated()) {
     const token = generateCsrfToken(req);
     res.cookie('XSRF-TOKEN', token, {
-      httpOnly: false, // Frontend needs to read this
+      httpOnly: false, // Frontend needs to read this for header submission
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
     });
-    res.setHeader('X-CSRF-Token', token);
+    // Note: Token is NOT set in response header to minimize XSS exposure
+    // Frontend reads from cookie and sends in X-CSRF-Token header
   }
   next();
 }
