@@ -13,7 +13,7 @@ Preferred communication style: Simple, everyday language.
 **Design System**: Material Design and Government Digital Service principles, custom theme with CSS variables for light/dark mode, Inter font, responsive grid layouts.
 **Key Features**:
 -   **Home Dashboard**: MP grid, filters, search, statistics (Total MPs, Party Breakdown, Gender Diversity, State Coverage, Avg Attendance), sort options (Name, Best/Worst Attendance), color-coded attendance displays. MP cards now display cumulative speech counts from Hansard records showing total speeches, sessions spoke, and average speeches per session.
--   **MP Profile Page**: Detailed individual MP information, monthly/yearly allowance calculations, attendance section with color-coded days, allowance information table, court cases section with status badges, SPRM investigations section, Hansard speech participation metrics.
+-   **MP Profile Page**: Detailed individual MP information, monthly/yearly allowance calculations, attendance section with color-coded days, allowance information table, contact information section (email, telephone, mobile number, addresses), court cases section with status badges, SPRM investigations section, Hansard speech participation metrics.
 -   **Parliamentary Activity Page**: Browse legislative proposals, debate participations, parliamentary questions, court cases, and SPRM investigations with search and filters.
 -   **Hansard Records Page**: Browse parliamentary session transcripts with search/filter, collapsible sections for speakers, vote records, full transcripts, PDF links, topics, vote tallies, and a "View by Constituency" dialog showing attendance grouped by state and party.
 -   **Hansard Analysis Page**: Analyze individual MP speech participation from database-stored Hansard PDFs. Users select a Hansard session (from existing database records) and an MP, then the system downloads the PDF from stored URLs, parses all speeches, and displays detailed statistics including total speeches, word count, attendance status, speech excerpts, question summaries, and mentioned MPs. Backend uses axios to fetch PDFs from stored URLs and pdf-parse for text extraction.
@@ -33,7 +33,7 @@ Preferred communication style: Simple, everyday language.
 **Development & Production**: Vite dev server for frontend, esbuild for backend bundling. In-memory storage for dev, PostgreSQL for production.
 
 ### Data Models
-**MP Schema**: Core details (`id`, `name`, `party`, `constituency`, `gender`, `role`, etc.), financial data (`mpAllowance`, `ministerSalary`, etc.), performance (`daysAttended`, `hansardSessionsSpoke`, `totalSpeechInstances`).
+**MP Schema**: Core details (`id`, `name`, `party`, `constituency`, `gender`, `role`, etc.), financial data (`mpAllowance`, `ministerSalary`, etc.), performance (`daysAttended`, `hansardSessionsSpoke`, `totalSpeechInstances`), contact information (`email`, `telephone`, `mobileNumber`, `contactAddress`, `serviceAddress`).
 **Court Case Schema**: `id`, `mpId`, `caseNumber`, `title`, `courtLevel`, `status`, `filingDate`, `outcome`, `charges`, `documentLinks`.
 **SPRM Investigation Schema**: `id`, `mpId`, `caseNumber`, `title`, `status`, `startDate`, `endDate`, `outcome`, `charges`.
 **Hansard Record Schema**: `id`, `sessionNumber`, `sessionDate`, `parliamentTerm`, `transcript`, `pdfLinks`, `topics`, `speakers`, `speakerStats`, `voteRecords`.
