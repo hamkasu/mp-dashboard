@@ -181,7 +181,7 @@ export function Header({ searchQuery, onSearchChange, onMenuClick }: HeaderProps
 
         {onSearchChange && (
           <div className="flex-1 flex justify-end">
-            <div className="relative w-full max-w-sm">
+            <div className="relative w-full max-w-[200px] sm:max-w-xs md:max-w-md">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 type="search"
