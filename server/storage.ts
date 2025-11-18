@@ -1,7 +1,7 @@
-import { type Mp, type InsertMp, type CourtCase, type InsertCourtCase, type SprmInvestigation, type InsertSprmInvestigation, type LegislativeProposal, type InsertLegislativeProposal, type DebateParticipation, type InsertDebateParticipation, type ParliamentaryQuestion, type InsertParliamentaryQuestion, type HansardRecord, type InsertHansardRecord, type UpdateHansardRecord, type PageView, type User, type InsertUser } from "@shared/schema";
+import { type Mp, type InsertMp, type CourtCase, type InsertCourtCase, type SprmInvestigation, type InsertSprmInvestigation, type LegislativeProposal, type InsertLegislativeProposal, type DebateParticipation, type InsertDebateParticipation, type ParliamentaryQuestion, type InsertParliamentaryQuestion, type HansardRecord, type InsertHansardRecord, type UpdateHansardRecord, type PageView, type User, type InsertUser, type UserActivityLog, type InsertUserActivityLog } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
-import { mps, courtCases, sprmInvestigations, legislativeProposals, debateParticipations, parliamentaryQuestions, hansardRecords, pageViews, users } from "@shared/schema";
+import { mps, courtCases, sprmInvestigations, legislativeProposals, debateParticipations, parliamentaryQuestions, hansardRecords, pageViews, users, userActivityLog } from "@shared/schema";
 import { eq, sql } from "drizzle-orm";
 import { MPNameMatcher } from "./mp-name-matcher";
 import { HansardScraper } from "./hansard-scraper";
@@ -118,6 +118,16 @@ export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+  
+  // User Activity Log methods
+  logUserActivity(activity: InsertUserActivityLog): Promise<UserActivityLog>;
+  getUserActivityLogs(options?: {
+    userId?: number;
+    pageUrl?: string;
+    startDate?: Date;
+    endDate?: Date;
+    limit?: number;
+  }): Promise<UserActivityLog[]>;
   
   // Session store for authentication
   sessionStore: session.Store;
