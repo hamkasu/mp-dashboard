@@ -11,6 +11,7 @@ import { normalizeParliamentTerm } from "../shared/utils";
 import session from "express-session";
 import createMemoryStore from "memorystore";
 import connectPg from "connect-pg-simple";
+import { hashPassword } from "./utils/password";
 
 export interface IStorage {
   // MP methods
@@ -2607,6 +2608,46 @@ export class DbStorage implements IStorage {
 export async function seedDatabase() {
   const memStorage = new MemStorage();
   const dbStorage = new DbStorage();
+  
+  // Create default admin user if it doesn't exist
+  // In production, ADMIN_USERNAME and ADMIN_PASSWORD must be set explicitly
+  const isDevelopment = process.env.NODE_ENV === "development";
+  const adminUsername = process.env.ADMIN_USERNAME;
+  const adminPassword = process.env.ADMIN_PASSWORD;
+  
+  // In production (or when NODE_ENV is not set), require explicit credentials
+  if (!isDevelopment && (!adminUsername || !adminPassword)) {
+    throw new Error(
+      "SECURITY ERROR: ADMIN_USERNAME and ADMIN_PASSWORD environment variables must be set in production. " +
+      "Default credentials are only allowed in development mode (NODE_ENV=development)."
+    );
+  }
+  
+  // Use default credentials only in development mode if env vars are not set
+  const finalUsername = adminUsername || "admin";
+  const finalPassword = adminPassword || "061167@abcdeF1";
+  
+  try {
+    const existingAdmin = await dbStorage.getUserByUsername(finalUsername);
+    if (!existingAdmin) {
+      console.log("Creating admin user...");
+      const hashedPassword = await hashPassword(finalPassword);
+      await dbStorage.createUser({
+        username: finalUsername,
+        password: hashedPassword,
+        role: "admin"
+      });
+      console.log(`✅ Admin user created with username: ${finalUsername}`);
+      if (isDevelopment && !adminUsername && !adminPassword) {
+        console.log("ℹ️  Using default development credentials. Set ADMIN_USERNAME and ADMIN_PASSWORD in .env to customize.");
+      }
+    } else {
+      console.log("Admin user already exists, skipping creation");
+    }
+  } catch (error) {
+    console.error("Error creating admin user:", error);
+    throw error;
+  }
   
   let mpIdMap = new Map<string, string>();
   let shouldSeedMps = false;
