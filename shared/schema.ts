@@ -407,3 +407,23 @@ export const insertUserSchema = createInsertSchema(users, {
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
+
+// User Activity Log table for tracking page visits
+export const userActivityLog = pgTable("user_activity_log", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: integer("user_id").references(() => users.id),
+  username: text("username"),
+  pageUrl: text("page_url").notNull(),
+  pageName: text("page_name"),
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+  timestamp: timestamp("timestamp").notNull().default(sql`NOW()`),
+});
+
+export const insertUserActivityLogSchema = createInsertSchema(userActivityLog).omit({
+  id: true,
+  timestamp: true,
+});
+
+export type InsertUserActivityLog = z.infer<typeof insertUserActivityLogSchema>;
+export type UserActivityLog = typeof userActivityLog.$inferSelect;
