@@ -351,12 +351,21 @@ export default function MPProfile() {
                   </div>
                 ) : hansardParticipation ? (
                   <>
-                    <div>
-                      <p className="text-sm text-muted-foreground mb-2">Sessions Spoken</p>
-                      <p className="text-3xl font-bold text-primary" data-testid="text-hansard-count">
-                        {hansardParticipation.count}
-                      </p>
-                      <p className="text-sm text-muted-foreground mt-1">parliamentary sessions</p>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <p className="text-sm text-muted-foreground mb-2">Sessions Spoken</p>
+                        <p className="text-3xl font-bold text-primary" data-testid="text-hansard-sessions-spoke">
+                          {mp.hansardSessionsSpoke || hansardParticipation.count}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">sessions</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground mb-2">Total Speeches</p>
+                        <p className="text-3xl font-bold text-chart-1" data-testid="text-hansard-total-speeches">
+                          {mp.totalSpeechInstances || 0}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">instances</p>
+                      </div>
                     </div>
                     {hansardParticipation.sessions.length > 0 && (
                       <>
@@ -364,7 +373,7 @@ export default function MPProfile() {
                         <div>
                           <p className="text-sm text-muted-foreground mb-2">Recent Sessions</p>
                           <div className="space-y-2" data-testid="list-recent-hansard-sessions">
-                            {hansardParticipation.sessions.slice(0, 5).map((session, index) => (
+                            {hansardParticipation.sessions.slice(0, 3).map((session, index) => (
                               <div key={session.id} className="text-sm">
                                 <p className="font-medium" data-testid={`text-hansard-session-${index}`}>
                                   {session.sessionNumber}
