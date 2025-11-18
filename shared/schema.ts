@@ -427,3 +427,25 @@ export const insertUserActivityLogSchema = createInsertSchema(userActivityLog).o
 
 export type InsertUserActivityLog = z.infer<typeof insertUserActivityLogSchema>;
 export type UserActivityLog = typeof userActivityLog.$inferSelect;
+
+// Visitor Analytics table for tracking all page visits with geolocation
+export const visitorAnalytics = pgTable("visitor_analytics", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  path: text("path").notNull(),
+  ip: text("ip"),
+  country: text("country"),
+  city: text("city"),
+  region: text("region"),
+  timezone: text("timezone"),
+  userAgent: text("user_agent"),
+  referrer: text("referrer"),
+  timestamp: timestamp("timestamp").notNull().default(sql`NOW()`),
+});
+
+export const insertVisitorAnalyticsSchema = createInsertSchema(visitorAnalytics).omit({
+  id: true,
+  timestamp: true,
+});
+
+export type InsertVisitorAnalytics = z.infer<typeof insertVisitorAnalyticsSchema>;
+export type VisitorAnalytics = typeof visitorAnalytics.$inferSelect;

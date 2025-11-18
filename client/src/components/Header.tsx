@@ -1,4 +1,4 @@
-import { Search, Menu, Home, FileText, BookOpen, UserCheck, Calculator, BarChart3, ExternalLink, ChevronDown, AlertCircle, GraduationCap, LogIn, LogOut, Shield } from "lucide-react";
+import { Search, Menu, Home, FileText, BookOpen, UserCheck, Calculator, BarChart3, ExternalLink, ChevronDown, AlertCircle, GraduationCap, LogIn, LogOut, Shield, TrendingUp } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -123,7 +123,7 @@ export function Header({ searchQuery, onSearchChange, onMenuClick }: HeaderProps
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
-                variant={location === "/hansard-analysis" || location === "/allowances" || location === "/disclaimer" ? "secondary" : "ghost"}
+                variant={location === "/hansard-analysis" || location === "/allowances" || location === "/disclaimer" || location === "/analytics" ? "secondary" : "ghost"}
                 size="sm"
                 data-testid="nav-analysis-dropdown"
                 className="gap-2"
@@ -141,6 +141,15 @@ export function Header({ searchQuery, onSearchChange, onMenuClick }: HeaderProps
                 <BarChart3 className="w-4 h-4 mr-2" />
                 <span>Hansard Analysis</span>
               </DropdownMenuItem>
+              {user && (
+                <DropdownMenuItem 
+                  onSelect={() => setLocation("/analytics")}
+                  data-testid="nav-analytics"
+                >
+                  <TrendingUp className="w-4 h-4 mr-2" />
+                  <span>Visitor Analytics</span>
+                </DropdownMenuItem>
+              )}
               <DropdownMenuItem 
                 onSelect={() => setLocation("/allowances")}
                 data-testid="nav-allowances"

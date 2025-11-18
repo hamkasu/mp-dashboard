@@ -3,6 +3,7 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { seedDatabase } from "./storage";
 import { startHansardCron } from "./hansard-cron";
+import { trackVisitorAnalytics } from "./analytics-middleware";
 
 const app = express();
 
@@ -18,6 +19,9 @@ app.use(express.json({
   }
 }));
 app.use(express.urlencoded({ extended: false }));
+
+// Track visitor analytics
+app.use(trackVisitorAnalytics());
 
 app.use((req, res, next) => {
   const start = Date.now();

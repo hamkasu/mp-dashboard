@@ -2974,6 +2974,126 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Analytics API routes (protected - admin only)
+  app.get("/api/analytics/summary", requireAuth, async (_req, res) => {
+    try {
+      const { visitorAnalytics } = await import("@shared/schema");
+      const { sql, count, countDistinct, desc } = await import("drizzle-orm");
+
+      // Get summary statistics
+      const [totalVisits] = await db.select({ value: count() }).from(visitorAnalytics);
+      const [uniqueIPs] = await db.select({ value: countDistinct(visitorAnalytics.ip) }).from(visitorAnalytics);
+
+      // Get top countries
+      const topCountries = await db
+        .select({
+          country: visitorAnalytics.country,
+          count: count(),
+        })
+        .from(visitorAnalytics)
+        .where(sql`${visitorAnalytics.country} IS NOT NULL`)
+        .groupBy(visitorAnalytics.country)
+        .orderBy(desc(count()))
+        .limit(10);
+
+      // Get top pages
+      const topPages = await db
+        .select({
+          path: visitorAnalytics.path,
+          count: count(),
+        })
+        .from(visitorAnalytics)
+        .groupBy(visitorAnalytics.path)
+        .orderBy(desc(count()))
+        .limit(10);
+
+      res.json({
+        totalVisits: totalVisits.value,
+        uniqueVisitors: uniqueIPs.value,
+        topCountries,
+        topPages,
+      });
+    } catch (error) {
+      console.error("Analytics summary error:", error);
+      res.status(500).json({ error: "Failed to fetch analytics summary" });
+    }
+  });
+
+  app.get("/api/analytics/recent", requireAuth, async (req, res) => {
+    try {
+      const { visitorAnalytics } = await import("@shared/schema");
+      const { desc } = await import("drizzle-orm");
+
+      const limit = parseInt(req.query.limit as string) || 50;
+
+      const recentVisits = await db
+        .select()
+        .from(visitorAnalytics)
+        .orderBy(desc(visitorAnalytics.timestamp))
+        .limit(limit);
+
+      res.json(recentVisits);
+    } catch (error) {
+      console.error("Recent analytics error:", error);
+      res.status(500).json({ error: "Failed to fetch recent visits" });
+    }
+  });
+
+  app.get("/api/analytics/countries", requireAuth, async (_req, res) => {
+    try {
+      const { visitorAnalytics } = await import("@shared/schema");
+      const { sql, count, desc } = await import("drizzle-orm");
+
+      const countries = await db
+        .select({
+          country: visitorAnalytics.country,
+          city: visitorAnalytics.city,
+          count: count(),
+        })
+        .from(visitorAnalytics)
+        .where(sql`${visitorAnalytics.country} IS NOT NULL`)
+        .groupBy(visitorAnalytics.country, visitorAnalytics.city)
+        .orderBy(desc(count()));
+
+      res.json(countries);
+    } catch (error) {
+      console.error("Countries analytics error:", error);
+      res.status(500).json({ error: "Failed to fetch country analytics" });
+    }
+  });
+
+  app.get("/api/analytics/timeline", requireAuth, async (req, res) => {
+    try {
+      const { visitorAnalytics } = await import("@shared/schema");
+      const { sql, count } = await import("drizzle-orm");
+
+      // Validate and sanitize days parameter
+      const daysParam = req.query.days as string;
+      let days = 7; // default
+      if (daysParam) {
+        const parsed = parseInt(daysParam, 10);
+        if (!isNaN(parsed) && parsed > 0 && parsed <= 365) {
+          days = parsed;
+        }
+      }
+
+      const timeline = await db
+        .select({
+          date: sql<string>`DATE(${visitorAnalytics.timestamp})`,
+          count: count(),
+        })
+        .from(visitorAnalytics)
+        .where(sql`${visitorAnalytics.timestamp} >= NOW() - INTERVAL '${sql.raw(days.toString())} days'`)
+        .groupBy(sql`DATE(${visitorAnalytics.timestamp})`)
+        .orderBy(sql`DATE(${visitorAnalytics.timestamp})`);
+
+      res.json(timeline);
+    } catch (error) {
+      console.error("Timeline analytics error:", error);
+      res.status(500).json({ error: "Failed to fetch timeline" });
+    }
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;

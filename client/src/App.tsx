@@ -14,6 +14,7 @@ import ConstituencyAnalysis from "@/pages/ConstituencyAnalysis";
 import Attendance from "@/pages/attendance";
 import Allowances from "@/pages/Allowances";
 import Disclaimer from "@/pages/Disclaimer";
+import Analytics from "@/pages/analytics";
 import NotFound from "@/pages/not-found";
 // Reference: blueprint:javascript_auth_all_persistance
 import AuthPage from "@/pages/auth-page";
@@ -35,6 +36,7 @@ function Router() {
       <ProtectedRoute path="/hansard-admin" component={HansardAdmin} />
       <Route path="/hansard-analysis" component={HansardAnalysis} />
       <Route path="/constituency-analysis" component={ConstituencyAnalysis} />
+      <ProtectedRoute path="/analytics" component={Analytics} />
       <Route component={NotFound} />
     </Switch>
   );
