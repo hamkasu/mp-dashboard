@@ -398,12 +398,11 @@ export const users = pgTable("users", {
   createdAt: timestamp("created_at").notNull().default(sql`NOW()`),
 });
 
-export const insertUserSchema = createInsertSchema(users).omit({
+export const insertUserSchema = createInsertSchema(users, {
+  role: z.enum(["admin", "user"]).optional(),
+}).omit({
   id: true,
   createdAt: true,
-  role: true,
-}).extend({
-  role: z.enum(["admin", "user"]).optional(),
 });
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
