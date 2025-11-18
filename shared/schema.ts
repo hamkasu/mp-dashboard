@@ -42,6 +42,11 @@ export const mps = pgTable("mps", {
   governmentMeetingDays: integer("government_meeting_days").notNull().default(0),
   isMinister: boolean("is_minister").notNull().default(false),
   ministerialPosition: text("ministerial_position"),
+  contactAddress: text("contact_address"),
+  email: text("email"),
+  telephone: text("telephone"),
+  mobileNumber: text("mobile_number"),
+  serviceAddress: text("service_address"),
 });
 
 export const insertMpSchema = createInsertSchema(mps).omit({

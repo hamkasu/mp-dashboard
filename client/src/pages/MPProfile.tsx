@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useRoute, Link } from "wouter";
-import { ArrowLeft, MapPin, UserCircle, Flag, FileText, Wallet, Calendar, Scale, ExternalLink, AlertTriangle, Info, MessageSquare, HelpCircle, Gavel, FileQuestion, ScrollText } from "lucide-react";
+import { ArrowLeft, MapPin, UserCircle, Flag, FileText, Wallet, Calendar, Scale, ExternalLink, AlertTriangle, Info, MessageSquare, HelpCircle, Gavel, FileQuestion, ScrollText, Phone, Mail, MapPinned } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -450,6 +450,99 @@ export default function MPProfile() {
               </CardContent>
             </Card>
           </div>
+
+          {/* Contact Information Section */}
+          {(mp.email || mp.telephone || mp.mobileNumber || mp.contactAddress || mp.serviceAddress) && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Mail className="h-5 w-5" />
+                  Contact Information
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {mp.email && (
+                  <div className="flex items-start gap-3">
+                    <Mail className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-sm text-muted-foreground">Email Address</p>
+                      <a 
+                        href={`mailto:${mp.email}`} 
+                        className="font-semibold text-primary hover:underline"
+                        data-testid="link-mp-email"
+                      >
+                        {mp.email}
+                      </a>
+                    </div>
+                  </div>
+                )}
+                
+                {mp.email && (mp.telephone || mp.mobileNumber || mp.contactAddress || mp.serviceAddress) && <Separator />}
+                
+                {mp.telephone && (
+                  <div className="flex items-start gap-3">
+                    <Phone className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-sm text-muted-foreground">Telephone</p>
+                      <a 
+                        href={`tel:${mp.telephone}`} 
+                        className="font-semibold text-primary hover:underline"
+                        data-testid="link-mp-telephone"
+                      >
+                        {mp.telephone}
+                      </a>
+                    </div>
+                  </div>
+                )}
+                
+                {mp.telephone && (mp.mobileNumber || mp.contactAddress || mp.serviceAddress) && <Separator />}
+                
+                {mp.mobileNumber && (
+                  <div className="flex items-start gap-3">
+                    <Phone className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-sm text-muted-foreground">Mobile Number</p>
+                      <a 
+                        href={`tel:${mp.mobileNumber}`} 
+                        className="font-semibold text-primary hover:underline"
+                        data-testid="link-mp-mobile"
+                      >
+                        {mp.mobileNumber}
+                      </a>
+                    </div>
+                  </div>
+                )}
+                
+                {mp.mobileNumber && (mp.contactAddress || mp.serviceAddress) && <Separator />}
+                
+                {mp.contactAddress && (
+                  <div className="flex items-start gap-3">
+                    <MapPinned className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-sm text-muted-foreground">Contact Address</p>
+                      <p className="font-semibold whitespace-pre-line" data-testid="text-mp-contact-address">
+                        {mp.contactAddress}
+                      </p>
+                    </div>
+                  </div>
+                )}
+                
+                {mp.contactAddress && mp.serviceAddress && <Separator />}
+                
+                {mp.serviceAddress && (
+                  <div className="flex items-start gap-3">
+                    <MapPinned className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-sm text-muted-foreground">Service Address</p>
+                      <p className="font-semibold whitespace-pre-line" data-testid="text-mp-service-address">
+                        {mp.serviceAddress}
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
 
           {/* Legislative Activity Summary */}
           <div className="space-y-3">
