@@ -7,6 +7,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, Download, Trash2, AlertTriangle, CheckCircle2, RefreshCw, Upload, FileText, X, Database } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
 import { UnmatchedSpeakersManager } from "@/components/UnmatchedSpeakersManager";
 
 interface UploadResult {
@@ -23,6 +24,7 @@ interface UploadResult {
 
 export default function HansardAdmin() {
   const { toast } = useToast();
+  const { user } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [isDragging, setIsDragging] = useState(false);
@@ -676,56 +678,58 @@ export default function HansardAdmin() {
       </Card>
 
       <div className="grid gap-6 md:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Trash2 className="h-5 w-5" />
-              Delete Hansard Records
-            </CardTitle>
-            <CardDescription>
-              Remove all existing hansard records from the database
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {isLoading ? (
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Loading records...
-              </div>
-            ) : (
-              <div className="space-y-2">
-                <p className="text-sm text-muted-foreground">
-                  Current records in database: <strong>{hansardRecords?.length || 0}</strong>
-                </p>
-                <Alert>
-                  <AlertTriangle className="h-4 w-4" />
-                  <AlertDescription>
-                    This will permanently delete all hansard records. This action cannot be undone.
-                  </AlertDescription>
-                </Alert>
-              </div>
-            )}
-            <Button
-              onClick={handleDelete}
-              disabled={deleteMutation.isPending || isLoading || !hansardRecords || hansardRecords.length === 0}
-              variant="destructive"
-              className="w-full"
-              data-testid="button-delete-all"
-            >
-              {deleteMutation.isPending ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Deleting...
-                </>
+        {user && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Trash2 className="h-5 w-5" />
+                Delete Hansard Records
+              </CardTitle>
+              <CardDescription>
+                Remove all existing hansard records from the database
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {isLoading ? (
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Loading records...
+                </div>
               ) : (
-                <>
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Delete All Records
-                </>
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground">
+                    Current records in database: <strong>{hansardRecords?.length || 0}</strong>
+                  </p>
+                  <Alert>
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertDescription>
+                      This will permanently delete all hansard records. This action cannot be undone.
+                    </AlertDescription>
+                  </Alert>
+                </div>
               )}
-            </Button>
-          </CardContent>
-        </Card>
+              <Button
+                onClick={handleDelete}
+                disabled={deleteMutation.isPending || isLoading || !hansardRecords || hansardRecords.length === 0}
+                variant="destructive"
+                className="w-full"
+                data-testid="button-delete-all"
+              >
+                {deleteMutation.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Delete All Records
+                  </>
+                )}
+              </Button>
+            </CardContent>
+          </Card>
+        )}
 
         <Card>
           <CardHeader>
