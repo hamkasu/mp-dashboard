@@ -1,4 +1,4 @@
-import { Search, Menu, Home, FileText, BookOpen, UserCheck, Calculator, BarChart3, ExternalLink, ChevronDown, AlertCircle, GraduationCap, LogIn, LogOut, Shield, TrendingUp, Scale } from "lucide-react";
+import { Search, Menu, Home, FileText, BookOpen, UserCheck, Calculator, BarChart3, ExternalLink, ChevronDown, AlertCircle, GraduationCap, Shield, TrendingUp, Scale } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -7,7 +7,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Link, useLocation } from "wouter";
-import { useAuth } from "@/hooks/use-auth";
 
 interface HeaderProps {
   onMenuClick?: () => void;
@@ -16,7 +15,6 @@ interface HeaderProps {
 
 export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
   const [location, setLocation] = useLocation();
-  const { user, logoutMutation } = useAuth();
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shadow-sm">
@@ -116,19 +114,17 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
               <span>Attendance</span>
             </Button>
           </Link>
-          {user && (
-            <Link href="/hansard-admin">
-              <Button
-                variant={location === "/hansard-admin" ? "secondary" : "ghost"}
-                size="sm"
-                data-testid="nav-hansard-admin"
-                className="gap-2"
-              >
-                <Shield className="w-4 h-4" />
-                <span>Admin</span>
-              </Button>
-            </Link>
-          )}
+          <Link href="/hansard-admin">
+            <Button
+              variant={location === "/hansard-admin" ? "secondary" : "ghost"}
+              size="sm"
+              data-testid="nav-hansard-admin"
+              className="gap-2"
+            >
+              <Shield className="w-4 h-4" />
+              <span>Admin</span>
+            </Button>
+          </Link>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
@@ -150,15 +146,13 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
                 <BarChart3 className="w-4 h-4 mr-2" />
                 <span>Hansard Analysis</span>
               </DropdownMenuItem>
-              {user && (
-                <DropdownMenuItem 
-                  onSelect={() => setLocation("/analytics")}
-                  data-testid="nav-analytics"
-                >
-                  <TrendingUp className="w-4 h-4 mr-2" />
-                  <span>Visitor Analytics</span>
-                </DropdownMenuItem>
-              )}
+              <DropdownMenuItem 
+                onSelect={() => setLocation("/analytics")}
+                data-testid="nav-analytics"
+              >
+                <TrendingUp className="w-4 h-4 mr-2" />
+                <span>Visitor Analytics</span>
+              </DropdownMenuItem>
               <DropdownMenuItem 
                 onSelect={() => setLocation("/allowances")}
                 data-testid="nav-allowances"
@@ -204,34 +198,6 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
             </Button>
           </div>
         )}
-
-        <div className="ml-auto md:ml-4 flex items-center gap-2">
-          {user ? (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => logoutMutation.mutate()}
-              disabled={logoutMutation.isPending}
-              data-testid="button-logout"
-              className="gap-2"
-            >
-              <LogOut className="w-4 h-4" />
-              <span className="hidden sm:inline">Logout</span>
-            </Button>
-          ) : (
-            <Link href="/auth">
-              <Button
-                variant="ghost"
-                size="sm"
-                data-testid="button-login"
-                className="gap-2"
-              >
-                <LogIn className="w-4 h-4" />
-                <span className="hidden sm:inline">Login</span>
-              </Button>
-            </Link>
-          )}
-        </div>
       </div>
     </header>
   );

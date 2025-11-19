@@ -9,8 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Search, FileText, Calendar, Download, Sparkles, CheckCircle, Users, UserX, MapPin, Trash2, BarChart3 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/hooks/use-auth";
-import { queryClient, apiRequest, getCsrfToken } from "@/lib/queryClient";
+import { queryClient, apiRequest } from "@/lib/queryClient";
 import type { HansardRecord } from "@shared/schema";
 import {
   Dialog,
@@ -40,7 +39,6 @@ export default function HansardPage() {
   const [endDate, setEndDate] = useState("");
   const [openDialogId, setOpenDialogId] = useState<string | null>(null);
   const { toast } = useToast();
-  const { user } = useAuth();
 
   const queryUrl = useMemo(() => {
     const params = new URLSearchParams();
@@ -58,10 +56,6 @@ export default function HansardPage() {
   const summarizeMutation = useMutation({
     mutationFn: async (recordId: string) => {
       const headers: Record<string, string> = { "Content-Type": "application/json" };
-      const csrfToken = getCsrfToken();
-      if (csrfToken) {
-        headers['X-CSRF-Token'] = csrfToken;
-      }
       
       const response = await fetch(`/api/hansard-records/${recordId}/summarize`, {
         method: "POST",
@@ -98,10 +92,6 @@ export default function HansardPage() {
   const deleteMutation = useMutation({
     mutationFn: async (recordId: string) => {
       const headers: Record<string, string> = {};
-      const csrfToken = getCsrfToken();
-      if (csrfToken) {
-        headers['X-CSRF-Token'] = csrfToken;
-      }
       
       const response = await fetch(`/api/hansard-records/${recordId}`, {
         method: 'DELETE',
@@ -297,7 +287,7 @@ export default function HansardPage() {
                       </Button>
                     }
                   />
-                  {user?.role === "admin" && (
+
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
                         <Button
@@ -335,7 +325,6 @@ export default function HansardPage() {
                         </AlertDialogFooter>
                       </AlertDialogContent>
                     </AlertDialog>
-                  )}
                 </div>
               </div>
             </CardHeader>

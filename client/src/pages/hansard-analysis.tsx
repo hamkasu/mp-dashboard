@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { apiRequest, queryClient, getCsrfToken } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -101,10 +101,6 @@ export default function HansardAnalysis() {
       const headers: Record<string, string> = {
         "Content-Type": "application/json",
       };
-      const csrfToken = getCsrfToken();
-      if (csrfToken) {
-        headers['X-CSRF-Token'] = csrfToken;
-      }
       
       const response = await fetch("/api/hansard-analysis", {
         method: "POST",

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { apiRequest, getCsrfToken } from "@/lib/queryClient";
+import { apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -123,10 +123,6 @@ export function HansardAnalysisDialog({ hansardRecord, trigger }: HansardAnalysi
       const headers: Record<string, string> = {
         "Content-Type": "application/json",
       };
-      const csrfToken = getCsrfToken();
-      if (csrfToken) {
-        headers['X-CSRF-Token'] = csrfToken;
-      }
       
       const response = await fetch("/api/hansard-analysis", {
         method: "POST",

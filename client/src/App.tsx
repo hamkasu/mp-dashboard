@@ -17,10 +17,6 @@ import Allowances from "@/pages/Allowances";
 import Disclaimer from "@/pages/Disclaimer";
 import Analytics from "@/pages/analytics";
 import NotFound from "@/pages/not-found";
-// Reference: blueprint:javascript_auth_all_persistance
-import AuthPage from "@/pages/auth-page";
-import { AuthProvider } from "@/hooks/use-auth";
-import { ProtectedRoute } from "@/lib/protected-route";
 
 function Router() {
   return (
@@ -34,11 +30,10 @@ function Router() {
       <Route path="/attendance" component={Attendance} />
       <Route path="/allowances" component={Allowances} />
       <Route path="/disclaimer" component={Disclaimer} />
-      <Route path="/auth" component={AuthPage} />
-      <ProtectedRoute path="/hansard-admin" component={HansardAdmin} />
+      <Route path="/hansard-admin" component={HansardAdmin} />
       <Route path="/hansard-analysis" component={HansardAnalysis} />
       <Route path="/constituency-analysis" component={ConstituencyAnalysis} />
-      <ProtectedRoute path="/analytics" component={Analytics} />
+      <Route path="/analytics" component={Analytics} />
       <Route component={NotFound} />
     </Switch>
   );
@@ -47,12 +42,10 @@ function Router() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Router />
-        </TooltipProvider>
-      </AuthProvider>
+      <TooltipProvider>
+        <Toaster />
+        <Router />
+      </TooltipProvider>
     </QueryClientProvider>
   );
 }

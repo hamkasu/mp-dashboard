@@ -32,10 +32,7 @@ import { db } from "./db";
 import { eq } from "drizzle-orm";
 import { jobTracker } from "./job-tracker";
 import { runHansardDownloadJob } from "./hansard-background-jobs";
-// Reference: blueprint:javascript_auth_all_persistance
-import { setupAuth, requireAuth } from "./auth";
 import { 
-  csrfProtection, 
   mutationRateLimit, 
   uploadRateLimit,
   auditLog as logAudit,
@@ -102,9 +99,6 @@ function extractTopics(transcript: string): string[] {
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Reference: blueprint:javascript_auth_all_persistance
-  // Set up authentication routes (/api/login, /api/register, /api/logout, /api/user)
-  setupAuth(app);
 
   // Get all MPs
   app.get("/api/mps", async (_req, res) => {
@@ -301,7 +295,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create a new court case
-  app.post("/api/court-cases", requireAuth, csrfProtection, mutationRateLimit, auditMiddleware('court-case'), async (req, res) => {
+  app.post("/api/court-cases", mutationRateLimit, auditMiddleware('court-case'), async (req, res) => {
     try {
       const validatedData = insertCourtCaseSchema.parse(req.body);
       const courtCase = await storage.createCourtCase(validatedData);
@@ -316,7 +310,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update a court case
-  app.patch("/api/court-cases/:id", requireAuth, csrfProtection, mutationRateLimit, auditMiddleware('court-case'), async (req, res) => {
+  app.patch("/api/court-cases/:id", mutationRateLimit, auditMiddleware('court-case'), async (req, res) => {
     try {
       const { id } = req.params;
       const validatedData = insertCourtCaseSchema.partial().parse(req.body);
@@ -337,7 +331,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Delete a court case
-  app.delete("/api/court-cases/:id", requireAuth, csrfProtection, mutationRateLimit, auditMiddleware('court-case'), async (req, res) => {
+  app.delete("/api/court-cases/:id", mutationRateLimit, auditMiddleware('court-case'), async (req, res) => {
     try {
       const { id } = req.params;
       const deleted = await storage.deleteCourtCase(id);
@@ -394,7 +388,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create a new SPRM investigation
-  app.post("/api/sprm-investigations", requireAuth, csrfProtection, mutationRateLimit, auditMiddleware('sprm-investigation'), async (req, res) => {
+  app.post("/api/sprm-investigations", mutationRateLimit, auditMiddleware('sprm-investigation'), async (req, res) => {
     try {
       const validatedData = insertSprmInvestigationSchema.parse(req.body);
       const investigation = await storage.createSprmInvestigation(validatedData);
@@ -409,7 +403,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update an SPRM investigation
-  app.patch("/api/sprm-investigations/:id", requireAuth, csrfProtection, mutationRateLimit, auditMiddleware('sprm-investigation'), async (req, res) => {
+  app.patch("/api/sprm-investigations/:id", mutationRateLimit, auditMiddleware('sprm-investigation'), async (req, res) => {
     try {
       const { id } = req.params;
       const validatedData = updateSprmInvestigationSchema.parse(req.body);
@@ -430,7 +424,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Delete an SPRM investigation
-  app.delete("/api/sprm-investigations/:id", requireAuth, csrfProtection, mutationRateLimit, auditMiddleware('sprm-investigation'), async (req, res) => {
+  app.delete("/api/sprm-investigations/:id", mutationRateLimit, auditMiddleware('sprm-investigation'), async (req, res) => {
     try {
       const { id } = req.params;
       const deleted = await storage.deleteSprmInvestigation(id);
@@ -489,7 +483,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create a new legislative proposal
-  app.post("/api/legislative-proposals", requireAuth, csrfProtection, mutationRateLimit, auditMiddleware('legislative-proposal'), async (req, res) => {
+  app.post("/api/legislative-proposals", mutationRateLimit, auditMiddleware('legislative-proposal'), async (req, res) => {
     try {
       const validatedData = insertLegislativeProposalSchema.parse(req.body);
       const proposal = await storage.createLegislativeProposal(validatedData);
@@ -504,7 +498,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update a legislative proposal
-  app.patch("/api/legislative-proposals/:id", requireAuth, csrfProtection, mutationRateLimit, auditMiddleware('legislative-proposal'), async (req, res) => {
+  app.patch("/api/legislative-proposals/:id", mutationRateLimit, auditMiddleware('legislative-proposal'), async (req, res) => {
     try {
       const { id } = req.params;
       const validatedData = insertLegislativeProposalSchema.partial().parse(req.body);
@@ -525,7 +519,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Delete a legislative proposal
-  app.delete("/api/legislative-proposals/:id", requireAuth, csrfProtection, mutationRateLimit, auditMiddleware('legislative-proposal'), async (req, res) => {
+  app.delete("/api/legislative-proposals/:id", mutationRateLimit, auditMiddleware('legislative-proposal'), async (req, res) => {
     try {
       const { id } = req.params;
       const deleted = await storage.deleteLegislativeProposal(id);
@@ -584,7 +578,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create a new debate participation
-  app.post("/api/debate-participations", requireAuth, csrfProtection, mutationRateLimit, auditMiddleware('debate-participation'), async (req, res) => {
+  app.post("/api/debate-participations", mutationRateLimit, auditMiddleware('debate-participation'), async (req, res) => {
     try {
       const validatedData = insertDebateParticipationSchema.parse(req.body);
       const participation = await storage.createDebateParticipation(validatedData);
@@ -599,7 +593,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update a debate participation
-  app.patch("/api/debate-participations/:id", requireAuth, csrfProtection, mutationRateLimit, auditMiddleware('debate-participation'), async (req, res) => {
+  app.patch("/api/debate-participations/:id", mutationRateLimit, auditMiddleware('debate-participation'), async (req, res) => {
     try {
       const { id } = req.params;
       const validatedData = insertDebateParticipationSchema.partial().parse(req.body);
@@ -620,7 +614,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Delete a debate participation
-  app.delete("/api/debate-participations/:id", requireAuth, csrfProtection, mutationRateLimit, auditMiddleware('debate-participation'), async (req, res) => {
+  app.delete("/api/debate-participations/:id", mutationRateLimit, auditMiddleware('debate-participation'), async (req, res) => {
     try {
       const { id } = req.params;
       const deleted = await storage.deleteDebateParticipation(id);
@@ -826,7 +820,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create a new parliamentary question
-  app.post("/api/parliamentary-questions", requireAuth, csrfProtection, mutationRateLimit, auditMiddleware('parliamentary-question'), async (req, res) => {
+  app.post("/api/parliamentary-questions", mutationRateLimit, auditMiddleware('parliamentary-question'), async (req, res) => {
     try {
       const validatedData = insertParliamentaryQuestionSchema.parse(req.body);
       const question = await storage.createParliamentaryQuestion(validatedData);
@@ -841,7 +835,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update a parliamentary question
-  app.patch("/api/parliamentary-questions/:id", requireAuth, csrfProtection, mutationRateLimit, auditMiddleware('parliamentary-question'), async (req, res) => {
+  app.patch("/api/parliamentary-questions/:id", mutationRateLimit, auditMiddleware('parliamentary-question'), async (req, res) => {
     try {
       const { id } = req.params;
       const validatedData = insertParliamentaryQuestionSchema.partial().parse(req.body);
@@ -862,7 +856,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Delete a parliamentary question
-  app.delete("/api/parliamentary-questions/:id", requireAuth, csrfProtection, mutationRateLimit, auditMiddleware('parliamentary-question'), async (req, res) => {
+  app.delete("/api/parliamentary-questions/:id", mutationRateLimit, auditMiddleware('parliamentary-question'), async (req, res) => {
     try {
       const { id } = req.params;
       const deleted = await storage.deleteParliamentaryQuestion(id);
@@ -953,7 +947,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Delete a Hansard record
-  app.delete("/api/hansard-records/:id", requireAuth, csrfProtection, mutationRateLimit, auditMiddleware('hansard-record'), async (req, res) => {
+  app.delete("/api/hansard-records/:id", mutationRateLimit, auditMiddleware('hansard-record'), async (req, res) => {
     try {
       const { id } = req.params;
       const deleted = await storage.deleteHansardRecord(id);
@@ -1042,7 +1036,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Upload and parse Hansard PDF(s)
-  app.post("/api/hansard-records/upload", requireAuth, csrfProtection, uploadRateLimit, auditMiddleware('hansard-upload'), upload.array('pdfs', 25), handleMulterError, async (req: Request, res: Response) => {
+  app.post("/api/hansard-records/upload", uploadRateLimit, auditMiddleware('hansard-upload'), upload.array('pdfs', 25), handleMulterError, async (req: Request, res: Response) => {
     try {
       const files = req.files as Express.Multer.File[] | undefined;
       
@@ -1312,7 +1306,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Analyze Hansard PDF for specific MP speeches (transient analysis, no persistence)
-  app.post("/api/hansard-analysis", requireAuth, csrfProtection, mutationRateLimit, auditMiddleware('hansard-analysis'), async (req, res) => {
+  app.post("/api/hansard-analysis", mutationRateLimit, auditMiddleware('hansard-analysis'), async (req, res) => {
     try {
       const requestSchema = z.object({
         hansardRecordId: z.string(),
@@ -1457,7 +1451,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Analyze Hansard PDF for speaker statistics (attendance vs participation)
-  app.post("/api/hansard-speaker-stats", requireAuth, csrfProtection, uploadRateLimit, auditMiddleware('hansard-speaker-stats'), upload.single('pdf'), handleMulterError, async (req: Request, res: Response) => {
+  app.post("/api/hansard-speaker-stats", uploadRateLimit, auditMiddleware('hansard-speaker-stats'), upload.single('pdf'), handleMulterError, async (req: Request, res: Response) => {
     try {
       if (!req.file) {
         return res.status(400).json({ error: "No PDF file uploaded. Only PDF files are accepted." });
@@ -1517,7 +1511,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create a new Hansard record
-  app.post("/api/hansard-records", requireAuth, csrfProtection, mutationRateLimit, auditMiddleware('hansard-record'), async (req, res) => {
+  app.post("/api/hansard-records", mutationRateLimit, auditMiddleware('hansard-record'), async (req, res) => {
     try {
       const validatedData = insertHansardRecordSchema.parse(req.body);
       const record = await storage.createHansardRecord(validatedData);
@@ -1532,7 +1526,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update a Hansard record
-  app.patch("/api/hansard-records/:id", requireAuth, csrfProtection, mutationRateLimit, auditMiddleware('hansard-record'), async (req, res) => {
+  app.patch("/api/hansard-records/:id", mutationRateLimit, auditMiddleware('hansard-record'), async (req, res) => {
     try {
       const { id } = req.params;
       const validatedData = updateHansardRecordSchema.parse(req.body);
@@ -1553,7 +1547,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Delete multiple Hansard records
-  app.post("/api/hansard-records/bulk-delete", requireAuth, csrfProtection, mutationRateLimit, auditMiddleware('hansard-record'), async (req, res) => {
+  app.post("/api/hansard-records/bulk-delete", mutationRateLimit, auditMiddleware('hansard-record'), async (req, res) => {
     try {
       const schema = z.object({
         ids: z.array(z.string()).min(1, "At least one ID is required")
@@ -1617,7 +1611,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create a manual speaker mapping
-  app.post("/api/speaker-mappings", requireAuth, csrfProtection, mutationRateLimit, auditMiddleware('speaker-mapping'), async (req, res) => {
+  app.post("/api/speaker-mappings", mutationRateLimit, auditMiddleware('speaker-mapping'), async (req, res) => {
     try {
       const validatedData = insertSpeakerMappingSchema.parse(req.body);
       
@@ -1693,7 +1687,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Summarize a Hansard record using AI
-  app.post("/api/hansard-records/:id/summarize", requireAuth, csrfProtection, mutationRateLimit, auditMiddleware('hansard-summary'), async (req, res) => {
+  app.post("/api/hansard-records/:id/summarize", mutationRateLimit, auditMiddleware('hansard-summary'), async (req, res) => {
     try {
       const { id } = req.params;
       
@@ -2124,7 +2118,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Delete all Hansard records
-  app.delete("/api/hansard-records", requireAuth, csrfProtection, mutationRateLimit, auditMiddleware('hansard-record'), async (_req, res) => {
+  app.delete("/api/hansard-records", mutationRateLimit, auditMiddleware('hansard-record'), async (_req, res) => {
     try {
       const count = await storage.deleteAllHansardRecords();
       res.json({ deletedCount: count });
@@ -2135,7 +2129,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Reprocess attendance for all or selected Hansard records
-  app.post("/api/hansard-records/reprocess-attendance", requireAuth, csrfProtection, mutationRateLimit, auditMiddleware('hansard-reprocess'), async (req, res) => {
+  app.post("/api/hansard-records/reprocess-attendance", mutationRateLimit, auditMiddleware('hansard-reprocess'), async (req, res) => {
     try {
       const { limit, recordIds } = req.body;
       const scraper = new HansardScraper();
@@ -2243,7 +2237,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Trigger Hansard download (background job)
-  app.post("/api/hansard-records/download", requireAuth, csrfProtection, mutationRateLimit, auditMiddleware('hansard-download'), async (req, res) => {
+  app.post("/api/hansard-records/download", mutationRateLimit, auditMiddleware('hansard-download'), async (req, res) => {
     try {
       const { maxRecords = 500, deleteExisting = false } = req.body;
       
@@ -2323,7 +2317,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Summarize text with Hugging Face mT5 (supports Malay and English)
-  app.post("/api/summarize", requireAuth, csrfProtection, mutationRateLimit, auditMiddleware('summarize'), async (req, res) => {
+  app.post("/api/summarize", mutationRateLimit, auditMiddleware('summarize'), async (req, res) => {
     try {
       const { text, language } = req.body;
       
@@ -2409,7 +2403,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin endpoint to manually trigger database seeding (for Railway/production)
-  app.post("/api/admin/seed", requireAuth, async (req, res) => {
+  app.post("/api/admin/seed", async (req, res) => {
     try {
       if (!process.env.DATABASE_URL) {
         return res.status(400).json({ error: "No database configured - using in-memory storage" });
@@ -2447,7 +2441,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin endpoint to verify database state
-  app.get("/api/admin/db-status", requireAuth, async (req, res) => {
+  app.get("/api/admin/db-status", async (req, res) => {
     try {
       const allMps = await storage.getAllMps();
       const hansardRecords = await storage.getAllHansardRecords();
@@ -2525,7 +2519,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin endpoint to manually trigger Hansard sync
-  app.post("/api/admin/trigger-hansard-check", requireAuth, async (req, res) => {
+  app.post("/api/admin/trigger-hansard-check", async (req, res) => {
     try {
       console.log("Manual Hansard sync triggered via API...");
       const result = await runHansardSync({ triggeredBy: 'manual' });
@@ -2552,7 +2546,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin endpoint to refresh all MP data (attendance, speeches, Hansard performance)
-  app.post("/api/admin/refresh-mp-data", requireAuth, async (req, res) => {
+  app.post("/api/admin/refresh-mp-data", async (req, res) => {
     try {
       console.log("Manual MP data refresh triggered via API...");
       const { refreshAllMpData } = await import('./aggregate-speeches');
@@ -2582,7 +2576,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin endpoint to re-extract Bills, Motions, and Questions from existing Hansard records
-  app.post("/api/admin/reextract-activities", requireAuth, async (req, res) => {
+  app.post("/api/admin/reextract-activities", async (req, res) => {
     try {
       console.log("🔄 Re-extracting Bills, Motions, and Questions from Hansard records...");
       
@@ -2805,7 +2799,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Diagnostic endpoint to identify Hansard records with missing speaker data
-  app.get("/api/admin/hansard-diagnostics", requireAuth, async (req, res) => {
+  app.get("/api/admin/hansard-diagnostics", async (req, res) => {
     try {
       const allRecords = await db.select({
         id: hansardRecords.id,
@@ -2863,7 +2857,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Endpoint to reprocess Hansard records without speaker stats
-  app.post("/api/admin/reprocess-hansard-speakers", requireAuth, async (req, res) => {
+  app.post("/api/admin/reprocess-hansard-speakers", async (req, res) => {
     try {
       console.log("🔄 Reprocessing Hansard records without speaker stats...");
       
@@ -2982,7 +2976,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Analytics API routes (protected - admin only)
-  app.get("/api/analytics/summary", requireAuth, async (_req, res) => {
+  app.get("/api/analytics/summary", async (_req, res) => {
     try {
       const { visitorAnalytics } = await import("@shared/schema");
       const { sql, count, countDistinct, desc } = await import("drizzle-orm");
@@ -3026,7 +3020,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/analytics/recent", requireAuth, async (req, res) => {
+  app.get("/api/analytics/recent", async (req, res) => {
     try {
       const { visitorAnalytics } = await import("@shared/schema");
       const { desc } = await import("drizzle-orm");
@@ -3046,7 +3040,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/analytics/countries", requireAuth, async (_req, res) => {
+  app.get("/api/analytics/countries", async (_req, res) => {
     try {
       const { visitorAnalytics } = await import("@shared/schema");
       const { sql, count, desc } = await import("drizzle-orm");
@@ -3069,7 +3063,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/analytics/timeline", requireAuth, async (req, res) => {
+  app.get("/api/analytics/timeline", async (req, res) => {
     try {
       const { visitorAnalytics } = await import("@shared/schema");
       const { sql, count } = await import("drizzle-orm");
