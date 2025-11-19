@@ -192,3 +192,14 @@ export function requireAuth(req: any, res: any, next: any) {
   }
   next();
 }
+
+// Middleware to protect admin routes - only admin users can access
+export function requireAdmin(req: any, res: any, next: any) {
+  if (!req.isAuthenticated()) {
+    return res.status(401).json({ error: "Unauthorized - Please log in" });
+  }
+  if (req.user.role !== "admin") {
+    return res.status(403).json({ error: "Forbidden - Admin access required" });
+  }
+  next();
+}
