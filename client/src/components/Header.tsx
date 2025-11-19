@@ -1,5 +1,4 @@
 import { Search, Menu, Home, FileText, BookOpen, UserCheck, Calculator, BarChart3, ExternalLink, ChevronDown, AlertCircle, GraduationCap, LogIn, LogOut, Shield, TrendingUp } from "lucide-react";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -11,12 +10,11 @@ import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 
 interface HeaderProps {
-  searchQuery?: string;
-  onSearchChange?: (value: string) => void;
   onMenuClick?: () => void;
+  onSearchClick?: () => void;
 }
 
-export function Header({ searchQuery, onSearchChange, onMenuClick }: HeaderProps) {
+export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
   const [location, setLocation] = useLocation();
   const { user, logoutMutation } = useAuth();
 
@@ -179,19 +177,20 @@ export function Header({ searchQuery, onSearchChange, onMenuClick }: HeaderProps
           </a>
         </nav>
 
-        {onSearchChange && (
+        {onSearchClick && (
           <div className="flex-1 flex justify-end">
-            <div className="relative w-full max-w-[200px] sm:max-w-xs md:max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                type="search"
-                placeholder="Search MPs..."
-                value={searchQuery || ""}
-                onChange={(e) => onSearchChange(e.target.value)}
-                className="pl-9 h-9"
-                data-testid="input-search"
-              />
-            </div>
+            <Button
+              variant="outline"
+              onClick={onSearchClick}
+              className="gap-2 max-w-xs w-full justify-start text-muted-foreground"
+              data-testid="button-search"
+            >
+              <Search className="h-4 w-4" />
+              <span className="hidden sm:inline">Search MPs...</span>
+              <kbd className="hidden md:inline-flex ml-auto h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium">
+                <span className="text-xs">⌘</span>K
+              </kbd>
+            </Button>
           </div>
         )}
 

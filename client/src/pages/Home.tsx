@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Header } from "@/components/Header";
+import { SearchDialog } from "@/components/SearchDialog";
 import { StatisticsCards } from "@/components/StatisticsCards";
 import { FilterSidebar } from "@/components/FilterSidebar";
 import { MPGrid } from "@/components/MPGrid";
@@ -21,6 +22,7 @@ export default function Home() {
   const [selectedStates, setSelectedStates] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState<SortOption>("name");
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
+  const [searchDialogOpen, setSearchDialogOpen] = useState(false);
 
   const { data: mps = [], isLoading: mpsLoading } = useQuery<Mp[]>({
     queryKey: ["/api/mps"],
@@ -163,9 +165,13 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-background">
       <Header
-        searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
         onMenuClick={() => setMobileFiltersOpen(true)}
+        onSearchClick={() => setSearchDialogOpen(true)}
+      />
+      
+      <SearchDialog 
+        open={searchDialogOpen}
+        onOpenChange={setSearchDialogOpen}
       />
 
       <div className="flex max-w-7xl mx-auto">

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Header } from "@/components/Header";
+import { SearchDialog } from "@/components/SearchDialog";
 import { AddActivityDialog } from "@/components/AddActivityDialog";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -14,10 +15,10 @@ import { format } from "date-fns";
 import type { Mp, LegislativeProposal, DebateParticipation, ParliamentaryQuestion, CourtCase, SprmInvestigation } from "@shared/schema";
 
 export default function ParliamentaryActivity() {
-  const [globalSearch, setGlobalSearch] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("legislation");
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [searchDialogOpen, setSearchDialogOpen] = useState(false);
 
   const { data: mps = [] } = useQuery<Mp[]>({
     queryKey: ["/api/mps"],
@@ -117,7 +118,12 @@ export default function ParliamentaryActivity() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header searchQuery={globalSearch} onSearchChange={setGlobalSearch} />
+      <Header onSearchClick={() => setSearchDialogOpen(true)} />
+      
+      <SearchDialog 
+        open={searchDialogOpen}
+        onOpenChange={setSearchDialogOpen}
+      />
       
       <main className="container mx-auto px-4 py-8 max-w-7xl">
         <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
