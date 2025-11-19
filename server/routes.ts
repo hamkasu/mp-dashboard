@@ -38,6 +38,7 @@ import {
   auditLog as logAudit,
   auditMiddleware
 } from "./middleware/security";
+import { requireAuth, requireAdmin } from "./auth";
 
 // Configure multer for file uploads
 const upload = multer({
@@ -996,7 +997,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Delete a Hansard record
-  app.delete("/api/hansard-records/:id", mutationRateLimit, auditMiddleware('hansard-record'), async (req, res) => {
+  app.delete("/api/hansard-records/:id", requireAdmin, mutationRateLimit, auditMiddleware('hansard-record'), async (req, res) => {
     try {
       const { id } = req.params;
       const deleted = await storage.deleteHansardRecord(id);
@@ -1085,7 +1086,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Upload and parse Hansard PDF(s)
-  app.post("/api/hansard-records/upload", uploadRateLimit, auditMiddleware('hansard-upload'), upload.array('pdfs', 25), handleMulterError, async (req: Request, res: Response) => {
+  app.post("/api/hansard-records/upload", requireAdmin, uploadRateLimit, auditMiddleware('hansard-upload'), upload.array('pdfs', 25), handleMulterError, async (req: Request, res: Response) => {
     try {
       const files = req.files as Express.Multer.File[] | undefined;
       
@@ -1355,7 +1356,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Analyze Hansard PDF for specific MP speeches (transient analysis, no persistence)
-  app.post("/api/hansard-analysis", mutationRateLimit, auditMiddleware('hansard-analysis'), async (req, res) => {
+  app.post("/api/hansard-analysis", requireAdmin, mutationRateLimit, auditMiddleware('hansard-analysis'), async (req, res) => {
     try {
       const requestSchema = z.object({
         hansardRecordId: z.string(),
@@ -1500,7 +1501,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Analyze Hansard PDF for speaker statistics (attendance vs participation)
-  app.post("/api/hansard-speaker-stats", uploadRateLimit, auditMiddleware('hansard-speaker-stats'), upload.single('pdf'), handleMulterError, async (req: Request, res: Response) => {
+  app.post("/api/hansard-speaker-stats", requireAdmin, uploadRateLimit, auditMiddleware('hansard-speaker-stats'), upload.single('pdf'), handleMulterError, async (req: Request, res: Response) => {
     try {
       if (!req.file) {
         return res.status(400).json({ error: "No PDF file uploaded. Only PDF files are accepted." });
@@ -1560,7 +1561,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create a new Hansard record
-  app.post("/api/hansard-records", mutationRateLimit, auditMiddleware('hansard-record'), async (req, res) => {
+  app.post("/api/hansard-records", requireAdmin, mutationRateLimit, auditMiddleware('hansard-record'), async (req, res) => {
     try {
       const validatedData = insertHansardRecordSchema.parse(req.body);
       const record = await storage.createHansardRecord(validatedData);
@@ -1575,7 +1576,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update a Hansard record
-  app.patch("/api/hansard-records/:id", mutationRateLimit, auditMiddleware('hansard-record'), async (req, res) => {
+  app.patch("/api/hansard-records/:id", requireAdmin, mutationRateLimit, auditMiddleware('hansard-record'), async (req, res) => {
     try {
       const { id } = req.params;
       const validatedData = updateHansardRecordSchema.parse(req.body);
@@ -1596,7 +1597,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Delete multiple Hansard records
-  app.post("/api/hansard-records/bulk-delete", mutationRateLimit, auditMiddleware('hansard-record'), async (req, res) => {
+  app.post("/api/hansard-records/bulk-delete", requireAdmin, mutationRateLimit, auditMiddleware('hansard-record'), async (req, res) => {
     try {
       const schema = z.object({
         ids: z.array(z.string()).min(1, "At least one ID is required")
@@ -1734,7 +1735,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Summarize a Hansard record using AI
-  app.post("/api/hansard-records/:id/summarize", mutationRateLimit, auditMiddleware('hansard-summary'), async (req, res) => {
+  app.post("/api/hansard-records/:id/summarize", requireAdmin, mutationRateLimit, auditMiddleware('hansard-summary'), async (req, res) => {
     try {
       const { id } = req.params;
       
@@ -2165,7 +2166,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Delete all Hansard records
-  app.delete("/api/hansard-records", mutationRateLimit, auditMiddleware('hansard-record'), async (_req, res) => {
+  app.delete("/api/hansard-records", requireAdmin, mutationRateLimit, auditMiddleware('hansard-record'), async (_req, res) => {
     try {
       const count = await storage.deleteAllHansardRecords();
       res.json({ deletedCount: count });
@@ -2176,7 +2177,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Reprocess attendance for all or selected Hansard records
-  app.post("/api/hansard-records/reprocess-attendance", mutationRateLimit, auditMiddleware('hansard-reprocess'), async (req, res) => {
+  app.post("/api/hansard-records/reprocess-attendance", requireAdmin, mutationRateLimit, auditMiddleware('hansard-reprocess'), async (req, res) => {
     try {
       const { limit, recordIds } = req.body;
       const scraper = new HansardScraper();
@@ -2284,7 +2285,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Trigger Hansard download (background job)
-  app.post("/api/hansard-records/download", mutationRateLimit, auditMiddleware('hansard-download'), async (req, res) => {
+  app.post("/api/hansard-records/download", requireAdmin, mutationRateLimit, auditMiddleware('hansard-download'), async (req, res) => {
     try {
       const { maxRecords = 500, deleteExisting = false } = req.body;
       
@@ -2450,7 +2451,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin endpoint to manually trigger database seeding (for Railway/production)
-  app.post("/api/admin/seed", async (req, res) => {
+  app.post("/api/admin/seed", requireAdmin, async (req, res) => {
     try {
       if (!process.env.DATABASE_URL) {
         return res.status(400).json({ error: "No database configured - using in-memory storage" });
@@ -2488,7 +2489,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin endpoint to verify database state
-  app.get("/api/admin/db-status", async (req, res) => {
+  app.get("/api/admin/db-status", requireAdmin, async (req, res) => {
     try {
       const allMps = await storage.getAllMps();
       const hansardRecords = await storage.getAllHansardRecords();
@@ -2566,7 +2567,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin endpoint to manually trigger Hansard sync
-  app.post("/api/admin/trigger-hansard-check", async (req, res) => {
+  app.post("/api/admin/trigger-hansard-check", requireAdmin, async (req, res) => {
     try {
       console.log("Manual Hansard sync triggered via API...");
       const result = await runHansardSync({ triggeredBy: 'manual' });
@@ -2593,7 +2594,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin endpoint to refresh all MP data (attendance, speeches, Hansard performance)
-  app.post("/api/admin/refresh-mp-data", async (req, res) => {
+  app.post("/api/admin/refresh-mp-data", requireAdmin, async (req, res) => {
     try {
       console.log("Manual MP data refresh triggered via API...");
       const { refreshAllMpData } = await import('./aggregate-speeches');
@@ -2623,7 +2624,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin endpoint to re-extract Bills, Motions, and Questions from existing Hansard records
-  app.post("/api/admin/reextract-activities", async (req, res) => {
+  app.post("/api/admin/reextract-activities", requireAdmin, async (req, res) => {
     try {
       console.log("🔄 Re-extracting Bills, Motions, and Questions from Hansard records...");
       
@@ -2846,7 +2847,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Diagnostic endpoint to identify Hansard records with missing speaker data
-  app.get("/api/admin/hansard-diagnostics", async (req, res) => {
+  app.get("/api/admin/hansard-diagnostics", requireAdmin, async (req, res) => {
     try {
       const allRecords = await db.select({
         id: hansardRecords.id,
@@ -2904,7 +2905,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Endpoint to reprocess Hansard records without speaker stats
-  app.post("/api/admin/reprocess-hansard-speakers", async (req, res) => {
+  app.post("/api/admin/reprocess-hansard-speakers", requireAdmin, async (req, res) => {
     try {
       console.log("🔄 Reprocessing Hansard records without speaker stats...");
       
