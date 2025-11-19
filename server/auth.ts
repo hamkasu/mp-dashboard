@@ -96,20 +96,41 @@ export function setupAuth(app: Express) {
     }
   });
 
-  app.post("/api/login", authRateLimit, passport.authenticate("local"), (req, res) => {
-    auditLog(req, 'LOGIN', 'user', req.user?.id, true);
-    
-    // Generate new CSRF token on login
-    const csrfToken = generateCsrfToken(req);
-    res.cookie('XSRF-TOKEN', csrfToken, {
-      httpOnly: false, // Frontend needs to read this for header submission
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 24 * 60 * 60 * 1000, // 24 hours
-    });
-    // Token not set in header to minimize XSS exposure
-    
-    res.status(200).json(req.user);
+  app.post("/api/login", authRateLimit, (req, res, next) => {
+    passport.authenticate("local", (err: any, user: any, info: any) => {
+      if (err) {
+        auditLog(req, 'LOGIN', 'user', undefined, false, err.message);
+        return next(err);
+      }
+      
+      if (!user) {
+        auditLog(req, 'LOGIN', 'user', undefined, false, 'Invalid credentials');
+        return res.status(401).json({ error: "Invalid username or password" });
+      }
+      
+      req.login(user, (err) => {
+        if (err) {
+          auditLog(req, 'LOGIN', 'user', user.id, false, err.message);
+          return next(err);
+        }
+        
+        auditLog(req, 'LOGIN', 'user', user.id, true);
+        
+        // Generate new CSRF token on login
+        const csrfToken = generateCsrfToken(req);
+        res.cookie('XSRF-TOKEN', csrfToken, {
+          httpOnly: false, // Frontend needs to read this for header submission
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'strict',
+          maxAge: 24 * 60 * 60 * 1000, // 24 hours
+        });
+        // Token not set in header to minimize XSS exposure
+        
+        // Strip password from response for security
+        const { password, ...userWithoutPassword } = user;
+        res.status(200).json(userWithoutPassword);
+      });
+    })(req, res, next);
   });
 
   app.post("/api/logout", (req, res, next) => {

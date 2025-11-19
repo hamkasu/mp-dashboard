@@ -7,7 +7,7 @@ if (!process.env.DATABASE_URL) {
 }
 
 // Use standard PostgreSQL driver (compatible with Railway, Heroku, etc.)
-const pool = new Pool({ 
+export const pool = new Pool({ 
   connectionString: process.env.DATABASE_URL,
   ssl: process.env.NODE_ENV === "production" ? { rejectUnauthorized: false } : false
 });

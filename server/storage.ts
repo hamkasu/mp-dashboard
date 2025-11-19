@@ -1,6 +1,6 @@
 import { type Mp, type InsertMp, type CourtCase, type InsertCourtCase, type SprmInvestigation, type InsertSprmInvestigation, type LegislativeProposal, type InsertLegislativeProposal, type DebateParticipation, type InsertDebateParticipation, type ParliamentaryQuestion, type InsertParliamentaryQuestion, type HansardRecord, type InsertHansardRecord, type UpdateHansardRecord, type PageView, type User, type InsertUser, type UserActivityLog, type InsertUserActivityLog } from "@shared/schema";
 import { randomUUID } from "crypto";
-import { db } from "./db";
+import { db, pool } from "./db";
 import { mps, courtCases, sprmInvestigations, legislativeProposals, debateParticipations, parliamentaryQuestions, hansardRecords, pageViews, users, userActivityLog } from "@shared/schema";
 import { eq, sql } from "drizzle-orm";
 import { MPNameMatcher } from "./mp-name-matcher";
@@ -2596,9 +2596,8 @@ export class DbStorage implements IStorage {
   constructor() {
     // Create PostgreSQL session store synchronously
     const PostgresSessionStore = connectPg(session);
-    // @ts-ignore - db._.session.client is the underlying pg pool
     this.sessionStore = new PostgresSessionStore({ 
-      pool: db._.session.client as any,
+      pool: pool,
       createTableIfMissing: true,
     });
   }
