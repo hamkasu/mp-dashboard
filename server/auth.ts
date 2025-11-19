@@ -28,7 +28,7 @@ export function setupAuth(app: Express) {
     },
   };
 
-  app.set("trust proxy", 1);
+  // Note: trust proxy is now set in server/index.ts before rate limiters
   app.use(session(sessionSettings));
   app.use(passport.initialize());
   app.use(passport.session());

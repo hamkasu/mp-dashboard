@@ -16,6 +16,10 @@ declare module 'http' {
   }
 }
 
+// Trust proxy - MUST be before rate limiters to correctly identify client IPs
+// Railway/Replit use reverse proxies that set X-Forwarded-For headers
+app.set("trust proxy", 1);
+
 // CORS - must be before other middleware to handle preflight requests
 app.use(corsConfig);
 
