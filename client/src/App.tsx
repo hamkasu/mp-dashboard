@@ -8,6 +8,7 @@ import MPProfile from "@/pages/MPProfile";
 import ParliamentaryActivity from "@/pages/ParliamentaryActivity";
 import Hansard from "@/pages/hansard";
 import ParliamentGuide from "@/pages/parliament-guide";
+import Constitution from "@/pages/Constitution";
 import HansardAdmin from "@/pages/HansardAdmin";
 import HansardAnalysis from "@/pages/hansard-analysis";
 import ConstituencyAnalysis from "@/pages/ConstituencyAnalysis";
@@ -29,6 +30,7 @@ function Router() {
       <Route path="/activity" component={ParliamentaryActivity} />
       <Route path="/hansard" component={Hansard} />
       <Route path="/parliament-guide" component={ParliamentGuide} />
+      <Route path="/constitution" component={Constitution} />
       <Route path="/attendance" component={Attendance} />
       <Route path="/allowances" component={Allowances} />
       <Route path="/disclaimer" component={Disclaimer} />
