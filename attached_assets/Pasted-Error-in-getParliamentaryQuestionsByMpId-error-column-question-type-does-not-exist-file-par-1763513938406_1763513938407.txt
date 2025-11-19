@@ -1,0 +1,83 @@
+Error in getParliamentaryQuestionsByMpId: error: column "question_type" does not exist
+  file: 'parse_relation.c',
+    at /app/node_modules/pg-pool/index.js:45:11
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+  line: '3723',
+    at async file:///app/node_modules/drizzle-orm/node-postgres/session.js:83:22
+  routine: 'errorMissingColumn'
+    at async DbStorage.getParliamentaryQuestionsByMpId (file:///app/dist/index.js:2676:22)
+}
+    at async file:///app/dist/index.js:6143:25 {
+12:55:41 AM [express] GET /api/mps/bc10e677-77ca-4cc2-8bbc-bb3936929712/parliamentary-questions 200 i…
+  length: 198,
+  severity: 'ERROR',
+  code: '42703',
+  detail: undefined,
+  hint: 'Perhaps you meant to reference the column "parliamentary_questions.question_text".',
+  position: '128',
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  severity: 'ERROR',
+Error in getLegislativeProposalsByMpId: error: column "bill_number" does not exist
+  line: '3716',
+  code: '42703',
+  detail: undefined,
+    at /app/node_modules/pg-pool/index.js:45:11
+  routine: 'errorMissingColumn'
+  hint: undefined,
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+}
+  position: '114',
+    at async file:///app/node_modules/drizzle-orm/node-postgres/session.js:83:22
+  internalPosition: undefined,
+    at async DbStorage.getLegislativeProposalsByMpId (file:///app/dist/index.js:2606:22)
+12:55:41 AM [express] GET /api/mps/bc10e677-77ca-4cc2-8bbc-bb3936929712/legislative-proposals 200 in …
+  internalQuery: undefined,
+    at async file:///app/dist/index.js:5993:25 {
+12:55:41 AM [express] GET /api/mps/bc10e677-77ca-4cc2-8bbc-bb3936929712/debate-participations 200 in …
+  where: undefined,
+  schema: undefined,
+  length: 112,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'parse_relation.c',
+12:55:41 AM [express] GET /api/mps/bc10e677-77ca-4cc2-8bbc-bb3936929712/court-cases 200 in 5ms :: []
+12:55:41 AM [express] GET /api/mps/bc10e677-77ca-4cc2-8bbc-bb3936929712/sprm-investigations 200 in 16…
+12:55:41 AM [express] GET /api/hansard-records/0dd6026b-a23a-4755-ad20-868b5a659b63/constituency-atte…
+12:55:41 AM [express] GET /api/mps/bc10e677-77ca-4cc2-8bbc-bb3936929712 200 in 362ms :: {"id":"bc10e6…
+12:55:41 AM [express] GET /api/mps/bc10e677-77ca-4cc2-8bbc-bb3936929712/hansard-participation 200 in …
+12:55:42 AM [express] GET /api/mps/bc10e677-77ca-4cc2-8bbc-bb3936929712/hansard-participation-15th 20…
+12:55:42 AM [express] GET /api/mps/bc10e677-77ca-4cc2-8bbc-bb3936929712/hansard-speaking-record 200 i…
+12:55:45 AM [express] POST /api/page-views 200 in 10ms :: {"count":6119}
+12:55:45 AM [express] GET /api/page-views/home 200 in 197ms :: {"count":6119}
+12:55:45 AM [express] POST /api/page-views 200 in 208ms :: {"count":6120}
+12:55:45 AM [express] GET /api/court-cases 200 in 7ms :: [{"id":"44f99a30-7413-4906-ac18-879d30cd12a4…
+12:55:45 AM [express] GET /api/sprm-investigations 200 in 7ms :: [{"id":"4aeb1a09-30b0-477a-ae5f-f6fc…
+12:55:45 AM [express] GET /api/user 401 in 0ms
+12:55:45 AM [express] GET /api/stats 200 in 23ms :: {"totalMps":222,"partyBreakdown":[{"party":"PH","…
+12:55:45 AM [express] GET /api/mps 200 in 544ms :: [{"id":"ba35bb09-451a-4cfa-a68f-5a41d4612d2d","nam…
+12:55:50 AM [express] GET /api/user 401 in 1ms
+12:55:50 AM [express] GET /api/sprm-investigations 304 in 3ms :: [{"id":"4aeb1a09-30b0-477a-ae5f-f6fc…
+12:55:50 AM [express] POST /api/page-views 200 in 6ms :: {"count":6121}
+12:55:50 AM [express] GET /api/stats 304 in 8ms :: {"totalMps":222,"partyBreakdown":[{"party":"PH","c…
+12:55:50 AM [express] GET /api/court-cases 304 in 7ms :: [{"id":"44f99a30-7413-4906-ac18-879d30cd12a4…
+12:55:50 AM [express] GET /api/page-views/home 200 in 3ms :: {"count":6121}
+12:55:50 AM [express] GET /api/mps 200 in 968ms :: [{"id":"ba35bb09-451a-4cfa-a68f-5a41d4612d2d","nam…
+  severity: 'ERROR',
+  code: '42703',
+12:56:02 AM [express] POST /api/page-views 200 in 196ms :: {"count":6122}
+  detail: undefined,
+12:56:05 AM [express] GET /api/mps/30438d05-45c3-4f64-9c5c-fab80033b1cc/sprm-investigations 200 in 4m…
+  hint: undefined,
+Error in getLegislativeProposalsByMpId: error: column "bill_number" does not exist
+    at /app/node_modules/pg-pool/index.js:45:11
+  position: '114',
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
