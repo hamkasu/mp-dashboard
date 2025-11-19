@@ -1642,15 +1642,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { unmappedOnly } = req.query;
       const { desc } = await import("drizzle-orm");
       
-      let query = db.select()
+      const baseQuery = db.select()
         .from(unmatchedSpeakers)
         .orderBy(desc(unmatchedSpeakers.createdAt));
       
-      if (unmappedOnly === 'true') {
-        query = query.where(eq(unmatchedSpeakers.isMapped, false));
-      }
-      
-      const speakers = await query;
+      const speakers = unmappedOnly === 'true'
+        ? await baseQuery.where(eq(unmatchedSpeakers.isMapped, false))
+        : await baseQuery;
       
       res.json(speakers);
     } catch (error) {
@@ -1668,9 +1666,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const [mapping] = await db.insert(speakerMappings)
         .values({
           ...validatedData,
-          mappedBy: validatedData.mappedBy || null,
           confidence: validatedData.confidence || 1.0,
           notes: validatedData.notes || null,
+          createdBy: validatedData.createdBy || null,
         })
         .returning();
       
@@ -3003,8 +3001,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (successCount > 0) {
         try {
           console.log("🔄 Triggering MP data refresh after reprocessing...");
-          const refreshResult = await refreshMpDataFromHansards();
-          console.log(`✅ MP data refreshed: ${refreshResult.attendance.mpsUpdated} MPs updated`);
+          const { refreshAllMpData } = await import('./aggregate-speeches');
+          const refreshResult = await refreshAllMpData();
+          console.log(`✅ MP data refreshed: ${refreshResult.attendance.totalMpsUpdated} MPs updated`);
         } catch (refreshError) {
           console.error("⚠️  Failed to auto-refresh MP data after reprocessing:", refreshError);
           // Don't fail the whole request if refresh fails

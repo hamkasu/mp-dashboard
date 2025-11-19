@@ -321,7 +321,11 @@ export default function HansardAdmin() {
       return data;
     },
     onSuccess: (data: { results: (UploadResult & { fileName: string })[] }) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/hansard-records"] });
+      queryClient.invalidateQueries({ 
+        predicate: (query) => 
+          typeof query.queryKey[0] === 'string' && 
+          query.queryKey[0].startsWith('/api/hansard-records')
+      });
       
       // Backend now includes fileName in each result
       setUploadResults(data.results);

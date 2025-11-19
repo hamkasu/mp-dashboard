@@ -201,6 +201,9 @@ export async function refreshAllMpData(): Promise<{
     totalMpsUpdated: number;
     mpsWithNoSpeeches: number;
     totalRecordsProcessed: number;
+    recordsWithSpeakers: number;
+    recordsWithoutSpeakers: number;
+    skippedSessions: string[];
   };
 }> {
   console.log('🔄 [Refresh] Starting comprehensive MP data refresh...');

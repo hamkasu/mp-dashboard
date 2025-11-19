@@ -51,6 +51,7 @@ export default function HansardPage() {
 
   const { data: filteredRecords, isLoading, isError } = useQuery<HansardRecord[]>({
     queryKey: [queryUrl],
+    staleTime: 0, // Always fetch fresh data to ensure hasPdf field is up-to-date
   });
 
   const summarizeMutation = useMutation({
