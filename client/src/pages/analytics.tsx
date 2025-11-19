@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, Globe, FileText, TrendingUp } from "lucide-react";
 import { format } from "date-fns";
+import { getQueryFn } from "@/lib/queryClient";
 
 interface AnalyticsSummary {
   totalVisits: number;
@@ -29,6 +30,13 @@ interface TimelineData {
 }
 
 export default function Analytics() {
+  // Check if user is logged in
+  const { data: user } = useQuery<{ id: number; username: string; role: string } | null>({
+    queryKey: ["/api/user"],
+    queryFn: getQueryFn({ on401: "returnNull" }),
+    retry: false,
+  });
+
   const { data: summary, isLoading: summaryLoading } = useQuery<AnalyticsSummary>({
     queryKey: ["/api/analytics/summary"],
   });
@@ -208,50 +216,52 @@ export default function Analytics() {
         </Card>
       </div>
 
-      {/* Recent Visits */}
-      <Card data-testid="card-recent-visits">
-        <CardHeader>
-          <CardTitle>Recent Visits</CardTitle>
-          <CardDescription>Latest visitor activity</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {recentVisits?.slice(0, 20).map((visit) => (
-              <div
-                key={visit.id}
-                className="flex flex-wrap items-center gap-4 text-sm border-b pb-3 last:border-0"
-                data-testid={`visit-${visit.id}`}
-              >
-                <div className="flex-1 min-w-0">
-                  <div className="font-medium truncate">{visit.path}</div>
-                  <div className="text-xs text-muted-foreground">
-                    {format(new Date(visit.timestamp), "MMM dd, yyyy HH:mm:ss")}
+      {/* Recent Visits - Only visible to logged-in users */}
+      {user && (
+        <Card data-testid="card-recent-visits">
+          <CardHeader>
+            <CardTitle>Recent Visits</CardTitle>
+            <CardDescription>Latest visitor activity</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {recentVisits?.slice(0, 20).map((visit) => (
+                <div
+                  key={visit.id}
+                  className="flex flex-wrap items-center gap-4 text-sm border-b pb-3 last:border-0"
+                  data-testid={`visit-${visit.id}`}
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium truncate">{visit.path}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {format(new Date(visit.timestamp), "MMM dd, yyyy HH:mm:ss")}
+                    </div>
                   </div>
+                  {visit.country && (
+                    <div className="flex items-center gap-1 text-muted-foreground">
+                      <Globe className="h-3 w-3" />
+                      <span>
+                        {visit.city ? `${visit.city}, ` : ""}
+                        {visit.country}
+                      </span>
+                    </div>
+                  )}
+                  {visit.ip && (
+                    <div className="text-xs text-muted-foreground font-mono">
+                      {visit.ip}
+                    </div>
+                  )}
                 </div>
-                {visit.country && (
-                  <div className="flex items-center gap-1 text-muted-foreground">
-                    <Globe className="h-3 w-3" />
-                    <span>
-                      {visit.city ? `${visit.city}, ` : ""}
-                      {visit.country}
-                    </span>
-                  </div>
-                )}
-                {visit.ip && (
-                  <div className="text-xs text-muted-foreground font-mono">
-                    {visit.ip}
-                  </div>
-                )}
-              </div>
-            ))}
-            {!recentVisits?.length && (
-              <p className="text-sm text-muted-foreground text-center py-4">
-                No recent visits yet
-              </p>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+              ))}
+              {!recentVisits?.length && (
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  No recent visits yet
+                </p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
