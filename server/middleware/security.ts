@@ -272,9 +272,9 @@ export const helmetConfig = helmet({
       imgSrc: ["'self'", "data:", "https:", "blob:"], // Allow parliament photos from external URLs
       connectSrc: ["'self'"],
       fontSrc: ["'self'", "data:"],
-      objectSrc: ["'none'"],
+      objectSrc: ["'self'"], // Allow PDFs from same origin
       mediaSrc: ["'self'"],
-      frameSrc: ["'none'"],
+      frameSrc: ["'self'", "blob:"], // Allow iframes for PDF viewing from same origin
     },
   },
   crossOriginEmbedderPolicy: false, // Disable for external images
@@ -284,7 +284,7 @@ export const helmetConfig = helmet({
     preload: true,
   },
   frameguard: {
-    action: 'deny',
+    action: 'sameorigin', // Allow same-origin iframes for PDF viewing
   },
   noSniff: true,
   xssFilter: true,
