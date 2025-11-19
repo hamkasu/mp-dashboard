@@ -1279,10 +1279,31 @@ export class MemStorage implements IStorage {
     const newUser: User = {
       ...user,
       id,
+      role: user.role || "user",
       createdAt: new Date(),
     };
     this.users.set(id, newUser);
     return newUser;
+  }
+
+  // User Activity Log methods
+  async logUserActivity(activity: InsertUserActivityLog): Promise<UserActivityLog> {
+    const newLog: UserActivityLog = {
+      ...activity,
+      id: randomUUID(),
+      timestamp: new Date(),
+    };
+    return newLog;
+  }
+
+  async getUserActivityLogs(options?: {
+    userId?: number;
+    pageUrl?: string;
+    startDate?: Date;
+    endDate?: Date;
+    limit?: number;
+  }): Promise<UserActivityLog[]> {
+    return [];
   }
 
   // Session store for in-memory sessions
@@ -2588,6 +2609,34 @@ export class DbStorage implements IStorage {
   async createUser(user: InsertUser): Promise<User> {
     const result = await db.insert(users).values(user).returning();
     return result[0];
+  }
+
+  // User Activity Log methods
+  async logUserActivity(activity: InsertUserActivityLog): Promise<UserActivityLog> {
+    const result = await db.insert(userActivityLog).values(activity).returning();
+    return result[0];
+  }
+
+  async getUserActivityLogs(options?: {
+    userId?: number;
+    pageUrl?: string;
+    startDate?: Date;
+    endDate?: Date;
+    limit?: number;
+  }): Promise<UserActivityLog[]> {
+    let query = db.select().from(userActivityLog);
+    
+    if (options?.userId) {
+      query = query.where(eq(userActivityLog.userId, options.userId)) as any;
+    }
+    if (options?.pageUrl) {
+      query = query.where(eq(userActivityLog.pageUrl, options.pageUrl)) as any;
+    }
+    if (options?.limit) {
+      query = query.limit(options.limit) as any;
+    }
+    
+    return query;
   }
 
   // Session store for PostgreSQL-backed sessions
