@@ -7,6 +7,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Link, useLocation } from "wouter";
+import { useQuery } from "@tanstack/react-query";
 
 interface HeaderProps {
   onMenuClick?: () => void;
@@ -15,6 +16,12 @@ interface HeaderProps {
 
 export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
   const [location, setLocation] = useLocation();
+  
+  // Check if user is admin
+  const { data: user } = useQuery<{ id: number; username: string; role: string }>({
+    queryKey: ["/api/user"],
+    retry: false,
+  });
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shadow-sm">
@@ -114,17 +121,19 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
               <span>Attendance</span>
             </Button>
           </Link>
-          <Link href="/hansard-admin">
-            <Button
-              variant={location === "/hansard-admin" ? "secondary" : "ghost"}
-              size="sm"
-              data-testid="nav-hansard-admin"
-              className="gap-2"
-            >
-              <Shield className="w-4 h-4" />
-              <span>Admin</span>
-            </Button>
-          </Link>
+          {user?.role === "admin" && (
+            <Link href="/hansard-admin">
+              <Button
+                variant={location === "/hansard-admin" ? "secondary" : "ghost"}
+                size="sm"
+                data-testid="nav-hansard-admin"
+                className="gap-2"
+              >
+                <Shield className="w-4 h-4" />
+                <span>Admin</span>
+              </Button>
+            </Link>
+          )}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button

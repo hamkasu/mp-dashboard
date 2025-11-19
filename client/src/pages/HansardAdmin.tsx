@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { Header } from "@/components/Header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -23,6 +24,7 @@ interface UploadResult {
 
 export default function HansardAdmin() {
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [isDragging, setIsDragging] = useState(false);
@@ -51,6 +53,24 @@ export default function HansardAdmin() {
   const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(null);
   const [diagnosticsResult, setDiagnosticsResult] = useState<any>(null);
   const [reprocessResult, setReprocessResult] = useState<any>(null);
+
+  // Check if user is admin
+  const { data: user, isLoading: userLoading } = useQuery<{ id: number; username: string; role: string }>({
+    queryKey: ["/api/user"],
+    retry: false,
+  });
+
+  // Redirect non-admin users to home page
+  useEffect(() => {
+    if (!userLoading && (!user || user.role !== "admin")) {
+      toast({
+        title: "Access Denied",
+        description: "You must be an administrator to access this page",
+        variant: "destructive",
+      });
+      setLocation("/");
+    }
+  }, [user, userLoading, setLocation, toast]);
 
   // Cleanup polling interval on unmount
   useEffect(() => {
