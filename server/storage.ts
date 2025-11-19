@@ -2641,7 +2641,18 @@ export async function seedDatabase() {
         console.log("ℹ️  Using default development credentials. Set ADMIN_USERNAME and ADMIN_PASSWORD in .env to customize.");
       }
     } else {
-      console.log("Admin user already exists, skipping creation");
+      // Check if admin has legacy bcrypt hash (contains $2b$) and re-hash with scrypt
+      if (existingAdmin.password.includes('$2b$')) {
+        console.log("⚠️  Detected legacy bcrypt password hash for admin user");
+        console.log("🔄 Re-hashing password with scrypt for compatibility...");
+        const hashedPassword = await hashPassword(finalPassword);
+        await db.update(users)
+          .set({ password: hashedPassword })
+          .where(eq(users.id, existingAdmin.id));
+        console.log("✅ Admin password re-hashed successfully");
+      } else {
+        console.log("Admin user already exists, skipping creation");
+      }
     }
   } catch (error) {
     console.error("Error creating admin user:", error);
