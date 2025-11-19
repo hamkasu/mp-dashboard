@@ -44,10 +44,40 @@ export function setupAuth(app: Express) {
     }),
   );
 
-  passport.serializeUser((user, done) => done(null, user.id));
+  passport.serializeUser((user, done) => {
+    try {
+      // Validate user object has required id field
+      if (!user || typeof user.id !== 'number') {
+        const error = new Error('Invalid user object: missing or invalid id');
+        console.error('[Auth] serializeUser failed:', { hasUser: !!user, userId: user?.id });
+        return done(error);
+      }
+      done(null, user.id);
+    } catch (error) {
+      console.error('[Auth] serializeUser unexpected error:', error);
+      done(error);
+    }
+  });
+  
   passport.deserializeUser(async (id: number, done) => {
-    const user = await storage.getUser(id);
-    done(null, user);
+    try {
+      // Fetch user from storage
+      const user = await storage.getUser(id);
+      
+      // User not found - session is stale or user was deleted
+      if (!user) {
+        console.warn('[Auth] deserializeUser: User not found for session id:', id);
+        return done(null, false);
+      }
+      
+      // Successfully deserialized
+      done(null, user);
+    } catch (error) {
+      // Storage/database error - this is a critical infrastructure issue
+      console.error('[Auth] deserializeUser storage error:', error);
+      // Return error to trigger 500 - this indicates infrastructure problems
+      done(error);
+    }
   });
 
   app.post("/api/register", authRateLimit, async (req, res, next) => {
