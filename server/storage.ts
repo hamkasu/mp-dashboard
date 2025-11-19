@@ -2673,7 +2673,7 @@ export async function seedDatabase() {
   
   // Use default credentials only in development mode if env vars are not set
   const finalUsername = adminUsername || "admin";
-  const finalPassword = adminPassword || "061167@abcdeF1";
+  const finalPassword = adminPassword || "221097@aB1221097";
   
   try {
     const existingAdmin = await dbStorage.getUserByUsername(finalUsername);
