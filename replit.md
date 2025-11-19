@@ -3,6 +3,16 @@
 ## Overview
 This web application provides a comprehensive dashboard for Malaysian Members of Parliament (MPs) from the Dewan Rakyat. It enables users to browse, search, and filter 222 MPs by party, state, and constituency. The application features detailed MP profiles, including party affiliation, constituency, gender, titles, roles, attendance records, allowance information, and tracks court cases and Malaysian Anti-Corruption Commission (SPRM) investigations. The project aims to present government data in an accessible, professional manner, adhering to Material Design principles and Government Digital Service standards, with ambitions for market potential and an accessible platform for government transparency.
 
+## Recent Changes
+
+### November 19, 2025 - Railway Authentication Fix
+Fixed "Failed to serialize user into session" error for Railway production deployments:
+- Improved passport session serialization with robust error handling and type validation
+- Added comprehensive logging for production debugging with `[Auth]` prefixes
+- Enhanced edge case handling for missing users and database connection issues
+- Created deployment guides (`RAILWAY_ADMIN_RESET.md`) and automation script (`deploy-to-railway.sh`)
+- Railway deployment now requires environment variables: `ADMIN_USERNAME`, `ADMIN_PASSWORD`, `SESSION_SECRET`
+
 ## User Preferences
 Preferred communication style: Simple, everyday language.
 
