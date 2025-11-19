@@ -5,6 +5,7 @@ import { seedDatabase } from "./storage";
 import { startHansardCron } from "./hansard-cron";
 import { trackVisitorAnalytics } from "./analytics-middleware";
 import { helmetConfig, readRateLimit } from "./middleware/security";
+import { corsConfig } from "./middleware/cors";
 import cookieParser from "cookie-parser";
 
 const app = express();
@@ -14,6 +15,9 @@ declare module 'http' {
     rawBody: unknown
   }
 }
+
+// CORS - must be before other middleware to handle preflight requests
+app.use(corsConfig);
 
 // Security headers
 app.use(helmetConfig);
