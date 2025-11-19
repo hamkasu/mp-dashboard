@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Search, FileText, Calendar, Download, Sparkles, CheckCircle, Users, UserX, MapPin, Trash2, BarChart3 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { queryClient, apiRequest } from "@/lib/queryClient";
+import { queryClient, apiRequest, getQueryFn } from "@/lib/queryClient";
 import type { HansardRecord } from "@shared/schema";
 import {
   Dialog,
@@ -39,6 +39,13 @@ export default function HansardPage() {
   const [endDate, setEndDate] = useState("");
   const [openDialogId, setOpenDialogId] = useState<string | null>(null);
   const { toast } = useToast();
+
+  // Check if user is admin
+  const { data: user } = useQuery<{ id: number; username: string; role: string } | null>({
+    queryKey: ["/api/user"],
+    queryFn: getQueryFn({ on401: "returnNull" }),
+    retry: false,
+  });
 
   const queryUrl = useMemo(() => {
     const params = new URLSearchParams();
@@ -302,6 +309,7 @@ export default function HansardPage() {
                     }
                   />
 
+                  {user && user.role === "admin" && (
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
                         <Button
@@ -339,6 +347,7 @@ export default function HansardPage() {
                         </AlertDialogFooter>
                       </AlertDialogContent>
                     </AlertDialog>
+                  )}
                 </div>
               </div>
             </CardHeader>
