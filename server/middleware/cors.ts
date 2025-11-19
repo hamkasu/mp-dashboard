@@ -1,5 +1,31 @@
 import cors from 'cors';
 
+// Trusted domain suffixes for Replit and Railway
+const TRUSTED_DOMAIN_SUFFIXES = [
+  '.replit.dev',
+  '.replit.app',
+  '.repl.co',
+  '.railway.app',
+  '.up.railway.app',
+];
+
+// Helper function to safely check if a hostname ends with a trusted domain suffix
+function isTrustedDomain(origin: string): boolean {
+  try {
+    const url = new URL(origin);
+    const hostname = url.hostname;
+    
+    // Check if hostname ends with any of the trusted suffixes
+    return TRUSTED_DOMAIN_SUFFIXES.some(suffix => 
+      hostname === suffix.slice(1) || // Exact match (e.g., "replit.dev")
+      hostname.endsWith(suffix)        // Subdomain match (e.g., "myapp.replit.dev")
+    );
+  } catch {
+    // Invalid URL format
+    return false;
+  }
+}
+
 // Dynamically determine allowed origins based on environment
 function getAllowedOrigins(): string[] {
   const origins: string[] = [];
@@ -46,19 +72,13 @@ export const corsConfig = cors({
       return callback(null, true);
     }
     
-    // Check if origin is in allowed list
+    // Check if origin is in the explicit allowed list
     if (allowedOrigins.some(allowed => origin.startsWith(allowed))) {
       return callback(null, true);
     }
     
-    // Also allow any Replit or Railway domain patterns
-    if (
-      origin.includes('.replit.dev') ||
-      origin.includes('.replit.app') ||
-      origin.includes('.repl.co') ||
-      origin.includes('.railway.app') ||
-      origin.includes('.up.railway.app')
-    ) {
+    // Check if origin is from a trusted Replit or Railway domain using secure suffix validation
+    if (isTrustedDomain(origin)) {
       return callback(null, true);
     }
     
