@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, Download, Trash2, AlertTriangle, CheckCircle2, RefreshCw, Upload, FileText, X, Database } from "lucide-react";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { apiRequest, queryClient, getCsrfToken } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { UnmatchedSpeakersManager } from "@/components/UnmatchedSpeakersManager";
@@ -304,9 +304,17 @@ export default function HansardAdmin() {
         formData.append('pdfs', file);
       });
       
+      const headers: Record<string, string> = {};
+      const csrfToken = getCsrfToken();
+      if (csrfToken) {
+        headers['X-CSRF-Token'] = csrfToken;
+      }
+      
       const response = await fetch('/api/hansard-records/upload', {
         method: 'POST',
+        headers,
         body: formData,
+        credentials: 'include', // Include cookies for authentication and CSRF token
       });
       
       const data = await response.json();

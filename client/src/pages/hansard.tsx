@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Search, FileText, Calendar, Download, Sparkles, CheckCircle, Users, UserX, MapPin, Trash2, BarChart3 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
-import { queryClient, apiRequest } from "@/lib/queryClient";
+import { queryClient, apiRequest, getCsrfToken } from "@/lib/queryClient";
 import type { HansardRecord } from "@shared/schema";
 import {
   Dialog,
@@ -57,10 +57,17 @@ export default function HansardPage() {
 
   const summarizeMutation = useMutation({
     mutationFn: async (recordId: string) => {
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      const csrfToken = getCsrfToken();
+      if (csrfToken) {
+        headers['X-CSRF-Token'] = csrfToken;
+      }
+      
       const response = await fetch(`/api/hansard-records/${recordId}/summarize`, {
         method: "POST",
         body: JSON.stringify({ maxLength: 500, language: "en" }),
-        headers: { "Content-Type": "application/json" }
+        headers,
+        credentials: "include"
       });
       if (!response.ok) {
         const error = await response.json();
@@ -90,8 +97,15 @@ export default function HansardPage() {
 
   const deleteMutation = useMutation({
     mutationFn: async (recordId: string) => {
+      const headers: Record<string, string> = {};
+      const csrfToken = getCsrfToken();
+      if (csrfToken) {
+        headers['X-CSRF-Token'] = csrfToken;
+      }
+      
       const response = await fetch(`/api/hansard-records/${recordId}`, {
         method: 'DELETE',
+        headers,
         credentials: 'include'
       });
       if (!response.ok) {
