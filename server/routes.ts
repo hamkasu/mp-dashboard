@@ -905,9 +905,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         );
       }
       
-      // Fix localhost URLs in PDF links
-      const fixedRecords = records.map(record => fixHansardPdfUrls(record, req));
-      res.json(fixedRecords);
+      // Check which records have PDFs attached
+      const { eq, and } = await import("drizzle-orm");
+      const recordsWithPdfStatus = await Promise.all(
+        records.map(async (record) => {
+          const [pdfFile] = await db.select({ id: hansardPdfFiles.id })
+            .from(hansardPdfFiles)
+            .where(and(
+              eq(hansardPdfFiles.hansardRecordId, record.id),
+              eq(hansardPdfFiles.isPrimary, true)
+            ))
+            .limit(1);
+          
+          return {
+            ...fixHansardPdfUrls(record, req),
+            hasPdf: !!pdfFile
+          };
+        })
+      );
+      
+      res.json(recordsWithPdfStatus);
     } catch (error) {
       console.error("Error searching Hansard records:", error);
       res.status(500).json({ error: "Failed to search Hansard records" });
@@ -918,9 +935,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/hansard-records", async (req, res) => {
     try {
       const records = await storage.getAllHansardRecords();
-      // Fix localhost URLs in PDF links
-      const fixedRecords = records.map(record => fixHansardPdfUrls(record, req));
-      res.json(fixedRecords);
+      
+      // Check which records have PDFs attached
+      const recordsWithPdfStatus = await Promise.all(
+        records.map(async (record) => {
+          const { eq, and } = await import("drizzle-orm");
+          const [pdfFile] = await db.select({ id: hansardPdfFiles.id })
+            .from(hansardPdfFiles)
+            .where(and(
+              eq(hansardPdfFiles.hansardRecordId, record.id),
+              eq(hansardPdfFiles.isPrimary, true)
+            ))
+            .limit(1);
+          
+          return {
+            ...fixHansardPdfUrls(record, req),
+            hasPdf: !!pdfFile
+          };
+        })
+      );
+      
+      res.json(recordsWithPdfStatus);
     } catch (error) {
       console.error("Error fetching Hansard records:", error);
       res.status(500).json({ error: "Failed to fetch Hansard records" });
@@ -937,8 +972,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Hansard record not found" });
       }
       
-      // Fix localhost URLs in PDF links
-      const fixedRecord = fixHansardPdfUrls(record, req);
+      // Check if PDF exists
+      const { eq, and } = await import("drizzle-orm");
+      const [pdfFile] = await db.select({ id: hansardPdfFiles.id })
+        .from(hansardPdfFiles)
+        .where(and(
+          eq(hansardPdfFiles.hansardRecordId, id),
+          eq(hansardPdfFiles.isPrimary, true)
+        ))
+        .limit(1);
+      
+      // Fix localhost URLs in PDF links and add hasPdf flag
+      const fixedRecord = {
+        ...fixHansardPdfUrls(record, req),
+        hasPdf: !!pdfFile
+      };
+      
       res.json(fixedRecord);
     } catch (error) {
       console.error("Error fetching Hansard record:", error);

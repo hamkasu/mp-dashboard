@@ -298,6 +298,11 @@ export type InsertHansardRecord = z.infer<typeof insertHansardRecordSchema>;
 export type UpdateHansardRecord = z.infer<typeof updateHansardRecordSchema>;
 export type HansardRecord = typeof hansardRecords.$inferSelect;
 
+// Extended type for Hansard records with PDF availability status (computed at runtime)
+export type HansardRecordWithPdf = HansardRecord & {
+  hasPdf: boolean;
+};
+
 export const hansardPdfFiles = pgTable("hansard_pdf_files", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   hansardRecordId: varchar("hansard_record_id").notNull().references(() => hansardRecords.id, { onDelete: "cascade" }),

@@ -263,17 +263,30 @@ export default function HansardPage() {
                   </CardDescription>
                 </div>
                 <div className="flex gap-2">
-                  <Button
-                    data-testid={`button-download-${record.id}`}
-                    variant="outline"
-                    size="sm"
-                    asChild
-                  >
-                    <a href={`/api/hansard-records/${record.id}/pdf`} target="_blank" rel="noopener noreferrer">
-                      <Download className="w-4 h-4 mr-2" />
-                      PDF
-                    </a>
-                  </Button>
+                  {('hasPdf' in record && record.hasPdf) ? (
+                    <Button
+                      data-testid={`button-download-${record.id}`}
+                      variant="outline"
+                      size="sm"
+                      asChild
+                    >
+                      <a href={`/api/hansard-records/${record.id}/pdf`} target="_blank" rel="noopener noreferrer">
+                        <Download className="w-4 h-4 mr-2" />
+                        PDF
+                      </a>
+                    </Button>
+                  ) : (
+                    <Button
+                      data-testid={`button-no-pdf-${record.id}`}
+                      variant="outline"
+                      size="sm"
+                      disabled
+                      className="text-muted-foreground"
+                    >
+                      <FileText className="w-4 h-4 mr-2" />
+                      No PDF
+                    </Button>
+                  )}
                   <HansardAnalysisDialog
                     hansardRecord={record}
                     trigger={
