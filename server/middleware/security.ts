@@ -92,6 +92,80 @@ export function verifyCsrfToken(token: string): boolean {
   return crypto.timingSafeEqual(signatureBuffer, expectedBuffer);
 }
 
+// Trusted domain suffixes for CSRF protection (same as CORS)
+const CSRF_TRUSTED_DOMAIN_SUFFIXES = [
+  '.replit.dev',
+  '.replit.app',
+  '.repl.co',
+  '.railway.app',
+  '.up.railway.app',
+];
+
+// Helper function to check if origin is from a trusted domain
+function isTrustedOriginForCsrf(originUrl: string): boolean {
+  try {
+    const url = new URL(originUrl);
+    const hostname = url.hostname;
+    
+    // Check if hostname ends with any of the trusted suffixes
+    return CSRF_TRUSTED_DOMAIN_SUFFIXES.some(suffix => 
+      hostname === suffix.slice(1) || // Exact match (e.g., "replit.dev")
+      hostname.endsWith(suffix)        // Subdomain match (e.g., "myapp.replit.dev")
+    );
+  } catch {
+    return false;
+  }
+}
+
+// Helper function to normalize origin URL (trim, lowercase, remove trailing slash)
+function normalizeOriginForCsrf(url: string): string {
+  try {
+    const normalized = new URL(url.trim());
+    return normalized.origin.toLowerCase();
+  } catch {
+    // If URL parsing fails, just trim and lowercase
+    return url.trim().toLowerCase().replace(/\/+$/, '');
+  }
+}
+
+// Build trusted origins list from environment
+function getTrustedOriginsForCsrf(): string[] {
+  const trustedOrigins: string[] = [];
+  
+  // Add custom origin from environment variable (for Railway or custom domains)
+  if (process.env.FRONTEND_URL) {
+    trustedOrigins.push(normalizeOriginForCsrf(process.env.FRONTEND_URL));
+  }
+  
+  // Add explicitly configured origins
+  if (process.env.ALLOWED_ORIGINS) {
+    trustedOrigins.push(...process.env.ALLOWED_ORIGINS.split(',').map(o => normalizeOriginForCsrf(o)));
+  }
+  
+  // Add Replit domains (both .dev and .app)
+  if (process.env.REPL_SLUG && process.env.REPL_OWNER) {
+    trustedOrigins.push(normalizeOriginForCsrf(`https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co`));
+    trustedOrigins.push(normalizeOriginForCsrf(`https://${process.env.REPL_SLUG}-${process.env.REPL_OWNER}.replit.app`));
+  }
+  
+  // Add Railway public domain if available
+  if (process.env.RAILWAY_PUBLIC_DOMAIN) {
+    trustedOrigins.push(normalizeOriginForCsrf(`https://${process.env.RAILWAY_PUBLIC_DOMAIN}`));
+  }
+  
+  // Add Railway static URL if available
+  if (process.env.RAILWAY_STATIC_URL) {
+    trustedOrigins.push(normalizeOriginForCsrf(process.env.RAILWAY_STATIC_URL));
+  }
+  
+  // For development, allow localhost
+  if (process.env.NODE_ENV === 'development') {
+    trustedOrigins.push('http://localhost:5000', 'http://127.0.0.1:5000');
+  }
+  
+  return trustedOrigins;
+}
+
 // CSRF middleware for state-changing operations
 export function csrfProtection(req: Request, res: Response, next: NextFunction) {
   // Skip CSRF for GET, HEAD, OPTIONS
@@ -108,33 +182,20 @@ export function csrfProtection(req: Request, res: Response, next: NextFunction) 
   const origin = req.headers.origin;
   const referer = req.headers.referer;
   
-  // Build and normalize trusted origins from environment - NEVER use request headers
-  const trustedOrigins: string[] = [];
+  // Build trusted origins list
+  const trustedOrigins = getTrustedOriginsForCsrf();
   
-  if (process.env.NODE_ENV === 'production') {
-    // In production, use Replit deployment URL or configured origins
-    if (process.env.REPLIT_DEPLOYMENT) {
-      const replitDomains = process.env.REPLIT_DOMAINS?.split(',') || [];
-      trustedOrigins.push(...replitDomains.map(d => `https://${d.trim().toLowerCase()}`));
-    }
-    // Allow custom configured origins (must be explicitly set by admin)
-    if (process.env.ALLOWED_ORIGINS) {
-      trustedOrigins.push(...process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim().toLowerCase()));
-    }
-  } else {
-    // In development, only trust localhost on port 5000 (canonical URLs)
-    trustedOrigins.push('http://localhost:5000', 'http://127.0.0.1:5000');
-  }
-  
-  // Reject requests with no trusted origins configured (defense in depth)
-  if (trustedOrigins.length === 0) {
-    return res.status(403).json({ error: 'No trusted origins configured' });
-  }
-  
-  // Validate Origin header (preferred) with strict canonicalization
+  // Validate Origin header (preferred) with strict origin matching
   if (origin) {
     const normalizedOrigin = origin.trim().toLowerCase();
-    if (!trustedOrigins.includes(normalizedOrigin)) {
+    
+    // Check explicit trusted origins list with strict equality
+    const isExplicitlyTrusted = trustedOrigins.includes(normalizedOrigin);
+    
+    // Check if from trusted domain suffix
+    const isTrustedDomain = isTrustedOriginForCsrf(origin);
+    
+    if (!isExplicitlyTrusted && !isTrustedDomain) {
       return res.status(403).json({ error: 'Untrusted origin' });
     }
   }
@@ -149,7 +210,13 @@ export function csrfProtection(req: Request, res: Response, next: NextFunction) 
       return res.status(403).json({ error: 'Invalid referer format' });
     }
     
-    if (!trustedOrigins.includes(refererOrigin)) {
+    // Check explicit trusted origins list with strict equality
+    const isExplicitlyTrusted = trustedOrigins.includes(refererOrigin);
+    
+    // Check if from trusted domain suffix
+    const isTrustedDomain = isTrustedOriginForCsrf(referer);
+    
+    if (!isExplicitlyTrusted && !isTrustedDomain) {
       return res.status(403).json({ error: 'Untrusted referer' });
     }
   }

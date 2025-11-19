@@ -26,29 +26,40 @@ function isTrustedDomain(origin: string): boolean {
   }
 }
 
+// Helper function to normalize origin URL (trim, lowercase, remove trailing slash)
+function normalizeOrigin(url: string): string {
+  try {
+    const normalized = new URL(url.trim());
+    return normalized.origin.toLowerCase();
+  } catch {
+    // If URL parsing fails, just trim and lowercase
+    return url.trim().toLowerCase().replace(/\/+$/, '');
+  }
+}
+
 // Dynamically determine allowed origins based on environment
 function getAllowedOrigins(): string[] {
   const origins: string[] = [];
   
   // Add custom origin from environment variable (for Railway or custom domains)
   if (process.env.FRONTEND_URL) {
-    origins.push(process.env.FRONTEND_URL);
+    origins.push(normalizeOrigin(process.env.FRONTEND_URL));
   }
   
   // Add Replit domains (both .dev and .app)
   if (process.env.REPL_SLUG && process.env.REPL_OWNER) {
-    origins.push(`https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co`);
-    origins.push(`https://${process.env.REPL_SLUG}-${process.env.REPL_OWNER}.replit.app`);
+    origins.push(normalizeOrigin(`https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co`));
+    origins.push(normalizeOrigin(`https://${process.env.REPL_SLUG}-${process.env.REPL_OWNER}.replit.app`));
   }
   
   // Add Railway public domain if available
   if (process.env.RAILWAY_PUBLIC_DOMAIN) {
-    origins.push(`https://${process.env.RAILWAY_PUBLIC_DOMAIN}`);
+    origins.push(normalizeOrigin(`https://${process.env.RAILWAY_PUBLIC_DOMAIN}`));
   }
   
   // Add Railway static URL if available
   if (process.env.RAILWAY_STATIC_URL) {
-    origins.push(process.env.RAILWAY_STATIC_URL);
+    origins.push(normalizeOrigin(process.env.RAILWAY_STATIC_URL));
   }
   
   // For development, allow localhost
@@ -72,8 +83,11 @@ export const corsConfig = cors({
       return callback(null, true);
     }
     
-    // Check if origin is in the explicit allowed list
-    if (allowedOrigins.some(allowed => origin.startsWith(allowed))) {
+    // Normalize origin for comparison
+    const normalizedOrigin = origin.trim().toLowerCase();
+    
+    // Check if origin is in the explicit allowed list with strict equality
+    if (allowedOrigins.includes(normalizedOrigin)) {
       return callback(null, true);
     }
     
