@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useRoute, Link } from "wouter";
-import { ArrowLeft, MapPin, UserCircle, Flag, FileText, Wallet, Calendar, Scale, ExternalLink, AlertTriangle, Info, MessageSquare, HelpCircle, Gavel, FileQuestion, ScrollText, Phone, Mail, MapPinned } from "lucide-react";
+import { ArrowLeft, MapPin, UserCircle, Flag, FileText, Wallet, Calendar, Scale, ExternalLink, AlertTriangle, Info, MessageSquare, HelpCircle, Gavel, FileQuestion, ScrollText, Phone, Mail, MapPinned, Printer, Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -452,7 +452,7 @@ export default function MPProfile() {
           </div>
 
           {/* Contact Information Section */}
-          {(mp.email || mp.telephone || mp.mobileNumber || mp.contactAddress || mp.serviceAddress) && (
+          {(mp.email || mp.telephone || mp.fax || mp.mobileNumber || mp.socialMedia || mp.contactAddress || mp.serviceAddress) && (
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -477,15 +477,15 @@ export default function MPProfile() {
                   </div>
                 )}
                 
-                {mp.email && (mp.telephone || mp.mobileNumber || mp.contactAddress || mp.serviceAddress) && <Separator />}
-                
+                {mp.email && (mp.telephone || mp.fax || mp.mobileNumber || mp.socialMedia || mp.contactAddress || mp.serviceAddress) && <Separator />}
+
                 {mp.telephone && (
                   <div className="flex items-start gap-3">
                     <Phone className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
                     <div>
                       <p className="text-sm text-muted-foreground">Telephone</p>
-                      <a 
-                        href={`tel:${mp.telephone}`} 
+                      <a
+                        href={`tel:${mp.telephone}`}
                         className="font-semibold text-primary hover:underline"
                         data-testid="link-mp-telephone"
                       >
@@ -494,16 +494,34 @@ export default function MPProfile() {
                     </div>
                   </div>
                 )}
-                
-                {mp.telephone && (mp.mobileNumber || mp.contactAddress || mp.serviceAddress) && <Separator />}
+
+                {mp.telephone && (mp.fax || mp.mobileNumber || mp.socialMedia || mp.contactAddress || mp.serviceAddress) && <Separator />}
+
+                {mp.fax && (
+                  <div className="flex items-start gap-3">
+                    <Printer className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-sm text-muted-foreground">Fax</p>
+                      <a
+                        href={`tel:${mp.fax}`}
+                        className="font-semibold text-primary hover:underline"
+                        data-testid="link-mp-fax"
+                      >
+                        {mp.fax}
+                      </a>
+                    </div>
+                  </div>
+                )}
+
+                {mp.fax && (mp.mobileNumber || mp.socialMedia || mp.contactAddress || mp.serviceAddress) && <Separator />}
                 
                 {mp.mobileNumber && (
                   <div className="flex items-start gap-3">
                     <Phone className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
                     <div>
                       <p className="text-sm text-muted-foreground">Mobile Number</p>
-                      <a 
-                        href={`tel:${mp.mobileNumber}`} 
+                      <a
+                        href={`tel:${mp.mobileNumber}`}
                         className="font-semibold text-primary hover:underline"
                         data-testid="link-mp-mobile"
                       >
@@ -512,8 +530,28 @@ export default function MPProfile() {
                     </div>
                   </div>
                 )}
-                
-                {mp.mobileNumber && (mp.contactAddress || mp.serviceAddress) && <Separator />}
+
+                {mp.mobileNumber && (mp.socialMedia || mp.contactAddress || mp.serviceAddress) && <Separator />}
+
+                {mp.socialMedia && (
+                  <div className="flex items-start gap-3">
+                    <Share2 className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-sm text-muted-foreground">Social Media</p>
+                      <a
+                        href={mp.socialMedia}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-semibold text-primary hover:underline"
+                        data-testid="link-mp-social-media"
+                      >
+                        {mp.socialMedia}
+                      </a>
+                    </div>
+                  </div>
+                )}
+
+                {mp.socialMedia && (mp.contactAddress || mp.serviceAddress) && <Separator />}
                 
                 {mp.contactAddress && (
                   <div className="flex items-start gap-3">

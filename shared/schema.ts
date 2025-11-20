@@ -45,7 +45,9 @@ export const mps = pgTable("mps", {
   contactAddress: text("contact_address"),
   email: text("email"),
   telephone: text("telephone"),
+  fax: text("fax"),
   mobileNumber: text("mobile_number"),
+  socialMedia: text("social_media"),
   serviceAddress: text("service_address"),
 });
 
