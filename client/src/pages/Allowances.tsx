@@ -36,7 +36,6 @@ import {
 
 export default function Allowances() {
   const [searchQuery, setSearchQuery] = useState("");
-  const [showMinistersOnly, setShowMinistersOnly] = useState(false);
 
   const { data: mps = [], isLoading } = useQuery<Mp[]>({
     queryKey: ["/api/mps"],
@@ -57,33 +56,22 @@ export default function Allowances() {
       );
     }
 
-    if (showMinistersOnly) {
-      filtered = filtered.filter((mp) => mp.isMinister);
-    }
-
     return filtered.sort((a, b) => {
       const aAllowance = calculateMpAllowances(a);
       const bAllowance = calculateMpAllowances(b);
       return bAllowance.totalMonthly - aAllowance.totalMonthly;
     });
-  }, [mps, searchQuery, showMinistersOnly]);
+  }, [mps, searchQuery]);
 
   const totalAllowanceStats = useMemo(() => {
-    const ministers = mps.filter((mp) => mp.isMinister);
-    const regularMps = mps.filter((mp) => !mp.isMinister);
-
-    const avgMinisterMonthly = ministers.length > 0
-      ? ministers.reduce((sum, mp) => sum + calculateMpAllowances(mp).totalMonthly, 0) / ministers.length
-      : 0;
-
-    const avgRegularMpMonthly = regularMps.length > 0
-      ? regularMps.reduce((sum, mp) => sum + calculateMpAllowances(mp).totalMonthly, 0) / regularMps.length
-      : 0;
-
     const totalMonthlyAllowances = mps.reduce(
       (sum, mp) => sum + calculateMpAllowances(mp).totalMonthly,
       0
     );
+
+    const avgMpMonthly = mps.length > 0
+      ? totalMonthlyAllowances / mps.length
+      : 0;
 
     const totalCumulativeAttendance = mps.reduce(
       (sum, mp) => sum + calculateMpAllowances(mp).totalCumulativeAttendance,
@@ -95,13 +83,10 @@ export default function Allowances() {
       : 0;
 
     return {
-      avgMinisterMonthly,
-      avgRegularMpMonthly,
+      avgMpMonthly,
       totalMonthlyAllowances,
       totalCumulativeAttendance,
       avgCumulativeAttendance,
-      ministerCount: ministers.length,
-      regularMpCount: regularMps.length,
     };
   }, [mps]);
 
@@ -132,18 +117,6 @@ export default function Allowances() {
           <p className="text-muted-foreground" data-testid="text-page-description">
             Comprehensive breakdown of allowances for Members of Parliament based on official rates
           </p>
-          
-          <Card className="mt-4 bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800">
-            <CardContent className="pt-4">
-              <div className="flex items-start gap-2">
-                <AlertCircle className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
-                <p className="text-sm text-blue-900 dark:text-blue-100">
-                  <strong>Note:</strong> Prime Minister Datuk Seri Anwar Ibrahim has voluntarily declined his PM and Finance Minister salaries 
-                  while implementing a 20% pay cut for cabinet ministers since 2022. However, all ministers remain entitled to their MP allowances.
-                </p>
-              </div>
-            </CardContent>
-          </Card>
         </div>
 
         <div className="space-y-6 mb-8">
@@ -165,32 +138,17 @@ export default function Allowances() {
                 </CardContent>
               </Card>
 
-              <Card data-testid="card-stat-minister-avg">
-                <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Avg. Minister (Monthly)</CardTitle>
-                  <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold" data-testid="text-minister-avg">
-                    {formatCurrency(totalAllowanceStats.avgMinisterMonthly)}
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {totalAllowanceStats.ministerCount} ministers
-                  </p>
-                </CardContent>
-              </Card>
-
               <Card data-testid="card-stat-mp-avg">
                 <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Avg. Regular MP (Monthly)</CardTitle>
+                  <CardTitle className="text-sm font-medium">Avg. MP (Monthly)</CardTitle>
                   <Users className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold" data-testid="text-mp-avg">
-                    {formatCurrency(totalAllowanceStats.avgRegularMpMonthly)}
+                    {formatCurrency(totalAllowanceStats.avgMpMonthly)}
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">
-                    {totalAllowanceStats.regularMpCount} regular MPs
+                    Average for all {mps.length} MPs
                   </p>
                 </CardContent>
               </Card>
@@ -266,10 +224,6 @@ export default function Allowances() {
                   <TableRow>
                     <TableCell className="font-medium">Base Salary (Dewan Rakyat)</TableCell>
                     <TableCell className="text-right">{formatCurrency(ALLOWANCE_RATES.DEWAN_RAKYAT_SALARY)}</TableCell>
-                  </TableRow>
-                  <TableRow>
-                    <TableCell className="font-medium">Minister Additional (if applicable)</TableCell>
-                    <TableCell className="text-right">{formatCurrency(ALLOWANCE_RATES.MINISTER_ADDITIONAL)}</TableCell>
                   </TableRow>
                   <TableRow>
                     <TableCell>Entertainment Allowance</TableCell>
@@ -383,13 +337,6 @@ export default function Allowances() {
                     data-testid="input-search-mp"
                   />
                 </div>
-                <Button
-                  variant={showMinistersOnly ? "default" : "outline"}
-                  onClick={() => setShowMinistersOnly(!showMinistersOnly)}
-                  data-testid="button-filter-ministers"
-                >
-                  {showMinistersOnly ? "Show All" : "Ministers Only"}
-                </Button>
               </div>
             </div>
           </CardHeader>
@@ -415,11 +362,6 @@ export default function Allowances() {
                             <h3 className="font-semibold truncate" data-testid={`text-mp-name-${mp.id}`}>
                               {mp.name}
                             </h3>
-                            {allowance.isMinister && (
-                              <Badge variant="default" data-testid={`badge-minister-${mp.id}`}>
-                                Minister
-                              </Badge>
-                            )}
                           </div>
                           <p className="text-sm text-muted-foreground truncate">
                             {mp.constituency} • {mp.party}

@@ -5,10 +5,7 @@ export const ALLOWANCE_RATES = {
   // Monthly Base Salary
   DEWAN_RAKYAT_SALARY: 25700,
   DEWAN_NEGARA_SALARY: 11000,
-  
-  // Additional Minister Allowance
-  MINISTER_ADDITIONAL: 13400,
-  
+
   // Daily Attendance Allowances (Cumulative from sworn-in date)
   PARLIAMENT_SITTING_PER_DAY: 400,
   GOVERNMENT_MEETING_PER_DAY: 300,
@@ -38,7 +35,6 @@ export const ALLOWANCE_RATES = {
 export interface AllowanceBreakdown {
   // Monthly Fixed
   baseSalary: number;
-  ministerAdditional: number;
   entertainment: number;
   specialNonAdmin: number;
   fixedTravel: number;
@@ -76,16 +72,13 @@ export function calculateMpAllowances(
   monthsInYear: number = 12
 ): AllowanceBreakdown {
   const isMinister = mp.isMinister;
-  
+
   // Base salary (Dewan Rakyat MPs)
   const baseSalary = ALLOWANCE_RATES.DEWAN_RAKYAT_SALARY;
-  
-  // Minister gets additional RM13,400
-  const ministerAdditional = isMinister ? ALLOWANCE_RATES.MINISTER_ADDITIONAL : 0;
-  
+
   // Monthly fixed allowances
   const entertainment = ALLOWANCE_RATES.ENTERTAINMENT;
-  const specialNonAdmin = !isMinister ? ALLOWANCE_RATES.SPECIAL_NON_ADMIN_MP : 0;
+  const specialNonAdmin = ALLOWANCE_RATES.SPECIAL_NON_ADMIN_MP;
   const fixedTravel = ALLOWANCE_RATES.FIXED_TRAVEL;
   const fuel = ALLOWANCE_RATES.FUEL;
   const toll = ALLOWANCE_RATES.TOLL;
@@ -98,9 +91,8 @@ export function calculateMpAllowances(
   const totalCumulativeAttendance = parliamentSittingTotal + governmentMeetingTotal;
   
   // Calculate recurring monthly totals (excluding cumulative attendance)
-  const totalMonthlyFixed = 
+  const totalMonthlyFixed =
     baseSalary +
-    ministerAdditional +
     entertainment +
     specialNonAdmin +
     fixedTravel +
@@ -108,13 +100,12 @@ export function calculateMpAllowances(
     toll +
     driver +
     phoneBill;
-  
+
   const totalMonthly = totalMonthlyFixed;
   const totalAnnual = totalMonthlyFixed * monthsInYear;
-  
+
   return {
     baseSalary,
-    ministerAdditional,
     entertainment,
     specialNonAdmin,
     fixedTravel,
