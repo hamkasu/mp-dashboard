@@ -1,4 +1,4 @@
-import { Search, Menu, Home, FileText, BookOpen, UserCheck, Calculator, BarChart3, ExternalLink, ChevronDown, AlertCircle, GraduationCap, TrendingUp, Scale } from "lucide-react";
+import { Search, Menu, Home, FileText, BookOpen, UserCheck, Calculator, BarChart3, ExternalLink, ChevronDown, AlertCircle, GraduationCap, TrendingUp, Scale, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -101,6 +101,17 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
             >
               <Scale className="w-4 h-4" />
               <span>Constitution</span>
+            </Button>
+          </Link>
+          <Link href="/hansard-admin">
+            <Button
+              variant={location === "/hansard-admin" ? "secondary" : "ghost"}
+              size="sm"
+              data-testid="nav-hansard-admin"
+              className="gap-2"
+            >
+              <Shield className="w-4 h-4" />
+              <span>Admin</span>
             </Button>
           </Link>
           <DropdownMenu>
