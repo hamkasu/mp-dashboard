@@ -81,6 +81,7 @@ app.use('/attached_assets', express.static('attached_assets'));
 
 (async () => {
   // Seed database before starting server (only if using DbStorage)
+  // Creates admin user if it doesn't exist
   if (process.env.DATABASE_URL) {
     try {
       log("Starting database seeding...");
