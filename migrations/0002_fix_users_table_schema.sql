@@ -14,23 +14,23 @@ CREATE TABLE IF NOT EXISTS users_backup AS SELECT * FROM users;
 -- Step 2: Drop the old users table (CASCADE removes FK constraints only, not related data)
 DROP TABLE IF EXISTS "users" CASCADE;
 
--- Step 3: Create users table with correct schema
+-- Step 3: Create users table with correct schema (admin only - no public registration)
 CREATE TABLE "users" (
 	"id" integer PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
 	"username" text NOT NULL,
 	"password" text NOT NULL,
-	"role" text DEFAULT 'user' NOT NULL,
+	"role" text DEFAULT 'admin' NOT NULL,
 	"created_at" timestamp DEFAULT NOW() NOT NULL,
 	CONSTRAINT "users_username_unique" UNIQUE("username")
 );
 
 -- Step 4: Migrate existing users from backup (if any exist)
--- Convert is_admin boolean to role text, preserve passwords
+-- All migrated users become admins (no public registration allowed)
 INSERT INTO users (username, password, role, created_at)
 SELECT
   username,
   password,
-  CASE WHEN is_admin THEN 'admin' ELSE 'user' END as role,
+  'admin' as role,
   NOW() as created_at
 FROM users_backup
 WHERE EXISTS (SELECT 1 FROM users_backup LIMIT 1)

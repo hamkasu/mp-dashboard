@@ -80,72 +80,26 @@ export function setupAuth(app: Express) {
     }
   });
 
-  app.post("/api/register", authRateLimit, async (req, res, next) => {
-    try {
-      // Validate request body against schema
-      const validatedData = insertUserSchema.parse(req.body) as { username: string; password: string };
-      
-      const existingUser = await storage.getUserByUsername(validatedData.username);
-      if (existingUser) {
-        auditLog(req, 'REGISTER', 'user', validatedData.username, false, 'Username already exists');
-        return res.status(400).send("Username already exists");
-      }
-
-      const user = await storage.createUser({
-        username: validatedData.username,
-        password: await hashPassword(validatedData.password),
-      });
-
-      req.login(user, (err) => {
-        if (err) {
-          auditLog(req, 'REGISTER', 'user', user.id, false, err.message);
-          return next(err);
-        }
-        auditLog(req, 'REGISTER', 'user', user.id, true);
-        
-        // Generate new CSRF token on registration
-        const csrfToken = generateCsrfToken(req);
-        res.cookie('XSRF-TOKEN', csrfToken, {
-          httpOnly: false, // Frontend needs to read this for header submission
-          secure: process.env.NODE_ENV === 'production',
-          sameSite: 'strict',
-          maxAge: 24 * 60 * 60 * 1000, // 24 hours
-        });
-        // Token not set in header to minimize XSS exposure
-        
-        // Strip password from response for security
-        const { password, ...userWithoutPassword } = user;
-        res.status(201).json(userWithoutPassword);
-      });
-    } catch (error) {
-      auditLog(req, 'REGISTER', 'user', undefined, false, error instanceof Error ? error.message : 'Unknown error');
-      if (error instanceof Error && 'issues' in error) {
-        return res.status(400).json({ error: "Invalid input data", details: error });
-      }
-      return res.status(500).json({ error: "Registration failed" });
-    }
-  });
-
   app.post("/api/login", authRateLimit, (req, res, next) => {
     passport.authenticate("local", (err: any, user: any, info: any) => {
       if (err) {
         auditLog(req, 'LOGIN', 'user', undefined, false, err.message);
         return next(err);
       }
-      
+
       if (!user) {
         auditLog(req, 'LOGIN', 'user', undefined, false, 'Invalid credentials');
         return res.status(401).json({ error: "Invalid username or password" });
       }
-      
+
       req.login(user, (err) => {
         if (err) {
           auditLog(req, 'LOGIN', 'user', user.id, false, err.message);
           return next(err);
         }
-        
+
         auditLog(req, 'LOGIN', 'user', user.id, true);
-        
+
         // Generate new CSRF token on login
         const csrfToken = generateCsrfToken(req);
         res.cookie('XSRF-TOKEN', csrfToken, {
@@ -155,7 +109,7 @@ export function setupAuth(app: Express) {
           maxAge: 24 * 60 * 60 * 1000, // 24 hours
         });
         // Token not set in header to minimize XSS exposure
-        
+
         // Strip password from response for security
         const { password, ...userWithoutPassword } = user;
         res.status(200).json(userWithoutPassword);
