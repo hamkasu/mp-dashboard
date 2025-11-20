@@ -248,17 +248,7 @@ export function csrfProtection(req: Request, res: Response, next: NextFunction) 
 
 // Middleware to set CSRF token in cookie only (not in header to prevent XSS reading)
 export function setCsrfToken(req: Request, res: Response, next: NextFunction) {
-  if (req.isAuthenticated && req.isAuthenticated()) {
-    const token = generateCsrfToken(req);
-    res.cookie('XSRF-TOKEN', token, {
-      httpOnly: false, // Frontend needs to read this for header submission
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 24 * 60 * 60 * 1000, // 24 hours
-    });
-    // Note: Token is NOT set in response header to minimize XSS exposure
-    // Frontend reads from cookie and sends in X-CSRF-Token header
-  }
+  // CSRF protection disabled - no authentication
   next();
 }
 
@@ -319,8 +309,8 @@ export function auditLog(
 ) {
   const entry: AuditLogEntry = {
     timestamp: new Date(),
-    userId: req.user?.id,
-    username: req.user?.username,
+    userId: undefined,
+    username: 'anonymous',
     action,
     resource,
     resourceId,
