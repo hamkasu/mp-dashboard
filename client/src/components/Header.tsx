@@ -237,6 +237,15 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
                   <span className="font-medium">Role: {user.role}</span>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
+                {user.role === "admin" && (
+                  <>
+                    <DropdownMenuItem onClick={() => setLocation("/hansard-admin")}>
+                      <Shield className="w-4 h-4 mr-2" />
+                      <span>Admin Panel</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                  </>
+                )}
                 <DropdownMenuItem
                   onClick={() => logoutMutation.mutate()}
                   disabled={logoutMutation.isPending}
