@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useLanguage } from "@/i18n/LanguageContext";
 import { Header } from "@/components/Header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,7 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { BookOpen, Users, FileText, CheckCircle } from "lucide-react";
 
 export default function ParliamentGuide() {
-  const [language, setLanguage] = useState<"en" | "bm">("en");
+  const { t, language: contextLanguage, setLanguage: setContextLanguage } = useLanguage();
+  const [language, setLanguage] = useState<"en" | "bm">(contextLanguage === "ms" ? "bm" : "en");
 
   const content = {
     en: {

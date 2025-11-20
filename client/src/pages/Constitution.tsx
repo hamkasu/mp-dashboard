@@ -3,11 +3,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Scale, BookOpen, Languages } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { useLanguage } from "@/i18n/LanguageContext";
 import federalConstitutionPdf from "@assets/Federal Constitution (Reprint 2020)_1763559512512.pdf";
 import simplifiedEnglishPdf from "@assets/Simplified_Constitution_English_Article11_Focus_1763561623756.pdf";
 import simplifiedMalayPdf from "@assets/Simplified_Constitution_Malay_Article11_Focus_1763561623753.pdf";
 
 export default function Constitution() {
+  const { t } = useLanguage();
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <Header />
@@ -18,11 +20,11 @@ export default function Constitution() {
             <div className="flex items-center gap-3 mb-2">
               <Scale className="w-8 h-8 text-primary" />
               <h1 className="text-3xl md:text-4xl font-bold" data-testid="text-constitution-title">
-                Federal Constitution
+                {t('constitution.title')}
               </h1>
             </div>
             <p className="text-muted-foreground text-lg">
-              Malaysia's supreme law and simplified guides
+              {t('constitution.subtitle')}
             </p>
           </div>
 
@@ -30,18 +32,18 @@ export default function Constitution() {
             <TabsList className="grid w-full grid-cols-3 max-w-2xl">
               <TabsTrigger value="full" data-testid="tab-full-constitution" className="gap-2">
                 <Scale className="w-4 h-4" />
-                <span className="hidden sm:inline">Full Constitution</span>
-                <span className="sm:hidden">Full</span>
+                <span className="hidden sm:inline">{t('constitution.fullConstitution')}</span>
+                <span className="sm:hidden">{t('constitution.full')}</span>
               </TabsTrigger>
               <TabsTrigger value="simplified-en" data-testid="tab-simplified-en" className="gap-2">
                 <BookOpen className="w-4 h-4" />
-                <span className="hidden sm:inline">Simplified (EN)</span>
-                <span className="sm:hidden">EN</span>
+                <span className="hidden sm:inline">{t('constitution.simplifiedEn')}</span>
+                <span className="sm:hidden">{t('constitution.en')}</span>
               </TabsTrigger>
               <TabsTrigger value="simplified-bm" data-testid="tab-simplified-bm" className="gap-2">
                 <Languages className="w-4 h-4" />
-                <span className="hidden sm:inline">Simplified (BM)</span>
-                <span className="sm:hidden">BM</span>
+                <span className="hidden sm:inline">{t('constitution.simplifiedBm')}</span>
+                <span className="sm:hidden">{t('constitution.bm')}</span>
               </TabsTrigger>
             </TabsList>
 
@@ -51,13 +53,13 @@ export default function Constitution() {
                   <div className="flex items-start justify-between gap-4">
                     <div className="space-y-1.5">
                       <CardTitle className="text-2xl" data-testid="text-federal-constitution-title">
-                        Federal Constitution (Reprint 2020)
+                        {t('constitution.federalConstitutionTitle')}
                       </CardTitle>
                       <CardDescription>
-                        The supreme law of Malaysia, as at 15 October 2020
+                        {t('constitution.federalConstitutionDescription')}
                       </CardDescription>
                     </div>
-                    <Badge variant="secondary">Official</Badge>
+                    <Badge variant="secondary">{t('constitution.official')}</Badge>
                   </div>
                 </CardHeader>
                 <CardContent>
@@ -70,8 +72,7 @@ export default function Constitution() {
                     />
                   </div>
                   <p className="text-sm text-muted-foreground mt-4">
-                    First introduced as the Constitution of the Federation of Malaya on Merdeka Day (31 August 1957).
-                    Subsequently introduced as the Constitution of Malaysia on Malaysia Day (16 September 1963).
+                    {t('constitution.firstIntroduced')}
                   </p>
                 </CardContent>
               </Card>
@@ -83,13 +84,13 @@ export default function Constitution() {
                   <div className="flex items-start justify-between gap-4">
                     <div className="space-y-1.5">
                       <CardTitle className="text-2xl" data-testid="text-simplified-en-title">
-                        Simplified Guide to the Malaysian Federal Constitution
+                        {t('constitution.simplifiedEnTitle')}
                       </CardTitle>
                       <CardDescription>
-                        Easy-to-understand summary with special focus on Article 11 (Freedom of Religion)
+                        {t('constitution.simplifiedEnDescription')}
                       </CardDescription>
                     </div>
-                    <Badge variant="secondary">English</Badge>
+                    <Badge variant="secondary">{t('constitution.english')}</Badge>
                   </div>
                 </CardHeader>
                 <CardContent>
@@ -102,13 +103,13 @@ export default function Constitution() {
                     />
                   </div>
                   <div className="mt-4 space-y-2">
-                    <p className="text-sm font-medium">Key topics covered:</p>
+                    <p className="text-sm font-medium">{t('constitution.keyTopicsCovered')}</p>
                     <ul className="text-sm text-muted-foreground list-disc list-inside space-y-1">
-                      <li>Introduction to the Federal Constitution</li>
-                      <li>Foundation of Malaysia and fundamental liberties</li>
-                      <li>Article 11: Freedom of Religion (comprehensive explanation)</li>
-                      <li>Citizenship, government structure, and elections</li>
-                      <li>Special provisions and constitutional amendments</li>
+                      <li>{t('constitution.introduction')}</li>
+                      <li>{t('constitution.foundation')}</li>
+                      <li>{t('constitution.article11')}</li>
+                      <li>{t('constitution.citizenship')}</li>
+                      <li>{t('constitution.specialProvisions')}</li>
                     </ul>
                   </div>
                 </CardContent>
@@ -121,13 +122,13 @@ export default function Constitution() {
                   <div className="flex items-start justify-between gap-4">
                     <div className="space-y-1.5">
                       <CardTitle className="text-2xl" data-testid="text-simplified-bm-title">
-                        Panduan Ringkas Perlembagaan Persekutuan Malaysia
+                        {t('constitution.simplifiedBmTitle')}
                       </CardTitle>
                       <CardDescription>
-                        Ringkasan mudah difahami dengan tumpuan khusus kepada Perkara 11 (Kebebasan Beragama)
+                        {t('constitution.simplifiedBmDescription')}
                       </CardDescription>
                     </div>
-                    <Badge variant="secondary">Bahasa Malaysia</Badge>
+                    <Badge variant="secondary">{t('constitution.bahasaMalaysia')}</Badge>
                   </div>
                 </CardHeader>
                 <CardContent>
@@ -140,13 +141,13 @@ export default function Constitution() {
                     />
                   </div>
                   <div className="mt-4 space-y-2">
-                    <p className="text-sm font-medium">Topik utama yang diliputi:</p>
+                    <p className="text-sm font-medium">{t('constitution.mainTopicsCovered')}</p>
                     <ul className="text-sm text-muted-foreground list-disc list-inside space-y-1">
-                      <li>Pengenalan kepada Perlembagaan Persekutuan</li>
-                      <li>Asas Malaysia dan kebebasan asasi</li>
-                      <li>Perkara 11: Kebebasan Beragama (penjelasan menyeluruh)</li>
-                      <li>Kewarganegaraan, struktur kerajaan, dan pilihan raya</li>
-                      <li>Peruntukan khas dan pindaan perlembagaan</li>
+                      <li>{t('constitution.introductionBm')}</li>
+                      <li>{t('constitution.foundationBm')}</li>
+                      <li>{t('constitution.article11Bm')}</li>
+                      <li>{t('constitution.citizenshipBm')}</li>
+                      <li>{t('constitution.specialProvisionsBm')}</li>
                     </ul>
                   </div>
                 </CardContent>

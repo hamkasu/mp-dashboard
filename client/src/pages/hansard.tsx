@@ -11,6 +11,7 @@ import { Search, FileText, Calendar, Download, Sparkles, CheckCircle, Users, Use
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest, getQueryFn } from "@/lib/queryClient";
 import type { HansardRecord } from "@shared/schema";
+import { useLanguage } from "@/i18n/LanguageContext";
 import {
   Dialog,
   DialogContent,
@@ -34,6 +35,7 @@ import { ConstituencyAttendance } from "@/components/ConstituencyAttendance";
 import { HansardAnalysisDialog } from "@/components/HansardAnalysisDialog";
 
 export default function HansardPage() {
+  const { t } = useLanguage();
   const [searchQuery, setSearchQuery] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -78,20 +80,20 @@ export default function HansardPage() {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ 
-        predicate: (query) => 
-          typeof query.queryKey[0] === 'string' && 
+      queryClient.invalidateQueries({
+        predicate: (query) =>
+          typeof query.queryKey[0] === 'string' &&
           query.queryKey[0].startsWith('/api/hansard-records/search')
       });
       toast({
-        title: "Summary Generated",
-        description: "The Hansard record has been successfully summarized."
+        title: t('hansard.aiSummary'),
+        description: t('hansard.aiSummary')
       });
     },
     onError: (error) => {
       toast({
-        title: "Summarization Failed",
-        description: error.message || "Failed to generate summary. Please try again.",
+        title: t('common.error'),
+        description: error.message || t('common.error'),
         variant: "destructive"
       });
     }
@@ -113,20 +115,20 @@ export default function HansardPage() {
       return response;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ 
-        predicate: (query) => 
-          typeof query.queryKey[0] === 'string' && 
+      queryClient.invalidateQueries({
+        predicate: (query) =>
+          typeof query.queryKey[0] === 'string' &&
           query.queryKey[0].startsWith('/api/hansard-records')
       });
       toast({
-        title: "Record Deleted",
-        description: "The Hansard record has been successfully deleted."
+        title: t('hansard.delete'),
+        description: t('hansard.deleteDescription')
       });
     },
     onError: (error: Error) => {
       toast({
-        title: "Delete Failed",
-        description: error.message || "Failed to delete record. Please try again.",
+        title: t('common.error'),
+        description: error.message || t('common.error'),
         variant: "destructive"
       });
     }
@@ -137,7 +139,7 @@ export default function HansardPage() {
       <>
         <Header />
         <div className="flex items-center justify-center h-full">
-          <div className="text-muted-foreground">Loading Hansard records...</div>
+          <div className="text-muted-foreground">{t('hansard.loadingRecords')}</div>
         </div>
       </>
     );
@@ -150,7 +152,7 @@ export default function HansardPage() {
         <div className="container mx-auto p-6">
           <Card>
             <CardContent className="py-12 text-center">
-              <p className="text-destructive">Failed to load Hansard records. Please try again.</p>
+              <p className="text-destructive">{t('common.error')}</p>
             </CardContent>
           </Card>
         </div>
@@ -163,9 +165,9 @@ export default function HansardPage() {
       <Header />
       <div className="container mx-auto p-6 space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">Penyata Rasmi (Hansard)</h1>
+        <h1 className="text-3xl font-bold">{t('hansard.title')}</h1>
         <p className="text-muted-foreground mt-2">
-          Browse parliamentary transcripts from the 15th Parliament
+          {t('hansard.subtitle')}
         </p>
       </div>
 
@@ -173,16 +175,16 @@ export default function HansardPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Search className="w-5 h-5" />
-            Search Hansard
+            {t('hansard.searchTitle')}
           </CardTitle>
-          <CardDescription>Search by topic, keyword, or filter by date</CardDescription>
+          <CardDescription>{t('hansard.searchDescription')}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex gap-4 flex-wrap">
             <div className="flex-1 min-w-[200px]">
               <Input
                 data-testid="input-hansard-search"
-                placeholder="Search transcripts, topics, or session number..."
+                placeholder={t('hansard.searchPlaceholder')}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
@@ -191,7 +193,7 @@ export default function HansardPage() {
               <Input
                 data-testid="input-start-date"
                 type="date"
-                placeholder="Start Date"
+                placeholder={t('hansard.startDate')}
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
                 className="w-40"
@@ -199,7 +201,7 @@ export default function HansardPage() {
               <Input
                 data-testid="input-end-date"
                 type="date"
-                placeholder="End Date"
+                placeholder={t('hansard.endDate')}
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
                 className="w-40"
@@ -214,7 +216,7 @@ export default function HansardPage() {
                 setEndDate("");
               }}
             >
-              Clear
+              {t('hansard.clear')}
             </Button>
           </div>
         </CardContent>
@@ -223,7 +225,7 @@ export default function HansardPage() {
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="text-xl font-semibold">
-            {filteredRecords?.length || 0} Records Found
+            {filteredRecords?.length || 0} {t('hansard.recordsFound')}
           </h2>
         </div>
 
@@ -231,21 +233,21 @@ export default function HansardPage() {
           <Card>
             <CardContent className="py-12 text-center">
               <FileText className="w-12 h-12 mx-auto mb-4 opacity-50 text-muted-foreground" />
-              <h3 className="font-semibold text-lg mb-2">No Hansard Records Available</h3>
+              <h3 className="font-semibold text-lg mb-2">{t('hansard.noRecordsTitle')}</h3>
               <p className="text-muted-foreground mb-4">
-                {searchQuery || startDate || endDate 
-                  ? "No records found matching your search criteria. Try adjusting your filters."
-                  : "The Hansard database is empty. Download records from the Malaysian Parliament website to get started."}
+                {searchQuery || startDate || endDate
+                  ? t('hansard.noRecordsDescription')
+                  : t('hansard.noRecordsEmpty')}
               </p>
               {!searchQuery && !startDate && !endDate && (
                 <div className="mt-6 space-y-3">
                   <p className="text-sm text-muted-foreground">
-                    Visit the Admin page to download parliamentary transcripts from the 15th Parliament
+                    {t('hansard.subtitle')}
                   </p>
                   <Button asChild data-testid="button-go-to-admin">
                     <Link href="/hansard-admin">
                       <Download className="w-4 h-4 mr-2" />
-                      Go to Hansard Admin
+                      {t('hansard.goToAdmin')}
                     </Link>
                   </Button>
                 </div>
@@ -280,7 +282,7 @@ export default function HansardPage() {
                     >
                       <a href={`/api/hansard-records/${record.id}/pdf`} target="_blank" rel="noopener noreferrer">
                         <Download className="w-4 h-4 mr-2" />
-                        PDF
+                        {t('hansard.pdf')}
                       </a>
                     </Button>
                   ) : (
@@ -292,7 +294,7 @@ export default function HansardPage() {
                       className="text-muted-foreground"
                     >
                       <FileText className="w-4 h-4 mr-2" />
-                      No PDF
+                      {t('hansard.noPdf')}
                     </Button>
                   )}
                   <HansardAnalysisDialog
@@ -304,7 +306,7 @@ export default function HansardPage() {
                         size="sm"
                       >
                         <BarChart3 className="w-4 h-4 mr-2" />
-                        Analysis
+                        {t('hansard.analysis')}
                       </Button>
                     }
                   />
@@ -323,18 +325,17 @@ export default function HansardPage() {
                       </AlertDialogTrigger>
                       <AlertDialogContent>
                         <AlertDialogHeader>
-                          <AlertDialogTitle>Delete Hansard Record</AlertDialogTitle>
+                          <AlertDialogTitle>{t('hansard.deleteTitle')}</AlertDialogTitle>
                           <AlertDialogDescription>
-                            Are you sure you want to delete the Hansard record "{record.sessionNumber}"? 
-                            This action cannot be undone and will permanently remove the record and all associated data.
+                            {t('hansard.deleteDescription')} "{record.sessionNumber}"
                           </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
-                          <AlertDialogCancel 
+                          <AlertDialogCancel
                             data-testid="button-cancel-delete"
                             disabled={deleteMutation.isPending}
                           >
-                            Cancel
+                            {t('hansard.cancelDelete')}
                           </AlertDialogCancel>
                           <AlertDialogAction
                             data-testid="button-confirm-delete"
@@ -342,7 +343,7 @@ export default function HansardPage() {
                             disabled={deleteMutation.isPending}
                             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                           >
-                            {deleteMutation.isPending ? "Deleting..." : "Delete"}
+                            {deleteMutation.isPending ? t('hansard.deleting') : t('hansard.deleteConfirm')}
                           </AlertDialogAction>
                         </AlertDialogFooter>
                       </AlertDialogContent>
@@ -371,25 +372,25 @@ export default function HansardPage() {
                         <div className="flex items-center gap-2" data-testid="attendance-present">
                           <Users className="w-4 h-4 text-green-600 dark:text-green-400" />
                           <span className="font-medium">{record.constituenciesPresent}</span>
-                          <span className="text-muted-foreground">Constituencies Present</span>
+                          <span className="text-muted-foreground">{t('hansard.constituenciesPresent')}</span>
                         </div>
                         {record.constituenciesAbsent !== null && record.constituenciesAbsent !== undefined && record.constituenciesAbsent > 0 && (
                           <div className="flex items-center gap-2" data-testid="attendance-absent">
                             <UserX className="w-4 h-4 text-orange-600 dark:text-orange-400" />
                             <span className="font-medium">{record.constituenciesAbsent}</span>
-                            <span className="text-muted-foreground">Absent</span>
+                            <span className="text-muted-foreground">{t('hansard.absent')}</span>
                           </div>
                         )}
                         {record.constituenciesAbsentRule91 !== null && record.constituenciesAbsentRule91 !== undefined && record.constituenciesAbsentRule91 > 0 && (
                           <div className="flex items-center gap-2" data-testid="attendance-absent-rule91">
                             <UserX className="w-4 h-4 text-red-600 dark:text-red-400" />
                             <span className="font-medium">{record.constituenciesAbsentRule91}</span>
-                            <span className="text-muted-foreground">Absent (SO 91)</span>
+                            <span className="text-muted-foreground">{t('hansard.absentRule91')}</span>
                           </div>
                         )}
                         {record.constituenciesPresent > 0 && (
                           <Badge variant="secondary" data-testid="attendance-rate">
-                            {((record.constituenciesPresent / 222) * 100).toFixed(1)}% Attendance
+                            {((record.constituenciesPresent / 222) * 100).toFixed(1)}% {t('hansard.attendanceRate')}
                           </Badge>
                         )}
                       </>
@@ -399,14 +400,14 @@ export default function HansardPage() {
                           <div className="flex items-center gap-2" data-testid="attendance-present">
                             <Users className="w-4 h-4 text-green-600 dark:text-green-400" />
                             <span className="font-medium">{record.attendedMpIds.length}</span>
-                            <span className="text-muted-foreground">MPs Present</span>
+                            <span className="text-muted-foreground">{t('hansard.mpsPresent')}</span>
                           </div>
                         )}
                         {record.absentMpIds && record.absentMpIds.length > 0 && (
                           <div className="flex items-center gap-2" data-testid="attendance-absent">
                             <UserX className="w-4 h-4 text-orange-600 dark:text-orange-400" />
                             <span className="font-medium">{record.absentMpIds.length}</span>
-                            <span className="text-muted-foreground">MPs Absent</span>
+                            <span className="text-muted-foreground">{t('hansard.mpsAbsent')}</span>
                           </div>
                         )}
                       </>
@@ -420,18 +421,18 @@ export default function HansardPage() {
                         data-testid={`button-constituency-${record.id}`}
                       >
                         <MapPin className="w-4 h-4 mr-2" />
-                        View by Constituency
+                        {t('hansard.viewByConstituency')}
                       </Button>
                     </DialogTrigger>
                     <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden">
                       <DialogHeader>
-                        <DialogTitle>Constituency Attendance</DialogTitle>
+                        <DialogTitle>{t('hansard.constituencyAttendance')}</DialogTitle>
                         <DialogDescription>
                           {record.sessionNumber} - {format(new Date(record.sessionDate), "MMMM dd, yyyy")}
                         </DialogDescription>
                       </DialogHeader>
-                      <ConstituencyAttendance 
-                        hansardRecordId={record.id} 
+                      <ConstituencyAttendance
+                        hansardRecordId={record.id}
                         enabled={openDialogId === record.id}
                       />
                     </DialogContent>
@@ -443,7 +444,7 @@ export default function HansardPage() {
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
                     <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400" />
-                    <span className="text-sm font-medium text-green-600 dark:text-green-400">AI Summary</span>
+                    <span className="text-sm font-medium text-green-600 dark:text-green-400">{t('hansard.aiSummary')}</span>
                   </div>
                   <Card className="bg-muted/50">
                     <CardContent className="pt-4">
@@ -464,21 +465,21 @@ export default function HansardPage() {
                     disabled={summarizeMutation.isPending}
                   >
                     <Sparkles className="w-4 h-4 mr-2" />
-                    {summarizeMutation.isPending ? "Generating Summary..." : "Summarize with AI"}
+                    {summarizeMutation.isPending ? t('hansard.generatingSummary') : t('hansard.summarizeWithAI')}
                   </Button>
                 </>
               )}
-              
+
               {record.speakers && record.speakers.length > 0 && (
                 <div className="text-sm">
-                  <span className="font-medium">Speakers: </span>
+                  <span className="font-medium">{t('hansard.speakers')}: </span>
                   {record.speakers.slice(0, 3).map((speaker, idx) => (
                     <span key={idx}>
                       {speaker.mpName}
                       {idx < Math.min(record.speakers.length, 3) - 1 && ", "}
                     </span>
                   ))}
-                  {record.speakers.length > 3 && ` +${record.speakers.length - 3} more`}
+                  {record.speakers.length > 3 && ` +${record.speakers.length - 3} ${t('hansard.more')}`}
                 </div>
               )}
             </CardContent>

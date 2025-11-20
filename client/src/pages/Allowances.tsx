@@ -6,11 +6,11 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { 
-  Calculator, 
-  DollarSign, 
-  TrendingUp, 
-  Users, 
+import {
+  Calculator,
+  DollarSign,
+  TrendingUp,
+  Users,
   AlertCircle,
   Search,
   ChevronRight,
@@ -18,11 +18,11 @@ import {
 } from "lucide-react";
 import { Link } from "wouter";
 import type { Mp } from "@shared/schema";
-import { 
-  calculateMpAllowances, 
-  formatCurrency, 
+import {
+  calculateMpAllowances,
+  formatCurrency,
   ALLOWANCE_RATES,
-  calculatePeriodicAllowances 
+  calculatePeriodicAllowances
 } from "@/lib/allowanceCalculator";
 import { apiRequest } from "@/lib/queryClient";
 import {
@@ -33,8 +33,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useLanguage } from "@/i18n/LanguageContext";
 
 export default function Allowances() {
+  const { t } = useLanguage();
   const [searchQuery, setSearchQuery] = useState("");
 
   const { data: mps = [], isLoading } = useQuery<Mp[]>({
@@ -97,7 +99,7 @@ export default function Allowances() {
       <div className="min-h-screen bg-background">
         <Header />
         <main className="container mx-auto px-4 py-8">
-          <div className="text-center">Loading allowance data...</div>
+          <div className="text-center">{t('common.loading')}</div>
         </main>
       </div>
     );
@@ -111,21 +113,21 @@ export default function Allowances() {
           <div className="flex items-center gap-3 mb-2">
             <Calculator className="h-8 w-8 text-primary" />
             <h1 className="text-3xl font-bold" data-testid="text-page-title">
-              MP Allowances Calculator
+              {t('allowances.title')}
             </h1>
           </div>
           <p className="text-muted-foreground" data-testid="text-page-description">
-            Comprehensive breakdown of allowances for Members of Parliament based on official rates
+            {t('allowances.description')}
           </p>
         </div>
 
         <div className="space-y-6 mb-8">
           <div>
-            <h2 className="text-xl font-semibold mb-4">Monthly Recurring Allowances</h2>
+            <h2 className="text-xl font-semibold mb-4">{t('allowances.summary')}</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <Card data-testid="card-stat-total-monthly">
                 <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Total Monthly (Recurring)</CardTitle>
+                  <CardTitle className="text-sm font-medium">{t('allowances.totalMonthlyAllowances')}</CardTitle>
                   <DollarSign className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
@@ -133,14 +135,14 @@ export default function Allowances() {
                     {formatCurrency(totalAllowanceStats.totalMonthlyAllowances)}
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">
-                    For all {mps.length} MPs
+                    {mps.length} {t('allowances.totalMps')}
                   </p>
                 </CardContent>
               </Card>
 
               <Card data-testid="card-stat-mp-avg">
                 <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Avg. MP (Monthly)</CardTitle>
+                  <CardTitle className="text-sm font-medium">{t('allowances.avgMonthlyPerMp')}</CardTitle>
                   <Users className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
@@ -148,14 +150,14 @@ export default function Allowances() {
                     {formatCurrency(totalAllowanceStats.avgMpMonthly)}
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">
-                    Average for all {mps.length} MPs
+                    {mps.length} {t('allowances.totalMps')}
                   </p>
                 </CardContent>
               </Card>
 
               <Card data-testid="card-stat-annual-total">
                 <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Est. Annual (Recurring)</CardTitle>
+                  <CardTitle className="text-sm font-medium">{t('allowances.totalYearlyAllowances')}</CardTitle>
                   <Calculator className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
@@ -163,7 +165,7 @@ export default function Allowances() {
                     {formatCurrency(totalAllowanceStats.totalMonthlyAllowances * 12)}
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">
-                    Projected yearly expenditure
+                    {t('allowances.yearly')}
                   </p>
                 </CardContent>
               </Card>
@@ -171,11 +173,11 @@ export default function Allowances() {
           </div>
 
           <div>
-            <h2 className="text-xl font-semibold mb-4">Cumulative Attendance Allowances (Since Sworn In)</h2>
+            <h2 className="text-xl font-semibold mb-4">{t('allowances.totalEarned')}</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Card data-testid="card-stat-total-cumulative">
                 <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Total Cumulative Attendance</CardTitle>
+                  <CardTitle className="text-sm font-medium">{t('allowances.totalEarned')}</CardTitle>
                   <Calendar className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
@@ -183,14 +185,14 @@ export default function Allowances() {
                     {formatCurrency(totalAllowanceStats.totalCumulativeAttendance)}
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">
-                    Lifetime attendance for all {mps.length} MPs
+                    {mps.length} {t('allowances.totalMps')}
                   </p>
                 </CardContent>
               </Card>
 
               <Card data-testid="card-stat-avg-cumulative">
                 <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Avg. Cumulative per MP</CardTitle>
+                  <CardTitle className="text-sm font-medium">{t('allowances.avgMonthlyPerMp')}</CardTitle>
                   <TrendingUp className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
@@ -198,7 +200,7 @@ export default function Allowances() {
                     {formatCurrency(totalAllowanceStats.avgCumulativeAttendance)}
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">
-                    Average lifetime attendance allowance
+                    {t('allowances.totalEarned')}
                   </p>
                 </CardContent>
               </Card>
@@ -209,48 +211,48 @@ export default function Allowances() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
           <Card className="lg:col-span-2" data-testid="card-monthly-allowances">
             <CardHeader>
-              <CardTitle>Monthly Allowance Breakdown</CardTitle>
-              <CardDescription>Standard rates for all MPs (Dewan Rakyat)</CardDescription>
+              <CardTitle>{t('allowances.breakdown')}</CardTitle>
+              <CardDescription>{t('allowances.monthly')}</CardDescription>
             </CardHeader>
             <CardContent>
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Allowance Type</TableHead>
-                    <TableHead className="text-right">Amount (RM)</TableHead>
+                    <TableHead>{t('allowances.types')}</TableHead>
+                    <TableHead className="text-right">{t('profile.amount')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   <TableRow>
-                    <TableCell className="font-medium">Base Salary (Dewan Rakyat)</TableCell>
+                    <TableCell className="font-medium">{t('allowances.baseAllowance')}</TableCell>
                     <TableCell className="text-right">{formatCurrency(ALLOWANCE_RATES.DEWAN_RAKYAT_SALARY)}</TableCell>
                   </TableRow>
                   <TableRow>
-                    <TableCell>Entertainment Allowance</TableCell>
+                    <TableCell>{t('allowances.entertainment')}</TableCell>
                     <TableCell className="text-right">{formatCurrency(ALLOWANCE_RATES.ENTERTAINMENT)}</TableCell>
                   </TableRow>
                   <TableRow>
-                    <TableCell>Special Payment (Non-Admin MP)</TableCell>
+                    <TableCell>{t('profile.baseAllowance')}</TableCell>
                     <TableCell className="text-right">{formatCurrency(ALLOWANCE_RATES.SPECIAL_NON_ADMIN_MP)}</TableCell>
                   </TableRow>
                   <TableRow>
-                    <TableCell>Fixed Travel Allowance</TableCell>
+                    <TableCell>{t('profile.baseAllowance')}</TableCell>
                     <TableCell className="text-right">{formatCurrency(ALLOWANCE_RATES.FIXED_TRAVEL)}</TableCell>
                   </TableRow>
                   <TableRow>
-                    <TableCell>Fuel Allowance</TableCell>
+                    <TableCell>{t('profile.baseAllowance')}</TableCell>
                     <TableCell className="text-right">{formatCurrency(ALLOWANCE_RATES.FUEL)}</TableCell>
                   </TableRow>
                   <TableRow>
-                    <TableCell>Toll Allowance</TableCell>
+                    <TableCell>{t('profile.baseAllowance')}</TableCell>
                     <TableCell className="text-right">{formatCurrency(ALLOWANCE_RATES.TOLL)}</TableCell>
                   </TableRow>
                   <TableRow>
-                    <TableCell>Driver Allowance</TableCell>
+                    <TableCell>{t('profile.baseAllowance')}</TableCell>
                     <TableCell className="text-right">{formatCurrency(ALLOWANCE_RATES.DRIVER)}</TableCell>
                   </TableRow>
                   <TableRow>
-                    <TableCell>Phone Bill Allowance</TableCell>
+                    <TableCell>{t('allowances.handphone')}</TableCell>
                     <TableCell className="text-right">{formatCurrency(ALLOWANCE_RATES.PHONE_BILL)}</TableCell>
                   </TableRow>
                 </TableBody>
@@ -261,57 +263,57 @@ export default function Allowances() {
           <div className="space-y-6">
             <Card data-testid="card-daily-allowances">
               <CardHeader>
-                <CardTitle>Attendance Allowances</CardTitle>
-                <CardDescription>Cumulative from sworn-in date</CardDescription>
+                <CardTitle>{t('allowances.parliamentSitting')}</CardTitle>
+                <CardDescription>{t('allowances.totalEarned')}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="flex justify-between items-center">
-                  <span className="text-sm">Parliamentary Sitting</span>
-                  <span className="font-semibold">{formatCurrency(ALLOWANCE_RATES.PARLIAMENT_SITTING_PER_DAY)}/day</span>
+                  <span className="text-sm">{t('allowances.parliamentSitting')}</span>
+                  <span className="font-semibold">{formatCurrency(ALLOWANCE_RATES.PARLIAMENT_SITTING_PER_DAY)}/{t('profile.day')}</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-sm">Government Meetings</span>
-                  <span className="font-semibold">{formatCurrency(ALLOWANCE_RATES.GOVERNMENT_MEETING_PER_DAY)}/day</span>
+                  <span className="text-sm">{t('allowances.baseAllowance')}</span>
+                  <span className="font-semibold">{formatCurrency(ALLOWANCE_RATES.GOVERNMENT_MEETING_PER_DAY)}/{t('profile.day')}</span>
                 </div>
                 <p className="text-xs text-muted-foreground pt-2">
-                  Total calculated from days attended since sworn in
+                  {t('allowances.totalEarned')}
                 </p>
               </CardContent>
             </Card>
 
             <Card data-testid="card-periodic-allowances">
               <CardHeader>
-                <CardTitle>Periodic Allowances</CardTitle>
-                <CardDescription>One-time or scheduled</CardDescription>
+                <CardTitle>{t('allowances.types')}</CardTitle>
+                <CardDescription>{t('allowances.yearly')}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="space-y-1">
                   <div className="flex justify-between items-center">
-                    <span className="text-sm">Handphone Purchase</span>
+                    <span className="text-sm">{t('allowances.handphone')}</span>
                     <span className="font-semibold">{formatCurrency(periodicAllowances.handphonePurchase)}</span>
                   </div>
-                  <p className="text-xs text-muted-foreground">Every 2 years</p>
+                  <p className="text-xs text-muted-foreground">{t('allowances.yearly')}</p>
                 </div>
                 <div className="space-y-1">
                   <div className="flex justify-between items-center">
-                    <span className="text-sm">Computer Purchase</span>
+                    <span className="text-sm">{t('allowances.computer')}</span>
                     <span className="font-semibold">{formatCurrency(periodicAllowances.computerPurchase)}</span>
                   </div>
-                  <p className="text-xs text-muted-foreground">One-time</p>
+                  <p className="text-xs text-muted-foreground">{t('allowances.yearly')}</p>
                 </div>
                 <div className="space-y-1">
                   <div className="flex justify-between items-center">
-                    <span className="text-sm">Black-tie Attire</span>
+                    <span className="text-sm">{t('allowances.dressWear')}</span>
                     <span className="font-semibold">{formatCurrency(periodicAllowances.blacktieAttire)}</span>
                   </div>
-                  <p className="text-xs text-muted-foreground">Every 3 years</p>
+                  <p className="text-xs text-muted-foreground">{t('allowances.yearly')}</p>
                 </div>
                 <div className="space-y-1">
                   <div className="flex justify-between items-center">
-                    <span className="text-sm">Ceremonial Attire</span>
+                    <span className="text-sm">{t('allowances.dressWear')}</span>
                     <span className="font-semibold">{formatCurrency(periodicAllowances.ceremonialAttire)}</span>
                   </div>
-                  <p className="text-xs text-muted-foreground">One-time</p>
+                  <p className="text-xs text-muted-foreground">{t('allowances.yearly')}</p>
                 </div>
               </CardContent>
             </Card>
@@ -322,15 +324,15 @@ export default function Allowances() {
           <CardHeader>
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div>
-                <CardTitle>Individual MP Allowances</CardTitle>
-                <CardDescription>Click on any MP to view their detailed profile</CardDescription>
+                <CardTitle>{t('allowances.breakdown')}</CardTitle>
+                <CardDescription>{t('allowances.viewDetails')}</CardDescription>
               </div>
               <div className="flex flex-col sm:flex-row gap-2">
                 <div className="relative flex-1 sm:w-64">
                   <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                   <Input
                     type="search"
-                    placeholder="Search MPs..."
+                    placeholder={t('allowances.searchPlaceholder')}
                     className="pl-8"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
@@ -374,13 +376,13 @@ export default function Allowances() {
                             <p className="font-semibold" data-testid={`text-monthly-allowance-${mp.id}`}>
                               {formatCurrency(allowance.totalMonthly)}
                             </p>
-                            <p className="text-xs text-muted-foreground">monthly recurring</p>
+                            <p className="text-xs text-muted-foreground">{t('allowances.monthly')}</p>
                           </div>
                           <div className="pt-1 border-t">
                             <p className="font-semibold text-green-600 dark:text-green-400" data-testid={`text-cumulative-allowance-${mp.id}`}>
                               {formatCurrency(allowance.totalCumulativeAttendance)}
                             </p>
-                            <p className="text-xs text-muted-foreground">cumulative attendance</p>
+                            <p className="text-xs text-muted-foreground">{t('allowances.totalEarned')}</p>
                           </div>
                         </div>
                         <ChevronRight className="h-5 w-5 text-muted-foreground" />
