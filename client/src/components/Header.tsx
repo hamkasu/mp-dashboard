@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Link, useLocation } from "wouter";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { useLanguage } from "@/i18n/LanguageContext";
 
 interface HeaderProps {
   onMenuClick?: () => void;
@@ -16,6 +17,7 @@ interface HeaderProps {
 
 export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
   const [location, setLocation] = useLocation();
+  const { t } = useLanguage();
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shadow-sm">
@@ -39,10 +41,10 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
             </div>
             <div className="flex flex-col">
               <h1 className="text-base md:text-lg font-bold tracking-tight">
-                Malaysian Parliament
+                {t('nav.malayParliament')}
               </h1>
               <p className="text-xs text-muted-foreground hidden sm:block">
-                Dewan Rakyat Dashboard
+                {t('nav.dewanRakyatDashboard')}
               </p>
             </div>
           </div>
@@ -57,7 +59,7 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
               className="gap-2"
             >
               <Home className="w-4 h-4" />
-              <span>MPs</span>
+              <span>{t('nav.mps')}</span>
             </Button>
           </Link>
           <Link href="/hansard">
@@ -68,7 +70,7 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
               className="gap-2"
             >
               <BookOpen className="w-4 h-4" />
-              <span>Hansard</span>
+              <span>{t('nav.hansard')}</span>
             </Button>
           </Link>
           <Link href="/parliament-guide">
@@ -79,7 +81,7 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
               className="gap-2"
             >
               <GraduationCap className="w-4 h-4" />
-              <span>How It Works</span>
+              <span>{t('nav.parliamentGuide')}</span>
             </Button>
           </Link>
           <Link href="/constitution">
@@ -90,7 +92,7 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
               className="gap-2"
             >
               <Scale className="w-4 h-4" />
-              <span>Constitution</span>
+              <span>{t('nav.constitution')}</span>
             </Button>
           </Link>
           <Link href="/hansard-admin">
@@ -101,7 +103,7 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
               className="gap-2"
             >
               <Shield className="w-4 h-4" />
-              <span>Admin</span>
+              <span>{t('nav.admin')}</span>
             </Button>
           </Link>
           <DropdownMenu>
@@ -113,7 +115,7 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
                 className="gap-2"
               >
                 <BarChart3 className="w-4 h-4" />
-                <span>Analysis</span>
+                <span>{t('nav.analysis')}</span>
                 <ChevronDown className="w-3 h-3 ml-1" />
               </Button>
             </DropdownMenuTrigger>
@@ -123,42 +125,42 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
                 data-testid="nav-activity"
               >
                 <FileText className="w-4 h-4 mr-2" />
-                <span>Activity</span>
+                <span>{t('nav.activity')}</span>
               </DropdownMenuItem>
               <DropdownMenuItem
                 onSelect={() => setLocation("/attendance")}
                 data-testid="nav-attendance"
               >
                 <UserCheck className="w-4 h-4 mr-2" />
-                <span>Attendance</span>
+                <span>{t('nav.attendance')}</span>
               </DropdownMenuItem>
               <DropdownMenuItem
                 onSelect={() => setLocation("/hansard-analysis")}
                 data-testid="nav-hansard-analysis"
               >
                 <BarChart3 className="w-4 h-4 mr-2" />
-                <span>Hansard Analysis</span>
+                <span>{t('nav.hansardAnalysis')}</span>
               </DropdownMenuItem>
-              <DropdownMenuItem 
+              <DropdownMenuItem
                 onSelect={() => setLocation("/analytics")}
                 data-testid="nav-analytics"
               >
                 <TrendingUp className="w-4 h-4 mr-2" />
-                <span>Visitor Analytics</span>
+                <span>{t('nav.visitorAnalytics')}</span>
               </DropdownMenuItem>
-              <DropdownMenuItem 
+              <DropdownMenuItem
                 onSelect={() => setLocation("/allowances")}
                 data-testid="nav-allowances"
               >
                 <Calculator className="w-4 h-4 mr-2" />
-                <span>Allowances</span>
+                <span>{t('nav.allowances')}</span>
               </DropdownMenuItem>
-              <DropdownMenuItem 
+              <DropdownMenuItem
                 onSelect={() => setLocation("/disclaimer")}
                 data-testid="nav-disclaimer"
               >
                 <AlertCircle className="w-4 h-4 mr-2" />
-                <span>Disclaimer</span>
+                <span>{t('nav.disclaimer')}</span>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -170,7 +172,7 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
               className="gap-2"
             >
               <ExternalLink className="w-4 h-4" />
-              <span>KAWANKU</span>
+              <span>{t('nav.kawanku')}</span>
             </Button>
           </a>
         </nav>
@@ -184,7 +186,7 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
               data-testid="button-search"
             >
               <Search className="h-4 w-4" />
-              <span className="hidden sm:inline">Search MPs...</span>
+              <span className="hidden sm:inline">{t('nav.searchMps')}</span>
               <kbd className="hidden md:inline-flex ml-auto h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium">
                 <span className="text-xs">⌘</span>K
               </kbd>

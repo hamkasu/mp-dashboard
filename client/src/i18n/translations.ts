@@ -25,6 +25,7 @@ export const translations = {
       or: "or",
       of: "of",
       views: "views",
+      in: "in",
     },
 
     // Navigation & Header
@@ -35,6 +36,52 @@ export const translations = {
       hansard: "Hansard",
       allowances: "Allowances",
       backToDashboard: "Back to Dashboard",
+      parliamentGuide: "How It Works",
+      constitution: "Constitution",
+      admin: "Admin",
+      analysis: "Analysis",
+      activity: "Activity",
+      attendance: "Attendance",
+      hansardAnalysis: "Hansard Analysis",
+      visitorAnalytics: "Visitor Analytics",
+      disclaimer: "Disclaimer",
+      kawanku: "KAWANKU",
+      searchMps: "Search MPs...",
+      malayParliament: "Malaysian Parliament",
+      dewanRakyatDashboard: "Dewan Rakyat Dashboard",
+    },
+
+    // Filters & Sorting
+    filters: {
+      title: "Filters",
+      sortBy: "Sort By",
+      sortName: "Name (A-Z)",
+      sortBestAttendance: "Best Attendance",
+      sortWorstAttendance: "Worst Attendance",
+      sortMostSpeeches: "Most Speeches",
+      sortFewestSpeeches: "Fewest Speeches",
+      party: "Party",
+      state: "State",
+      selected: "selected",
+      clearAllFilters: "Clear All Filters",
+    },
+
+    // MP Card
+    mpCard: {
+      totalEarned: "Total earned",
+      monthly: "Monthly",
+      yearly: "Yearly",
+      sessions: "sessions",
+      hansardAttendance: "Hansard attendance",
+      sinceSwornIn: "since sworn in",
+      parliamentSittingAllowance: "Parliament sitting allowance",
+      speeches: "speeches",
+      speakesIn: "speeches in",
+      spokeIn: "Spoke in",
+      hansardParticipation: "Hansard participation",
+      avg: "avg",
+      speechesPerSession: "speeches/session",
+      hansardSpeakingParticipation: "Hansard speaking participation",
     },
 
     // Home Page
@@ -289,6 +336,7 @@ export const translations = {
       or: "atau",
       of: "daripada",
       views: "tontonan",
+      in: "dalam",
     },
 
     // Navigation & Header / Navigasi & Pengepala
@@ -299,6 +347,52 @@ export const translations = {
       hansard: "Hansard",
       allowances: "Elaun",
       backToDashboard: "Kembali ke Papan Pemuka",
+      parliamentGuide: "Cara Ia Berfungsi",
+      constitution: "Perlembagaan",
+      admin: "Pentadbir",
+      analysis: "Analisis",
+      activity: "Aktiviti",
+      attendance: "Kehadiran",
+      hansardAnalysis: "Analisis Hansard",
+      visitorAnalytics: "Analitik Pelawat",
+      disclaimer: "Penafian",
+      kawanku: "KAWANKU",
+      searchMps: "Cari Ahli Parlimen...",
+      malayParliament: "Parlimen Malaysia",
+      dewanRakyatDashboard: "Papan Pemuka Dewan Rakyat",
+    },
+
+    // Filters & Sorting / Penapis & Isihan
+    filters: {
+      title: "Penapis",
+      sortBy: "Isih Mengikut",
+      sortName: "Nama (A-Z)",
+      sortBestAttendance: "Kehadiran Terbaik",
+      sortWorstAttendance: "Kehadiran Terburuk",
+      sortMostSpeeches: "Ucapan Terbanyak",
+      sortFewestSpeeches: "Ucapan Paling Sedikit",
+      party: "Parti",
+      state: "Negeri",
+      selected: "dipilih",
+      clearAllFilters: "Kosongkan Semua Penapis",
+    },
+
+    // MP Card / Kad Ahli Parlimen
+    mpCard: {
+      totalEarned: "Jumlah perolehan",
+      monthly: "Bulanan",
+      yearly: "Tahunan",
+      sessions: "sidang",
+      hansardAttendance: "Kehadiran Hansard",
+      sinceSwornIn: "sejak mengangkat sumpah",
+      parliamentSittingAllowance: "Elaun mesyuarat parlimen",
+      speeches: "ucapan",
+      speakesIn: "ucapan dalam",
+      spokeIn: "Berucap dalam",
+      hansardParticipation: "Penyertaan Hansard",
+      avg: "purata",
+      speechesPerSession: "ucapan/sidang",
+      hansardSpeakingParticipation: "Penyertaan ucapan Hansard",
     },
 
     // Home Page / Laman Utama

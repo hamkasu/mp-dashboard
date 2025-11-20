@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import { useLanguage } from "@/i18n/LanguageContext";
 
 type SortOption = "name" | "attendance-best" | "attendance-worst" | "speeches-most" | "speeches-fewest";
 
@@ -35,6 +36,7 @@ export function FilterSidebar({
   isMobile,
   onClose,
 }: FilterSidebarProps) {
+  const { t } = useLanguage();
   const hasActiveFilters = selectedParties.length > 0 || selectedStates.length > 0;
 
   return (
@@ -42,7 +44,7 @@ export function FilterSidebar({
       {isMobile && (
         <>
           <div className="flex items-center justify-between p-4">
-            <h2 className="text-lg font-semibold">Filters</h2>
+            <h2 className="text-lg font-semibold">{t('filters.title')}</h2>
             <Button variant="ghost" size="icon" onClick={onClose} data-testid="button-close-filters">
               <X className="h-4 w-4" />
             </Button>
@@ -56,37 +58,37 @@ export function FilterSidebar({
           {/* Sort Options */}
           <div className="space-y-3">
             <h3 className="text-sm font-medium uppercase tracking-wide">
-              Sort By
+              {t('filters.sortBy')}
             </h3>
             <RadioGroup value={sortBy} onValueChange={(value) => onSortChange(value as SortOption)}>
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="name" id="sort-name" data-testid="radio-sort-name" />
                 <Label htmlFor="sort-name" className="text-sm font-normal cursor-pointer">
-                  Name (A-Z)
+                  {t('filters.sortName')}
                 </Label>
               </div>
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="attendance-best" id="sort-attendance-best" data-testid="radio-sort-attendance-best" />
                 <Label htmlFor="sort-attendance-best" className="text-sm font-normal cursor-pointer">
-                  Best Attendance
+                  {t('filters.sortBestAttendance')}
                 </Label>
               </div>
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="attendance-worst" id="sort-attendance-worst" data-testid="radio-sort-attendance-worst" />
                 <Label htmlFor="sort-attendance-worst" className="text-sm font-normal cursor-pointer">
-                  Worst Attendance
+                  {t('filters.sortWorstAttendance')}
                 </Label>
               </div>
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="speeches-most" id="sort-speeches-most" data-testid="radio-sort-speeches-most" />
                 <Label htmlFor="sort-speeches-most" className="text-sm font-normal cursor-pointer">
-                  Most Speeches
+                  {t('filters.sortMostSpeeches')}
                 </Label>
               </div>
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="speeches-fewest" id="sort-speeches-fewest" data-testid="radio-sort-speeches-fewest" />
                 <Label htmlFor="sort-speeches-fewest" className="text-sm font-normal cursor-pointer">
-                  Fewest Speeches
+                  {t('filters.sortFewestSpeeches')}
                 </Label>
               </div>
             </RadioGroup>
@@ -98,11 +100,11 @@ export function FilterSidebar({
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-medium uppercase tracking-wide">
-                Party
+                {t('filters.party')}
               </h3>
               {selectedParties.length > 0 && (
                 <span className="text-xs text-muted-foreground">
-                  {selectedParties.length} selected
+                  {selectedParties.length} {t('filters.selected')}
                 </span>
               )}
             </div>
@@ -133,11 +135,11 @@ export function FilterSidebar({
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-medium uppercase tracking-wide">
-                State
+                {t('filters.state')}
               </h3>
               {selectedStates.length > 0 && (
                 <span className="text-xs text-muted-foreground">
-                  {selectedStates.length} selected
+                  {selectedStates.length} {t('filters.selected')}
                 </span>
               )}
             </div>
@@ -171,7 +173,7 @@ export function FilterSidebar({
           disabled={!hasActiveFilters}
           data-testid="button-clear-filters"
         >
-          Clear All Filters
+          {t('filters.clearAllFilters')}
         </Button>
       </div>
     </div>
