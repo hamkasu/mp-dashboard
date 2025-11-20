@@ -244,7 +244,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Calculate cumulative costs for all MPs since sworn in
       const now = new Date();
-      let totalCumulativeMonths = 0;
       const totalCumulativeCosts = mps.reduce((sum, mp) => {
         const swornInDate = new Date(mp.swornInDate);
         const monthsSinceSwornIn = Math.max(
@@ -252,9 +251,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           (now.getFullYear() - swornInDate.getFullYear()) * 12 +
           (now.getMonth() - swornInDate.getMonth())
         );
-
-        // Accumulate total months
-        totalCumulativeMonths += monthsSinceSwornIn;
 
         // Base salary and allowances per month
         const DEWAN_RAKYAT_SALARY = 25700;
@@ -284,7 +280,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         stateCount: uniqueStates.size,
         averageAttendanceRate: Math.round(averageAttendanceRate * 10) / 10,
         totalCumulativeCosts: Math.round(totalCumulativeCosts),
-        totalCumulativeMonths,
       });
     } catch (error) {
       console.error("Error calculating stats:", error);
