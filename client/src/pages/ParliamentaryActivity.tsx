@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useLanguage } from "@/i18n/LanguageContext";
 import { Header } from "@/components/Header";
 import { SearchDialog } from "@/components/SearchDialog";
 import { AddActivityDialog } from "@/components/AddActivityDialog";
@@ -15,6 +16,7 @@ import { format } from "date-fns";
 import type { Mp, LegislativeProposal, DebateParticipation, ParliamentaryQuestion, CourtCase, SprmInvestigation } from "@shared/schema";
 
 export default function ParliamentaryActivity() {
+  const { t } = useLanguage();
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("legislation");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -128,18 +130,18 @@ export default function ParliamentaryActivity() {
       <main className="container mx-auto px-4 py-8 max-w-7xl">
         <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
           <div>
-            <h1 className="text-3xl font-bold mb-2">Parliamentary Activity</h1>
+            <h1 className="text-3xl font-bold mb-2">{t('activity.title')}</h1>
             <p className="text-muted-foreground">
-              Track legislation, debates, and questions from Malaysian Parliament
+              {t('activity.subtitle')}
             </p>
           </div>
-          <Button 
-            data-testid="button-add-activity" 
+          <Button
+            data-testid="button-add-activity"
             variant="default"
             onClick={() => setDialogOpen(true)}
           >
             <Plus className="w-4 h-4 mr-2" />
-            Add Activity
+            {t('activity.addActivity')}
           </Button>
         </div>
 
@@ -147,7 +149,7 @@ export default function ParliamentaryActivity() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
             data-testid="input-search"
-            placeholder="Search by MP name, title, topic, or keyword..."
+            placeholder={t('activity.search')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-9"
@@ -158,23 +160,23 @@ export default function ParliamentaryActivity() {
           <TabsList className="grid w-full grid-cols-5 gap-2">
             <TabsTrigger value="legislation" data-testid="tab-legislation">
               <FileText className="w-4 h-4 mr-2" />
-              Legislation ({filteredProposals.length})
+              {t('activity.legislation')} ({filteredProposals.length})
             </TabsTrigger>
             <TabsTrigger value="debates" data-testid="tab-debates">
               <MessageSquare className="w-4 h-4 mr-2" />
-              Debates ({filteredDebates.length})
+              {t('activity.debates')} ({filteredDebates.length})
             </TabsTrigger>
             <TabsTrigger value="questions" data-testid="tab-questions">
               <HelpCircle className="w-4 h-4 mr-2" />
-              Questions ({filteredQuestions.length})
+              {t('activity.questions')} ({filteredQuestions.length})
             </TabsTrigger>
             <TabsTrigger value="court-cases" data-testid="tab-court-cases">
               <Scale className="w-4 h-4 mr-2" />
-              Court Cases ({filteredCourtCases.length})
+              {t('activity.courtCases')} ({filteredCourtCases.length})
             </TabsTrigger>
             <TabsTrigger value="sprm" data-testid="tab-sprm">
               <AlertTriangle className="w-4 h-4 mr-2" />
-              SPRM ({filteredSprmInvestigations.length})
+              {t('activity.sprm')} ({filteredSprmInvestigations.length})
             </TabsTrigger>
           </TabsList>
 
@@ -182,14 +184,14 @@ export default function ParliamentaryActivity() {
             {proposalsLoading ? (
               <Card>
                 <CardContent className="p-6">
-                  <p className="text-center text-muted-foreground">Loading legislative proposals...</p>
+                  <p className="text-center text-muted-foreground">{t('activity.loadingProposals')}</p>
                 </CardContent>
               </Card>
             ) : filteredProposals.length === 0 ? (
               <Card>
                 <CardContent className="p-6">
                   <p className="text-center text-muted-foreground">
-                    {searchQuery ? "No legislative proposals found matching your search." : "No legislative proposals yet."}
+                    {searchQuery ? t('activity.noProposalsSearch') : t('activity.noProposals')}
                   </p>
                 </CardContent>
               </Card>
@@ -230,12 +232,12 @@ export default function ParliamentaryActivity() {
                       
                       <div className="flex flex-wrap items-center gap-6 text-sm text-muted-foreground">
                         <div>
-                          <span className="font-medium">Proposed:</span>{" "}
+                          <span className="font-medium">{t('activity.proposed')}:</span>{" "}
                           {format(new Date(proposal.dateProposed), "dd MMM yyyy")}
                         </div>
                         {proposal.outcome && (
                           <div>
-                            <span className="font-medium">Outcome:</span> {proposal.outcome}
+                            <span className="font-medium">{t('activity.outcome')}:</span> {proposal.outcome}
                           </div>
                         )}
                         {proposal.hansardReference && (
@@ -246,7 +248,7 @@ export default function ParliamentaryActivity() {
                             className="gap-2"
                           >
                             <ExternalLink className="w-3 h-3" />
-                            View Hansard
+                            {t('activity.viewHansard')}
                           </Button>
                         )}
                       </div>
@@ -261,14 +263,14 @@ export default function ParliamentaryActivity() {
             {debatesLoading ? (
               <Card>
                 <CardContent className="p-6">
-                  <p className="text-center text-muted-foreground">Loading debate participations...</p>
+                  <p className="text-center text-muted-foreground">{t('activity.loadingDebates')}</p>
                 </CardContent>
               </Card>
             ) : filteredDebates.length === 0 ? (
               <Card>
                 <CardContent className="p-6">
                   <p className="text-center text-muted-foreground">
-                    {searchQuery ? "No debate participations found matching your search." : "No debate participations yet."}
+                    {searchQuery ? t('activity.noDebatesSearch') : t('activity.noDebates')}
                   </p>
                 </CardContent>
               </Card>
@@ -300,7 +302,7 @@ export default function ParliamentaryActivity() {
                       )}
                       
                       <div className="space-y-2">
-                        <p className="text-sm font-medium">Contribution:</p>
+                        <p className="text-sm font-medium">{t('activity.contribution')}:</p>
                         <p className="text-sm text-muted-foreground">{debate.contribution}</p>
                       </div>
 
@@ -316,7 +318,7 @@ export default function ParliamentaryActivity() {
                             className="gap-2"
                           >
                             <ExternalLink className="w-3 h-3" />
-                            View Hansard
+                            {t('activity.viewHansard')}
                           </Button>
                         )}
                       </div>
@@ -331,14 +333,14 @@ export default function ParliamentaryActivity() {
             {questionsLoading ? (
               <Card>
                 <CardContent className="p-6">
-                  <p className="text-center text-muted-foreground">Loading parliamentary questions...</p>
+                  <p className="text-center text-muted-foreground">{t('activity.loadingQuestions')}</p>
                 </CardContent>
               </Card>
             ) : filteredQuestions.length === 0 ? (
               <Card>
                 <CardContent className="p-6">
                   <p className="text-center text-muted-foreground">
-                    {searchQuery ? "No parliamentary questions found matching your search." : "No parliamentary questions yet."}
+                    {searchQuery ? t('activity.noQuestionsSearch') : t('activity.noQuestions')}
                   </p>
                 </CardContent>
               </Card>
@@ -380,13 +382,13 @@ export default function ParliamentaryActivity() {
                       )}
                       
                       <div className="space-y-2">
-                        <p className="text-sm font-medium">Question:</p>
+                        <p className="text-sm font-medium">{t('activity.question')}:</p>
                         <p className="text-sm">{question.questionText}</p>
                       </div>
 
                       {question.answerText && (
                         <div className="space-y-2 bg-muted p-4 rounded-md">
-                          <p className="text-sm font-medium">Answer:</p>
+                          <p className="text-sm font-medium">{t('activity.answer')}:</p>
                           <p className="text-sm text-muted-foreground">{question.answerText}</p>
                         </div>
                       )}
@@ -399,7 +401,7 @@ export default function ParliamentaryActivity() {
                           className="gap-2"
                         >
                           <ExternalLink className="w-3 h-3" />
-                          View Hansard
+                          {t('activity.viewHansard')}
                         </Button>
                       )}
                     </CardContent>
@@ -413,14 +415,14 @@ export default function ParliamentaryActivity() {
             {courtCasesLoading ? (
               <Card>
                 <CardContent className="p-6">
-                  <p className="text-center text-muted-foreground">Loading court cases...</p>
+                  <p className="text-center text-muted-foreground">{t('activity.loadingCourtCases')}</p>
                 </CardContent>
               </Card>
             ) : filteredCourtCases.length === 0 ? (
               <Card>
                 <CardContent className="p-6">
                   <p className="text-center text-muted-foreground">
-                    {searchQuery ? "No court cases found matching your search." : "No court cases yet."}
+                    {searchQuery ? t('activity.noCourtCasesSearch') : t('activity.noCourtCases')}
                   </p>
                 </CardContent>
               </Card>
@@ -439,7 +441,7 @@ export default function ParliamentaryActivity() {
                             <Badge variant="secondary">{courtCase.courtLevel}</Badge>
                           </div>
                           <CardTitle className="text-xl mb-2">{courtCase.title}</CardTitle>
-                          <CardDescription>Case #{courtCase.caseNumber}</CardDescription>
+                          <CardDescription>{t('activity.caseNumber')} #{courtCase.caseNumber}</CardDescription>
                         </div>
                       </div>
                     </CardHeader>
@@ -460,20 +462,20 @@ export default function ParliamentaryActivity() {
                       )}
                       
                       <div className="space-y-2">
-                        <p className="text-sm font-medium">Charges:</p>
+                        <p className="text-sm font-medium">{t('activity.charges')}:</p>
                         <p className="text-sm text-muted-foreground">{courtCase.charges}</p>
                       </div>
 
                       {courtCase.outcome && (
                         <div className="space-y-2 bg-muted p-4 rounded-md">
-                          <p className="text-sm font-medium">Outcome:</p>
+                          <p className="text-sm font-medium">{t('activity.outcome')}:</p>
                           <p className="text-sm text-muted-foreground">{courtCase.outcome}</p>
                         </div>
                       )}
 
                       <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
                         <div>
-                          <span className="font-medium">Filed:</span>{" "}
+                          <span className="font-medium">{t('activity.filed')}:</span>{" "}
                           {format(new Date(courtCase.filingDate), "dd MMM yyyy")}
                         </div>
                       </div>
@@ -488,14 +490,14 @@ export default function ParliamentaryActivity() {
             {sprmLoading ? (
               <Card>
                 <CardContent className="p-6">
-                  <p className="text-center text-muted-foreground">Loading SPRM investigations...</p>
+                  <p className="text-center text-muted-foreground">{t('activity.loadingSprm')}</p>
                 </CardContent>
               </Card>
             ) : filteredSprmInvestigations.length === 0 ? (
               <Card>
                 <CardContent className="p-6">
                   <p className="text-center text-muted-foreground">
-                    {searchQuery ? "No SPRM investigations found matching your search." : "No SPRM investigations yet."}
+                    {searchQuery ? t('activity.noSprmSearch') : t('activity.noSprm')}
                   </p>
                 </CardContent>
               </Card>
@@ -512,7 +514,7 @@ export default function ParliamentaryActivity() {
                               {investigation.status}
                             </Badge>
                             {investigation.caseNumber && (
-                              <Badge variant="secondary">Case #{investigation.caseNumber}</Badge>
+                              <Badge variant="secondary">{t('activity.caseNumber')} #{investigation.caseNumber}</Badge>
                             )}
                           </div>
                           <CardTitle className="text-xl mb-2">{investigation.title}</CardTitle>
@@ -536,25 +538,25 @@ export default function ParliamentaryActivity() {
                       )}
                       
                       <div className="space-y-2">
-                        <p className="text-sm font-medium">Allegations:</p>
+                        <p className="text-sm font-medium">{t('activity.allegations')}:</p>
                         <p className="text-sm text-muted-foreground">{investigation.charges}</p>
                       </div>
 
                       {investigation.outcome && (
                         <div className="space-y-2 bg-muted p-4 rounded-md">
-                          <p className="text-sm font-medium">Outcome:</p>
+                          <p className="text-sm font-medium">{t('activity.outcome')}:</p>
                           <p className="text-sm text-muted-foreground">{investigation.outcome}</p>
                         </div>
                       )}
 
                       <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
                         <div>
-                          <span className="font-medium">Started:</span>{" "}
+                          <span className="font-medium">{t('activity.started')}:</span>{" "}
                           {format(new Date(investigation.startDate), "dd MMM yyyy")}
                         </div>
                         {investigation.endDate && (
                           <div>
-                            <span className="font-medium">Ended:</span>{" "}
+                            <span className="font-medium">{t('activity.ended')}:</span>{" "}
                             {format(new Date(investigation.endDate), "dd MMM yyyy")}
                           </div>
                         )}

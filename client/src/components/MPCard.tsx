@@ -5,6 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import type { Mp } from "@shared/schema";
 import { Link } from "wouter";
 import { calculateTotalSalary, formatCurrency } from "@/lib/utils";
+import { useLanguage } from "@/i18n/LanguageContext";
 
 interface MPCardProps {
   mp: Mp;
@@ -36,6 +37,7 @@ function getSpeakingColor(speakingRate: number): string {
 }
 
 export function MPCard({ mp }: MPCardProps) {
+  const { t } = useLanguage();
   const initials = mp.name
     .split(" ")
     .map((n) => n[0])
@@ -121,16 +123,16 @@ export function MPCard({ mp }: MPCardProps) {
                   <p className="font-semibold text-green-600 dark:text-green-400" data-testid={`text-total-earned-${mp.id}`}>
                     {formatCurrency(totalSalary)}
                   </p>
-                  <p className="text-xs text-muted-foreground">Total earned</p>
+                  <p className="text-xs text-muted-foreground">{t('mpCard.totalEarned')}</p>
                 </div>
                 <div className="grid grid-cols-2 gap-2 pt-1 border-t border-muted">
                   <div>
                     <p className="font-medium" data-testid={`text-monthly-allowance-${mp.id}`}>{formatCurrency(monthlySalary)}</p>
-                    <p className="text-xs text-muted-foreground">Monthly</p>
+                    <p className="text-xs text-muted-foreground">{t('mpCard.monthly')}</p>
                   </div>
                   <div>
                     <p className="font-medium" data-testid={`text-yearly-allowance-${mp.id}`}>{formatCurrency(yearlySalary)}</p>
-                    <p className="text-xs text-muted-foreground">Yearly</p>
+                    <p className="text-xs text-muted-foreground">{t('mpCard.yearly')}</p>
                   </div>
                 </div>
               </div>
@@ -140,29 +142,29 @@ export function MPCard({ mp }: MPCardProps) {
               <Calendar className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
               <div className="flex-1 min-w-0">
                 <p className={`font-semibold ${attendanceColor}`} data-testid={`text-attendance-${mp.id}`}>
-                  {sessionsAttended}/{totalSessions} sessions
+                  {sessionsAttended}/{totalSessions} {t('mpCard.sessions')}
                 </p>
-                <p className="text-xs text-muted-foreground">Hansard attendance ({attendanceRate.toFixed(1)}% since sworn in)</p>
+                <p className="text-xs text-muted-foreground">{t('mpCard.hansardAttendance')} ({attendanceRate.toFixed(1)}% {t('mpCard.sinceSwornIn')})</p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  {formatCurrency(mp.parliamentSittingAllowance * sessionsAttended)} - Parliament sitting allowance
+                  {formatCurrency(mp.parliamentSittingAllowance * sessionsAttended)} - {t('mpCard.parliamentSittingAllowance')}
                 </p>
               </div>
             </div>
-            
+
             <div className="flex items-start gap-2">
               <Mic className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
               <div className="flex-1 min-w-0">
                 <p className={`font-semibold ${speakingColor}`} data-testid={`text-speaking-${mp.id}`}>
                   {mp.totalSpeechInstances > 0 ? (
-                    <>{mp.totalSpeechInstances} speeches in {mp.hansardSessionsSpoke} sessions</>
+                    <>{mp.totalSpeechInstances} {t('mpCard.speeches')} {t('common.in')} {mp.hansardSessionsSpoke} {t('mpCard.sessions')}</>
                   ) : (
-                    <>Spoke in {mp.hansardSessionsSpoke} sessions</>
+                    <>{t('mpCard.spokeIn')} {mp.hansardSessionsSpoke} {t('mpCard.sessions')}</>
                   )}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  {mp.totalSpeechInstances > 0 
-                    ? `Hansard participation (avg ${(mp.totalSpeechInstances / (mp.hansardSessionsSpoke || 1)).toFixed(1)} speeches/session)`
-                    : 'Hansard speaking participation'
+                  {mp.totalSpeechInstances > 0
+                    ? `${t('mpCard.hansardParticipation')} (${t('mpCard.avg')} ${(mp.totalSpeechInstances / (mp.hansardSessionsSpoke || 1)).toFixed(1)} ${t('mpCard.speechesPerSession')})`
+                    : t('mpCard.hansardSpeakingParticipation')
                   }
                 </p>
               </div>

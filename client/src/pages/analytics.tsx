@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Users, Globe, FileText, TrendingUp } from "lucide-react";
 import { format } from "date-fns";
 import { getQueryFn } from "@/lib/queryClient";
+import { useLanguage } from "@/i18n/LanguageContext";
 
 interface AnalyticsSummary {
   totalVisits: number;
@@ -30,6 +31,8 @@ interface TimelineData {
 }
 
 export default function Analytics() {
+  const { t } = useLanguage();
+
   // Check if user is logged in
   const { data: user } = useQuery<{ id: number; username: string; role: string } | null>({
     queryKey: ["/api/user"],
@@ -54,7 +57,7 @@ export default function Analytics() {
       <div className="flex items-center justify-center h-full">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4" />
-          <p className="text-muted-foreground">Loading analytics...</p>
+          <p className="text-muted-foreground">{t('analytics.loadingAnalytics')}</p>
         </div>
       </div>
     );
@@ -64,10 +67,10 @@ export default function Analytics() {
     <div className="container mx-auto p-6 space-y-6">
       <div>
         <h1 className="text-3xl font-bold mb-2" data-testid="text-analytics-title">
-          Visitor Analytics
+          {t('analytics.title')}
         </h1>
         <p className="text-muted-foreground">
-          Track and monitor website traffic from around the world
+          {t('analytics.subtitle')}
         </p>
       </div>
 
@@ -75,53 +78,53 @@ export default function Analytics() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card data-testid="card-total-visits">
           <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Visits</CardTitle>
+            <CardTitle className="text-sm font-medium">{t('analytics.totalVisits')}</CardTitle>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold" data-testid="text-total-visits">
               {summary?.totalVisits.toLocaleString() || 0}
             </div>
-            <p className="text-xs text-muted-foreground">All time page views</p>
+            <p className="text-xs text-muted-foreground">{t('analytics.allTimePageViews')}</p>
           </CardContent>
         </Card>
 
         <Card data-testid="card-unique-visitors">
           <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Unique Visitors</CardTitle>
+            <CardTitle className="text-sm font-medium">{t('analytics.uniqueVisitors')}</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold" data-testid="text-unique-visitors">
               {summary?.uniqueVisitors.toLocaleString() || 0}
             </div>
-            <p className="text-xs text-muted-foreground">Distinct IP addresses</p>
+            <p className="text-xs text-muted-foreground">{t('analytics.distinctIpAddresses')}</p>
           </CardContent>
         </Card>
 
         <Card data-testid="card-countries">
           <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Countries</CardTitle>
+            <CardTitle className="text-sm font-medium">{t('analytics.countries')}</CardTitle>
             <Globe className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold" data-testid="text-countries-count">
               {summary?.topCountries.length || 0}
             </div>
-            <p className="text-xs text-muted-foreground">Geographic reach</p>
+            <p className="text-xs text-muted-foreground">{t('analytics.geographicReach')}</p>
           </CardContent>
         </Card>
 
         <Card data-testid="card-pages">
           <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Top Pages</CardTitle>
+            <CardTitle className="text-sm font-medium">{t('analytics.topPages')}</CardTitle>
             <FileText className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold" data-testid="text-pages-count">
               {summary?.topPages.length || 0}
             </div>
-            <p className="text-xs text-muted-foreground">Most visited</p>
+            <p className="text-xs text-muted-foreground">{t('analytics.mostVisited')}</p>
           </CardContent>
         </Card>
       </div>
@@ -130,8 +133,8 @@ export default function Analytics() {
       {timeline && timeline.length > 0 && (
         <Card data-testid="card-timeline">
           <CardHeader>
-            <CardTitle>Visits Over Time</CardTitle>
-            <CardDescription>Daily visitor count for the last 7 days</CardDescription>
+            <CardTitle>{t('analytics.visitsOverTime')}</CardTitle>
+            <CardDescription>{t('analytics.dailyVisitorCount')}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
@@ -164,8 +167,8 @@ export default function Analytics() {
         {/* Top Countries */}
         <Card data-testid="card-top-countries">
           <CardHeader>
-            <CardTitle>Top Countries</CardTitle>
-            <CardDescription>Visitors by country</CardDescription>
+            <CardTitle>{t('analytics.topCountries')}</CardTitle>
+            <CardDescription>{t('analytics.visitorsByCountry')}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
@@ -173,14 +176,14 @@ export default function Analytics() {
                 <div key={country.country} className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Globe className="h-4 w-4 text-muted-foreground" />
-                    <span className="font-medium">{country.country || "Unknown"}</span>
+                    <span className="font-medium">{country.country || t('analytics.unknown')}</span>
                   </div>
                   <span className="text-muted-foreground">{country.count.toLocaleString()}</span>
                 </div>
               ))}
               {!summary?.topCountries.length && (
                 <p className="text-sm text-muted-foreground text-center py-4">
-                  No country data yet
+                  {t('analytics.noCountryData')}
                 </p>
               )}
             </div>
@@ -190,8 +193,8 @@ export default function Analytics() {
         {/* Top Pages */}
         <Card data-testid="card-top-pages">
           <CardHeader>
-            <CardTitle>Top Pages</CardTitle>
-            <CardDescription>Most visited pages</CardDescription>
+            <CardTitle>{t('analytics.topPages')}</CardTitle>
+            <CardDescription>{t('analytics.mostVisitedPages')}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
@@ -208,7 +211,7 @@ export default function Analytics() {
               ))}
               {!summary?.topPages.length && (
                 <p className="text-sm text-muted-foreground text-center py-4">
-                  No page data yet
+                  {t('analytics.noPageData')}
                 </p>
               )}
             </div>
@@ -220,8 +223,8 @@ export default function Analytics() {
       {user && (
         <Card data-testid="card-recent-visits">
           <CardHeader>
-            <CardTitle>Recent Visits</CardTitle>
-            <CardDescription>Latest visitor activity</CardDescription>
+            <CardTitle>{t('analytics.recentVisits')}</CardTitle>
+            <CardDescription>{t('analytics.latestVisitorActivity')}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
@@ -255,7 +258,7 @@ export default function Analytics() {
               ))}
               {!recentVisits?.length && (
                 <p className="text-sm text-muted-foreground text-center py-4">
-                  No recent visits yet
+                  {t('analytics.noRecentVisits')}
                 </p>
               )}
             </div>

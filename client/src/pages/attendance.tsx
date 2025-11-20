@@ -14,6 +14,7 @@ import { Calendar, ChevronDown, ChevronUp, UserX, Users, TrendingDown, MapPin, H
 import type { Mp } from "@shared/schema";
 import { ConstituencyAttendance } from "@/components/ConstituencyAttendance";
 import { ConstituencyAttendanceHistory } from "@/components/ConstituencyAttendanceHistory";
+import { useLanguage } from "@/i18n/LanguageContext";
 
 interface AttendanceSession {
   id: string;
@@ -44,6 +45,7 @@ interface AttendanceReport {
 }
 
 export default function AttendancePage() {
+  const { t } = useLanguage();
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [selectedParty, setSelectedParty] = useState("all");
@@ -105,7 +107,7 @@ export default function AttendancePage() {
       <>
         <Header />
         <div className="flex items-center justify-center h-full">
-          <div className="text-muted-foreground">Loading attendance report...</div>
+          <div className="text-muted-foreground">{t('attendance.loadingReport')}</div>
         </div>
       </>
     );
@@ -116,9 +118,9 @@ export default function AttendancePage() {
       <Header />
       <div className="container mx-auto p-6 space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">MP Attendance Report</h1>
+        <h1 className="text-3xl font-bold">{t('attendance.title')}</h1>
         <p className="text-muted-foreground mt-2">
-          Track which MPs did not participate in parliamentary sessions
+          {t('attendance.subtitle')}
         </p>
       </div>
 
@@ -126,9 +128,9 @@ export default function AttendancePage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Calendar className="w-5 h-5" />
-            Filter Options
+            {t('attendance.filterOptions')}
           </CardTitle>
-          <CardDescription>Filter by date range, party, or state</CardDescription>
+          <CardDescription>{t('attendance.filterDescription')}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex gap-4 flex-wrap">
@@ -136,7 +138,7 @@ export default function AttendancePage() {
               <Input
                 data-testid="input-start-date"
                 type="date"
-                placeholder="Start Date"
+                placeholder={t('attendance.startDate')}
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
                 className="w-40"
@@ -144,7 +146,7 @@ export default function AttendancePage() {
               <Input
                 data-testid="input-end-date"
                 type="date"
-                placeholder="End Date"
+                placeholder={t('attendance.endDate')}
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
                 className="w-40"
@@ -152,10 +154,10 @@ export default function AttendancePage() {
             </div>
             <Select value={selectedParty} onValueChange={setSelectedParty}>
               <SelectTrigger data-testid="select-party" className="w-40">
-                <SelectValue placeholder="All Parties" />
+                <SelectValue placeholder={t('attendance.allParties')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Parties</SelectItem>
+                <SelectItem value="all">{t('attendance.allParties')}</SelectItem>
                 {parties.map(party => (
                   <SelectItem key={party} value={party}>{party}</SelectItem>
                 ))}
@@ -163,10 +165,10 @@ export default function AttendancePage() {
             </Select>
             <Select value={selectedState} onValueChange={setSelectedState}>
               <SelectTrigger data-testid="select-state" className="w-40">
-                <SelectValue placeholder="All States" />
+                <SelectValue placeholder={t('attendance.allStates')} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All States</SelectItem>
+                <SelectItem value="all">{t('attendance.allStates')}</SelectItem>
                 {states.map(state => (
                   <SelectItem key={state} value={state}>{state}</SelectItem>
                 ))}
@@ -177,7 +179,7 @@ export default function AttendancePage() {
               variant="outline"
               onClick={clearFilters}
             >
-              Clear
+              {t('attendance.clear')}
             </Button>
           </div>
         </CardContent>
@@ -188,7 +190,7 @@ export default function AttendancePage() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Sessions</CardTitle>
+                <CardTitle className="text-sm font-medium">{t('attendance.totalSessions')}</CardTitle>
                 <Calendar className="w-4 h-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
@@ -198,7 +200,7 @@ export default function AttendancePage() {
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Avg Constituency Absent</CardTitle>
+                <CardTitle className="text-sm font-medium">{t('attendance.avgConstituencyAbsent')}</CardTitle>
                 <UserX className="w-4 h-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
@@ -208,7 +210,7 @@ export default function AttendancePage() {
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Avg Attendance Rate</CardTitle>
+                <CardTitle className="text-sm font-medium">{t('attendance.avgAttendanceRate')}</CardTitle>
                 <TrendingDown className="w-4 h-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
@@ -218,7 +220,7 @@ export default function AttendancePage() {
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">MPs Tracked</CardTitle>
+                <CardTitle className="text-sm font-medium">{t('attendance.mpsTracked')}</CardTitle>
                 <Users className="w-4 h-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
@@ -231,25 +233,25 @@ export default function AttendancePage() {
             <TabsList className="grid w-full max-w-2xl grid-cols-3">
               <TabsTrigger value="mp" data-testid="tab-mp-view">
                 <Users className="w-4 h-4 mr-2" />
-                By MP
+                {t('attendance.byMp')}
               </TabsTrigger>
               <TabsTrigger value="constituency" data-testid="tab-constituency-view">
                 <MapPin className="w-4 h-4 mr-2" />
-                By Session
+                {t('attendance.bySession')}
               </TabsTrigger>
               <TabsTrigger value="history" data-testid="tab-history-view">
                 <History className="w-4 h-4 mr-2" />
-                Historical Overview
+                {t('attendance.historicalOverview')}
               </TabsTrigger>
             </TabsList>
 
             <TabsContent value="mp" className="mt-6 space-y-4">
-              <h2 className="text-2xl font-bold">{report.sessions.length} Sessions Found</h2>
+              <h2 className="text-2xl font-bold">{report.sessions.length} {t('attendance.sessionsFound')}</h2>
 
               {report.sessions.length === 0 ? (
                 <Card>
                   <CardContent className="py-12 text-center">
-                    <p className="text-muted-foreground">No sessions found with the selected filters.</p>
+                    <p className="text-muted-foreground">{t('attendance.noSessions')}</p>
                   </CardContent>
                 </Card>
               ) : (
@@ -269,7 +271,7 @@ export default function AttendancePage() {
                                 <Badge variant="outline">{session.sitting}</Badge>
                               </div>
                               <CardDescription className="mt-2">
-                                {session.totalAbsent} MPs absent • {session.totalSpeakers} speakers • {Math.round(session.attendanceRate)}% attendance rate
+                                {session.totalAbsent} {t('attendance.mpsAbsent')} • {session.totalSpeakers} {t('attendance.speakers')} • {Math.round(session.attendanceRate)}% {t('attendance.attendanceRate')}
                               </CardDescription>
                             </div>
                             {isExpanded ? (
@@ -282,7 +284,7 @@ export default function AttendancePage() {
                         <CollapsibleContent>
                           <CardContent className="pt-0">
                             <div className="space-y-2">
-                              <h4 className="font-semibold text-sm text-muted-foreground">Absent MPs ({session.totalAbsent})</h4>
+                              <h4 className="font-semibold text-sm text-muted-foreground">{t('attendance.absentMps')} ({session.totalAbsent})</h4>
                               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
                                 {session.absentMps.map(mp => (
                                   <Link
@@ -312,12 +314,12 @@ export default function AttendancePage() {
             </TabsContent>
 
             <TabsContent value="constituency" className="mt-6 space-y-4">
-              <h2 className="text-2xl font-bold">Constituency Attendance by Session</h2>
+              <h2 className="text-2xl font-bold">{t('attendance.constituencyAttendanceBySession')}</h2>
 
               {report.sessions.length === 0 ? (
                 <Card>
                   <CardContent className="py-12 text-center">
-                    <p className="text-muted-foreground">No sessions found with the selected filters.</p>
+                    <p className="text-muted-foreground">{t('attendance.noSessions')}</p>
                   </CardContent>
                 </Card>
               ) : (
@@ -337,7 +339,7 @@ export default function AttendancePage() {
                                 <Badge variant="outline">{session.sitting}</Badge>
                               </div>
                               <CardDescription className="mt-2">
-                                Click to view constituency attendance breakdown
+                                {t('attendance.clickToView')}
                               </CardDescription>
                             </div>
                             {isExpanded ? (
@@ -363,7 +365,7 @@ export default function AttendancePage() {
             </TabsContent>
 
             <TabsContent value="history" className="mt-6">
-              <h2 className="text-2xl font-bold mb-4">Historical Constituency Attendance</h2>
+              <h2 className="text-2xl font-bold mb-4">{t('attendance.historicalConstituencyAttendance')}</h2>
               <ConstituencyAttendanceHistory 
                 startDate={startDate}
                 endDate={endDate}

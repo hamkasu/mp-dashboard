@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useLanguage } from "@/i18n/LanguageContext";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -83,6 +84,7 @@ interface AnalysisResult {
 }
 
 export default function HansardAnalysis() {
+  const { t } = useLanguage();
   const { toast } = useToast();
   const [selectedHansardId, setSelectedHansardId] = useState<string>("");
   const [selectedMpId, setSelectedMpId] = useState<string>("");
@@ -122,13 +124,13 @@ export default function HansardAnalysis() {
     onSuccess: (data) => {
       setAnalysisResult(data);
       toast({
-        title: "Analysis Complete",
-        description: `Found ${data.allSpeechInstances.count} speech instances for ${data.mp.name}`,
+        title: t('hansardAnalysis.analysisResults'),
+        description: `${data.allSpeechInstances.count} ${t('hansardAnalysis.speechInstances')} - ${data.mp.name}`,
       });
     },
     onError: (error: Error) => {
       toast({
-        title: "Analysis Failed",
+        title: t('common.error'),
         description: error.message,
         variant: "destructive",
       });
@@ -141,8 +143,8 @@ export default function HansardAnalysis() {
     },
     onSuccess: (data: any) => {
       toast({
-        title: "Re-extraction Complete",
-        description: `Extracted ${data.results.bills.total} bills, ${data.results.motions.total} motions, and ${data.results.questions.total} questions from ${data.results.recordsProcessed} Hansard records`,
+        title: t('hansardAnalysis.reextractActivities'),
+        description: `${data.results.bills.total} ${t('profile.bills')}, ${data.results.motions.total} ${t('profile.motions')}, ${data.results.questions.total} ${t('profile.questions')}`,
       });
       // Invalidate queries to refresh data
       queryClient.invalidateQueries({ queryKey: ["/api/legislative-proposals"] });
@@ -150,7 +152,7 @@ export default function HansardAnalysis() {
     },
     onError: (error: Error) => {
       toast({
-        title: "Re-extraction Failed",
+        title: t('common.error'),
         description: error.message,
         variant: "destructive",
       });
@@ -160,16 +162,16 @@ export default function HansardAnalysis() {
   const handleAnalyze = () => {
     if (!selectedHansardId) {
       toast({
-        title: "No Session Selected",
-        description: "Please select a Hansard session",
+        title: t('hansardAnalysis.noSessionSelected'),
+        description: t('hansardAnalysis.noSessionSelectedDesc'),
         variant: "destructive",
       });
       return;
     }
     if (!selectedMpId) {
       toast({
-        title: "No MP Selected",
-        description: "Please select an MP to analyze",
+        title: t('hansardAnalysis.noMpSelected'),
+        description: t('hansardAnalysis.noMpSelectedDesc'),
         variant: "destructive",
       });
       return;
@@ -203,9 +205,9 @@ export default function HansardAnalysis() {
   return (
     <div className="container mx-auto p-6 max-w-7xl">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold mb-2">Hansard Speech Analysis</h1>
+        <h1 className="text-3xl font-bold mb-2">{t('hansardAnalysis.title')}</h1>
         <p className="text-muted-foreground">
-          Select a Hansard session to analyze speaking instances for a specific MP
+          {t('hansardAnalysis.subtitle')}
         </p>
       </div>
 
@@ -213,12 +215,12 @@ export default function HansardAnalysis() {
         <div className="lg:col-span-1">
           <Card>
             <CardHeader>
-              <CardTitle>Upload & Analyze</CardTitle>
-              <CardDescription>Select a session and MP to analyze</CardDescription>
+              <CardTitle>{t('hansardAnalysis.uploadAnalyze')}</CardTitle>
+              <CardDescription>{t('hansardAnalysis.selectSessionAndMp')}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="hansard-select">Hansard Session</Label>
+                <Label htmlFor="hansard-select">{t('hansardAnalysis.hansardSession')}</Label>
                 {hansardLoading ? (
                   <Skeleton className="h-10 w-full" />
                 ) : (
@@ -228,7 +230,7 @@ export default function HansardAnalysis() {
                     disabled={analyzeMutation.isPending}
                   >
                     <SelectTrigger id="hansard-select" data-testid="select-hansard">
-                      <SelectValue placeholder="Choose a Hansard session" />
+                      <SelectValue placeholder={t('hansardAnalysis.chooseHansard')} />
                     </SelectTrigger>
                     <SelectContent>
                       {hansardRecords && hansardRecords.length > 0 ? (
@@ -241,7 +243,7 @@ export default function HansardAnalysis() {
                           ))
                       ) : (
                         <SelectItem value="none" disabled>
-                          No Hansard sessions with PDFs available
+                          {t('hansardAnalysis.noHansardWithPdfs')}
                         </SelectItem>
                       )}
                     </SelectContent>
@@ -250,7 +252,7 @@ export default function HansardAnalysis() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="mp-select">Select MP</Label>
+                <Label htmlFor="mp-select">{t('hansardAnalysis.selectMp')}</Label>
                 {mpsLoading ? (
                   <Skeleton className="h-10 w-full" />
                 ) : (
@@ -260,7 +262,7 @@ export default function HansardAnalysis() {
                     disabled={analyzeMutation.isPending}
                   >
                     <SelectTrigger id="mp-select" data-testid="select-mp">
-                      <SelectValue placeholder="Choose a Constituency" />
+                      <SelectValue placeholder={t('hansardAnalysis.chooseConstituency')} />
                     </SelectTrigger>
                     <SelectContent>
                       {[...(mps ?? [])].sort((a, b) => a.constituency.localeCompare(b.constituency)).map((mp) => (
@@ -282,12 +284,12 @@ export default function HansardAnalysis() {
                 {analyzeMutation.isPending ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Analyzing...
+                    {t('hansardAnalysis.analyzing')}
                   </>
                 ) : (
                   <>
                     <BarChart3 className="mr-2 h-4 w-4" />
-                    Analyze Speech
+                    {t('hansardAnalysis.analyzeSpeech')}
                   </>
                 )}
               </Button>
@@ -295,7 +297,7 @@ export default function HansardAnalysis() {
               <Separator />
 
               <div className="space-y-2">
-                <Label>Admin Actions</Label>
+                <Label>{t('hansardAnalysis.adminActions')}</Label>
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
                     <Button
@@ -307,41 +309,39 @@ export default function HansardAnalysis() {
                       {reextractActivitiesMutation.isPending ? (
                         <>
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Re-extracting...
+                          {t('hansardAnalysis.reextracting')}
                         </>
                       ) : (
                         <>
                           <RefreshCw className="mr-2 h-4 w-4" />
-                          Re-extract Activities
+                          {t('hansardAnalysis.reextractActivities')}
                         </>
                       )}
                     </Button>
                   </AlertDialogTrigger>
                   <AlertDialogContent>
                     <AlertDialogHeader>
-                      <AlertDialogTitle>Re-extract Bills, Motions, and Questions?</AlertDialogTitle>
+                      <AlertDialogTitle>{t('hansardAnalysis.reextractTitle')}</AlertDialogTitle>
                       <AlertDialogDescription>
-                        This will re-process all existing Hansard records to extract Bills, Motions, and Questions.
-                        All current activities will be cleared and re-extracted from the transcript data.
-                        This is useful when parsing logic has been improved.
+                        {t('hansardAnalysis.reextractDescription')}
                         <br /><br />
-                        <strong>Warning:</strong> This operation may take several minutes depending on the number of Hansard records.
+                        <strong>{t('hansardAnalysis.reextractWarning')}</strong>
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                      <AlertDialogCancel data-testid="button-cancel-reextract">Cancel</AlertDialogCancel>
+                      <AlertDialogCancel data-testid="button-cancel-reextract">{t('hansardAnalysis.cancel')}</AlertDialogCancel>
                       <AlertDialogAction
                         data-testid="button-confirm-reextract"
                         onClick={() => reextractActivitiesMutation.mutate()}
                         disabled={reextractActivitiesMutation.isPending}
                       >
-                        {reextractActivitiesMutation.isPending ? "Re-extracting..." : "Re-extract"}
+                        {reextractActivitiesMutation.isPending ? t('hansardAnalysis.reextracting') : t('hansardAnalysis.reextract')}
                       </AlertDialogAction>
                     </AlertDialogFooter>
                   </AlertDialogContent>
                 </AlertDialog>
                 <p className="text-xs text-muted-foreground">
-                  Re-extract parliamentary activities from existing Hansard records using improved parsing logic
+                  {t('hansardAnalysis.reextractNote')}
                 </p>
               </div>
             </CardContent>
@@ -354,9 +354,9 @@ export default function HansardAnalysis() {
               <CardContent className="p-12">
                 <div className="flex flex-col items-center justify-center space-y-4">
                   <Loader2 className="h-12 w-12 animate-spin text-primary" />
-                  <p className="text-lg font-medium">Analyzing Hansard PDF...</p>
+                  <p className="text-lg font-medium">{t('hansardAnalysis.analyzingPdf')}</p>
                   <p className="text-sm text-muted-foreground">
-                    This may take a moment for large files
+                    {t('hansardAnalysis.analyzingDescription')}
                   </p>
                 </div>
               </CardContent>
@@ -369,9 +369,9 @@ export default function HansardAnalysis() {
                 <div className="flex flex-col items-center justify-center space-y-4 text-center">
                   <BarChart3 className="h-12 w-12 text-muted-foreground" />
                   <div>
-                    <p className="text-lg font-medium mb-2">Ready to Analyze</p>
+                    <p className="text-lg font-medium mb-2">{t('hansardAnalysis.readyToAnalyze')}</p>
                     <p className="text-sm text-muted-foreground">
-                      Select a Hansard session and an MP to begin analysis
+                      {t('hansardAnalysis.readyDescription')}
                     </p>
                   </div>
                 </div>
@@ -383,7 +383,7 @@ export default function HansardAnalysis() {
             <div className="space-y-6">
               <Card>
                 <CardHeader>
-                  <CardTitle>Analysis Results</CardTitle>
+                  <CardTitle>{t('hansardAnalysis.analysisResults')}</CardTitle>
                   <CardDescription>
                     {analysisResult.metadata.sessionNumber} - {new Date(analysisResult.metadata.sessionDate).toLocaleDateString('en-MY', {
                       weekday: 'long',
@@ -396,14 +396,14 @@ export default function HansardAnalysis() {
                 <CardContent className="space-y-6">
                   <div className="grid gap-4 md:grid-cols-2">
                     <div className="space-y-2">
-                      <p className="text-sm font-medium text-muted-foreground">MP</p>
+                      <p className="text-sm font-medium text-muted-foreground">{t('hansardAnalysis.mp')}</p>
                       <p className="text-lg font-semibold" data-testid="text-mp-name">{analysisResult.mp.name}</p>
                       <p className="text-sm text-muted-foreground">
                         {analysisResult.mp.constituency} • {analysisResult.mp.party}
                       </p>
                     </div>
                     <div className="space-y-2">
-                      <p className="text-sm font-medium text-muted-foreground">Attendance</p>
+                      <p className="text-sm font-medium text-muted-foreground">{t('hansardAnalysis.attendance')}</p>
                       <div className="flex items-center gap-2">
                         {getAttendanceIcon(analysisResult.attendanceStatus)}
                         <Badge variant={getAttendanceBadgeVariant(analysisResult.attendanceStatus)} data-testid="badge-attendance">
@@ -420,12 +420,12 @@ export default function HansardAnalysis() {
                       <CardHeader className="pb-2">
                         <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                           <MessageSquare className="w-4 h-4" />
-                          Unique Speakers
+                          {t('hansardAnalysis.uniqueSpeakers')}
                         </CardTitle>
                       </CardHeader>
                       <CardContent>
                         <p className="text-3xl font-bold" data-testid="text-unique-count">{analysisResult.uniqueSpeakers.count}</p>
-                        <p className="text-xs text-muted-foreground mt-1">Distinct speaking slots</p>
+                        <p className="text-xs text-muted-foreground mt-1">{t('hansardAnalysis.distinctSpeakingSlots')}</p>
                       </CardContent>
                     </Card>
 
@@ -433,12 +433,12 @@ export default function HansardAnalysis() {
                       <CardHeader className="pb-2">
                         <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                           <BarChart3 className="w-4 h-4" />
-                          Total Speeches
+                          {t('hansardAnalysis.totalSpeeches')}
                         </CardTitle>
                       </CardHeader>
                       <CardContent>
                         <p className="text-3xl font-bold" data-testid="text-total-count">{analysisResult.allSpeechInstances.count}</p>
-                        <p className="text-xs text-muted-foreground mt-1">All speech instances</p>
+                        <p className="text-xs text-muted-foreground mt-1">{t('hansardAnalysis.allSpeechInstances')}</p>
                       </CardContent>
                     </Card>
 
@@ -446,12 +446,12 @@ export default function HansardAnalysis() {
                       <CardHeader className="pb-2">
                         <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                           <Users className="w-4 h-4" />
-                          Session Speakers
+                          {t('hansardAnalysis.sessionSpeakers')}
                         </CardTitle>
                       </CardHeader>
                       <CardContent>
                         <p className="text-3xl font-bold" data-testid="text-session-speakers">{analysisResult.sessionStats.totalUniqueSpeakers}</p>
-                        <p className="text-xs text-muted-foreground mt-1">Total MPs spoke</p>
+                        <p className="text-xs text-muted-foreground mt-1">{t('hansardAnalysis.totalMpsSpoke')}</p>
                       </CardContent>
                     </Card>
                   </div>
@@ -459,26 +459,26 @@ export default function HansardAnalysis() {
                   <Separator />
 
                   <div>
-                    <h3 className="text-lg font-semibold mb-3">Session Statistics</h3>
+                    <h3 className="text-lg font-semibold mb-3">{t('hansardAnalysis.sessionStatistics')}</h3>
                     <div className="grid gap-2 text-sm">
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground">Parliament:</span>
+                        <span className="text-muted-foreground">{t('hansardAnalysis.parliament')}:</span>
                         <span className="font-medium">{analysisResult.metadata.parliamentTerm}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground">Sitting:</span>
+                        <span className="text-muted-foreground">{t('hansardAnalysis.sitting')}:</span>
                         <span className="font-medium">{analysisResult.metadata.sitting}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground">MPs Attended:</span>
+                        <span className="text-muted-foreground">{t('hansardAnalysis.mpsAttended')}:</span>
                         <span className="font-medium">{analysisResult.sessionStats.attendedMps}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground">MPs Absent:</span>
+                        <span className="text-muted-foreground">{t('hansardAnalysis.mpsAbsent')}:</span>
                         <span className="font-medium">{analysisResult.sessionStats.absentMps}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground">Unmatched Speakers:</span>
+                        <span className="text-muted-foreground">{t('hansardAnalysis.unmatchedSpeakers')}:</span>
                         <span className="font-medium">{analysisResult.sessionStats.unmatchedSpeakers}</span>
                       </div>
                     </div>
@@ -488,7 +488,7 @@ export default function HansardAnalysis() {
                     <>
                       <Separator />
                       <div>
-                        <h3 className="text-lg font-semibold mb-3">Speech Instances</h3>
+                        <h3 className="text-lg font-semibold mb-3">{t('hansardAnalysis.speechInstances')}</h3>
                         <div className="space-y-3 max-h-[600px] overflow-y-auto">
                           {analysisResult.allSpeechInstances.instances.map((instance, idx) => (
                             <Card key={idx} data-testid={`card-speech-${idx}`}>
@@ -497,7 +497,7 @@ export default function HansardAnalysis() {
                                   <Badge variant="outline" className="flex-shrink-0">#{idx + 1}</Badge>
                                   <div className="space-y-1 flex-1 min-w-0">
                                     <p className="text-sm font-medium">
-                                      Captured as: "{instance.capturedName}"
+                                      {t('hansardAnalysis.capturedAs')}: "{instance.capturedName}"
                                     </p>
                                     <p className="text-xs text-muted-foreground">
                                       {instance.context}
@@ -506,7 +506,7 @@ export default function HansardAnalysis() {
                                 </div>
                                 <Separator className="mb-3" />
                                 <div className="space-y-2">
-                                  <p className="text-xs font-semibold text-muted-foreground uppercase">Speech Content</p>
+                                  <p className="text-xs font-semibold text-muted-foreground uppercase">{t('hansardAnalysis.speechContent')}</p>
                                   <ScrollArea className="h-48 w-full rounded-md border p-3" data-testid={`speech-text-${idx}`}>
                                     <p className="text-sm whitespace-pre-wrap leading-relaxed">
                                       {instance.speechText}
@@ -521,16 +521,16 @@ export default function HansardAnalysis() {
                     </>
                   )}
 
-                  {analysisResult.sessionStats.unmatchedSpeakerNames.length > 0 && 
+                  {analysisResult.sessionStats.unmatchedSpeakerNames.length > 0 &&
                    analysisResult.sessionStats.unmatchedSpeakerNames.length <= 10 && (
                     <>
                       <Separator />
                       <Alert>
                         <HelpCircle className="h-4 w-4" />
-                        <AlertTitle>Unmatched Speakers</AlertTitle>
+                        <AlertTitle>{t('hansardAnalysis.unmatchedSpeakersTitle')}</AlertTitle>
                         <AlertDescription>
                           <p className="text-sm mb-2">
-                            The following speakers could not be matched to MPs in the database:
+                            {t('hansardAnalysis.unmatchedSpeakersDescription')}
                           </p>
                           <ul className="text-sm list-disc list-inside space-y-1">
                             {analysisResult.sessionStats.unmatchedSpeakerNames.map((name, idx) => (

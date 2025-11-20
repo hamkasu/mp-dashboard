@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useRoute, Link } from "wouter";
+import { useLanguage } from "@/i18n/LanguageContext";
 import { ArrowLeft, MapPin, UserCircle, Flag, FileText, Wallet, Calendar, Scale, ExternalLink, AlertTriangle, Info, MessageSquare, HelpCircle, Gavel, FileQuestion, ScrollText, Phone, Mail, MapPinned, Printer, Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -35,15 +36,16 @@ function getAttendanceColor(attendanceRate: number): string {
   return "text-red-600 dark:text-red-400";
 }
 
-function getAttendanceLabel(attendanceRate: number): string {
-  if (attendanceRate >= 85) return "Excellent";
-  if (attendanceRate >= 70) return "Good";
-  return "Needs Improvement";
-}
-
 export default function MPProfile() {
+  const { t } = useLanguage();
   const [, params] = useRoute("/mp/:id");
   const mpId = params?.id;
+
+  const getAttendanceLabel = (attendanceRate: number): string => {
+    if (attendanceRate >= 85) return t('profile.excellent');
+    if (attendanceRate >= 70) return t('profile.good');
+    return t('profile.needsImprovement');
+  };
 
   const { data: mp, isLoading } = useQuery<Mp>({
     queryKey: ["/api/mps", mpId],
@@ -107,11 +109,11 @@ export default function MPProfile() {
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center space-y-4">
           <UserCircle className="h-24 w-24 text-muted-foreground/50 mx-auto" />
-          <h2 className="text-2xl font-bold">MP Not Found</h2>
+          <h2 className="text-2xl font-bold">{t('profile.notFound')}</h2>
           <Link href="/">
             <Button variant="default">
               <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Dashboard
+              {t('nav.backToDashboard')}
             </Button>
           </Link>
         </div>
@@ -189,7 +191,7 @@ export default function MPProfile() {
           <Link href="/">
             <Button variant="ghost" size="sm" data-testid="button-back">
               <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Dashboard
+              {t('nav.backToDashboard')}
             </Button>
           </Link>
 
@@ -246,7 +248,7 @@ export default function MPProfile() {
                   <MapPin className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
                   <div>
                     <p className="font-medium text-sm text-muted-foreground uppercase tracking-wide mb-1">
-                      Constituency
+                      {t('home.constituency')}
                     </p>
                     <p className="text-lg font-semibold">{mp.constituency}</p>
                   </div>
@@ -256,7 +258,7 @@ export default function MPProfile() {
                   <Flag className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
                   <div>
                     <p className="font-medium text-sm text-muted-foreground uppercase tracking-wide mb-1">
-                      State
+                      {t('home.state')}
                     </p>
                     <p className="text-lg font-semibold">{mp.state}</p>
                   </div>
@@ -266,7 +268,7 @@ export default function MPProfile() {
                   <UserCircle className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
                   <div>
                     <p className="font-medium text-sm text-muted-foreground uppercase tracking-wide mb-1">
-                      Gender
+                      {t('profile.gender')}
                     </p>
                     <p className="text-lg font-semibold">{mp.gender}</p>
                   </div>
@@ -278,7 +280,7 @@ export default function MPProfile() {
                     <Mail className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
                     <div>
                       <p className="font-medium text-sm text-muted-foreground uppercase tracking-wide mb-1">
-                        Email
+                        {t('profile.email')}
                       </p>
                       <a href={`mailto:${mp.email}`} className="text-lg font-semibold text-primary hover:underline">
                         {mp.email}
@@ -292,7 +294,7 @@ export default function MPProfile() {
                     <Phone className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
                     <div>
                       <p className="font-medium text-sm text-muted-foreground uppercase tracking-wide mb-1">
-                        Telephone
+                        {t('profile.telephone')}
                       </p>
                       <a href={`tel:${mp.telephone}`} className="text-lg font-semibold text-primary hover:underline">
                         {mp.telephone}
@@ -306,7 +308,7 @@ export default function MPProfile() {
                     <Phone className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
                     <div>
                       <p className="font-medium text-sm text-muted-foreground uppercase tracking-wide mb-1">
-                        Mobile
+                        {t('profile.mobile')}
                       </p>
                       <a href={`tel:${mp.mobileNumber}`} className="text-lg font-semibold text-primary hover:underline">
                         {mp.mobileNumber}
@@ -320,7 +322,7 @@ export default function MPProfile() {
                     <Printer className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
                     <div>
                       <p className="font-medium text-sm text-muted-foreground uppercase tracking-wide mb-1">
-                        Fax
+                        {t('profile.fax')}
                       </p>
                       <p className="text-lg font-semibold">{mp.fax}</p>
                     </div>
@@ -332,7 +334,7 @@ export default function MPProfile() {
                     <Share2 className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
                     <div>
                       <p className="font-medium text-sm text-muted-foreground uppercase tracking-wide mb-1">
-                        Social Media
+                        {t('profile.socialMedia')}
                       </p>
                       <a href={mp.socialMedia} target="_blank" rel="noopener noreferrer" className="text-lg font-semibold text-primary hover:underline break-all">
                         {mp.socialMedia}
@@ -346,7 +348,7 @@ export default function MPProfile() {
                     <MapPinned className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
                     <div>
                       <p className="font-medium text-sm text-muted-foreground uppercase tracking-wide mb-1">
-                        Contact Address
+                        {t('profile.contactAddress')}
                       </p>
                       <p className="text-lg font-semibold whitespace-pre-line">{mp.contactAddress}</p>
                     </div>
@@ -358,7 +360,7 @@ export default function MPProfile() {
                     <MapPinned className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
                     <div>
                       <p className="font-medium text-sm text-muted-foreground uppercase tracking-wide mb-1">
-                        Service Address
+                        {t('profile.serviceAddress')}
                       </p>
                       <p className="text-lg font-semibold whitespace-pre-line">{mp.serviceAddress}</p>
                     </div>
@@ -374,7 +376,7 @@ export default function MPProfile() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Calendar className="h-5 w-5" />
-                  Parliament Attendance
+                  {t('profile.parliamentAttendance')}
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <button className="ml-1" data-testid="button-attendance-info">
@@ -391,22 +393,22 @@ export default function MPProfile() {
               </CardHeader>
               <CardContent className="space-y-3">
                 <div>
-                  <p className="text-sm text-muted-foreground mb-2">Attendance Record</p>
+                  <p className="text-sm text-muted-foreground mb-2">{t('profile.attendanceRecord')}</p>
                   <p className={`text-3xl font-bold ${attendanceColor}`} data-testid="text-attendance-fraction">
                     {sessionsAttended}/{totalSessions}
                   </p>
-                  <p className="text-sm text-muted-foreground mt-1">parliamentary sessions</p>
+                  <p className="text-sm text-muted-foreground mt-1">{t('profile.parliamentarySessions')}</p>
                 </div>
                 <Separator />
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <p className="text-sm text-muted-foreground">Attendance Rate</p>
+                    <p className="text-sm text-muted-foreground">{t('profile.attendanceRate')}</p>
                     <p className={`text-xl font-semibold ${attendanceColor}`} data-testid="text-attendance-rate">
                       {attendanceRate.toFixed(1)}%
                     </p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Performance</p>
+                    <p className="text-sm text-muted-foreground">{t('profile.performance')}</p>
                     <p className={`text-xl font-semibold ${attendanceColor}`} data-testid="text-attendance-label">
                       {attendanceLabel}
                     </p>
@@ -414,7 +416,7 @@ export default function MPProfile() {
                 </div>
                 <Separator />
                 <p className="text-xs text-muted-foreground italic" data-testid="text-attendance-source">
-                  Source: Official Hansard Records
+                  {t('profile.source')}
                 </p>
               </CardContent>
             </Card>
@@ -423,7 +425,7 @@ export default function MPProfile() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <MessageSquare className="h-5 w-5" />
-                  Hansard Speaking Record
+                  {t('profile.hansardSpeakingRecord')}
                   <Tooltip>
                     <TooltipTrigger>
                       <Info className="h-4 w-4 text-muted-foreground" />
@@ -446,25 +448,25 @@ export default function MPProfile() {
                   <>
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <p className="text-sm text-muted-foreground mb-2">Sessions Spoken</p>
+                        <p className="text-sm text-muted-foreground mb-2">{t('profile.sessionsSpoken')}</p>
                         <p className="text-3xl font-bold text-primary" data-testid="text-hansard-sessions-spoke">
                           {mp.hansardSessionsSpoke || hansardParticipation.count}
                         </p>
-                        <p className="text-xs text-muted-foreground mt-1">sessions</p>
+                        <p className="text-xs text-muted-foreground mt-1">{t('profile.sessions')}</p>
                       </div>
                       <div>
-                        <p className="text-sm text-muted-foreground mb-2">Total Speeches</p>
+                        <p className="text-sm text-muted-foreground mb-2">{t('profile.totalSpeeches')}</p>
                         <p className="text-3xl font-bold text-chart-1" data-testid="text-hansard-total-speeches">
                           {mp.totalSpeechInstances || 0}
                         </p>
-                        <p className="text-xs text-muted-foreground mt-1">instances</p>
+                        <p className="text-xs text-muted-foreground mt-1">{t('profile.instances')}</p>
                       </div>
                     </div>
                     {hansardParticipation.sessions.length > 0 && (
                       <>
                         <Separator />
                         <div>
-                          <p className="text-sm text-muted-foreground mb-2">Recent Sessions</p>
+                          <p className="text-sm text-muted-foreground mb-2">{t('profile.recentSessions')}</p>
                           <div className="space-y-2" data-testid="list-recent-hansard-sessions">
                             {hansardParticipation.sessions.slice(0, 3).map((session, index) => (
                               <div key={session.id} className="text-sm">
@@ -485,11 +487,11 @@ export default function MPProfile() {
                     )}
                     <Separator />
                     <p className="text-xs text-muted-foreground italic" data-testid="text-hansard-source">
-                      Source: Official Hansard Records
+                      {t('profile.source')}
                     </p>
                   </>
                 ) : (
-                  <p className="text-sm text-muted-foreground">No speaking records found</p>
+                  <p className="text-sm text-muted-foreground">{t('profile.noSpeakingRecords')}</p>
                 )}
               </CardContent>
             </Card>
@@ -498,24 +500,24 @@ export default function MPProfile() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <FileText className="h-5 w-5" />
-                  Parliamentary Information
+                  {t('profile.parliamentaryInformation')}
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 <div>
-                  <p className="text-sm text-muted-foreground">Parliament Code</p>
+                  <p className="text-sm text-muted-foreground">{t('profile.parliamentCode')}</p>
                   <p className="font-mono font-semibold">{mp.parliamentCode}</p>
                 </div>
                 <Separator />
                 <div>
-                  <p className="text-sm text-muted-foreground">Party Affiliation</p>
+                  <p className="text-sm text-muted-foreground">{t('profile.partyAffiliation')}</p>
                   <p className="font-semibold">{mp.party}</p>
                 </div>
                 {mp.role && (
                   <>
                     <Separator />
                     <div>
-                      <p className="text-sm text-muted-foreground">Current Role</p>
+                      <p className="text-sm text-muted-foreground">{t('profile.currentRole')}</p>
                       <p className="font-semibold">{mp.role}</p>
                     </div>
                   </>
@@ -527,17 +529,17 @@ export default function MPProfile() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <MapPin className="h-5 w-5" />
-                  Constituency Details
+                  {t('profile.constituencyDetails')}
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 <div>
-                  <p className="text-sm text-muted-foreground">Constituency Name</p>
+                  <p className="text-sm text-muted-foreground">{t('profile.constituencyName')}</p>
                   <p className="font-semibold">{mp.constituency}</p>
                 </div>
                 <Separator />
                 <div>
-                  <p className="text-sm text-muted-foreground">State/Territory</p>
+                  <p className="text-sm text-muted-foreground">{t('profile.stateTerritory')}</p>
                   <p className="font-semibold">{mp.state}</p>
                 </div>
               </CardContent>
@@ -550,7 +552,7 @@ export default function MPProfile() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Mail className="h-5 w-5" />
-                  Contact Information
+                  {t('profile.contact')}
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
@@ -558,7 +560,7 @@ export default function MPProfile() {
                   <div className="flex items-start gap-3">
                     <Mail className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
                     <div>
-                      <p className="text-sm text-muted-foreground">Email Address</p>
+                      <p className="text-sm text-muted-foreground">{t('profile.email')}</p>
                       <a 
                         href={`mailto:${mp.email}`} 
                         className="font-semibold text-primary hover:underline"
@@ -576,7 +578,7 @@ export default function MPProfile() {
                   <div className="flex items-start gap-3">
                     <Phone className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
                     <div>
-                      <p className="text-sm text-muted-foreground">Telephone</p>
+                      <p className="text-sm text-muted-foreground">{t('profile.telephone')}</p>
                       <a
                         href={`tel:${mp.telephone}`}
                         className="font-semibold text-primary hover:underline"
@@ -594,7 +596,7 @@ export default function MPProfile() {
                   <div className="flex items-start gap-3">
                     <Printer className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
                     <div>
-                      <p className="text-sm text-muted-foreground">Fax</p>
+                      <p className="text-sm text-muted-foreground">{t('profile.fax')}</p>
                       <a
                         href={`tel:${mp.fax}`}
                         className="font-semibold text-primary hover:underline"
@@ -607,12 +609,12 @@ export default function MPProfile() {
                 )}
 
                 {mp.fax && (mp.mobileNumber || mp.socialMedia || mp.contactAddress || mp.serviceAddress) && <Separator />}
-                
+
                 {mp.mobileNumber && (
                   <div className="flex items-start gap-3">
                     <Phone className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
                     <div>
-                      <p className="text-sm text-muted-foreground">Mobile Number</p>
+                      <p className="text-sm text-muted-foreground">{t('profile.mobile')}</p>
                       <a
                         href={`tel:${mp.mobileNumber}`}
                         className="font-semibold text-primary hover:underline"
@@ -630,7 +632,7 @@ export default function MPProfile() {
                   <div className="flex items-start gap-3">
                     <Share2 className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
                     <div>
-                      <p className="text-sm text-muted-foreground">Social Media</p>
+                      <p className="text-sm text-muted-foreground">{t('profile.socialMedia')}</p>
                       <a
                         href={mp.socialMedia}
                         target="_blank"
@@ -645,26 +647,26 @@ export default function MPProfile() {
                 )}
 
                 {mp.socialMedia && (mp.contactAddress || mp.serviceAddress) && <Separator />}
-                
+
                 {mp.contactAddress && (
                   <div className="flex items-start gap-3">
                     <MapPinned className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
                     <div>
-                      <p className="text-sm text-muted-foreground">Contact Address</p>
+                      <p className="text-sm text-muted-foreground">{t('profile.contactAddress')}</p>
                       <p className="font-semibold whitespace-pre-line" data-testid="text-mp-contact-address">
                         {mp.contactAddress}
                       </p>
                     </div>
                   </div>
                 )}
-                
+
                 {mp.contactAddress && mp.serviceAddress && <Separator />}
-                
+
                 {mp.serviceAddress && (
                   <div className="flex items-start gap-3">
                     <MapPinned className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
                     <div>
-                      <p className="text-sm text-muted-foreground">Service Address</p>
+                      <p className="text-sm text-muted-foreground">{t('profile.serviceAddress')}</p>
                       <p className="font-semibold whitespace-pre-line" data-testid="text-mp-service-address">
                         {mp.serviceAddress}
                       </p>
@@ -678,13 +680,13 @@ export default function MPProfile() {
           {/* Legislative Activity Summary */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <h2 className="text-2xl font-bold tracking-tight">Legislative Activity</h2>
+              <h2 className="text-2xl font-bold tracking-tight">{t('profile.legislativeActivity')}</h2>
               <Tooltip>
                 <TooltipTrigger>
                   <Info className="h-4 w-4 text-muted-foreground" />
                 </TooltipTrigger>
                 <TooltipContent className="max-w-sm">
-                  <p>Parliamentary activities including questions asked, bills sponsored, and motions proposed based on official Hansard records.</p>
+                  <p>{t('profile.legislativeActivityDesc')}</p>
                 </TooltipContent>
               </Tooltip>
             </div>
@@ -695,7 +697,7 @@ export default function MPProfile() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-base">
                     <HelpCircle className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                    Questions Asked
+                    {t('profile.questionsAsked')}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
@@ -710,26 +712,26 @@ export default function MPProfile() {
                         <p className="text-4xl font-bold text-blue-600 dark:text-blue-400" data-testid="text-total-questions">
                           {parliamentaryQuestions.length}
                         </p>
-                        <p className="text-sm text-muted-foreground mt-1">total questions</p>
+                        <p className="text-sm text-muted-foreground mt-1">{t('profile.totalQuestions')}</p>
                       </div>
                       {parliamentaryQuestions.length > 0 && (
                         <>
                           <Separator />
                           <div className="space-y-2">
                             <div className="flex items-center justify-between text-sm">
-                              <span className="text-muted-foreground">Oral Questions</span>
+                              <span className="text-muted-foreground">{t('profile.oralQuestions')}</span>
                               <Badge variant="outline" data-testid="badge-oral-count">
                                 {parliamentaryQuestions.filter(q => q.questionType?.toLowerCase() === 'oral').length}
                               </Badge>
                             </div>
                             <div className="flex items-center justify-between text-sm">
-                              <span className="text-muted-foreground">Written Questions</span>
+                              <span className="text-muted-foreground">{t('profile.writtenQuestions')}</span>
                               <Badge variant="outline" data-testid="badge-written-count">
                                 {parliamentaryQuestions.filter(q => q.questionType?.toLowerCase() === 'written').length}
                               </Badge>
                             </div>
                             <div className="flex items-center justify-between text-sm">
-                              <span className="text-muted-foreground">Minister Questions</span>
+                              <span className="text-muted-foreground">{t('profile.ministerQuestions')}</span>
                               <Badge variant="outline" data-testid="badge-minister-count">
                                 {parliamentaryQuestions.filter(q => q.questionType?.toLowerCase() === 'minister').length}
                               </Badge>
@@ -747,7 +749,7 @@ export default function MPProfile() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-base">
                     <ScrollText className="h-5 w-5 text-green-600 dark:text-green-400" />
-                    Bills Sponsored
+                    {t('profile.billsSponsored')}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
@@ -762,26 +764,26 @@ export default function MPProfile() {
                         <p className="text-4xl font-bold text-green-600 dark:text-green-400" data-testid="text-total-bills">
                           {legislativeProposals.filter(p => p.type?.toLowerCase() === 'bill').length}
                         </p>
-                        <p className="text-sm text-muted-foreground mt-1">bills proposed</p>
+                        <p className="text-sm text-muted-foreground mt-1">{t('profile.billsProposed')}</p>
                       </div>
                       {legislativeProposals.filter(p => p.type?.toLowerCase() === 'bill').length > 0 && (
                         <>
                           <Separator />
                           <div className="space-y-2">
                             <div className="flex items-center justify-between text-sm">
-                              <span className="text-muted-foreground">Pending</span>
+                              <span className="text-muted-foreground">{t('profile.pending')}</span>
                               <Badge variant="outline" data-testid="badge-bills-pending">
                                 {legislativeProposals.filter(p => p.type?.toLowerCase() === 'bill' && p.status?.toLowerCase() === 'pending').length}
                               </Badge>
                             </div>
                             <div className="flex items-center justify-between text-sm">
-                              <span className="text-muted-foreground">Approved / Passed</span>
+                              <span className="text-muted-foreground">{t('profile.approved')}</span>
                               <Badge variant="outline" data-testid="badge-bills-approved">
                                 {legislativeProposals.filter(p => p.type?.toLowerCase() === 'bill' && (p.status?.toLowerCase() === 'approved' || p.status?.toLowerCase() === 'passed')).length}
                               </Badge>
                             </div>
                             <div className="flex items-center justify-between text-sm">
-                              <span className="text-muted-foreground">Rejected</span>
+                              <span className="text-muted-foreground">{t('profile.rejected')}</span>
                               <Badge variant="outline" data-testid="badge-bills-rejected">
                                 {legislativeProposals.filter(p => p.type?.toLowerCase() === 'bill' && p.status?.toLowerCase() === 'rejected').length}
                               </Badge>
@@ -799,7 +801,7 @@ export default function MPProfile() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-base">
                     <Gavel className="h-5 w-5 text-purple-600 dark:text-purple-400" />
-                    Motions Proposed
+                    {t('profile.motionsProposed')}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
@@ -814,26 +816,26 @@ export default function MPProfile() {
                         <p className="text-4xl font-bold text-purple-600 dark:text-purple-400" data-testid="text-total-motions">
                           {legislativeProposals.filter(p => p.type?.toLowerCase() === 'motion').length}
                         </p>
-                        <p className="text-sm text-muted-foreground mt-1">motions proposed</p>
+                        <p className="text-sm text-muted-foreground mt-1">{t('profile.motionsProposedCount')}</p>
                       </div>
                       {legislativeProposals.filter(p => p.type?.toLowerCase() === 'motion').length > 0 && (
                         <>
                           <Separator />
                           <div className="space-y-2">
                             <div className="flex items-center justify-between text-sm">
-                              <span className="text-muted-foreground">Pending</span>
+                              <span className="text-muted-foreground">{t('profile.pending')}</span>
                               <Badge variant="outline" data-testid="badge-motions-pending">
                                 {legislativeProposals.filter(p => p.type?.toLowerCase() === 'motion' && p.status?.toLowerCase() === 'pending').length}
                               </Badge>
                             </div>
                             <div className="flex items-center justify-between text-sm">
-                              <span className="text-muted-foreground">Approved / Passed</span>
+                              <span className="text-muted-foreground">{t('profile.approved')}</span>
                               <Badge variant="outline" data-testid="badge-motions-approved">
                                 {legislativeProposals.filter(p => p.type?.toLowerCase() === 'motion' && (p.status?.toLowerCase() === 'approved' || p.status?.toLowerCase() === 'passed')).length}
                               </Badge>
                             </div>
                             <div className="flex items-center justify-between text-sm">
-                              <span className="text-muted-foreground">Rejected</span>
+                              <span className="text-muted-foreground">{t('profile.rejected')}</span>
                               <Badge variant="outline" data-testid="badge-motions-rejected">
                                 {legislativeProposals.filter(p => p.type?.toLowerCase() === 'motion' && p.status?.toLowerCase() === 'rejected').length}
                               </Badge>
@@ -853,13 +855,13 @@ export default function MPProfile() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Wallet className="h-5 w-5" />
-                  Salary Information
+                  {t('profile.salaryInformation')}
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="grid gap-4">
                   <div>
-                    <p className="text-sm text-muted-foreground mb-1">Sworn In Date</p>
+                    <p className="text-sm text-muted-foreground mb-1">{t('profile.swornInDate')}</p>
                     <div className="flex items-center gap-2">
                       <Calendar className="h-4 w-4 text-muted-foreground" />
                       <p className="font-semibold">{formattedSwornInDate}</p>
@@ -868,15 +870,15 @@ export default function MPProfile() {
                   <Separator />
                   <div className="grid md:grid-cols-3 gap-4">
                     <div>
-                      <p className="text-sm text-muted-foreground mb-1">Monthly Allowance</p>
+                      <p className="text-sm text-muted-foreground mb-1">{t('profile.monthlyAllowance')}</p>
                       <p className="font-semibold text-lg" data-testid="text-monthly-salary">{formatCurrency(monthlySalary)}</p>
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground mb-1">Yearly Allowance</p>
+                      <p className="text-sm text-muted-foreground mb-1">{t('profile.yearlyAllowance')}</p>
                       <p className="font-semibold text-lg" data-testid="text-yearly-salary">{formatCurrency(yearlySalary)}</p>
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground mb-1">Total Earned to Date</p>
+                      <p className="text-sm text-muted-foreground mb-1">{t('profile.totalEarnedToDate')}</p>
                       <p className="font-bold text-2xl text-green-600 dark:text-green-400" data-testid="text-total-earned">
                         {formatCurrency(totalSalary)}
                       </p>
@@ -890,7 +892,7 @@ export default function MPProfile() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Wallet className="h-5 w-5" />
-                  Allowance Information
+                  {t('profile.allowanceInformation')}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -898,55 +900,55 @@ export default function MPProfile() {
                   <table className="w-full" data-testid="table-allowances">
                     <thead>
                       <tr className="border-b">
-                        <th className="text-left py-3 px-4 font-semibold text-sm text-muted-foreground">Allowance Type</th>
-                        <th className="text-center py-3 px-4 font-semibold text-sm text-muted-foreground">Frequency</th>
-                        <th className="text-right py-3 px-4 font-semibold text-sm text-muted-foreground">Amount</th>
+                        <th className="text-left py-3 px-4 font-semibold text-sm text-muted-foreground">{t('profile.allowanceType')}</th>
+                        <th className="text-center py-3 px-4 font-semibold text-sm text-muted-foreground">{t('profile.frequency')}</th>
+                        <th className="text-right py-3 px-4 font-semibold text-sm text-muted-foreground">{t('profile.amount')}</th>
                       </tr>
                     </thead>
                     <tbody>
                       <tr className="border-b hover:bg-muted/50 transition-colors">
-                        <td className="py-3 px-4 font-medium">Base MP Allowance</td>
-                        <td className="text-center py-3 px-4 text-sm text-muted-foreground">Monthly</td>
+                        <td className="py-3 px-4 font-medium">{t('profile.baseMpAllowance')}</td>
+                        <td className="text-center py-3 px-4 text-sm text-muted-foreground">{t('profile.monthly')}</td>
                         <td className="text-right py-3 px-4 font-semibold" data-testid="text-base-allowance">
                           {formatCurrency(mp.mpAllowance)}
                         </td>
                       </tr>
                       <tr className="border-b hover:bg-muted/50 transition-colors">
-                        <td className="py-3 px-4 font-medium">Entertainment Allowance</td>
-                        <td className="text-center py-3 px-4 text-sm text-muted-foreground">Monthly</td>
+                        <td className="py-3 px-4 font-medium">{t('profile.entertainmentAllowance')}</td>
+                        <td className="text-center py-3 px-4 text-sm text-muted-foreground">{t('profile.monthly')}</td>
                         <td className="text-right py-3 px-4 font-semibold" data-testid="text-entertainment-allowance">
                           {formatCurrency(mp.entertainmentAllowance)}
                         </td>
                       </tr>
                       <tr className="border-b hover:bg-muted/50 transition-colors">
-                        <td className="py-3 px-4 font-medium">Handphone Allowance</td>
-                        <td className="text-center py-3 px-4 text-sm text-muted-foreground">Monthly</td>
+                        <td className="py-3 px-4 font-medium">{t('profile.handphoneAllowance')}</td>
+                        <td className="text-center py-3 px-4 text-sm text-muted-foreground">{t('profile.monthly')}</td>
                         <td className="text-right py-3 px-4 font-semibold" data-testid="text-handphone-allowance">
                           {formatCurrency(mp.handphoneAllowance)}
                         </td>
                       </tr>
                       <tr className="border-b hover:bg-muted/50 transition-colors">
                         <td className="py-3 px-4 font-medium">
-                          Parliament Sitting Attendance
+                          {t('profile.parliamentSittingAttendance')}
                           <p className="text-xs text-muted-foreground mt-1">
-                            {formatCurrency(mp.parliamentSittingAllowance)}/day × {mp.daysAttended} days (cumulative since sworn in)
+                            {formatCurrency(mp.parliamentSittingAllowance)}/{t('profile.day')} × {mp.daysAttended} {t('profile.daysCumulative')}
                           </p>
                         </td>
-                        <td className="text-center py-3 px-4 text-sm text-muted-foreground">Cumulative</td>
+                        <td className="text-center py-3 px-4 text-sm text-muted-foreground">{t('profile.cumulative')}</td>
                         <td className="text-right py-3 px-4 font-semibold" data-testid="text-parliament-sitting-total">
                           {formatCurrency(mp.parliamentSittingAllowance * mp.daysAttended)}
                         </td>
                       </tr>
                       <tr className="border-b hover:bg-muted/50 transition-colors">
-                        <td className="py-3 px-4 font-medium">Computer Allowance</td>
-                        <td className="text-center py-3 px-4 text-sm text-muted-foreground">Yearly</td>
+                        <td className="py-3 px-4 font-medium">{t('profile.computerAllowance')}</td>
+                        <td className="text-center py-3 px-4 text-sm text-muted-foreground">{t('profile.yearly')}</td>
                         <td className="text-right py-3 px-4 font-semibold" data-testid="text-computer-allowance">
                           {formatCurrency(mp.computerAllowance)}
                         </td>
                       </tr>
                       <tr className="border-b hover:bg-muted/50 transition-colors">
-                        <td className="py-3 px-4 font-medium">Dress Wear Allowance</td>
-                        <td className="text-center py-3 px-4 text-sm text-muted-foreground">Yearly</td>
+                        <td className="py-3 px-4 font-medium">{t('profile.dressWearAllowance')}</td>
+                        <td className="text-center py-3 px-4 text-sm text-muted-foreground">{t('profile.yearly')}</td>
                         <td className="text-right py-3 px-4 font-semibold" data-testid="text-dresswear-allowance">
                           {formatCurrency(mp.dressWearAllowance)}
                         </td>
@@ -961,7 +963,7 @@ export default function MPProfile() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Calendar className="h-5 w-5" />
-                  Yearly Allowance Breakdown
+                  {t('profile.yearlyBreakdown')}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -969,26 +971,26 @@ export default function MPProfile() {
                   <table className="w-full" data-testid="table-yearly-breakdown">
                     <thead>
                       <tr className="border-b">
-                        <th className="text-left py-3 px-4 font-semibold text-sm text-muted-foreground">Year</th>
-                        <th className="text-right py-3 px-4 font-semibold text-sm text-muted-foreground">Months Served</th>
-                        <th className="text-right py-3 px-4 font-semibold text-sm text-muted-foreground">Amount Earned</th>
+                        <th className="text-left py-3 px-4 font-semibold text-sm text-muted-foreground">{t('profile.year')}</th>
+                        <th className="text-right py-3 px-4 font-semibold text-sm text-muted-foreground">{t('profile.monthsServed')}</th>
+                        <th className="text-right py-3 px-4 font-semibold text-sm text-muted-foreground">{t('profile.amountEarned')}</th>
                       </tr>
                     </thead>
                     <tbody>
                       {yearlyBreakdown.map((item, index) => (
-                        <tr 
-                          key={item.year} 
+                        <tr
+                          key={item.year}
                           className="border-b last:border-0 hover:bg-muted/50 transition-colors"
                           data-testid={`row-year-${item.year}`}
                         >
                           <td className="py-3 px-4 font-medium" data-testid={`text-year-${item.year}`}>
                             {item.year}
                             {index === yearlyBreakdown.length - 1 && (
-                              <span className="ml-2 text-xs text-muted-foreground">(Current)</span>
+                              <span className="ml-2 text-xs text-muted-foreground">{t('profile.current')}</span>
                             )}
                           </td>
                           <td className="text-right py-3 px-4" data-testid={`text-months-${item.year}`}>
-                            {item.monthsServed} {item.monthsServed === 1 ? 'month' : 'months'}
+                            {item.monthsServed} {item.monthsServed === 1 ? t('profile.month') : t('profile.months')}
                           </td>
                           <td className="text-right py-3 px-4 font-semibold text-green-600 dark:text-green-400" data-testid={`text-amount-${item.year}`}>
                             {formatCurrency(item.amount)}
@@ -996,9 +998,9 @@ export default function MPProfile() {
                         </tr>
                       ))}
                       <tr className="bg-muted/30">
-                        <td className="py-3 px-4 font-bold">Total</td>
+                        <td className="py-3 px-4 font-bold">{t('profile.total')}</td>
                         <td className="text-right py-3 px-4 font-bold">
-                          {yearlyBreakdown.reduce((sum, item) => sum + item.monthsServed, 0)} months
+                          {yearlyBreakdown.reduce((sum, item) => sum + item.monthsServed, 0)} {t('profile.months')}
                         </td>
                         <td className="text-right py-3 px-4 font-bold text-lg text-green-600 dark:text-green-400" data-testid="text-total-breakdown">
                           {formatCurrency(yearlyBreakdown.reduce((sum, item) => sum + item.amount, 0))}
@@ -1016,7 +1018,7 @@ export default function MPProfile() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Scale className="h-5 w-5" />
-                    Court Cases
+                    {t('profile.courtCases')}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -1028,7 +1030,7 @@ export default function MPProfile() {
                   ) : courtCases.length === 0 ? (
                     <div className="text-center py-8 text-muted-foreground">
                       <Scale className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                      <p>No court cases on record for this MP.</p>
+                      <p>{t('profile.noCases')}</p>
                     </div>
                   ) : (
                     <div className="space-y-4">
@@ -1036,7 +1038,7 @@ export default function MPProfile() {
                       {courtCases.filter(c => c.status === "Ongoing").length > 0 && (
                         <div>
                           <h4 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide mb-3">
-                            Ongoing Cases ({courtCases.filter(c => c.status === "Ongoing").length})
+                            {t('profile.ongoingCases')} ({courtCases.filter(c => c.status === "Ongoing").length})
                           </h4>
                           <div className="space-y-3">
                             {courtCases
@@ -1061,22 +1063,22 @@ export default function MPProfile() {
                                         {courtCase.title}
                                       </h5>
                                       <p className="text-sm text-muted-foreground mb-2" data-testid={`text-case-number-${courtCase.id}`}>
-                                        Case No: {courtCase.caseNumber}
+                                        {t('profile.caseNumber')}: {courtCase.caseNumber}
                                       </p>
                                     </div>
                                   </div>
                                   <p className="text-sm mb-2" data-testid={`text-charges-${courtCase.id}`}>
-                                    <span className="font-medium">Charges: </span>
+                                    <span className="font-medium">{t('profile.charges')}: </span>
                                     {courtCase.charges}
                                   </p>
                                   <div className="text-xs text-muted-foreground mb-2">
                                     <span data-testid={`text-filing-date-${courtCase.id}`}>
-                                      Filed: {format(new Date(courtCase.filingDate), "MMM d, yyyy")}
+                                      {t('profile.filed')}: {format(new Date(courtCase.filingDate), "MMM d, yyyy")}
                                     </span>
                                   </div>
                                   {courtCase.documentLinks && courtCase.documentLinks.length > 0 && (
                                     <div className="space-y-1 mb-3">
-                                      <p className="text-xs font-medium text-muted-foreground">Sources:</p>
+                                      <p className="text-xs font-medium text-muted-foreground">{t('profile.sources')}:</p>
                                       <div className="flex flex-wrap gap-2">
                                         {courtCase.documentLinks.map((link, index) => (
                                           <a
@@ -1094,9 +1096,9 @@ export default function MPProfile() {
                                       </div>
                                     </div>
                                   )}
-                                  <Summarizer 
+                                  <Summarizer
                                     text={`Court Case: ${courtCase.title}. Charges: ${courtCase.charges}. Status: ${courtCase.status}. Court Level: ${courtCase.courtLevel}.${courtCase.outcome ? ` Outcome: ${courtCase.outcome}` : ''}`}
-                                    title="Case Summary"
+                                    title={t('profile.caseSummary')}
                                     className="mt-3"
                                   />
                                 </div>
@@ -1110,7 +1112,7 @@ export default function MPProfile() {
                         <div>
                           {courtCases.filter(c => c.status === "Ongoing").length > 0 && <Separator className="my-4" />}
                           <h4 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide mb-3">
-                            Completed Cases ({courtCases.filter(c => c.status === "Completed").length})
+                            {t('profile.completedCases')} ({courtCases.filter(c => c.status === "Completed").length})
                           </h4>
                           <div className="space-y-3">
                             {courtCases
@@ -1135,27 +1137,27 @@ export default function MPProfile() {
                                         {courtCase.title}
                                       </h5>
                                       <p className="text-sm text-muted-foreground mb-2" data-testid={`text-case-number-${courtCase.id}`}>
-                                        Case No: {courtCase.caseNumber}
+                                        {t('profile.caseNumber')}: {courtCase.caseNumber}
                                       </p>
                                     </div>
                                   </div>
                                   <p className="text-sm mb-2" data-testid={`text-charges-${courtCase.id}`}>
-                                    <span className="font-medium">Charges: </span>
+                                    <span className="font-medium">{t('profile.charges')}: </span>
                                     {courtCase.charges}
                                   </p>
                                   {courtCase.outcome && (
                                     <p className="text-sm mb-2 font-medium text-green-600 dark:text-green-400" data-testid={`text-outcome-${courtCase.id}`}>
-                                      Outcome: {courtCase.outcome}
+                                      {t('profile.outcome')}: {courtCase.outcome}
                                     </p>
                                   )}
                                   <div className="text-xs text-muted-foreground mb-2">
                                     <span data-testid={`text-filing-date-${courtCase.id}`}>
-                                      Filed: {format(new Date(courtCase.filingDate), "MMM d, yyyy")}
+                                      {t('profile.filed')}: {format(new Date(courtCase.filingDate), "MMM d, yyyy")}
                                     </span>
                                   </div>
                                   {courtCase.documentLinks && courtCase.documentLinks.length > 0 && (
                                     <div className="space-y-1 mb-3">
-                                      <p className="text-xs font-medium text-muted-foreground">Sources:</p>
+                                      <p className="text-xs font-medium text-muted-foreground">{t('profile.sources')}:</p>
                                       <div className="flex flex-wrap gap-2">
                                         {courtCase.documentLinks.map((link, index) => (
                                           <a
@@ -1173,9 +1175,9 @@ export default function MPProfile() {
                                       </div>
                                     </div>
                                   )}
-                                  <Summarizer 
+                                  <Summarizer
                                     text={`Court Case: ${courtCase.title}. Charges: ${courtCase.charges}. Status: ${courtCase.status}. Court Level: ${courtCase.courtLevel}.${courtCase.outcome ? ` Outcome: ${courtCase.outcome}` : ''}`}
-                                    title="Case Summary"
+                                    title={t('profile.caseSummary')}
                                     className="mt-3"
                                   />
                                 </div>
@@ -1195,7 +1197,7 @@ export default function MPProfile() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-red-900 dark:text-red-100">
                     <AlertTriangle className="h-5 w-5" />
-                    SPRM Investigations
+                    {t('profile.sprmInvestigations')}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -1206,7 +1208,7 @@ export default function MPProfile() {
                   ) : sprmInvestigations.length === 0 ? (
                     <div className="text-center py-8 text-muted-foreground">
                       <AlertTriangle className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                      <p>No SPRM investigations on record for this MP.</p>
+                      <p>{t('profile.noInvestigations')}</p>
                     </div>
                   ) : (
                     <div className="space-y-4">
@@ -1214,7 +1216,7 @@ export default function MPProfile() {
                       {sprmInvestigations.filter(i => i.status === "Ongoing").length > 0 && (
                         <div>
                           <h4 className="font-semibold text-sm text-red-900 dark:text-red-100 uppercase tracking-wide mb-3">
-                            Ongoing Investigations ({sprmInvestigations.filter(i => i.status === "Ongoing").length})
+                            {t('profile.ongoingInvestigations')} ({sprmInvestigations.filter(i => i.status === "Ongoing").length})
                           </h4>
                           <div className="space-y-3">
                             {sprmInvestigations
@@ -1243,17 +1245,17 @@ export default function MPProfile() {
                                     </div>
                                   </div>
                                   <p className="text-sm mb-2" data-testid={`text-investigation-charges-${investigation.id}`}>
-                                    <span className="font-medium">Allegations: </span>
+                                    <span className="font-medium">{t('profile.allegations')}: </span>
                                     {investigation.charges}
                                   </p>
                                   <div className="text-xs text-muted-foreground mb-2">
                                     <span data-testid={`text-start-date-${investigation.id}`}>
-                                      Started: {format(new Date(investigation.startDate), "MMM d, yyyy")}
+                                      {t('profile.started')}: {format(new Date(investigation.startDate), "MMM d, yyyy")}
                                     </span>
                                   </div>
                                   {investigation.documentLinks && investigation.documentLinks.length > 0 && (
                                     <div className="space-y-1 mb-3">
-                                      <p className="text-xs font-medium text-muted-foreground">Sources:</p>
+                                      <p className="text-xs font-medium text-muted-foreground">{t('profile.sources')}:</p>
                                       <div className="flex flex-wrap gap-2">
                                         {investigation.documentLinks.map((link, index) => (
                                           <a
@@ -1271,9 +1273,9 @@ export default function MPProfile() {
                                       </div>
                                     </div>
                                   )}
-                                  <Summarizer 
+                                  <Summarizer
                                     text={`SPRM Investigation: ${investigation.title}. Allegations: ${investigation.charges}. Status: ${investigation.status}.${investigation.outcome ? ` Outcome: ${investigation.outcome}` : ''}`}
-                                    title="Investigation Summary"
+                                    title={t('profile.investigationSummary')}
                                     className="mt-3"
                                   />
                                 </div>
@@ -1287,7 +1289,7 @@ export default function MPProfile() {
                         <div>
                           {sprmInvestigations.filter(i => i.status === "Ongoing").length > 0 && <Separator className="my-4" />}
                           <h4 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide mb-3">
-                            Completed Investigations ({sprmInvestigations.filter(i => i.status === "Completed").length})
+                            {t('profile.completedInvestigations')} ({sprmInvestigations.filter(i => i.status === "Completed").length})
                           </h4>
                           <div className="space-y-3">
                             {sprmInvestigations
@@ -1316,29 +1318,29 @@ export default function MPProfile() {
                                     </div>
                                   </div>
                                   <p className="text-sm mb-2" data-testid={`text-investigation-charges-${investigation.id}`}>
-                                    <span className="font-medium">Allegations: </span>
+                                    <span className="font-medium">{t('profile.allegations')}: </span>
                                     {investigation.charges}
                                   </p>
                                   {investigation.outcome && (
                                     <p className="text-sm mb-2 font-medium text-green-600 dark:text-green-400" data-testid={`text-outcome-${investigation.id}`}>
-                                      Outcome: {investigation.outcome}
+                                      {t('profile.outcome')}: {investigation.outcome}
                                     </p>
                                   )}
                                   <div className="text-xs text-muted-foreground mb-2">
                                     <div className="flex items-center justify-between">
                                       <span data-testid={`text-start-date-${investigation.id}`}>
-                                        Started: {format(new Date(investigation.startDate), "MMM d, yyyy")}
+                                        {t('profile.started')}: {format(new Date(investigation.startDate), "MMM d, yyyy")}
                                       </span>
                                       {investigation.endDate && (
                                         <span data-testid={`text-end-date-${investigation.id}`}>
-                                          Completed: {format(new Date(investigation.endDate), "MMM d, yyyy")}
+                                          {t('profile.completed')}: {format(new Date(investigation.endDate), "MMM d, yyyy")}
                                         </span>
                                       )}
                                     </div>
                                   </div>
                                   {investigation.documentLinks && investigation.documentLinks.length > 0 && (
                                     <div className="space-y-1 mb-3">
-                                      <p className="text-xs font-medium text-muted-foreground">Sources:</p>
+                                      <p className="text-xs font-medium text-muted-foreground">{t('profile.sources')}:</p>
                                       <div className="flex flex-wrap gap-2">
                                         {investigation.documentLinks.map((link, index) => (
                                           <a
@@ -1356,9 +1358,9 @@ export default function MPProfile() {
                                       </div>
                                     </div>
                                   )}
-                                  <Summarizer 
+                                  <Summarizer
                                     text={`SPRM Investigation: ${investigation.title}. Allegations: ${investigation.charges}. Status: ${investigation.status}.${investigation.outcome ? ` Outcome: ${investigation.outcome}` : ''}`}
-                                    title="Investigation Summary"
+                                    title={t('profile.investigationSummary')}
                                     className="mt-3"
                                   />
                                 </div>
@@ -1412,7 +1414,7 @@ export default function MPProfile() {
                         {legislativeProposals.filter(p => p.type?.toLowerCase() === 'bill').length === 0 ? (
                           <div className="text-center py-8 text-muted-foreground">
                             <ScrollText className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                            <p>No bills on record for this MP.</p>
+                            <p>{t('profile.noBills')}</p>
                           </div>
                         ) : (
                           legislativeProposals
@@ -1474,7 +1476,7 @@ export default function MPProfile() {
                         {legislativeProposals.filter(p => p.type?.toLowerCase() === 'motion').length === 0 ? (
                           <div className="text-center py-8 text-muted-foreground">
                             <Gavel className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                            <p>No motions on record for this MP.</p>
+                            <p>{t('profile.noMotions')}</p>
                           </div>
                         ) : (
                           legislativeProposals
@@ -1531,7 +1533,7 @@ export default function MPProfile() {
                         {debateParticipations.length === 0 ? (
                           <div className="text-center py-8 text-muted-foreground">
                             <MessageSquare className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                            <p>No debate participations on record for this MP.</p>
+                            <p>{t('profile.noDebates')}</p>
                           </div>
                         ) : (
                           debateParticipations.map((debate) => (
@@ -1565,7 +1567,7 @@ export default function MPProfile() {
                         {parliamentaryQuestions.length === 0 ? (
                           <div className="text-center py-8 text-muted-foreground">
                             <HelpCircle className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                            <p>No parliamentary questions on record for this MP.</p>
+                            <p>{t('profile.noQuestions')}</p>
                           </div>
                         ) : (
                           <>
@@ -1690,12 +1692,12 @@ export default function MPProfile() {
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <FileText className="h-5 w-5" />
-                      Sources & References
+                      {t('profile.sourcesReferences')}
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
                     <p className="text-sm text-muted-foreground mb-4">
-                      All information on this page is sourced from the following publications and news outlets:
+                      {t('profile.sourcesDescription')}
                     </p>
                     <div className="grid gap-2 sm:grid-cols-2">
                       {sourcesList.map((link, index) => (
