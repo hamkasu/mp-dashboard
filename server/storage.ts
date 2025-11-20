@@ -1229,8 +1229,6 @@ export class MemStorage implements IStorage {
   }
   
   // Page View methods
-  private pageViewCounts: Map<string, number> = new Map();
-  
   async incrementPageView(page: string): Promise<number> {
     const current = this.pageViewCounts.get(page) || 0;
     const newCount = current + 1;
@@ -1246,6 +1244,10 @@ export class MemStorage implements IStorage {
   async logUserActivity(activity: InsertUserActivityLog): Promise<UserActivityLog> {
     const newLog: UserActivityLog = {
       ...activity,
+      username: activity.username || null,
+      pageName: activity.pageName || null,
+      ipAddress: activity.ipAddress || null,
+      userAgent: activity.userAgent || null,
       id: randomUUID(),
       timestamp: new Date(),
     };
