@@ -38,7 +38,7 @@ import {
   auditLog as logAudit,
   auditMiddleware
 } from "./middleware/security";
-import { requireAdmin } from "./simple-auth";
+import { requireAdmin, getCurrentUsername } from "./simple-auth";
 
 // Configure multer for file uploads
 const upload = multer({
@@ -1292,7 +1292,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               contentType: 'application/pdf',
               pdfData: file.buffer,
               md5Hash,
-              uploadedBy: null,
+              uploadedBy: getCurrentUsername(req) || null,
               isPrimary: true,
             }).returning();
             

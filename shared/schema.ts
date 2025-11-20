@@ -438,3 +438,29 @@ export const insertVisitorAnalyticsSchema = createInsertSchema(visitorAnalytics)
 
 export type InsertVisitorAnalytics = z.infer<typeof insertVisitorAnalyticsSchema>;
 export type VisitorAnalytics = typeof visitorAnalytics.$inferSelect;
+
+// Admin Users table for multi-user authentication
+export const adminUsers = pgTable("admin_users", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  username: text("username").notNull().unique(),
+  passwordHash: text("password_hash").notNull(),
+  displayName: text("display_name").notNull(),
+  email: text("email"),
+  isActive: boolean("is_active").notNull().default(true),
+  lastLoginAt: timestamp("last_login_at"),
+  createdAt: timestamp("created_at").notNull().default(sql`NOW()`),
+  updatedAt: timestamp("updated_at").notNull().default(sql`NOW()`),
+});
+
+export const insertAdminUserSchema = createInsertSchema(adminUsers).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  lastLoginAt: true,
+}).extend({
+  email: z.string().email().optional(),
+  isActive: z.boolean().optional().default(true),
+});
+
+export type InsertAdminUser = z.infer<typeof insertAdminUserSchema>;
+export type AdminUser = typeof adminUsers.$inferSelect;

@@ -2581,7 +2581,37 @@ export async function seedDatabase() {
 
   let mpIdMap = new Map<string, string>();
   let shouldSeedMps = false;
-  
+
+  // Seed admin users if not already present
+  try {
+    const { adminUsers } = await import("@shared/schema");
+    const { hashPassword } = await import("./simple-auth");
+
+    const existingAdmins = await db.select().from(adminUsers);
+
+    if (existingAdmins.length === 0) {
+      console.log("Seeding initial admin users...");
+
+      // Create default admin user
+      const defaultPassword = process.env.ADMIN_PASSWORD || "admin123";
+      const hashedPassword = await hashPassword(defaultPassword);
+
+      await db.insert(adminUsers).values({
+        username: "admin",
+        passwordHash: hashedPassword,
+        displayName: "Administrator",
+        email: "admin@mpdashboard.my",
+        isActive: true,
+      });
+
+      console.log("✅ Created default admin user (username: admin)");
+    } else {
+      console.log(`Admin users already exist (${existingAdmins.length} found), skipping admin seed...`);
+    }
+  } catch (error) {
+    console.error("Error seeding admin users:", error);
+  }
+
   // Check if database is already seeded with MPs
   try {
     const existingMps = await dbStorage.getAllMps();
