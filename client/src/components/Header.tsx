@@ -7,6 +7,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Link, useLocation } from "wouter";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 
 interface HeaderProps {
   onMenuClick?: () => void;
@@ -193,6 +194,7 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
               </kbd>
             </Button>
           )}
+          <LanguageSwitcher />
         </div>
       </div>
     </header>

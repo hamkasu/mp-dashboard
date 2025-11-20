@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useLanguage } from "@/i18n/LanguageContext";
 import { Header } from "@/components/Header";
 import { SearchDialog } from "@/components/SearchDialog";
 import { StatisticsCards } from "@/components/StatisticsCards";
@@ -17,6 +18,7 @@ import { apiRequest } from "@/lib/queryClient";
 type SortOption = "name" | "attendance-best" | "attendance-worst" | "speeches-most" | "speeches-fewest";
 
 export default function Home() {
+  const { t } = useLanguage();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedParties, setSelectedParties] = useState<string[]>([]);
   const [selectedStates, setSelectedStates] = useState<string[]>([]);
@@ -216,28 +218,27 @@ export default function Home() {
             {/* SEO Landing Section */}
             <div className="space-y-3" data-testid="landing-section">
               <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
-                Malaysian Parliament MP Dashboard
+                {t('home.title')}
               </h1>
               <p className="text-lg text-muted-foreground max-w-3xl">
-                Your comprehensive source for tracking all 222 Members of Parliament from Malaysia's Dewan Rakyat. 
-                Monitor voting records, attendance rates, parliamentary activities, court cases, and SPRM investigations in one transparent, accessible platform.
+                {t('home.subtitle')} {t('home.description')}
               </p>
               <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
                 <div className="flex items-center gap-2">
                   <span className="font-semibold text-foreground">✓</span>
-                  <span>Real-time attendance tracking</span>
+                  <span>{t('home.avgAttendance')}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="font-semibold text-foreground">✓</span>
-                  <span>Hansard record access</span>
+                  <span>{t('nav.hansard')}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="font-semibold text-foreground">✓</span>
-                  <span>Court case & SPRM monitoring</span>
+                  <span>{t('profile.courtCases')} & {t('profile.sprmInvestigations')}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="font-semibold text-foreground">✓</span>
-                  <span>Salary & allowance transparency</span>
+                  <span>{t('allowances.title')}</span>
                 </div>
               </div>
             </div>
@@ -246,7 +247,7 @@ export default function Home() {
             <div>
               <div className="flex flex-wrap items-center gap-3 mb-2">
                 <h2 className="text-2xl md:text-3xl font-bold tracking-tight">
-                  Members of Parliament
+                  {t('nav.mps')}
                 </h2>
                 {pageViewData && (
                   <div className="flex items-center gap-1.5 text-sm text-muted-foreground" data-testid="page-view-count">
@@ -256,7 +257,7 @@ export default function Home() {
                 )}
               </div>
               <p className="text-muted-foreground">
-                Browse all {filteredMps.length} of {(stats || defaultStats).totalMps} MPs from Dewan Rakyat
+                {filteredMps.length} {t('common.of')} {(stats || defaultStats).totalMps} {t('nav.mps')}
               </p>
             </div>
 
@@ -311,7 +312,7 @@ export default function Home() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-red-900 dark:text-red-100">
                     <AlertTriangle className="h-5 w-5" />
-                    MPs with SPRM Investigations
+                    {t('nav.mps')} {t('profile.sprmInvestigations')}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -320,7 +321,7 @@ export default function Home() {
                       const mpInvestigations = sprmInvestigations.filter(i => i.mpId === mp.id);
                       const ongoingCount = mpInvestigations.filter(i => i.status === "Ongoing").length;
                       const completedCount = mpInvestigations.filter(i => i.status === "Completed").length;
-                      
+
                       return (
                         <Link key={mp.id} href={`/mp/${mp.id}`} data-testid={`sprm-investigation-mp-${mp.id}`}>
                           <div className="group cursor-pointer rounded-lg border bg-card p-4 hover:bg-accent transition-colors">
@@ -341,12 +342,12 @@ export default function Home() {
                                 <div className="flex flex-wrap gap-1">
                                   {ongoingCount > 0 && (
                                     <Badge variant="destructive" className="text-xs" data-testid={`badge-sprm-ongoing-${mp.id}`}>
-                                      {ongoingCount} Ongoing
+                                      {ongoingCount} {t('profile.ongoing')}
                                     </Badge>
                                   )}
                                   {completedCount > 0 && (
                                     <Badge variant="secondary" className="text-xs" data-testid={`badge-sprm-completed-${mp.id}`}>
-                                      {completedCount} Completed
+                                      {completedCount} {t('profile.completed')}
                                     </Badge>
                                   )}
                                 </div>
@@ -359,7 +360,7 @@ export default function Home() {
                     })}
                   </div>
                   <p className="text-xs text-muted-foreground mt-4">
-                    Click on any MP to view detailed SPRM investigation information.
+                    {t('profile.sprmInvestigations')}
                   </p>
                 </CardContent>
               </Card>
@@ -371,7 +372,7 @@ export default function Home() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-red-900 dark:text-red-100">
                     <Scale className="h-5 w-5" />
-                    MPs with Court Cases
+                    {t('nav.mps')} {t('profile.courtCases')}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -380,7 +381,7 @@ export default function Home() {
                       const mpCases = courtCases.filter(c => c.mpId === mp.id);
                       const ongoingCount = mpCases.filter(c => c.status === "Ongoing").length;
                       const completedCount = mpCases.filter(c => c.status === "Completed").length;
-                      
+
                       return (
                         <Link key={mp.id} href={`/mp/${mp.id}`} data-testid={`court-case-mp-${mp.id}`}>
                           <div className="group cursor-pointer rounded-lg border bg-card p-4 hover:bg-accent transition-colors">
@@ -401,12 +402,12 @@ export default function Home() {
                                 <div className="flex flex-wrap gap-1">
                                   {ongoingCount > 0 && (
                                     <Badge variant="destructive" className="text-xs" data-testid={`badge-ongoing-${mp.id}`}>
-                                      {ongoingCount} Ongoing
+                                      {ongoingCount} {t('profile.ongoing')}
                                     </Badge>
                                   )}
                                   {completedCount > 0 && (
                                     <Badge variant="secondary" className="text-xs" data-testid={`badge-completed-${mp.id}`}>
-                                      {completedCount} Completed
+                                      {completedCount} {t('profile.completed')}
                                     </Badge>
                                   )}
                                 </div>
@@ -419,7 +420,7 @@ export default function Home() {
                     })}
                   </div>
                   <p className="text-xs text-muted-foreground mt-4">
-                    Click on any MP to view detailed court case information with links to news articles from The Star and New Straits Times.
+                    {t('profile.courtCases')}
                   </p>
                 </CardContent>
               </Card>
