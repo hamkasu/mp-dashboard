@@ -254,15 +254,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         // Base salary and allowances per month
         const DEWAN_RAKYAT_SALARY = 25700;
-        const MINISTER_ADDITIONAL = 13400;
-        const MONTHLY_FIXED_ALLOWANCES = 2500 + 1500 + 1500 + 1500 + 300 + 1500 + 900; // Entertainment, special non-admin/fixed travel, fuel, toll, driver, phone
+        const MONTHLY_FIXED_ALLOWANCES = 2500 + 1500 + 1500 + 1500 + 300 + 1500 + 900 + 1500; // Entertainment, special non-admin, fixed travel, fuel, toll, driver, phone
 
         const baseMonthlySalary = DEWAN_RAKYAT_SALARY;
-        const ministerAdditional = mp.isMinister ? MINISTER_ADDITIONAL : 0;
-        const specialNonAdmin = !mp.isMinister ? 1500 : 0; // Only non-ministers get this
 
         // Total monthly recurring
-        const totalMonthly = baseMonthlySalary + ministerAdditional + MONTHLY_FIXED_ALLOWANCES + specialNonAdmin;
+        const totalMonthly = baseMonthlySalary + MONTHLY_FIXED_ALLOWANCES;
 
         // Cumulative attendance-based allowances (lifetime)
         const PARLIAMENT_SITTING_PER_DAY = 400;
