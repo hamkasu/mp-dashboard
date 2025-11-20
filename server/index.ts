@@ -7,6 +7,7 @@ import { trackVisitorAnalytics } from "./analytics-middleware";
 import { helmetConfig, readRateLimit } from "./middleware/security";
 import { corsConfig } from "./middleware/cors";
 import cookieParser from "cookie-parser";
+import { setupAuth } from "./auth";
 
 const app = express();
 
@@ -41,6 +42,9 @@ app.use(express.urlencoded({ extended: false }));
 
 // Track visitor analytics
 app.use(trackVisitorAnalytics());
+
+// Setup authentication (session, passport, auth routes)
+setupAuth(app);
 
 app.use((req, res, next) => {
   const start = Date.now();
