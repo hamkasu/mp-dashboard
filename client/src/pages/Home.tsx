@@ -37,7 +37,6 @@ export default function Home() {
     stateCount: number;
     averageAttendanceRate?: number;
     totalCumulativeCosts?: number;
-    totalCumulativeMonths?: number;
   }>({
     queryKey: ["/api/stats"],
   });
