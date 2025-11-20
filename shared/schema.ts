@@ -398,30 +398,9 @@ export const insertSpeakerMappingSchema = createInsertSchema(speakerMappings).om
 export type InsertSpeakerMapping = z.infer<typeof insertSpeakerMappingSchema>;
 export type SpeakerMapping = typeof speakerMappings.$inferSelect;
 
-// Reference: blueprint:javascript_auth_all_persistance
-// Users table for authentication (admin only - no public registration)
-export const users = pgTable("users", {
-  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
-  username: text("username").notNull().unique(),
-  password: text("password").notNull(),
-  role: text("role").notNull().default("admin"),
-  createdAt: timestamp("created_at").notNull().default(sql`NOW()`),
-});
-
-export const insertUserSchema = createInsertSchema(users, {
-  role: z.enum(["admin"]).optional(),
-}).omit({
-  id: true,
-  createdAt: true,
-});
-
-export type InsertUser = z.infer<typeof insertUserSchema>;
-export type User = typeof users.$inferSelect;
-
 // User Activity Log table for tracking page visits
 export const userActivityLog = pgTable("user_activity_log", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: integer("user_id").references(() => users.id),
   username: text("username"),
   pageUrl: text("page_url").notNull(),
   pageName: text("page_name"),

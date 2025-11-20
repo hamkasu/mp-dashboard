@@ -1,13 +1,10 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
-import { seedDatabase } from "./storage";
 import { startHansardCron } from "./hansard-cron";
 import { trackVisitorAnalytics } from "./analytics-middleware";
 import { helmetConfig, readRateLimit } from "./middleware/security";
 import { corsConfig } from "./middleware/cors";
-import cookieParser from "cookie-parser";
-import { setupAuth } from "./auth";
 
 const app = express();
 
@@ -27,9 +24,6 @@ app.use(corsConfig);
 // Security headers
 app.use(helmetConfig);
 
-// Cookie parser for CSRF tokens
-app.use(cookieParser());
-
 // Global rate limiting for all requests
 app.use(readRateLimit);
 
@@ -42,9 +36,6 @@ app.use(express.urlencoded({ extended: false }));
 
 // Track visitor analytics
 app.use(trackVisitorAnalytics());
-
-// Setup authentication (session, passport, auth routes)
-setupAuth(app);
 
 app.use((req, res, next) => {
   const start = Date.now();
@@ -80,23 +71,6 @@ app.use((req, res, next) => {
 app.use('/attached_assets', express.static('attached_assets'));
 
 (async () => {
-  // Seed database before starting server (only if using DbStorage)
-  // Creates admin user if it doesn't exist
-  if (process.env.DATABASE_URL) {
-    try {
-      log("Starting database seeding...");
-      log("ADMIN_USERNAME:", process.env.ADMIN_USERNAME ? "SET" : "NOT SET");
-      log("ADMIN_PASSWORD:", process.env.ADMIN_PASSWORD ? "SET" : "NOT SET");
-      await seedDatabase();
-      log("Database seeded successfully");
-    } catch (error) {
-      log("ERROR: Database seeding failed:", String(error));
-      console.error("Full error:", error);
-    }
-  } else {
-    log("WARNING: DATABASE_URL not set, skipping database seeding");
-  }
-
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
