@@ -55,14 +55,16 @@ export default function HansardAdmin() {
   const [reprocessResult, setReprocessResult] = useState<any>(null);
 
   // Check if user is admin
-  const { data: user, isLoading: userLoading } = useQuery<{ id: number; username: string; role: string }>({
+  const { data: user, isLoading: userLoading, isError } = useQuery<{ id: number; username: string; role: string }>({
     queryKey: ["/api/user"],
     retry: false,
   });
 
   // Redirect non-admin users to home page
   useEffect(() => {
-    if (!userLoading && (!user || user.role !== "admin")) {
+    // Only redirect if we're sure the user is not an admin
+    // Don't redirect while still loading or on temporary errors
+    if (!userLoading && !isError && user && user.role !== "admin") {
       toast({
         title: "Access Denied",
         description: "You must be an administrator to access this page",
@@ -70,7 +72,16 @@ export default function HansardAdmin() {
       });
       setLocation("/");
     }
-  }, [user, userLoading, setLocation, toast]);
+    // If there's an error (401), redirect to login
+    if (isError) {
+      toast({
+        title: "Not logged in",
+        description: "Please log in to access this page",
+        variant: "destructive",
+      });
+      setLocation("/auth");
+    }
+  }, [user, userLoading, isError, setLocation, toast]);
 
   // Cleanup polling interval on unmount
   useEffect(() => {
@@ -437,6 +448,23 @@ export default function HansardAdmin() {
       uploadMutation.mutate(selectedFiles);
     }
   };
+
+  // Show loading state while checking authentication
+  if (userLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Don't render admin content if not authenticated/authorized
+  if (!user || user.role !== "admin") {
+    return null;
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
