@@ -81,13 +81,20 @@ app.use('/attached_assets', express.static('attached_assets'));
 
 (async () => {
   // Seed database before starting server (only if using DbStorage)
+  // Creates admin user if it doesn't exist
   if (process.env.DATABASE_URL) {
     try {
+      log("Starting database seeding...");
+      log("ADMIN_USERNAME:", process.env.ADMIN_USERNAME ? "SET" : "NOT SET");
+      log("ADMIN_PASSWORD:", process.env.ADMIN_PASSWORD ? "SET" : "NOT SET");
       await seedDatabase();
       log("Database seeded successfully");
     } catch (error) {
-      log("Warning: Database seeding failed:", String(error));
+      log("ERROR: Database seeding failed:", String(error));
+      console.error("Full error:", error);
     }
+  } else {
+    log("WARNING: DATABASE_URL not set, skipping database seeding");
   }
 
   const server = await registerRoutes(app);

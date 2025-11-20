@@ -2676,10 +2676,13 @@ export async function seedDatabase() {
   const finalPassword = adminPassword || "221097@aB1221097";
   
   try {
+    console.log(`Checking for existing admin user: ${finalUsername}`);
     const existingAdmin = await dbStorage.getUserByUsername(finalUsername);
     if (!existingAdmin) {
-      console.log("Creating admin user...");
+      console.log("No existing admin found. Creating admin user...");
+      console.log("Hashing password...");
       const hashedPassword = await hashPassword(finalPassword);
+      console.log("Calling createUser...");
       await dbStorage.createUser({
         username: finalUsername,
         password: hashedPassword,
@@ -2690,6 +2693,7 @@ export async function seedDatabase() {
         console.log("ℹ️  Using default development credentials. Set ADMIN_USERNAME and ADMIN_PASSWORD in .env to customize.");
       }
     } else {
+      console.log(`Admin user '${finalUsername}' already exists (ID: ${existingAdmin.id})`);
       // Check if admin has legacy bcrypt hash (contains $2b$) and re-hash with scrypt
       if (existingAdmin.password.includes('$2b$')) {
         console.log("⚠️  Detected legacy bcrypt password hash for admin user");
@@ -2700,11 +2704,12 @@ export async function seedDatabase() {
           .where(eq(users.id, existingAdmin.id));
         console.log("✅ Admin password re-hashed successfully");
       } else {
-        console.log("Admin user already exists, skipping creation");
+        console.log("Admin password hash is up-to-date");
       }
     }
   } catch (error) {
-    console.error("Error creating admin user:", error);
+    console.error("❌ ERROR creating admin user:", error);
+    console.error("Error details:", JSON.stringify(error, null, 2));
     throw error;
   }
   
