@@ -271,7 +271,7 @@ export default function HansardPage() {
                   </CardDescription>
                 </div>
                 <div className="flex gap-2">
-                  {('hasPdf' in record && record.hasPdf) ? (
+                  {(('hasPdf' in record && record.hasPdf) || record.summary || (record.speakers && record.speakers.length > 0)) ? (
                     <Button
                       data-testid={`button-download-${record.id}`}
                       variant="outline"
