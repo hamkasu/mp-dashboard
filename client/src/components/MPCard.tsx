@@ -44,7 +44,7 @@ export function MPCard({ mp }: MPCardProps) {
     .toUpperCase();
 
   const partyColor = PARTY_COLORS[mp.party] || "bg-muted text-muted-foreground";
-  const monthlySalary = mp.mpAllowance + mp.ministerSalary;
+  const monthlySalary = mp.mpAllowance;
   const yearlySalary = monthlySalary * 12;
   
   // Use Hansard-based attendance if available, otherwise fall back to static fields

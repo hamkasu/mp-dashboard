@@ -127,7 +127,7 @@ export default function MPProfile() {
     .toUpperCase();
 
   const partyColor = PARTY_COLORS[mp.party] || "bg-muted text-muted-foreground";
-  const monthlySalary = mp.mpAllowance + mp.ministerSalary;
+  const monthlySalary = mp.mpAllowance;
   const yearlySalary = monthlySalary * 12;
   
   // Use real attendance from Hansard records
@@ -780,15 +780,6 @@ export default function MPProfile() {
                           {formatCurrency(mp.mpAllowance)}
                         </td>
                       </tr>
-                      {mp.ministerSalary > 0 && (
-                        <tr className="border-b hover:bg-muted/50 transition-colors">
-                          <td className="py-3 px-4 font-medium">Minister Salary</td>
-                          <td className="text-center py-3 px-4 text-sm text-muted-foreground">Monthly</td>
-                          <td className="text-right py-3 px-4 font-semibold" data-testid="text-minister-salary">
-                            {formatCurrency(mp.ministerSalary)}
-                          </td>
-                        </tr>
-                      )}
                       <tr className="border-b hover:bg-muted/50 transition-colors">
                         <td className="py-3 px-4 font-medium">Entertainment Allowance</td>
                         <td className="text-center py-3 px-4 text-sm text-muted-foreground">Monthly</td>
