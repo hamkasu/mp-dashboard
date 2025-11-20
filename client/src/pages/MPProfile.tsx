@@ -271,6 +271,99 @@ export default function MPProfile() {
                     <p className="text-lg font-semibold">{mp.gender}</p>
                   </div>
                 </div>
+
+                {/* Contact Details */}
+                {mp.email && (
+                  <div className="flex items-start gap-3">
+                    <Mail className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-medium text-sm text-muted-foreground uppercase tracking-wide mb-1">
+                        Email
+                      </p>
+                      <a href={`mailto:${mp.email}`} className="text-lg font-semibold text-primary hover:underline">
+                        {mp.email}
+                      </a>
+                    </div>
+                  </div>
+                )}
+
+                {mp.telephone && (
+                  <div className="flex items-start gap-3">
+                    <Phone className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-medium text-sm text-muted-foreground uppercase tracking-wide mb-1">
+                        Telephone
+                      </p>
+                      <a href={`tel:${mp.telephone}`} className="text-lg font-semibold text-primary hover:underline">
+                        {mp.telephone}
+                      </a>
+                    </div>
+                  </div>
+                )}
+
+                {mp.mobileNumber && (
+                  <div className="flex items-start gap-3">
+                    <Phone className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-medium text-sm text-muted-foreground uppercase tracking-wide mb-1">
+                        Mobile
+                      </p>
+                      <a href={`tel:${mp.mobileNumber}`} className="text-lg font-semibold text-primary hover:underline">
+                        {mp.mobileNumber}
+                      </a>
+                    </div>
+                  </div>
+                )}
+
+                {mp.fax && (
+                  <div className="flex items-start gap-3">
+                    <Printer className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-medium text-sm text-muted-foreground uppercase tracking-wide mb-1">
+                        Fax
+                      </p>
+                      <p className="text-lg font-semibold">{mp.fax}</p>
+                    </div>
+                  </div>
+                )}
+
+                {mp.socialMedia && (
+                  <div className="flex items-start gap-3">
+                    <Share2 className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-medium text-sm text-muted-foreground uppercase tracking-wide mb-1">
+                        Social Media
+                      </p>
+                      <a href={mp.socialMedia} target="_blank" rel="noopener noreferrer" className="text-lg font-semibold text-primary hover:underline break-all">
+                        {mp.socialMedia}
+                      </a>
+                    </div>
+                  </div>
+                )}
+
+                {mp.contactAddress && (
+                  <div className="flex items-start gap-3">
+                    <MapPinned className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-medium text-sm text-muted-foreground uppercase tracking-wide mb-1">
+                        Contact Address
+                      </p>
+                      <p className="text-lg font-semibold whitespace-pre-line">{mp.contactAddress}</p>
+                    </div>
+                  </div>
+                )}
+
+                {mp.serviceAddress && (
+                  <div className="flex items-start gap-3">
+                    <MapPinned className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-medium text-sm text-muted-foreground uppercase tracking-wide mb-1">
+                        Service Address
+                      </p>
+                      <p className="text-lg font-semibold whitespace-pre-line">{mp.serviceAddress}</p>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
