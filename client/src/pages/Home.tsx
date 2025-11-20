@@ -37,6 +37,7 @@ export default function Home() {
     stateCount: number;
     averageAttendanceRate?: number;
     totalCumulativeCosts?: number;
+    totalCumulativeMonths?: number;
   }>({
     queryKey: ["/api/stats"],
   });
@@ -281,6 +282,11 @@ export default function Home() {
                       <p className="text-xs text-blue-800 dark:text-blue-200 mt-1">
                         Cumulative costs for all {stats.totalMps} MPs since their respective sworn-in dates
                       </p>
+                      {stats.totalCumulativeMonths !== undefined && (
+                        <p className="text-xs text-blue-700 dark:text-blue-300 mt-1 font-medium">
+                          Total cumulative months: {stats.totalCumulativeMonths.toLocaleString('en-MY')} months
+                        </p>
+                      )}
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
                       <div className="bg-white/50 dark:bg-black/20 rounded-md p-2.5">
