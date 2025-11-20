@@ -209,7 +209,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/stats", async (_req, res) => {
     try {
       const mps = await storage.getAllMps();
-      
+
       // Calculate party breakdown
       const partyBreakdown = mps.reduce((acc, mp) => {
         const existing = acc.find((p) => p.party === mp.party);
@@ -238,9 +238,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Calculate average attendance
       const totalDaysAttended = mps.reduce((sum, mp) => sum + mp.daysAttended, 0);
       const totalPossibleDays = mps.reduce((sum, mp) => sum + mp.totalParliamentDays, 0);
-      const averageAttendanceRate = totalPossibleDays > 0 
-        ? (totalDaysAttended / totalPossibleDays) * 100 
+      const averageAttendanceRate = totalPossibleDays > 0
+        ? (totalDaysAttended / totalPossibleDays) * 100
         : 0;
+
+      // Calculate cumulative costs for all MPs since sworn in
+      const now = new Date();
+      const totalCumulativeCosts = mps.reduce((sum, mp) => {
+        const swornInDate = new Date(mp.swornInDate);
+        const monthsSinceSwornIn = Math.max(
+          0,
+          (now.getFullYear() - swornInDate.getFullYear()) * 12 +
+          (now.getMonth() - swornInDate.getMonth())
+        );
+
+        // Base salary and allowances per month
+        const DEWAN_RAKYAT_SALARY = 25700;
+        const MINISTER_ADDITIONAL = 13400;
+        const MONTHLY_FIXED_ALLOWANCES = 2500 + 1500 + 1500 + 1500 + 300 + 1500 + 900; // Entertainment, special non-admin/fixed travel, fuel, toll, driver, phone
+
+        const baseMonthlySalary = DEWAN_RAKYAT_SALARY;
+        const ministerAdditional = mp.isMinister ? MINISTER_ADDITIONAL : 0;
+        const specialNonAdmin = !mp.isMinister ? 1500 : 0; // Only non-ministers get this
+
+        // Total monthly recurring
+        const totalMonthly = baseMonthlySalary + ministerAdditional + MONTHLY_FIXED_ALLOWANCES + specialNonAdmin;
+
+        // Cumulative attendance-based allowances (lifetime)
+        const PARLIAMENT_SITTING_PER_DAY = 400;
+        const GOVERNMENT_MEETING_PER_DAY = 300;
+        const parliamentSittingTotal = mp.daysAttended * PARLIAMENT_SITTING_PER_DAY;
+        const governmentMeetingTotal = mp.governmentMeetingDays * GOVERNMENT_MEETING_PER_DAY;
+
+        // Total cumulative cost for this MP
+        const totalForMP = (totalMonthly * monthsSinceSwornIn) + parliamentSittingTotal + governmentMeetingTotal;
+
+        return sum + totalForMP;
+      }, 0);
 
       res.json({
         totalMps: mps.length,
@@ -248,6 +282,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         genderBreakdown,
         stateCount: uniqueStates.size,
         averageAttendanceRate: Math.round(averageAttendanceRate * 10) / 10,
+        totalCumulativeCosts: Math.round(totalCumulativeCosts),
       });
     } catch (error) {
       console.error("Error calculating stats:", error);
