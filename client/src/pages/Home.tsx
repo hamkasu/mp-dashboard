@@ -263,35 +263,35 @@ export default function Home() {
             {/* Cumulative Costs Section */}
             {!statsLoading && stats?.totalCumulativeCosts !== undefined && (
               <Card className="border-blue-200 dark:border-blue-900 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20" data-testid="cumulative-costs-section">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-blue-900 dark:text-blue-100">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2 text-blue-900 dark:text-blue-100 text-base">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                     Total MP Salaries & Allowances Since Sworn In
                   </CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
+                <CardContent className="pt-0">
+                  <div className="space-y-3">
                     <div>
-                      <div className="text-4xl md:text-5xl font-bold text-blue-900 dark:text-blue-100" data-testid="text-cumulative-costs">
+                      <div className="text-3xl font-bold text-blue-900 dark:text-blue-100" data-testid="text-cumulative-costs">
                         RM {stats.totalCumulativeCosts.toLocaleString('en-MY')}
                       </div>
-                      <p className="text-sm text-blue-800 dark:text-blue-200 mt-2">
+                      <p className="text-xs text-blue-800 dark:text-blue-200 mt-1">
                         Cumulative costs for all {stats.totalMps} MPs since their respective sworn-in dates
                       </p>
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-                      <div className="bg-white/50 dark:bg-black/20 rounded-lg p-3">
-                        <p className="text-muted-foreground mb-1">Includes:</p>
-                        <ul className="text-xs text-blue-800 dark:text-blue-200 space-y-1">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
+                      <div className="bg-white/50 dark:bg-black/20 rounded-md p-2.5">
+                        <p className="text-xs font-medium text-muted-foreground mb-1">Includes:</p>
+                        <ul className="text-xs text-blue-800 dark:text-blue-200 space-y-0.5">
                           <li>• Base salaries (RM 25,700/month)</li>
                           <li>• Monthly fixed allowances (entertainment, travel, fuel, etc.)</li>
                         </ul>
                       </div>
-                      <div className="bg-white/50 dark:bg-black/20 rounded-lg p-3">
-                        <p className="text-muted-foreground mb-1">Plus attendance-based:</p>
-                        <ul className="text-xs text-blue-800 dark:text-blue-200 space-y-1">
+                      <div className="bg-white/50 dark:bg-black/20 rounded-md p-2.5">
+                        <p className="text-xs font-medium text-muted-foreground mb-1">Plus attendance-based:</p>
+                        <ul className="text-xs text-blue-800 dark:text-blue-200 space-y-0.5">
                           <li>• Parliament sitting allowances (RM 400/day)</li>
                           <li>• Government meeting allowances (RM 300/day)</li>
                         </ul>
