@@ -60,17 +60,6 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
               <span>MPs</span>
             </Button>
           </Link>
-          <Link href="/activity">
-            <Button
-              variant={location === "/activity" ? "secondary" : "ghost"}
-              size="sm"
-              data-testid="nav-activity"
-              className="gap-2"
-            >
-              <FileText className="w-4 h-4" />
-              <span>Activity</span>
-            </Button>
-          </Link>
           <Link href="/hansard">
             <Button
               variant={location === "/hansard" ? "secondary" : "ghost"}
@@ -118,7 +107,7 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
-                variant={location === "/attendance" || location === "/hansard-analysis" || location === "/allowances" || location === "/disclaimer" || location === "/analytics" ? "secondary" : "ghost"}
+                variant={location === "/activity" || location === "/attendance" || location === "/hansard-analysis" || location === "/allowances" || location === "/disclaimer" || location === "/analytics" ? "secondary" : "ghost"}
                 size="sm"
                 data-testid="nav-analysis-dropdown"
                 className="gap-2"
@@ -129,6 +118,13 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start">
+              <DropdownMenuItem
+                onSelect={() => setLocation("/activity")}
+                data-testid="nav-activity"
+              >
+                <FileText className="w-4 h-4 mr-2" />
+                <span>Activity</span>
+              </DropdownMenuItem>
               <DropdownMenuItem
                 onSelect={() => setLocation("/attendance")}
                 data-testid="nav-attendance"
