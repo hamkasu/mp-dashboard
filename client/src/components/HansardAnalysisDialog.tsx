@@ -28,7 +28,7 @@ import {
   Users
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import type { HansardRecord } from "@shared/schema";
+import type { HansardRecordWithPdf } from "@shared/schema";
 
 interface MP {
   id: string;
@@ -79,7 +79,7 @@ interface AnalysisResult {
 }
 
 interface HansardAnalysisDialogProps {
-  hansardRecord: HansardRecord;
+  hansardRecord: HansardRecordWithPdf;
   trigger: React.ReactNode;
 }
 
@@ -94,9 +94,12 @@ export function HansardAnalysisDialog({ hansardRecord, trigger }: HansardAnalysi
     queryKey: ["/api/mps"],
   });
 
-  const { data: hansardRecords, isLoading: hansardLoading } = useQuery<HansardRecord[]>({
+  const { data: allHansardRecords, isLoading: hansardLoading } = useQuery<HansardRecordWithPdf[]>({
     queryKey: ["/api/hansard-records"],
   });
+
+  // Filter to only show hansard records that have PDFs available
+  const hansardRecords = allHansardRecords?.filter(record => record.hasPdf) || [];
 
   const filteredMps = (() => {
     if (!mps) return [];
@@ -251,7 +254,7 @@ export function HansardAnalysisDialog({ hansardRecord, trigger }: HansardAnalysi
                             ))
                         ) : (
                           <SelectItem value="none" disabled>
-                            No Hansard sessions available
+                            No Hansard sessions with PDFs available
                           </SelectItem>
                         )}
                       </SelectContent>
@@ -339,7 +342,7 @@ export function HansardAnalysisDialog({ hansardRecord, trigger }: HansardAnalysi
                     <div>
                       <p className="text-lg font-medium mb-2">Ready to Analyze</p>
                       <p className="text-sm text-muted-foreground">
-                        Upload the Hansard PDF for this session and select an MP to begin analysis
+                        Select a Hansard session (with PDF) and an MP to begin analysis
                       </p>
                     </div>
                   </div>

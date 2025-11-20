@@ -32,7 +32,7 @@ import {
   RefreshCw
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import type { HansardRecord } from "@shared/schema";
+import type { HansardRecordWithPdf } from "@shared/schema";
 
 interface MP {
   id: string;
@@ -92,9 +92,12 @@ export default function HansardAnalysis() {
     queryKey: ["/api/mps"],
   });
 
-  const { data: hansardRecords, isLoading: hansardLoading } = useQuery<HansardRecord[]>({
+  const { data: allHansardRecords, isLoading: hansardLoading } = useQuery<HansardRecordWithPdf[]>({
     queryKey: ["/api/hansard-records"],
   });
+
+  // Filter to only show hansard records that have PDFs available
+  const hansardRecords = allHansardRecords?.filter(record => record.hasPdf) || [];
 
   const analyzeMutation = useMutation({
     mutationFn: async (data: { hansardRecordId: string; mpId: string }) => {
@@ -238,7 +241,7 @@ export default function HansardAnalysis() {
                           ))
                       ) : (
                         <SelectItem value="none" disabled>
-                          No Hansard sessions available
+                          No Hansard sessions with PDFs available
                         </SelectItem>
                       )}
                     </SelectContent>
