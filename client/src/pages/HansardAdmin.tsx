@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { Header } from "@/components/Header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -23,7 +24,21 @@ interface UploadResult {
 
 export default function HansardAdmin() {
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Check admin authentication
+  const { data: authStatus, isLoading: authLoading } = useQuery<{ isAdmin: boolean }>({
+    queryKey: ["/api/admin/auth-status"],
+    retry: false,
+  });
+
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (!authLoading && !authStatus?.isAdmin) {
+      setLocation("/admin-login");
+    }
+  }, [authStatus, authLoading, setLocation]);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [uploadResults, setUploadResults] = useState<(UploadResult & { fileName: string })[]>([]);
@@ -417,6 +432,20 @@ export default function HansardAdmin() {
       uploadMutation.mutate(selectedFiles);
     }
   };
+
+  // Show loading while checking authentication
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
+
+  // Don't render if not authenticated (useEffect will redirect)
+  if (!authStatus?.isAdmin) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
