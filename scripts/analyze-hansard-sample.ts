@@ -1,21 +1,29 @@
-import fs from 'fs';
-import path from 'path';
 import { createRequire } from 'module';
+import { db } from '../server/db';
+import { hansardPdfFiles } from '../shared/schema';
 
 const require = createRequire(import.meta.url);
 const { PDFParse } = require('pdf-parse');
 const pdfParse = PDFParse;
 
-async function analyzePDF(filename: string) {
-  console.log(`\n${'='.repeat(60)}`);
-  console.log(`Analyzing: ${filename}`);
-  console.log('='.repeat(60));
+interface AnalysisResult {
+  filename: string;
+  sessionDate: string;
+  totalPages: number;
+  hasKandungan: boolean;
+  hasOralQuestions: boolean;
+  hasMinisterialQuestions: boolean;
+  hasBills: boolean;
+  hasMotions: boolean;
+  hasAttendance: boolean;
+  questionCount: number;
+  billCount: number;
+  attendanceCount: number;
+}
 
-  const filePath = path.join(process.cwd(), 'attached_assets', filename);
-  const dataBuffer = fs.readFileSync(filePath);
-
+async function analyzePDF(filename: string, pdfBuffer: Buffer): Promise<AnalysisResult | null> {
   try {
-    const parser = new pdfParse({ data: dataBuffer });
+    const parser = new pdfParse({ data: pdfBuffer });
     const pdfData = await parser.getText();
     await parser.destroy();
 
@@ -29,12 +37,8 @@ async function analyzePDF(filename: string) {
       sessionDate = `${day}/${month}/${year}`;
     }
 
-    console.log(`\nSession Date: ${sessionDate}`);
-    console.log(`Total Pages: ${pdfData.total || 0}`);
-
     // Check for Table of Contents
     const hasKandungan = text.includes('KANDUNGAN');
-    console.log(`\nHas Table of Contents (KANDUNGAN): ${hasKandungan ? 'Yes' : 'No'}`);
 
     // Check for different sections
     const hasOralQuestions = text.includes('PERTANYAAN-PERTANYAAN BAGI JAWAB LISAN');
@@ -43,88 +47,170 @@ async function analyzePDF(filename: string) {
     const hasMotions = text.includes('USUL');
     const hasAttendance = text.includes('KEHADIRAN AHLI-AHLI PARLIMEN');
 
-    console.log(`\nSections Found:`);
-    console.log(`  - Oral Questions: ${hasOralQuestions ? 'Yes' : 'No'}`);
-    console.log(`  - Ministerial Questions: ${hasMinisterialQuestions ? 'Yes' : 'No'}`);
-    console.log(`  - Bills (Rang Undang-undang): ${hasBills ? 'Yes' : 'No'}`);
-    console.log(`  - Motions (Usul): ${hasMotions ? 'Yes' : 'No'}`);
-    console.log(`  - Attendance List: ${hasAttendance ? 'Yes' : 'No'}`);
-
-    // Try to extract some sample questions
+    // Count questions
+    let questionCount = 0;
     if (hasOralQuestions) {
       const questionPattern = /Soalan\s+No\.\s*(\d+)/gi;
       const matches = text.match(questionPattern);
-      if (matches) {
-        console.log(`\n  Oral Questions Found: ${matches.length}`);
-        console.log(`  Sample: ${matches.slice(0, 3).join(', ')}`);
-      }
+      questionCount = matches ? matches.length : 0;
     }
 
-    // Try to extract bills
+    // Count bills
+    let billCount = 0;
     if (hasBills) {
       const billPattern = /Rang\s+Undang-undang\s+([^\n]+?)(?:\n|$)/gi;
       const matches = text.match(billPattern);
-      if (matches) {
-        console.log(`\n  Bills Found: ${matches.length}`);
-        if (matches.length > 0) {
-          console.log(`  Samples:`);
-          matches.slice(0, 3).forEach((bill, i) => {
-            console.log(`    ${i + 1}. ${bill.trim()}`);
-          });
-        }
-      }
+      billCount = matches ? matches.length : 0;
     }
 
-    // Try to extract motions
-    if (hasMotions) {
-      // Look for motion patterns
-      const motionSection = text.match(/USUL:[\s\S]*?(?=RANG UNDANG-UNDANG|PERTANYAAN|$)/i);
-      if (motionSection) {
-        console.log(`\n  Motion section found (length: ${motionSection[0].length} chars)`);
-      }
-    }
-
-    // Try to count MPs in attendance
+    // Count MPs in attendance
+    let attendanceCount = 0;
     if (hasAttendance) {
       const attendancePattern = /\d+\.\s+[^(]+\([^)]+\)/g;
       const matches = text.match(attendancePattern);
-      if (matches) {
-        console.log(`\n  MPs in Attendance: ~${matches.length}`);
-        console.log(`  Sample entries:`);
-        matches.slice(0, 3).forEach(entry => {
-          console.log(`    - ${entry.trim()}`);
-        });
-      }
+      attendanceCount = matches ? matches.length : 0;
     }
 
+    return {
+      filename,
+      sessionDate,
+      totalPages: pdfData.total || 0,
+      hasKandungan,
+      hasOralQuestions,
+      hasMinisterialQuestions,
+      hasBills,
+      hasMotions,
+      hasAttendance,
+      questionCount,
+      billCount,
+      attendanceCount,
+    };
+
   } catch (error) {
-    console.error(`Error parsing PDF: ${error}`);
+    console.error(`Error parsing PDF ${filename}: ${error}`);
+    return null;
   }
 }
 
 async function main() {
-  console.log('Hansard PDF Analysis Tool');
-  console.log('='.repeat(60));
+  try {
+    console.log('Hansard PDF Analysis Tool - Database Edition');
+    console.log('='.repeat(80));
+    console.log('📊 Analyzing ALL Hansard PDFs from the database...\n');
 
-  // Analyze a few recent PDFs
-  const sampleFiles = [
-    'DR-13112025_1763514446245.pdf',
-    'DR-12112025_1763514142279.pdf',
-    'DR-06112025_1762879372571.pdf'
-  ];
+    // Fetch all PDFs from database
+    console.log('📄 Fetching all Hansard PDF files from database...');
+    const allPdfFiles = await db
+      .select({
+        id: hansardPdfFiles.id,
+        originalFilename: hansardPdfFiles.originalFilename,
+        fileSizeBytes: hansardPdfFiles.fileSizeBytes,
+        pdfData: hansardPdfFiles.pdfData,
+        uploadedAt: hansardPdfFiles.uploadedAt,
+      })
+      .from(hansardPdfFiles);
 
-  for (const file of sampleFiles) {
-    const filePath = path.join(process.cwd(), 'attached_assets', file);
-    if (fs.existsSync(filePath)) {
-      await analyzePDF(file);
-    } else {
-      console.log(`\nFile not found: ${file}`);
+    console.log(`✅ Found ${allPdfFiles.length} PDF files in database\n`);
+
+    if (allPdfFiles.length === 0) {
+      console.log('❌ No PDF files found in database');
+      process.exit(0);
     }
-  }
 
-  console.log('\n' + '='.repeat(60));
-  console.log('Analysis Complete');
-  console.log('='.repeat(60));
+    console.log('🔍 Processing PDFs...\n');
+    console.log('='.repeat(80));
+
+    const results: AnalysisResult[] = [];
+    let processedCount = 0;
+    let errorCount = 0;
+
+    for (let i = 0; i < allPdfFiles.length; i++) {
+      const pdfFile = allPdfFiles[i];
+      console.log(`\n[${i + 1}/${allPdfFiles.length}] ${pdfFile.originalFilename}`);
+      console.log(`   Size: ${(pdfFile.fileSizeBytes / 1024).toFixed(1)} KB`);
+
+      const result = await analyzePDF(pdfFile.originalFilename, pdfFile.pdfData);
+
+      if (result) {
+        results.push(result);
+        processedCount++;
+
+        // Print quick summary
+        console.log(`   Date: ${result.sessionDate}`);
+        console.log(`   Pages: ${result.totalPages}`);
+        console.log(`   Sections: ${[
+          result.hasOralQuestions && 'Questions',
+          result.hasBills && 'Bills',
+          result.hasMotions && 'Motions',
+          result.hasAttendance && 'Attendance'
+        ].filter(Boolean).join(', ') || 'None detected'}`);
+      } else {
+        errorCount++;
+      }
+
+      // Progress indicator
+      if ((i + 1) % 10 === 0) {
+        console.log(`\n   Progress: ${i + 1}/${allPdfFiles.length} files processed...`);
+      }
+    }
+
+    // Generate aggregate statistics
+    console.log('\n' + '='.repeat(80));
+    console.log('📊 AGGREGATE ANALYSIS RESULTS');
+    console.log('='.repeat(80));
+    console.log(`\nTotal PDFs Processed: ${processedCount}`);
+    console.log(`Errors: ${errorCount}`);
+    console.log(`Success Rate: ${((processedCount / allPdfFiles.length) * 100).toFixed(1)}%`);
+
+    const withKandungan = results.filter(r => r.hasKandungan).length;
+    const withQuestions = results.filter(r => r.hasOralQuestions).length;
+    const withMinisterialQ = results.filter(r => r.hasMinisterialQuestions).length;
+    const withBills = results.filter(r => r.hasBills).length;
+    const withMotions = results.filter(r => r.hasMotions).length;
+    const withAttendance = results.filter(r => r.hasAttendance).length;
+
+    console.log(`\n📋 Section Coverage:`);
+    console.log(`   Table of Contents (KANDUNGAN): ${withKandungan}/${processedCount} (${((withKandungan/processedCount)*100).toFixed(1)}%)`);
+    console.log(`   Oral Questions: ${withQuestions}/${processedCount} (${((withQuestions/processedCount)*100).toFixed(1)}%)`);
+    console.log(`   Ministerial Questions: ${withMinisterialQ}/${processedCount} (${((withMinisterialQ/processedCount)*100).toFixed(1)}%)`);
+    console.log(`   Bills (Rang Undang-undang): ${withBills}/${processedCount} (${((withBills/processedCount)*100).toFixed(1)}%)`);
+    console.log(`   Motions (Usul): ${withMotions}/${processedCount} (${((withMotions/processedCount)*100).toFixed(1)}%)`);
+    console.log(`   Attendance Lists: ${withAttendance}/${processedCount} (${((withAttendance/processedCount)*100).toFixed(1)}%)`);
+
+    const totalQuestions = results.reduce((sum, r) => sum + r.questionCount, 0);
+    const totalBills = results.reduce((sum, r) => sum + r.billCount, 0);
+    const totalPages = results.reduce((sum, r) => sum + r.totalPages, 0);
+    const avgAttendance = results.filter(r => r.attendanceCount > 0)
+      .reduce((sum, r) => sum + r.attendanceCount, 0) /
+      results.filter(r => r.attendanceCount > 0).length;
+
+    console.log(`\n📈 Content Statistics:`);
+    console.log(`   Total Questions Found: ${totalQuestions}`);
+    console.log(`   Total Bills Found: ${totalBills}`);
+    console.log(`   Total Pages: ${totalPages}`);
+    console.log(`   Average MPs in Attendance: ${avgAttendance ? avgAttendance.toFixed(1) : 'N/A'}`);
+
+    // Date range
+    const dates = results
+      .map(r => r.sessionDate)
+      .filter(d => d !== 'Unknown')
+      .sort();
+
+    if (dates.length > 0) {
+      console.log(`\n📅 Date Range:`);
+      console.log(`   Earliest: ${dates[0]}`);
+      console.log(`   Latest: ${dates[dates.length - 1]}`);
+    }
+
+    console.log('\n' + '='.repeat(80));
+    console.log('✅ Analysis Complete');
+    console.log('='.repeat(80));
+
+    process.exit(0);
+  } catch (error) {
+    console.error('❌ Fatal error:', error);
+    process.exit(1);
+  }
 }
 
 main();
