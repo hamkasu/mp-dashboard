@@ -1,15 +1,12 @@
-import { Search, Menu, Home, FileText, BookOpen, UserCheck, Calculator, BarChart3, ExternalLink, ChevronDown, AlertCircle, GraduationCap, Shield, TrendingUp, Scale, LogIn, LogOut, User } from "lucide-react";
+import { Search, Menu, Home, FileText, BookOpen, UserCheck, Calculator, BarChart3, ExternalLink, ChevronDown, AlertCircle, GraduationCap, TrendingUp, Scale } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { Link, useLocation } from "wouter";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useToast } from "@/hooks/use-toast";
 
 interface HeaderProps {
   onMenuClick?: () => void;
@@ -18,42 +15,6 @@ interface HeaderProps {
 
 export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
   const [location, setLocation] = useLocation();
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
-
-  // Check if user is admin
-  const { data: user } = useQuery<{ id: number; username: string; role: string }>({
-    queryKey: ["/api/user"],
-    retry: false,
-  });
-
-  const logoutMutation = useMutation({
-    mutationFn: async () => {
-      const response = await fetch("/api/logout", {
-        method: "POST",
-        credentials: "include",
-      });
-
-      if (!response.ok) {
-        throw new Error("Logout failed");
-      }
-    },
-    onSuccess: () => {
-      toast({
-        title: "Logged out",
-        description: "You have been successfully logged out",
-      });
-      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
-      setLocation("/");
-    },
-    onError: () => {
-      toast({
-        title: "Logout failed",
-        description: "An error occurred while logging out",
-        variant: "destructive",
-      });
-    },
-  });
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shadow-sm">
@@ -142,19 +103,6 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
               <span>Constitution</span>
             </Button>
           </Link>
-          {user?.role === "admin" && (
-            <Link href="/hansard-admin">
-              <Button
-                variant={location === "/hansard-admin" ? "secondary" : "ghost"}
-                size="sm"
-                data-testid="nav-hansard-admin"
-                className="gap-2"
-              >
-                <Shield className="w-4 h-4" />
-                <span>Admin</span>
-              </Button>
-            </Link>
-          )}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
@@ -220,46 +168,6 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
         </nav>
 
         <div className="flex-1 flex justify-end items-center gap-2">
-          {user ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" className="gap-2">
-                  <User className="h-4 w-4" />
-                  <span className="hidden sm:inline">{user.username}</span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem disabled>
-                  <span className="font-medium">Role: {user.role}</span>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                {user.role === "admin" && (
-                  <>
-                    <DropdownMenuItem onClick={() => setLocation("/hansard-admin")}>
-                      <Shield className="w-4 h-4 mr-2" />
-                      <span>Admin Panel</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                  </>
-                )}
-                <DropdownMenuItem
-                  onClick={() => logoutMutation.mutate()}
-                  disabled={logoutMutation.isPending}
-                >
-                  <LogOut className="w-4 h-4 mr-2" />
-                  <span>Logout</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          ) : (
-            <Link href="/auth">
-              <Button variant="ghost" size="sm" className="gap-2">
-                <LogIn className="h-4 w-4" />
-                <span className="hidden sm:inline">Login</span>
-              </Button>
-            </Link>
-          )}
-
           {onSearchClick && (
             <Button
               variant="outline"

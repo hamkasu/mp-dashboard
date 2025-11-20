@@ -16,7 +16,6 @@ import Attendance from "@/pages/attendance";
 import Allowances from "@/pages/Allowances";
 import Disclaimer from "@/pages/Disclaimer";
 import Analytics from "@/pages/analytics";
-import Auth from "@/pages/Auth";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -35,7 +34,6 @@ function Router() {
       <Route path="/hansard-analysis" component={HansardAnalysis} />
       <Route path="/constituency-analysis" component={ConstituencyAnalysis} />
       <Route path="/analytics" component={Analytics} />
-      <Route path="/auth" component={Auth} />
       <Route component={NotFound} />
     </Switch>
   );

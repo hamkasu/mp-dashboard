@@ -1,17 +1,13 @@
-import { type Mp, type InsertMp, type CourtCase, type InsertCourtCase, type SprmInvestigation, type InsertSprmInvestigation, type LegislativeProposal, type InsertLegislativeProposal, type DebateParticipation, type InsertDebateParticipation, type ParliamentaryQuestion, type InsertParliamentaryQuestion, type HansardRecord, type InsertHansardRecord, type UpdateHansardRecord, type PageView, type User, type InsertUser, type UserActivityLog, type InsertUserActivityLog } from "@shared/schema";
+import { type Mp, type InsertMp, type CourtCase, type InsertCourtCase, type SprmInvestigation, type InsertSprmInvestigation, type LegislativeProposal, type InsertLegislativeProposal, type DebateParticipation, type InsertDebateParticipation, type ParliamentaryQuestion, type InsertParliamentaryQuestion, type HansardRecord, type InsertHansardRecord, type UpdateHansardRecord, type PageView, type UserActivityLog, type InsertUserActivityLog } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db, pool } from "./db";
-import { mps, courtCases, sprmInvestigations, legislativeProposals, debateParticipations, parliamentaryQuestions, hansardRecords, pageViews, users, userActivityLog } from "@shared/schema";
+import { mps, courtCases, sprmInvestigations, legislativeProposals, debateParticipations, parliamentaryQuestions, hansardRecords, pageViews, userActivityLog } from "@shared/schema";
 import { eq, sql } from "drizzle-orm";
 import { MPNameMatcher } from "./mp-name-matcher";
 import { HansardScraper } from "./hansard-scraper";
 import { ConstituencyMatcher } from "./constituency-matcher";
 import { scrapeMpPhotos } from "./utils/scrape-mp-photos";
 import { normalizeParliamentTerm } from "../shared/utils";
-import session from "express-session";
-import createMemoryStore from "memorystore";
-import connectPg from "connect-pg-simple";
-import { hashPassword } from "./utils/password";
 
 export interface IStorage {
   // MP methods
@@ -114,24 +110,14 @@ export interface IStorage {
   incrementPageView(page: string): Promise<number>;
   getPageViewCount(page: string): Promise<number>;
 
-  // Reference: blueprint:javascript_auth_all_persistance
-  // User authentication methods
-  getUser(id: number): Promise<User | undefined>;
-  getUserByUsername(username: string): Promise<User | undefined>;
-  createUser(user: InsertUser): Promise<User>;
-  
   // User Activity Log methods
   logUserActivity(activity: InsertUserActivityLog): Promise<UserActivityLog>;
   getUserActivityLogs(options?: {
-    userId?: number;
     pageUrl?: string;
     startDate?: Date;
     endDate?: Date;
     limit?: number;
   }): Promise<UserActivityLog[]>;
-  
-  // Session store for authentication
-  sessionStore: session.Store;
 }
 
 export class MemStorage implements IStorage {
@@ -142,10 +128,7 @@ export class MemStorage implements IStorage {
   private debateParticipations: Map<string, DebateParticipation>;
   private parliamentaryQuestions: Map<string, ParliamentaryQuestion>;
   private hansardRecords: Map<string, HansardRecord>;
-  private users: Map<number, User>;
-  private userIdCounter: number = 1;
   private pageViewCounts: Map<string, number> = new Map();
-  sessionStore: session.Store;
 
   constructor() {
     this.mps = new Map();
@@ -155,12 +138,7 @@ export class MemStorage implements IStorage {
     this.debateParticipations = new Map();
     this.parliamentaryQuestions = new Map();
     this.hansardRecords = new Map();
-    this.users = new Map();
-    
-    // Initialize in-memory session store synchronously
-    const MemoryStore = createMemoryStore(session);
-    this.sessionStore = new MemoryStore({ checkPeriod: 86400000 });
-    
+
     this.seedMps();
     this.seedCourtCases();
     this.seedSprmInvestigations();
@@ -1264,28 +1242,6 @@ export class MemStorage implements IStorage {
     return this.pageViewCounts.get(page) || 0;
   }
 
-  // Reference: blueprint:javascript_auth_all_persistance
-  // User authentication methods
-  async getUser(id: number): Promise<User | undefined> {
-    return this.users.get(id);
-  }
-
-  async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(u => u.username === username);
-  }
-
-  async createUser(user: InsertUser): Promise<User> {
-    const id = this.userIdCounter++;
-    const newUser: User = {
-      ...user,
-      id,
-      role: user.role || "user",
-      createdAt: new Date(),
-    };
-    this.users.set(id, newUser);
-    return newUser;
-  }
-
   // User Activity Log methods
   async logUserActivity(activity: InsertUserActivityLog): Promise<UserActivityLog> {
     const newLog: UserActivityLog = {
@@ -1297,7 +1253,6 @@ export class MemStorage implements IStorage {
   }
 
   async getUserActivityLogs(options?: {
-    userId?: number;
     pageUrl?: string;
     startDate?: Date;
     endDate?: Date;
@@ -1305,9 +1260,6 @@ export class MemStorage implements IStorage {
   }): Promise<UserActivityLog[]> {
     return [];
   }
-
-  // Session store for in-memory sessions
-  sessionStore: session.Store;
 
   private seedHansardRecords() {
     const mpsArray = Array.from(this.mps.values());
@@ -2595,22 +2547,6 @@ export class DbStorage implements IStorage {
   }
 
   // Reference: blueprint:javascript_auth_all_persistance
-  // User authentication methods
-  async getUser(id: number): Promise<User | undefined> {
-    const result = await db.select().from(users).where(eq(users.id, id));
-    return result[0];
-  }
-
-  async getUserByUsername(username: string): Promise<User | undefined> {
-    const result = await db.select().from(users).where(eq(users.username, username));
-    return result[0];
-  }
-
-  async createUser(user: InsertUser): Promise<User> {
-    const result = await db.insert(users).values(user).returning();
-    return result[0];
-  }
-
   // User Activity Log methods
   async logUserActivity(activity: InsertUserActivityLog): Promise<UserActivityLog> {
     const result = await db.insert(userActivityLog).values(activity).returning();
@@ -2618,37 +2554,21 @@ export class DbStorage implements IStorage {
   }
 
   async getUserActivityLogs(options?: {
-    userId?: number;
     pageUrl?: string;
     startDate?: Date;
     endDate?: Date;
     limit?: number;
   }): Promise<UserActivityLog[]> {
     let query = db.select().from(userActivityLog);
-    
-    if (options?.userId) {
-      query = query.where(eq(userActivityLog.userId, options.userId)) as any;
-    }
+
     if (options?.pageUrl) {
       query = query.where(eq(userActivityLog.pageUrl, options.pageUrl)) as any;
     }
     if (options?.limit) {
       query = query.limit(options.limit) as any;
     }
-    
+
     return query;
-  }
-
-  // Session store for PostgreSQL-backed sessions
-  sessionStore: session.Store;
-
-  constructor() {
-    // Create PostgreSQL session store synchronously
-    const PostgresSessionStore = connectPg(session);
-    this.sessionStore = new PostgresSessionStore({ 
-      pool: pool,
-      createTableIfMissing: true,
-    });
   }
 }
 
@@ -2656,63 +2576,7 @@ export class DbStorage implements IStorage {
 export async function seedDatabase() {
   const memStorage = new MemStorage();
   const dbStorage = new DbStorage();
-  
-  // Create default admin user if it doesn't exist
-  // In production, ADMIN_USERNAME and ADMIN_PASSWORD must be set explicitly
-  const isDevelopment = process.env.NODE_ENV === "development";
-  const adminUsername = process.env.ADMIN_USERNAME;
-  const adminPassword = process.env.ADMIN_PASSWORD;
-  
-  // In production (or when NODE_ENV is not set), require explicit credentials
-  if (!isDevelopment && (!adminUsername || !adminPassword)) {
-    throw new Error(
-      "SECURITY ERROR: ADMIN_USERNAME and ADMIN_PASSWORD environment variables must be set in production. " +
-      "Default credentials are only allowed in development mode (NODE_ENV=development)."
-    );
-  }
-  
-  // Use default credentials only in development mode if env vars are not set
-  const finalUsername = adminUsername || "admin";
-  const finalPassword = adminPassword || "221097@aB1221097";
-  
-  try {
-    console.log(`Checking for existing admin user: ${finalUsername}`);
-    const existingAdmin = await dbStorage.getUserByUsername(finalUsername);
-    if (!existingAdmin) {
-      console.log("No existing admin found. Creating admin user...");
-      console.log("Hashing password...");
-      const hashedPassword = await hashPassword(finalPassword);
-      console.log("Calling createUser...");
-      await dbStorage.createUser({
-        username: finalUsername,
-        password: hashedPassword,
-        role: "admin"
-      });
-      console.log(`✅ Admin user created with username: ${finalUsername}`);
-      if (isDevelopment && !adminUsername && !adminPassword) {
-        console.log("ℹ️  Using default development credentials. Set ADMIN_USERNAME and ADMIN_PASSWORD in .env to customize.");
-      }
-    } else {
-      console.log(`Admin user '${finalUsername}' already exists (ID: ${existingAdmin.id})`);
-      // Check if admin has legacy bcrypt hash (contains $2b$) and re-hash with scrypt
-      if (existingAdmin.password.includes('$2b$')) {
-        console.log("⚠️  Detected legacy bcrypt password hash for admin user");
-        console.log("🔄 Re-hashing password with scrypt for compatibility...");
-        const hashedPassword = await hashPassword(finalPassword);
-        await db.update(users)
-          .set({ password: hashedPassword })
-          .where(eq(users.id, existingAdmin.id));
-        console.log("✅ Admin password re-hashed successfully");
-      } else {
-        console.log("Admin password hash is up-to-date");
-      }
-    }
-  } catch (error) {
-    console.error("❌ ERROR creating admin user:", error);
-    console.error("Error details:", JSON.stringify(error, null, 2));
-    throw error;
-  }
-  
+
   let mpIdMap = new Map<string, string>();
   let shouldSeedMps = false;
   
