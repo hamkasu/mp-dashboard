@@ -37,7 +37,8 @@ export default function Auth() {
         description: `Welcome back, ${data.username}!`,
       });
       queryClient.invalidateQueries({ queryKey: ["/api/user"] });
-      setLocation("/");
+      // Redirect admin to admin panel
+      setLocation("/hansard-admin");
     },
     onError: (error: Error) => {
       toast({
