@@ -1,5 +1,5 @@
 import type { Express, Request, Response, NextFunction } from "express";
-import { createServer, type Server } from "http";
+import type { Server } from "http";
 import { storage, seedDatabase } from "./storage";
 import { z } from "zod";
 import multer from "multer";
@@ -102,7 +102,7 @@ function extractTopics(transcript: string): string[] {
   return Array.from(topics).slice(0, 10);
 }
 
-export async function registerRoutes(app: Express): Promise<Server> {
+export async function registerRoutes(app: Express, httpServer: Server): Promise<void> {
 
   // Get all MPs
   app.get("/api/mps", async (_req, res) => {
@@ -3306,7 +3306,5 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  const httpServer = createServer(app);
-
-  return httpServer;
+  // Server is now passed in from index.ts, no need to create it here
 }
