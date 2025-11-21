@@ -1,4 +1,4 @@
-import { Search, Menu, Home, FileText, BookOpen, UserCheck, Calculator, BarChart3, ExternalLink, ChevronDown, AlertCircle, GraduationCap, TrendingUp, Scale, Shield } from "lucide-react";
+import { Search, Menu, Home, FileText, BookOpen, UserCheck, Calculator, BarChart3, ExternalLink, ChevronDown, AlertCircle, GraduationCap, TrendingUp, Scale, Shield, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -109,7 +109,7 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
-                variant={location === "/activity" || location === "/attendance" || location === "/hansard-analysis" || location === "/allowances" || location === "/disclaimer" || location === "/analytics" ? "secondary" : "ghost"}
+                variant={location === "/activity" || location === "/attendance" || location === "/hansard-analysis" || location === "/hansard-questions" || location === "/allowances" || location === "/disclaimer" || location === "/analytics" ? "secondary" : "ghost"}
                 size="sm"
                 data-testid="nav-analysis-dropdown"
                 className="gap-2"
@@ -140,6 +140,13 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
               >
                 <BarChart3 className="w-4 h-4 mr-2" />
                 <span>{t('nav.hansardAnalysis')}</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={() => setLocation("/hansard-questions")}
+                data-testid="nav-hansard-questions"
+              >
+                <MessageSquare className="w-4 h-4 mr-2" />
+                <span>{t('nav.hansardQuestions')}</span>
               </DropdownMenuItem>
               <DropdownMenuItem
                 onSelect={() => setLocation("/analytics")}
