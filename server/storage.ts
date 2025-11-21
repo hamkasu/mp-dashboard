@@ -14,6 +14,7 @@ export interface IStorage {
   getMp(id: string): Promise<Mp | undefined>;
   getAllMps(): Promise<Mp[]>;
   createMp(mp: InsertMp): Promise<Mp>;
+  updateMp(id: string, updates: Partial<InsertMp>): Promise<Mp | undefined>;
   
   // Court Case methods
   getCourtCase(id: string): Promise<CourtCase | undefined>;
@@ -164,8 +165,8 @@ export class MemStorage implements IStorage {
 
   async createMp(insertMp: InsertMp): Promise<Mp> {
     const id = randomUUID();
-    const mp: Mp = { 
-      ...insertMp, 
+    const mp: Mp = {
+      ...insertMp,
       id,
       photoUrl: insertMp.photoUrl ?? null,
       title: insertMp.title ?? null,
@@ -186,6 +187,15 @@ export class MemStorage implements IStorage {
     };
     this.mps.set(id, mp);
     return mp;
+  }
+
+  async updateMp(id: string, updates: Partial<InsertMp>): Promise<Mp | undefined> {
+    const mp = this.mps.get(id);
+    if (!mp) return undefined;
+
+    const updatedMp = { ...mp, ...updates };
+    this.mps.set(id, updatedMp);
+    return updatedMp;
   }
 
   private generateAttendance(): { daysAttended: number; totalParliamentDays: number } {
@@ -1592,6 +1602,11 @@ export class DbStorage implements IStorage {
 
   async createMp(mp: InsertMp): Promise<Mp> {
     const result = await db.insert(mps).values(mp).returning();
+    return result[0];
+  }
+
+  async updateMp(id: string, updates: Partial<InsertMp>): Promise<Mp | undefined> {
+    const result = await db.update(mps).set(updates).where(eq(mps.id, id)).returning();
     return result[0];
   }
 
