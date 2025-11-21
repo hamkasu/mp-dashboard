@@ -17,14 +17,17 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies (production only for smaller image)
+# Install ALL dependencies (including dev) needed for building
 RUN npm ci
 
 # Copy application files
 COPY . .
 
-# Build TypeScript (if needed)
-RUN npm run build || true
+# Build TypeScript - fail if build fails
+RUN npm run build
+
+# Remove dev dependencies after build to reduce image size
+RUN npm prune --production
 
 # Railway injects PORT environment variable automatically
 # Default to 5000 for local testing

@@ -845,13 +845,12 @@ export default function HansardAdmin() {
               )}
             </CardContent>
           </Card>
-        </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Download className="h-5 w-5" />
-              Download Hansard Records
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Download className="h-5 w-5" />
+                Download Hansard Records
             </CardTitle>
             <CardDescription>
               Download hansard records from parlimen.gov.my (15th Parliament)
