@@ -6,9 +6,9 @@ import multer from "multer";
 import { promises as fs } from "fs";
 import path from "path";
 import { getPublicBaseUrl, buildPdfUrl, fixHansardPdfUrls } from "./utils/url-helper";
-import { 
-  insertCourtCaseSchema, 
-  insertSprmInvestigationSchema, 
+import {
+  insertCourtCaseSchema,
+  insertSprmInvestigationSchema,
   updateSprmInvestigationSchema,
   insertLegislativeProposalSchema,
   insertDebateParticipationSchema,
@@ -21,7 +21,9 @@ import {
   unmatchedSpeakers,
   insertUnmatchedSpeakerSchema,
   speakerMappings,
-  insertSpeakerMappingSchema
+  insertSpeakerMappingSchema,
+  parliamentaryQuestions,
+  legislativeProposals
 } from "@shared/schema";
 import crypto from "crypto";
 import { HansardScraper, ConstituencyAttendanceCounts } from "./hansard-scraper";
@@ -29,7 +31,8 @@ import { MPNameMatcher } from "./mp-name-matcher";
 import { runHansardSync } from "./hansard-cron";
 import { HansardPdfParser } from "./hansard-pdf-parser";
 import { db } from "./db";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
+import { normalizeParliamentTerm } from "@shared/utils";
 import { jobTracker } from "./job-tracker";
 import { runHansardDownloadJob } from "./hansard-background-jobs";
 import {
@@ -1138,10 +1141,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       for (const file of files) {
         try {
           console.log(`📄 Processing: ${file.originalname} (${file.size} bytes)`);
-          
+
           // Calculate MD5 hash first to check for duplicates
           const md5Hash = crypto.createHash('md5').update(file.buffer).digest('hex');
-          
+
           // Check if this exact PDF already exists
           const pdfCheck = await storage.checkPdfExistsByMd5(md5Hash);
           if (pdfCheck.exists) {
@@ -1155,7 +1158,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             });
             continue;
           }
-          
+
           // Parse the PDF with filename for better date extraction
           const parsed = await parser.parseHansardPdf(file.buffer, file.originalname);
 
@@ -1179,7 +1182,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             speechesPerMp.set(instance.mpId, (speechesPerMp.get(instance.mpId) || 0) + 1);
           }
 
-          // Create Hansard record first (truncate transcript to match background job behavior)
+          // Prepare Hansard record data (truncate transcript to match background job behavior)
           const hansardData = {
             sessionNumber: parsed.metadata.sessionNumber,
             sessionDate: parsed.metadata.sessionDate,
@@ -1205,151 +1208,159 @@ export async function registerRoutes(app: Express): Promise<Server> {
             constituenciesAbsent: parsed.attendance.absentConstituencies.length,
           };
 
-          const record = await storage.createHansardRecord(hansardData);
-          
-          // Save unmatched speakers for diagnostics and manual mapping
-          if (parsed.unmatchedSpeakersDetailed && parsed.unmatchedSpeakersDetailed.length > 0) {
-            console.log(`💾 Saving ${parsed.unmatchedSpeakersDetailed.length} unmatched speakers for diagnostic purposes`);
-            
-            for (const unmatched of parsed.unmatchedSpeakersDetailed) {
-              await db.insert(unmatchedSpeakers).values({
-                hansardRecordId: record.id,
-                extractedName: unmatched.extractedName,
-                extractedConstituency: unmatched.extractedConstituency || null,
-                matchFailureReason: unmatched.failureReason,
-                speakingOrder: unmatched.speakingOrder,
-                rawHeaderText: unmatched.rawHeaderText,
-                suggestedMpIds: unmatched.suggestedMpIds,
-                isMapped: false,
-              });
-            }
-          }
+          // CRITICAL FIX: Wrap all database operations in a transaction
+          // This ensures that if ANY operation fails, the entire upload is rolled back
+          // preventing orphaned hansard records without PDFs
+          const record = await db.transaction(async (tx) => {
+            // Create Hansard record with normalized parliament term
+            const normalizedHansardData = {
+              ...hansardData,
+              parliamentTerm: normalizeParliamentTerm(hansardData.parliamentTerm)
+            };
+            const [insertedRecord] = await tx.insert(hansardRecords).values(normalizedHansardData).returning();
 
-          // Save parliamentary questions
-          if (parsed.questions && parsed.questions.length > 0) {
-            console.log(`💾 Saving ${parsed.questions.length} parliamentary questions`);
-            for (const question of parsed.questions) {
-              if (question.mpId) {
-                await storage.createParliamentaryQuestion({
-                  mpId: question.mpId,
-                  questionText: question.questionText,
-                  dateAsked: parsed.metadata.sessionDate,
-                  ministry: question.ministry,
-                  topic: question.topic,
-                  answerStatus: question.answerStatus,
-                  hansardReference: parsed.metadata.sessionNumber,
-                  answerText: question.answerText || null,
-                  questionType: question.questionType,
-                  questionNumber: question.questionNumber || null,
-                  hansardRecordId: record.id,
+            // Save unmatched speakers for diagnostics and manual mapping
+            if (parsed.unmatchedSpeakersDetailed && parsed.unmatchedSpeakersDetailed.length > 0) {
+              console.log(`💾 Saving ${parsed.unmatchedSpeakersDetailed.length} unmatched speakers for diagnostic purposes`);
+
+              for (const unmatched of parsed.unmatchedSpeakersDetailed) {
+                await tx.insert(unmatchedSpeakers).values({
+                  hansardRecordId: insertedRecord.id,
+                  extractedName: unmatched.extractedName,
+                  extractedConstituency: unmatched.extractedConstituency || null,
+                  matchFailureReason: unmatched.failureReason,
+                  speakingOrder: unmatched.speakingOrder,
+                  rawHeaderText: unmatched.rawHeaderText,
+                  suggestedMpIds: unmatched.suggestedMpIds,
+                  isMapped: false,
                 });
               }
             }
-          }
 
-          // Save bills and motions
-          if (parsed.bills && parsed.bills.length > 0) {
-            console.log(`💾 Saving ${parsed.bills.length} bills`);
-            for (const bill of parsed.bills) {
-              if (bill.mpId) {
-                await storage.createLegislativeProposal({
-                  mpId: bill.mpId,
-                  title: bill.title,
-                  type: 'Bill',
-                  dateProposed: parsed.metadata.sessionDate,
-                  status: bill.status,
-                  description: bill.description,
-                  hansardReference: parsed.metadata.sessionNumber,
-                  outcome: null,
-                  billNumber: bill.billNumber || null,
-                  coSponsors: bill.coSponsors || [],
-                  hansardRecordId: record.id,
-                });
+            // Save parliamentary questions
+            if (parsed.questions && parsed.questions.length > 0) {
+              console.log(`💾 Saving ${parsed.questions.length} parliamentary questions`);
+              for (const question of parsed.questions) {
+                if (question.mpId) {
+                  await tx.insert(parliamentaryQuestions).values({
+                    mpId: question.mpId,
+                    questionText: question.questionText,
+                    dateAsked: parsed.metadata.sessionDate,
+                    ministry: question.ministry,
+                    topic: question.topic,
+                    answerStatus: question.answerStatus,
+                    hansardReference: parsed.metadata.sessionNumber,
+                    answerText: question.answerText || null,
+                    questionType: question.questionType,
+                    questionNumber: question.questionNumber || null,
+                    hansardRecordId: insertedRecord.id,
+                  });
+                }
               }
             }
-          }
 
-          if (parsed.motions && parsed.motions.length > 0) {
-            console.log(`💾 Saving ${parsed.motions.length} motions`);
-            for (const motion of parsed.motions) {
-              if (motion.mpId) {
-                await storage.createLegislativeProposal({
-                  mpId: motion.mpId,
-                  title: motion.title,
-                  type: 'Motion',
-                  dateProposed: parsed.metadata.sessionDate,
-                  status: motion.status,
-                  description: motion.description,
-                  hansardReference: parsed.metadata.sessionNumber,
-                  outcome: null,
-                  billNumber: null,
-                  coSponsors: motion.coSponsors || [],
-                  hansardRecordId: record.id,
-                });
+            // Save bills and motions
+            if (parsed.bills && parsed.bills.length > 0) {
+              console.log(`💾 Saving ${parsed.bills.length} bills`);
+              for (const bill of parsed.bills) {
+                if (bill.mpId) {
+                  await tx.insert(legislativeProposals).values({
+                    mpId: bill.mpId,
+                    title: bill.title,
+                    type: 'Bill',
+                    dateProposed: parsed.metadata.sessionDate,
+                    status: bill.status,
+                    description: bill.description,
+                    hansardReference: parsed.metadata.sessionNumber,
+                    outcome: null,
+                    billNumber: bill.billNumber || null,
+                    coSponsors: bill.coSponsors || [],
+                    hansardRecordId: insertedRecord.id,
+                  });
+                }
               }
             }
-          }
-          
-          // Store PDF in database (md5Hash already calculated earlier)
-          // Check if a PDF with this hash already exists for this record
-          const { eq, and } = await import("drizzle-orm");
-          const [existingPdf] = await db.select().from(hansardPdfFiles)
-            .where(and(
-              eq(hansardPdfFiles.hansardRecordId, record.id),
-              eq(hansardPdfFiles.md5Hash, md5Hash)
-            ));
-          
-          if (existingPdf) {
-            // Duplicate found - ensure it's marked as primary if not already
-            if (!existingPdf.isPrimary) {
-              await db.update(hansardPdfFiles)
+
+            if (parsed.motions && parsed.motions.length > 0) {
+              console.log(`💾 Saving ${parsed.motions.length} motions`);
+              for (const motion of parsed.motions) {
+                if (motion.mpId) {
+                  await tx.insert(legislativeProposals).values({
+                    mpId: motion.mpId,
+                    title: motion.title,
+                    type: 'Motion',
+                    dateProposed: parsed.metadata.sessionDate,
+                    status: motion.status,
+                    description: motion.description,
+                    hansardReference: parsed.metadata.sessionNumber,
+                    outcome: null,
+                    billNumber: null,
+                    coSponsors: motion.coSponsors || [],
+                    hansardRecordId: insertedRecord.id,
+                  });
+                }
+              }
+            }
+
+            // Store PDF in database (md5Hash already calculated earlier)
+            // Check if a PDF with this hash already exists for this record
+            const { eq, and } = await import("drizzle-orm");
+            const [existingPdf] = await tx.select().from(hansardPdfFiles)
+              .where(and(
+                eq(hansardPdfFiles.hansardRecordId, insertedRecord.id),
+                eq(hansardPdfFiles.md5Hash, md5Hash)
+              ));
+
+            if (existingPdf) {
+              // Duplicate found - ensure it's marked as primary if not already
+              if (!existingPdf.isPrimary) {
+                await tx.update(hansardPdfFiles)
+                  .set({ isPrimary: false })
+                  .where(eq(hansardPdfFiles.hansardRecordId, insertedRecord.id));
+
+                await tx.update(hansardPdfFiles)
+                  .set({ isPrimary: true })
+                  .where(eq(hansardPdfFiles.id, existingPdf.id));
+              }
+              console.log(`✓ PDF already exists (same MD5 hash), using existing file as primary`);
+            } else {
+              // New PDF - clear previous primary flags and insert
+              await tx.update(hansardPdfFiles)
                 .set({ isPrimary: false })
-                .where(eq(hansardPdfFiles.hansardRecordId, record.id));
-              
-              await db.update(hansardPdfFiles)
-                .set({ isPrimary: true })
-                .where(eq(hansardPdfFiles.id, existingPdf.id));
-            }
-            console.log(`✓ PDF already exists (same MD5 hash), using existing file as primary`);
-          } else {
-            // New PDF - clear previous primary flags and insert
-            await db.update(hansardPdfFiles)
-              .set({ isPrimary: false })
-              .where(eq(hansardPdfFiles.hansardRecordId, record.id));
-            
-            const [pdfFile] = await db.insert(hansardPdfFiles).values({
-              hansardRecordId: record.id,
-              originalFilename: file.originalname,
-              fileSizeBytes: file.size,
-              contentType: 'application/pdf',
-              pdfData: file.buffer,
-              md5Hash,
-              uploadedBy: getCurrentUsername(req) || null,
-              isPrimary: true,
-            }).returning();
-            
-            console.log(`💾 Saved new PDF to database: ${pdfFile.id}`);
-          }
+                .where(eq(hansardPdfFiles.hansardRecordId, insertedRecord.id));
 
-          // Update MP speaking statistics
-          const speakerIds = parsed.speakers.map(s => s.mpId);
-          for (const mpId of speakerIds) {
-            const mp = allMps.find(m => m.id === mpId);
-            if (mp) {
-              const { eq } = await import("drizzle-orm");
+              const [pdfFile] = await tx.insert(hansardPdfFiles).values({
+                hansardRecordId: insertedRecord.id,
+                originalFilename: file.originalname,
+                fileSizeBytes: file.size,
+                contentType: 'application/pdf',
+                pdfData: file.buffer,
+                md5Hash,
+                uploadedBy: getCurrentUsername(req) || null,
+                isPrimary: true,
+              }).returning();
+
+              console.log(`💾 Saved new PDF to database: ${pdfFile.id}`);
+            }
+
+            // Update MP speaking statistics using SQL increment to avoid race conditions
+            const speakerIds = parsed.speakers.map(s => s.mpId);
+            for (const mpId of speakerIds) {
               const speechCount = speechesPerMp.get(mpId) || 0;
-              
+
               // Only increment if MP actually spoke (has speech instances)
               if (speechCount > 0) {
-                await db.update(mps)
-                  .set({ 
-                    hansardSessionsSpoke: mp.hansardSessionsSpoke + 1,
-                    totalSpeechInstances: mp.totalSpeechInstances + speechCount
+                await tx.update(mps)
+                  .set({
+                    hansardSessionsSpoke: sql`${mps.hansardSessionsSpoke} + 1`,
+                    totalSpeechInstances: sql`${mps.totalSpeechInstances} + ${speechCount}`
                   })
                   .where(eq(mps.id, mpId));
               }
             }
-          }
+
+            return insertedRecord;
+          });
 
           console.log(`✅ Successfully created Hansard record ${parsed.metadata.sessionNumber}`);
 
@@ -2205,6 +2216,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting all Hansard records:", error);
       res.status(500).json({ error: "Failed to delete all Hansard records" });
+    }
+  });
+
+  // Clean up orphaned Hansard records (records without PDFs)
+  app.post("/api/hansard-records/cleanup-orphaned", requireAdmin, mutationRateLimit, auditMiddleware('hansard-cleanup'), async (_req, res) => {
+    try {
+      console.log("🧹 Starting cleanup of orphaned Hansard records (records without PDFs)...");
+
+      // Find all hansard records
+      const allRecords = await db.select({ id: hansardRecords.id, sessionNumber: hansardRecords.sessionNumber })
+        .from(hansardRecords);
+
+      console.log(`📊 Found ${allRecords.length} total Hansard records`);
+
+      // Check each record for associated PDF
+      const orphanedRecords = [];
+      for (const record of allRecords) {
+        const [pdfFile] = await db.select({ id: hansardPdfFiles.id })
+          .from(hansardPdfFiles)
+          .where(eq(hansardPdfFiles.hansardRecordId, record.id))
+          .limit(1);
+
+        if (!pdfFile) {
+          orphanedRecords.push(record);
+        }
+      }
+
+      console.log(`🗑️  Found ${orphanedRecords.length} orphaned records without PDFs`);
+
+      if (orphanedRecords.length === 0) {
+        return res.json({
+          message: "No orphaned records found",
+          deletedCount: 0,
+          orphanedRecords: []
+        });
+      }
+
+      // Delete orphaned records (cascade will handle related data)
+      let deletedCount = 0;
+      const deletedRecords = [];
+
+      for (const record of orphanedRecords) {
+        const deleted = await storage.deleteHansardRecord(record.id);
+        if (deleted) {
+          deletedCount++;
+          deletedRecords.push(record.sessionNumber);
+          console.log(`✓ Deleted orphaned record: ${record.sessionNumber}`);
+        }
+      }
+
+      console.log(`✅ Cleanup complete: deleted ${deletedCount} orphaned records`);
+
+      res.json({
+        message: `Successfully deleted ${deletedCount} orphaned Hansard records`,
+        deletedCount,
+        orphanedRecords: deletedRecords
+      });
+    } catch (error) {
+      console.error("Error cleaning up orphaned Hansard records:", error);
+      res.status(500).json({
+        error: "Failed to clean up orphaned Hansard records",
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
     }
   });
 
