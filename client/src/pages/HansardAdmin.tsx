@@ -102,6 +102,27 @@ export default function HansardAdmin() {
     },
   });
 
+  const cleanupOrphanedMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/hansard-records/cleanup-orphaned");
+      return await res.json();
+    },
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/hansard-records"] });
+      toast({
+        title: "Success",
+        description: data.message || `Deleted ${data.deletedCount} orphaned records`,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to clean up orphaned records",
+        variant: "destructive",
+      });
+    },
+  });
+
   const pollJobStatus = async (jobId: string) => {
     try {
       const res = await apiRequest("GET", `/api/jobs/${jobId}`);
@@ -209,6 +230,12 @@ export default function HansardAdmin() {
   const handleDelete = () => {
     if (confirm(`Are you sure you want to delete all ${hansardRecords?.length || 0} hansard records? This action cannot be undone.`)) {
       deleteMutation.mutate();
+    }
+  };
+
+  const handleCleanupOrphaned = () => {
+    if (confirm("This will remove all Hansard records that don't have associated PDF files. Continue?")) {
+      cleanupOrphanedMutation.mutate();
     }
   };
 
@@ -765,6 +792,60 @@ export default function HansardAdmin() {
               )}
             </CardContent>
           </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Database className="h-5 w-5" />
+                Clean Up Orphaned Records
+              </CardTitle>
+              <CardDescription>
+                Remove hansard records without associated PDF files
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {isLoading ? (
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Loading records...
+                </div>
+              ) : (
+                <>
+                  <div className="space-y-2">
+                    <p className="text-sm text-muted-foreground">
+                      This will remove records that were created but don't have PDF files
+                      (typically from failed uploads).
+                    </p>
+                    <Alert>
+                      <AlertTriangle className="h-4 w-4" />
+                      <AlertDescription>
+                        Orphaned records cannot display PDF content and should be cleaned up.
+                      </AlertDescription>
+                    </Alert>
+                  </div>
+                  <Button
+                    onClick={handleCleanupOrphaned}
+                    disabled={cleanupOrphanedMutation.isPending || isLoading || !hansardRecords || hansardRecords.length === 0}
+                    variant="outline"
+                    className="w-full"
+                  >
+                    {cleanupOrphanedMutation.isPending ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Cleaning up...
+                      </>
+                    ) : (
+                      <>
+                        <Database className="mr-2 h-4 w-4" />
+                        Clean Up Orphaned Records
+                      </>
+                    )}
+                  </Button>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        </div>
 
         <Card>
           <CardHeader>
