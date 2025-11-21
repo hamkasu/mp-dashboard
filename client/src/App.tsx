@@ -13,6 +13,7 @@ import Constitution from "@/pages/Constitution";
 import HansardAdmin from "@/pages/HansardAdmin";
 import HansardAnalysis from "@/pages/hansard-analysis";
 import ConstituencyAnalysis from "@/pages/ConstituencyAnalysis";
+import HansardQuestions from "@/pages/hansard-questions";
 import Attendance from "@/pages/attendance";
 import Allowances from "@/pages/Allowances";
 import Disclaimer from "@/pages/Disclaimer";
@@ -34,6 +35,7 @@ function Router() {
       <Route path="/disclaimer" component={Disclaimer} />
       <Route path="/hansard-admin" component={HansardAdmin} />
       <Route path="/hansard-analysis" component={HansardAnalysis} />
+      <Route path="/hansard-questions" component={HansardQuestions} />
       <Route path="/constituency-analysis" component={ConstituencyAnalysis} />
       <Route path="/analytics" component={Analytics} />
       <Route path="/admin-login" component={AdminLogin} />
