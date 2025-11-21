@@ -8,6 +8,13 @@ import { helmetConfig, readRateLimit } from "./middleware/security";
 import { corsConfig } from "./middleware/cors";
 import { setupAuth } from "./simple-auth";
 import { runStartupTasks } from "./startup-tasks";
+import { isDatabaseAvailable } from "./db";
+
+// Validate DATABASE_URL is set at runtime (not during build)
+if (!isDatabaseAvailable()) {
+  console.error("DATABASE_URL must be set. Did you forget to provision the database?");
+  process.exit(1);
+}
 
 const app = express();
 const server = createServer(app);

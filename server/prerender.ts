@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { db } from './db';
+import { db, isDatabaseAvailable } from './db';
 import { mps } from '../shared/schema';
 import type { Mp } from '../shared/schema';
 
@@ -260,12 +260,17 @@ export async function generatePrerenderedPages() {
   
   console.log('👥 Fetching all MPs...');
   let allMps: Mp[] = [];
-  try {
-    allMps = await db.select().from(mps);
-    console.log(`📊 Generating ${allMps.length} MP profile pages...`);
-  } catch (error) {
-    console.warn('⚠️ Database not available during build (expected on Railway). Skipping MP profile pages.');
+  if (!isDatabaseAvailable()) {
+    console.warn('⚠️ DATABASE_URL not set during build (expected in CI/CD). Skipping MP profile pages.');
     console.warn('   MP profiles will be rendered dynamically at runtime.');
+  } else {
+    try {
+      allMps = await db!.select().from(mps);
+      console.log(`📊 Generating ${allMps.length} MP profile pages...`);
+    } catch (error) {
+      console.warn('⚠️ Database query failed during build. Skipping MP profile pages.');
+      console.warn('   MP profiles will be rendered dynamically at runtime.');
+    }
   }
   
   for (const mp of allMps) {
