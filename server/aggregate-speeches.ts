@@ -151,22 +151,26 @@ export async function aggregateAttendanceForAllMps(): Promise<{
     const sessionDate = new Date(record.sessionDate);
     const attendedMpIds = (record.attendedMpIds || []) as string[];
     const absentMpIds = (record.absentMpIds || []) as string[];
-    
-    const uniqueAttendedMps = new Set(attendedMpIds);
-    const uniqueAbsentMps = new Set(absentMpIds);
 
-    for (const mpId of Array.from(uniqueAttendedMps)) {
-      const mpData = mpAttendanceData.get(mpId);
-      if (mpData && sessionDate >= mpData.swornInDate) {
-        mpData.daysAttended++;
-        mpData.totalParliamentDays++;
-      }
-    }
+    const attendedSet = new Set(attendedMpIds);
+    const absentSet = new Set(absentMpIds);
 
-    for (const mpId of Array.from(uniqueAbsentMps)) {
-      const mpData = mpAttendanceData.get(mpId);
-      if (mpData && sessionDate >= mpData.swornInDate) {
+    // Track MPs mentioned in this session
+    const totalMentioned = attendedSet.size + absentSet.size;
+
+    // For each MP, check if they were sworn in before this session
+    for (const [mpId, mpData] of Array.from(mpAttendanceData.entries())) {
+      // Only count sessions after MP was sworn in
+      if (sessionDate >= mpData.swornInDate) {
+        // Count this as a parliament day for this MP
         mpData.totalParliamentDays++;
+
+        // Mark as attended if explicitly in attendedSet OR if not in either list
+        // (giving benefit of doubt for unlisted MPs, as they may have been missed in parsing)
+        if (attendedSet.has(mpId) || (!attendedSet.has(mpId) && !absentSet.has(mpId))) {
+          mpData.daysAttended++;
+        }
+        // If MP is in absentSet, totalParliamentDays is incremented but not daysAttended
       }
     }
   }
