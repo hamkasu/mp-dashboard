@@ -181,12 +181,27 @@ export async function runHansardDownloadJob(
       }
     }
     
+    // Run MP data refresh if any records were successfully processed
+    if (successCount > 0) {
+      console.log(`\n[Job] Running MP data refresh for ${successCount} new records...`);
+      try {
+        const { refreshAllMpData } = await import('./aggregate-speeches');
+        const refreshResult = await refreshAllMpData();
+        console.log(`[Job] ✅ MP data refresh complete:`);
+        console.log(`[Job]    - Attendance: ${refreshResult.attendance.totalMpsUpdated} MPs updated from ${refreshResult.attendance.totalRecordsProcessed} records`);
+        console.log(`[Job]    - Speeches: ${refreshResult.speeches.totalMpsUpdated} MPs updated`);
+      } catch (error: any) {
+        console.error(`[Job] ⚠️  MP data refresh failed: ${error.message}`);
+        // Don't fail the job if refresh fails
+      }
+    }
+
     // Complete the job
     console.log(`\n[Job] === Summary ===`);
     console.log(`[Job] Successfully processed: ${successCount}`);
     console.log(`[Job] Errors: ${errorCount}`);
     console.log(`[Job] Already existed: ${skippedCount}`);
-    
+
     jobTracker.completeJob(jobId, {
       successCount,
       errorCount,
