@@ -1,4 +1,5 @@
 import express, { type Request, Response, NextFunction } from "express";
+import { createServer } from "http";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { startHansardCron } from "./hansard-cron";
@@ -8,6 +9,7 @@ import { corsConfig } from "./middleware/cors";
 import { setupAuth } from "./simple-auth";
 
 const app = express();
+const server = createServer(app);
 
 declare module 'http' {
   interface IncomingMessage {
@@ -80,8 +82,19 @@ app.use((req, res, next) => {
 // Serve static files from attached_assets (for PDFs and other uploads)
 app.use('/attached_assets', express.static('attached_assets'));
 
+// Start listening IMMEDIATELY so health checks pass while routes are being registered
+// This is critical for Railway deployment - health checks start as soon as the process runs
+const port = parseInt(process.env.PORT || '5000', 10);
+server.listen({
+  port,
+  host: "0.0.0.0",
+  reusePort: true,
+}, () => {
+  log(`Server listening on port ${port}`);
+});
+
 (async () => {
-  const server = await registerRoutes(app);
+  await registerRoutes(app, server);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
@@ -108,19 +121,8 @@ app.use('/attached_assets', express.static('attached_assets'));
     serveStatic(app);
   }
 
-  // ALWAYS serve the app on the port specified in the environment variable PORT
-  // Other ports are firewalled. Default to 5000 if not specified.
-  // this serves both the API and the client.
-  // It is the only port that is not firewalled.
-  const port = parseInt(process.env.PORT || '5000', 10);
-  server.listen({
-    port,
-    host: "0.0.0.0",
-    reusePort: true,
-  }, () => {
-    log(`serving on port ${port}`);
-    
-    // Start the daily Hansard sync cron job
-    startHansardCron();
-  });
+  log(`App fully initialized`);
+
+  // Start the daily Hansard sync cron job
+  startHansardCron();
 })();

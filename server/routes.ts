@@ -1,5 +1,5 @@
 import type { Express, Request, Response, NextFunction } from "express";
-import { createServer, type Server } from "http";
+import type { Server } from "http";
 import { storage, seedDatabase } from "./storage";
 import { z } from "zod";
 import multer from "multer";
@@ -102,7 +102,7 @@ function extractTopics(transcript: string): string[] {
   return Array.from(topics).slice(0, 10);
 }
 
-export async function registerRoutes(app: Express): Promise<Server> {
+export async function registerRoutes(app: Express, httpServer: Server): Promise<void> {
 
   // Get all MPs
   app.get("/api/mps", async (_req, res) => {
@@ -3306,8 +3306,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Hansard Question Analyzer Routes
-  
+// Hansard Question Analyzer Routes
+
   // Upload and parse Hansard PDF for questions
   app.post("/api/hansard/parse-questions", uploadRateLimit, upload.single('pdf'), handleMulterError, async (req, res) => {
     try {
@@ -3317,23 +3317,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const { HansardQuestionParser } = await import("./utils/hansard-question-parser");
       const parser = new HansardQuestionParser();
-      
+
       // Parse the PDF
       const result = await parser.parsePdf(req.file.buffer);
-      
+
       // Get constituency statistics
       const stats = parser.getConstituencyStats(result);
-      
+
       // Get all MPs for name matching
       const allMps = await storage.getAllMps();
       const mpNameMatcher = new MPNameMatcher(allMps);
-      
+
       // Persist parsed questions to database
       const persistedQuestions: any[] = [];
       for (const question of result.questions) {
         // Try to match MP name to database MP
         const matchedMp = mpNameMatcher.findBestMatch(question.mpName);
-        
+
         if (matchedMp) {
           try {
             // Insert the question
@@ -3352,9 +3352,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.warn(`Could not match MP name: ${question.mpName} (${question.constituency})`);
         }
       }
-      
+
       console.log(`Persisted ${persistedQuestions.length} of ${result.questions.length} parsed questions`);
-      
+
       res.json({
         sessionInfo: {
           sessionDate: result.sessionDate,
@@ -3371,7 +3371,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         questions: result.questions,
         constituencyStats: stats,
       });
-      
+
     } catch (error) {
       console.error("Error parsing Hansard PDF:", error);
       res.status(500).json({ error: error instanceof Error ? error.message : "Failed to parse PDF" });
@@ -3383,10 +3383,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const questions = await storage.getAllParliamentaryQuestions();
       const mps = await storage.getAllMps();
-      
+
       // Create MP lookup map
       const mpMap = new Map(mps.map(mp => [mp.id, mp]));
-      
+
       // Group questions by constituency
       const statsByConstituency = new Map<string, {
         constituency: string;
@@ -3395,11 +3395,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         mpNames: Set<string>;
         mpIds: Set<string>;
       }>();
-      
+
       questions.forEach(q => {
         const mp = mpMap.get(q.mpId);
         if (!mp) return;
-        
+
         const constituency = mp.constituency;
         if (!statsByConstituency.has(constituency)) {
           statsByConstituency.set(constituency, {
@@ -3410,13 +3410,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
             mpIds: new Set(),
           });
         }
-        
+
         const stats = statsByConstituency.get(constituency)!;
         stats.questionCount++;
         stats.mpNames.add(mp.name);
         stats.mpIds.add(mp.id);
       });
-      
+
       // Convert to array and format
       const statsArray = Array.from(statsByConstituency.values()).map(stat => ({
         constituency: stat.constituency,
@@ -3425,13 +3425,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         mpNames: Array.from(stat.mpNames),
         mpIds: Array.from(stat.mpIds),
       })).sort((a, b) => b.questionCount - a.questionCount);
-      
+
       res.json({
         totalConstituencies: statsArray.length,
         totalQuestions: questions.length,
         stats: statsArray,
       });
-      
+
     } catch (error) {
       console.error("Error getting constituency question stats:", error);
       res.status(500).json({ error: "Failed to fetch constituency statistics" });
@@ -3444,28 +3444,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { constituency } = req.params;
       const questions = await storage.getAllParliamentaryQuestions();
       const mps = await storage.getAllMps();
-      
+
       // Find MPs in this constituency
       const constituencyMps = mps.filter(mp => mp.constituency === constituency);
       const mpIds = new Set(constituencyMps.map(mp => mp.id));
-      
+
       // Filter questions by these MPs
       const constituencyQuestions = questions.filter(q => mpIds.has(q.mpId));
-      
+
       res.json({
         constituency,
         questionCount: constituencyQuestions.length,
         questions: constituencyQuestions,
         mps: constituencyMps,
       });
-      
+
     } catch (error) {
       console.error("Error fetching constituency questions:", error);
       res.status(500).json({ error: "Failed to fetch questions" });
     }
   });
 
-  const httpServer = createServer(app);
-
-  return httpServer;
+  // Server is now passed in from index.ts, no need to create it here
 }
