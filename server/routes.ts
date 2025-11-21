@@ -2396,6 +2396,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Constituency endpoints
+  app.get("/api/constituencies", async (_req, res) => {
+    try {
+      const constituencies = await storage.getAllConstituencies();
+      // Convert poverty incidence from integer tenths back to decimal
+      const constituenciesWithPoverty = constituencies.map(c => ({
+        ...c,
+        povertyIncidence: c.povertyIncidence ? c.povertyIncidence / 10 : null,
+      }));
+      res.json(constituenciesWithPoverty);
+    } catch (error) {
+      console.error("Error fetching constituencies:", error);
+      res.status(500).json({ error: "Failed to fetch constituencies" });
+    }
+  });
+
+  app.get("/api/constituencies/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const constituency = await storage.getConstituency(id);
+
+      if (!constituency) {
+        return res.status(404).json({ error: "Constituency not found" });
+      }
+
+      // Convert poverty incidence from integer tenths back to decimal
+      res.json({
+        ...constituency,
+        povertyIncidence: constituency.povertyIncidence ? constituency.povertyIncidence / 10 : null,
+      });
+    } catch (error) {
+      console.error("Error fetching constituency:", error);
+      res.status(500).json({ error: "Failed to fetch constituency" });
+    }
+  });
+
+  app.get("/api/constituencies/code/:code", async (req, res) => {
+    try {
+      const { code } = req.params;
+      const constituency = await storage.getConstituencyByCode(code);
+
+      if (!constituency) {
+        return res.status(404).json({ error: "Constituency not found" });
+      }
+
+      // Convert poverty incidence from integer tenths back to decimal
+      res.json({
+        ...constituency,
+        povertyIncidence: constituency.povertyIncidence ? constituency.povertyIncidence / 10 : null,
+      });
+    } catch (error) {
+      console.error("Error fetching constituency:", error);
+      res.status(500).json({ error: "Failed to fetch constituency" });
+    }
+  });
+
   // Summarize text with Hugging Face mT5 (supports Malay and English)
   app.post("/api/summarize", mutationRateLimit, auditMiddleware('summarize'), async (req, res) => {
     try {

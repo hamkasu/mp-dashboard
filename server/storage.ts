@@ -1,7 +1,7 @@
-import { type Mp, type InsertMp, type CourtCase, type InsertCourtCase, type SprmInvestigation, type InsertSprmInvestigation, type LegislativeProposal, type InsertLegislativeProposal, type DebateParticipation, type InsertDebateParticipation, type ParliamentaryQuestion, type InsertParliamentaryQuestion, type HansardRecord, type InsertHansardRecord, type UpdateHansardRecord, type PageView, type UserActivityLog, type InsertUserActivityLog } from "@shared/schema";
+import { type Mp, type InsertMp, type CourtCase, type InsertCourtCase, type SprmInvestigation, type InsertSprmInvestigation, type LegislativeProposal, type InsertLegislativeProposal, type DebateParticipation, type InsertDebateParticipation, type ParliamentaryQuestion, type InsertParliamentaryQuestion, type HansardRecord, type InsertHansardRecord, type UpdateHansardRecord, type PageView, type UserActivityLog, type InsertUserActivityLog, type Constituency, type InsertConstituency } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db, pool } from "./db";
-import { mps, courtCases, sprmInvestigations, legislativeProposals, debateParticipations, parliamentaryQuestions, hansardRecords, pageViews, userActivityLog } from "@shared/schema";
+import { mps, courtCases, sprmInvestigations, legislativeProposals, debateParticipations, parliamentaryQuestions, hansardRecords, pageViews, userActivityLog, constituencies } from "@shared/schema";
 import { eq, sql } from "drizzle-orm";
 import { MPNameMatcher } from "./mp-name-matcher";
 import { HansardScraper } from "./hansard-scraper";
@@ -118,6 +118,12 @@ export interface IStorage {
     endDate?: Date;
     limit?: number;
   }): Promise<UserActivityLog[]>;
+
+  // Constituency methods
+  getConstituency(id: string): Promise<Constituency | undefined>;
+  getConstituencyByCode(parliamentCode: string): Promise<Constituency | undefined>;
+  getAllConstituencies(): Promise<Constituency[]>;
+  getConstituenciesByState(state: string): Promise<Constituency[]>;
 }
 
 export class MemStorage implements IStorage {
@@ -1552,6 +1558,23 @@ export class MemStorage implements IStorage {
       });
     }
   }
+
+  // Constituency methods (stub implementations for MemStorage)
+  async getConstituency(id: string): Promise<Constituency | undefined> {
+    return undefined;
+  }
+
+  async getConstituencyByCode(parliamentCode: string): Promise<Constituency | undefined> {
+    return undefined;
+  }
+
+  async getAllConstituencies(): Promise<Constituency[]> {
+    return [];
+  }
+
+  async getConstituenciesByState(state: string): Promise<Constituency[]> {
+    return [];
+  }
 }
 
 // Database storage implementation using Drizzle ORM
@@ -2571,6 +2594,25 @@ export class DbStorage implements IStorage {
     }
 
     return query;
+  }
+
+  // Constituency methods
+  async getConstituency(id: string): Promise<Constituency | undefined> {
+    const result = await db.select().from(constituencies).where(eq(constituencies.id, id)).limit(1);
+    return result[0];
+  }
+
+  async getConstituencyByCode(parliamentCode: string): Promise<Constituency | undefined> {
+    const result = await db.select().from(constituencies).where(eq(constituencies.parliamentCode, parliamentCode)).limit(1);
+    return result[0];
+  }
+
+  async getAllConstituencies(): Promise<Constituency[]> {
+    return db.select().from(constituencies);
+  }
+
+  async getConstituenciesByState(state: string): Promise<Constituency[]> {
+    return db.select().from(constituencies).where(eq(constituencies.state, state));
   }
 }
 

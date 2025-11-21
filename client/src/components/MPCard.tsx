@@ -1,4 +1,4 @@
-import { MapPin, UserCircle, Wallet, Calendar, Mic } from "lucide-react";
+import { MapPin, UserCircle, Wallet, Calendar, Mic, TrendingDown } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -6,6 +6,7 @@ import type { Mp } from "@shared/schema";
 import { Link } from "wouter";
 import { calculateTotalSalary, formatCurrency } from "@/lib/utils";
 import { useLanguage } from "@/i18n/LanguageContext";
+import { useConstituencyByCode } from "@/hooks/use-constituencies";
 
 interface MPCardProps {
   mp: Mp;
@@ -36,8 +37,15 @@ function getSpeakingColor(speakingRate: number): string {
   return "text-red-600 dark:text-red-400";
 }
 
+function getPovertyColor(povertyRate: number): string {
+  if (povertyRate <= 2) return "text-green-600 dark:text-green-400";
+  if (povertyRate <= 10) return "text-yellow-600 dark:text-yellow-400";
+  return "text-red-600 dark:text-red-400";
+}
+
 export function MPCard({ mp }: MPCardProps) {
   const { t } = useLanguage();
+  const { data: constituency } = useConstituencyByCode(mp.parliamentCode);
   const initials = mp.name
     .split(" ")
     .map((n) => n[0])
@@ -113,9 +121,17 @@ export function MPCard({ mp }: MPCardProps) {
               <div className="flex-1 min-w-0">
                 <p className="font-medium line-clamp-1">{mp.constituency}</p>
                 <p className="text-xs text-muted-foreground">{mp.state}</p>
+                {constituency?.povertyIncidence !== null && constituency?.povertyIncidence !== undefined && (
+                  <div className="flex items-center gap-1 mt-1">
+                    <TrendingDown className="h-3 w-3 text-muted-foreground" />
+                    <p className={`text-xs font-medium ${getPovertyColor(constituency.povertyIncidence)}`}>
+                      {constituency.povertyIncidence.toFixed(1)}% poverty rate
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
-            
+
             <div className="flex items-start gap-2">
               <Wallet className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
               <div className="flex-1 min-w-0 space-y-1">

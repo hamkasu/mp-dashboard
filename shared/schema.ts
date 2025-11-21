@@ -466,3 +466,23 @@ export const insertAdminUserSchema = createInsertSchema(adminUsers).omit({
 
 export type InsertAdminUser = z.infer<typeof insertAdminUserSchema>;
 export type AdminUser = typeof adminUsers.$inferSelect;
+
+// Constituencies table for parliamentary constituency data
+export const constituencies = pgTable("constituencies", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  state: text("state").notNull(),
+  parliamentCode: text("parliament_code").notNull().unique(),
+  name: text("name").notNull(),
+  povertyIncidence: integer("poverty_incidence"),
+  createdAt: timestamp("created_at").notNull().default(sql`NOW()`),
+  updatedAt: timestamp("updated_at").notNull().default(sql`NOW()`),
+});
+
+export const insertConstituencySchema = createInsertSchema(constituencies).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertConstituency = z.infer<typeof insertConstituencySchema>;
+export type Constituency = typeof constituencies.$inferSelect;
