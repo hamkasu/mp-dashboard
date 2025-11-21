@@ -19,6 +19,12 @@ declare module 'http' {
 // Railway/Replit use reverse proxies that set X-Forwarded-For headers
 app.set("trust proxy", 1);
 
+// Health check endpoint - must be early in middleware chain to respond
+// even if other parts of the app haven't fully initialized
+app.get("/health", (_req, res) => {
+  res.status(200).json({ status: "ok", timestamp: new Date().toISOString() });
+});
+
 // CORS - must be before other middleware to handle preflight requests
 app.use(corsConfig);
 
