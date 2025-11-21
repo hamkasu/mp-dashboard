@@ -7,6 +7,7 @@ import { trackVisitorAnalytics } from "./analytics-middleware";
 import { helmetConfig, readRateLimit } from "./middleware/security";
 import { corsConfig } from "./middleware/cors";
 import { setupAuth } from "./simple-auth";
+import { runStartupTasks } from "./startup-tasks";
 
 const app = express();
 const server = createServer(app);
@@ -94,6 +95,12 @@ server.listen({
 });
 
 (async () => {
+  // Run startup tasks (db:push, migrations, data imports) in production
+  // This runs after the server is listening so health checks pass immediately
+  if (process.env.NODE_ENV === "production") {
+    await runStartupTasks();
+  }
+
   await registerRoutes(app, server);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
