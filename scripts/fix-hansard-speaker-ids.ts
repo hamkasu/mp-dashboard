@@ -1,4 +1,4 @@
-import { db } from '../server/db';
+import { db, isDatabaseAvailable } from '../server/db';
 import { mps, hansardRecords } from '../shared/schema';
 import { eq } from 'drizzle-orm';
 import { MPNameMatcher } from '../server/mp-name-matcher';
@@ -10,6 +10,11 @@ import { MPNameMatcher } from '../server/mp-name-matcher';
 async function fixHansardSpeakerIds() {
   try {
     console.log('🔧 Fixing Hansard speaker IDs to match current MPs...\n');
+
+    if (!isDatabaseAvailable() || !db) {
+      console.error("DATABASE_URL not set. Cannot fix Hansard speaker IDs.");
+      process.exit(1);
+    }
 
     console.log('👥 Fetching all MPs...');
     const allMps = await db.select().from(mps);

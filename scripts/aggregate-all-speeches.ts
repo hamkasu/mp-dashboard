@@ -1,4 +1,4 @@
-import { db } from '../server/db';
+import { db, isDatabaseAvailable } from '../server/db';
 import { mps, hansardRecords } from '../shared/schema';
 import { eq } from 'drizzle-orm';
 
@@ -11,6 +11,11 @@ import { eq } from 'drizzle-orm';
 async function aggregateAllSpeeches() {
   try {
     console.log('📊 Aggregating speech data from all Hansard records...\n');
+
+    if (!isDatabaseAvailable() || !db) {
+      console.error("DATABASE_URL not set. Cannot aggregate speeches.");
+      process.exit(1);
+    }
 
     console.log('🔍 Fetching all Hansard records...');
     const allHansardRecords = await db.select().from(hansardRecords);

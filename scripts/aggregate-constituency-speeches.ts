@@ -1,4 +1,4 @@
-import { db } from '../server/db';
+import { db, isDatabaseAvailable } from '../server/db';
 import { mps, hansardRecords } from '../shared/schema';
 import { eq } from 'drizzle-orm';
 
@@ -9,6 +9,11 @@ import { eq } from 'drizzle-orm';
 async function aggregateConstituencySpeeches() {
   try {
     console.log('📊 Aggregating constituency speech data from 15th Parliament Hansards...\n');
+
+    if (!isDatabaseAvailable() || !db) {
+      console.error("DATABASE_URL not set. Cannot aggregate constituency speeches.");
+      process.exit(1);
+    }
 
     console.log('🔍 Fetching all 15th Parliament Hansard records...');
     const hansards = await db.select()
