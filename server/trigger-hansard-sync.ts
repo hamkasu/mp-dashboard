@@ -1,3 +1,7 @@
+/**
+ * Copyright by Calmic Sdn Bhd
+ */
+
 import { runHansardSync } from './hansard-cron';
 import { db } from './db';
 

@@ -1,3 +1,7 @@
+/**
+ * Copyright by Calmic Sdn Bhd
+ */
+
 import { MPCard } from "./MPCard";
 import type { Mp, LegislativeProposal, ParliamentaryQuestion } from "@shared/schema";
 import { UserCircle } from "lucide-react";

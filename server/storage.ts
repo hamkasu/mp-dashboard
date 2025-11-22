@@ -1,3 +1,7 @@
+/**
+ * Copyright by Calmic Sdn Bhd
+ */
+
 import { type Mp, type InsertMp, type CourtCase, type InsertCourtCase, type SprmInvestigation, type InsertSprmInvestigation, type LegislativeProposal, type InsertLegislativeProposal, type DebateParticipation, type InsertDebateParticipation, type ParliamentaryQuestion, type InsertParliamentaryQuestion, type HansardRecord, type InsertHansardRecord, type UpdateHansardRecord, type PageView, type UserActivityLog, type InsertUserActivityLog, type Constituency, type InsertConstituency } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db, pool } from "./db";

@@ -1,3 +1,7 @@
+/**
+ * Copyright by Calmic Sdn Bhd
+ */
+
 import { useQuery } from "@tanstack/react-query";
 import type { Constituency } from "@shared/schema";
 

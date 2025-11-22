@@ -1,3 +1,7 @@
+/**
+ * Copyright by Calmic Sdn Bhd
+ */
+
 import { HansardScraper } from './hansard-scraper';
 import { storage } from './storage';
 import type { InsertHansardRecord } from '@shared/schema';

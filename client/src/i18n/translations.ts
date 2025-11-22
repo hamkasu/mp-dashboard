@@ -1,3 +1,7 @@
+/**
+ * Copyright by Calmic Sdn Bhd
+ */
+
 // Translation keys and text for English and Malay
 export const translations = {
   en: {

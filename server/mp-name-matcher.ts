@@ -1,3 +1,7 @@
+/**
+ * Copyright by Calmic Sdn Bhd
+ */
+
 import type { Mp } from '@shared/schema';
 
 export class MPNameMatcher {

@@ -1,3 +1,7 @@
+/**
+ * Copyright by Calmic Sdn Bhd
+ */
+
 import { createRoot } from "react-dom/client";
 import App from "./App";
 import "./index.css";

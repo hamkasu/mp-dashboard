@@ -1,3 +1,7 @@
+/**
+ * Copyright by Calmic Sdn Bhd
+ */
+
 import { ConstituencyHansardAnalysis } from "@/components/ConstituencyHansardAnalysis";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";

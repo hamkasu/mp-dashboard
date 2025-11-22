@@ -1,3 +1,7 @@
+/**
+ * Copyright by Calmic Sdn Bhd
+ */
+
 import { cn } from "@/lib/utils"
 
 function Skeleton({

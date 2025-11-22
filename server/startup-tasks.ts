@@ -1,4 +1,8 @@
 /**
+ * Copyright by Calmic Sdn Bhd
+ */
+
+/**
  * Startup tasks module
  * Runs initialization tasks (db:push, migrations, data imports) asynchronously
  * after the server starts listening, so health checks can pass immediately

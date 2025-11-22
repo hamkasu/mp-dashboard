@@ -1,3 +1,7 @@
+/**
+ * Copyright by Calmic Sdn Bhd
+ */
+
 import * as cheerio from 'cheerio';
 import axios from 'axios';
 import https from 'https';

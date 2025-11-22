@@ -1,3 +1,7 @@
+/**
+ * Copyright by Calmic Sdn Bhd
+ */
+
 import { db } from './db';
 import { hansardRecords, mps } from '@shared/schema';
 import { eq } from 'drizzle-orm';

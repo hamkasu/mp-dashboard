@@ -1,3 +1,7 @@
+/**
+ * Copyright by Calmic Sdn Bhd
+ */
+
 import cron from 'node-cron';
 import { storage } from './storage';
 import { HansardScraper } from './hansard-scraper';

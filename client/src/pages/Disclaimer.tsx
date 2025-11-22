@@ -1,3 +1,7 @@
+/**
+ * Copyright by Calmic Sdn Bhd
+ */
+
 import { Header } from "@/components/Header";
 import { Card } from "@/components/ui/card";
 import { AlertCircle } from "lucide-react";

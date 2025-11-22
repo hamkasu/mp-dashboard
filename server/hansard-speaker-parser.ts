@@ -1,3 +1,7 @@
+/**
+ * Copyright by Calmic Sdn Bhd
+ */
+
 import { Mp, HansardSpeaker } from '@shared/schema';
 import { MPNameMatcher } from './mp-name-matcher';
 import { ConstituencyMatcher } from './constituency-matcher';
