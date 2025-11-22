@@ -1,3 +1,7 @@
+/**
+ * Copyright by Calmic Sdn Bhd
+ */
+
 import type { Request } from "express";
 
 export function getPublicBaseUrl(req?: Request): string {

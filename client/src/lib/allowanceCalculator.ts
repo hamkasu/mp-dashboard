@@ -1,3 +1,7 @@
+/**
+ * Copyright by Calmic Sdn Bhd
+ */
+
 import type { Mp } from "@shared/schema";
 
 // Standard MP Allowances (in RM) based on official rates

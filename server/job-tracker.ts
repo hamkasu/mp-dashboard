@@ -1,3 +1,7 @@
+/**
+ * Copyright by Calmic Sdn Bhd
+ */
+
 import { randomUUID } from 'crypto';
 
 export interface JobProgress {

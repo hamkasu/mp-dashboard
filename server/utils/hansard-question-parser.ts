@@ -1,3 +1,7 @@
+/**
+ * Copyright by Calmic Sdn Bhd
+ */
+
 export interface ParsedQuestion {
   mpName: string;
   constituency: string;

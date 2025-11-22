@@ -1,3 +1,7 @@
+/**
+ * Copyright by Calmic Sdn Bhd
+ */
+
 import { type Request, type Response, type NextFunction } from "express";
 import type { Express } from "express";
 import session from "express-session";

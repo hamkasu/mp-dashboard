@@ -1,3 +1,7 @@
+/**
+ * Copyright by Calmic Sdn Bhd
+ */
+
 import { Mp } from '@shared/schema';
 import { HansardSpeakerParser } from './hansard-speaker-parser';
 import { HansardSectionParser } from './hansard-section-parser';

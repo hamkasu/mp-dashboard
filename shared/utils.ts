@@ -1,4 +1,8 @@
 /**
+ * Copyright by Calmic Sdn Bhd
+ */
+
+/**
  * Normalize parliament term to canonical format
  * Converts all 15th Parliament variants (Malay/English) to "15th Parliament"
  */

@@ -1,3 +1,7 @@
+/**
+ * Copyright by Calmic Sdn Bhd
+ */
+
 import { storage } from './storage';
 import { HansardScraper } from './hansard-scraper';
 import { MPNameMatcher } from './mp-name-matcher';

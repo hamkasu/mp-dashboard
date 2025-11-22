@@ -1,3 +1,7 @@
+/**
+ * Copyright by Calmic Sdn Bhd
+ */
+
 import cors from 'cors';
 
 // Trusted domain suffixes for Replit and Railway

@@ -1,3 +1,7 @@
+/**
+ * Copyright by Calmic Sdn Bhd
+ */
+
 export interface HansardSection {
   type: 'questions_oral' | 'questions_written' | 'questions_minister' | 'bill' | 'motion' | 'other';
   title: string;

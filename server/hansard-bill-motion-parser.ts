@@ -1,3 +1,7 @@
+/**
+ * Copyright by Calmic Sdn Bhd
+ */
+
 import { Mp } from '@shared/schema';
 
 export interface ParsedBillOrMotion {

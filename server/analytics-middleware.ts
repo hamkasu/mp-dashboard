@@ -1,3 +1,7 @@
+/**
+ * Copyright by Calmic Sdn Bhd
+ */
+
 import type { Request, Response, NextFunction } from "express";
 import geoip from "geoip-lite";
 import { db } from "./db";

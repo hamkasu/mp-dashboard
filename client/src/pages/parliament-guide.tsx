@@ -1,3 +1,7 @@
+/**
+ * Copyright by Calmic Sdn Bhd
+ */
+
 import { useState } from "react";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { Header } from "@/components/Header";
