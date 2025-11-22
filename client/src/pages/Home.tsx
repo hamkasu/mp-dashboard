@@ -203,12 +203,16 @@ export default function Home() {
         return povertyA - povertyB; // Lowest first
       });
     } else if (sortBy === "bills-raised") {
+      // Filter to only show MPs with bills, then sort
+      filtered = filtered.filter(mp => (billsCountByMpId.get(mp.id) ?? 0) > 0);
       filtered = [...filtered].sort((a, b) => {
         const billsA = billsCountByMpId.get(a.id) ?? 0;
         const billsB = billsCountByMpId.get(b.id) ?? 0;
         return billsB - billsA; // Most bills first
       });
     } else if (sortBy === "inappropriate-language") {
+      // Filter to only show MPs with inappropriate language data, then sort
+      filtered = filtered.filter(mp => (inappropriateLanguageByMpId.get(mp.id)?.count ?? 0) > 0);
       filtered = [...filtered].sort((a, b) => {
         const countA = inappropriateLanguageByMpId.get(a.id)?.count ?? 0;
         const countB = inappropriateLanguageByMpId.get(b.id)?.count ?? 0;
