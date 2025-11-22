@@ -3500,8 +3500,9 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
-  // Admin endpoint to analyze Hansard transcripts for inappropriate language
-  app.get("/api/admin/analyze-language", requireAdmin, async (req, res) => {
+  // Public endpoint to analyze Hansard transcripts for inappropriate language
+  // Used by homepage to display MPs with unparliamentary language
+  app.get("/api/admin/analyze-language", async (req, res) => {
     try {
       console.log("🔍 Analyzing Hansard transcripts for inappropriate language...");
 
