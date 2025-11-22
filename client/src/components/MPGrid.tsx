@@ -1,10 +1,11 @@
 import { MPCard } from "./MPCard";
-import type { Mp } from "@shared/schema";
+import type { Mp, LegislativeProposal } from "@shared/schema";
 import { UserCircle } from "lucide-react";
 
 interface MPGridProps {
   mps: Mp[];
   isLoading?: boolean;
+  billsByMpId?: Map<string, LegislativeProposal[]>;
 }
 
 function MPCardSkeleton() {
@@ -38,7 +39,7 @@ function EmptyState() {
   );
 }
 
-export function MPGrid({ mps, isLoading }: MPGridProps) {
+export function MPGrid({ mps, isLoading, billsByMpId }: MPGridProps) {
   if (isLoading) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
@@ -56,7 +57,7 @@ export function MPGrid({ mps, isLoading }: MPGridProps) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
       {mps.map((mp) => (
-        <MPCard key={mp.id} mp={mp} />
+        <MPCard key={mp.id} mp={mp} bills={billsByMpId?.get(mp.id)} />
       ))}
     </div>
   );

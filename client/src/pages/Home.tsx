@@ -74,6 +74,18 @@ export default function Home() {
     return map;
   }, [legislativeProposals]);
 
+  // Create a lookup map for bills (with details) by MP ID
+  const billsByMpId = useMemo(() => {
+    const map = new Map<string, LegislativeProposal[]>();
+    legislativeProposals
+      .filter(p => p.type?.toLowerCase() === 'bill')
+      .forEach((p) => {
+        const existing = map.get(p.mpId) || [];
+        map.set(p.mpId, [...existing, p]);
+      });
+    return map;
+  }, [legislativeProposals]);
+
   // Create a lookup map for poverty by parliament code
   const povertyByCode = useMemo(() => {
     const map = new Map<string, number>();
@@ -486,7 +498,7 @@ export default function Home() {
             <StatisticsCards stats={stats || defaultStats} isLoading={isLoading} />
 
             {/* MP Grid */}
-            <MPGrid mps={filteredMps} isLoading={isLoading} />
+            <MPGrid mps={filteredMps} isLoading={isLoading} billsByMpId={billsByMpId} />
           </div>
         </main>
       </div>
