@@ -268,6 +268,25 @@ async function downloadAndSaveWithRetry(
 
 let cronJob: ReturnType<typeof cron.schedule> | null = null;
 
+// Store sync logs in memory (last 50 syncs)
+const MAX_SYNC_LOGS = 50;
+const syncLogs: HansardSyncResult[] = [];
+
+export function addSyncLog(result: HansardSyncResult): void {
+  syncLogs.unshift(result); // Add to beginning (newest first)
+  if (syncLogs.length > MAX_SYNC_LOGS) {
+    syncLogs.pop(); // Remove oldest
+  }
+}
+
+export function getSyncLogs(): HansardSyncResult[] {
+  return [...syncLogs];
+}
+
+export function getLatestSyncLog(): HansardSyncResult | null {
+  return syncLogs[0] || null;
+}
+
 export function startHansardCron(): void {
   if (cronJob) {
     console.log('⚠️  [Hansard Cron] Cron job already running');
@@ -280,7 +299,23 @@ export function startHansardCron(): void {
     '0 12 * * *',
     async () => {
       console.log('\n⏰ [Hansard Cron] Scheduled sync triggered');
-      await runHansardSync({ triggeredBy: 'scheduled' });
+      try {
+        const result = await runHansardSync({ triggeredBy: 'scheduled' });
+        addSyncLog(result);
+      } catch (error: any) {
+        // Log failed sync attempt
+        addSyncLog({
+          triggeredBy: 'scheduled',
+          startTime: new Date(),
+          endTime: new Date(),
+          durationMs: 0,
+          lastKnownSession: null,
+          recordsFound: 0,
+          recordsInserted: 0,
+          recordsSkipped: 0,
+          errors: [{ sessionNumber: 'N/A', error: error.message }]
+        });
+      }
     },
     {
       timezone: 'Asia/Kuala_Lumpur'

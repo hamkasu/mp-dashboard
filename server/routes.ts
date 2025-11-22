@@ -2732,7 +2732,11 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   app.post("/api/admin/trigger-hansard-check", requireAdmin, async (req, res) => {
     try {
       console.log("Manual Hansard sync triggered via API...");
+      const { addSyncLog } = await import('./hansard-cron');
       const result = await runHansardSync({ triggeredBy: 'manual' });
+
+      // Log the result
+      addSyncLog(result);
 
       res.json({
         message: "Hansard sync completed",
@@ -2749,9 +2753,40 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
           errors: result.errors
         }
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error triggering Hansard sync:", error);
+      // Log failed sync attempt
+      const { addSyncLog } = await import('./hansard-cron');
+      addSyncLog({
+        triggeredBy: 'manual',
+        startTime: new Date(),
+        endTime: new Date(),
+        durationMs: 0,
+        lastKnownSession: null,
+        recordsFound: 0,
+        recordsInserted: 0,
+        recordsSkipped: 0,
+        errors: [{ sessionNumber: 'N/A', error: error.message || String(error) }]
+      });
       res.status(500).json({ error: "Failed to trigger Hansard sync", details: String(error) });
+    }
+  });
+
+  // Admin endpoint to get Hansard sync logs
+  app.get("/api/admin/hansard-sync-logs", requireAdmin, async (req, res) => {
+    try {
+      const { getSyncLogs, getLatestSyncLog } = await import('./hansard-cron');
+      const logs = getSyncLogs();
+      const latest = getLatestSyncLog();
+
+      res.json({
+        totalLogs: logs.length,
+        latestSync: latest,
+        logs: logs
+      });
+    } catch (error) {
+      console.error("Error fetching sync logs:", error);
+      res.status(500).json({ error: "Failed to fetch sync logs" });
     }
   });
 

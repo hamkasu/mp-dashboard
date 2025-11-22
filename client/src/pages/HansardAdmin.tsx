@@ -5,7 +5,7 @@ import { Header } from "@/components/Header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, Download, Trash2, AlertTriangle, CheckCircle2, RefreshCw, Upload, FileText, X, Database } from "lucide-react";
+import { Loader2, Download, Trash2, AlertTriangle, CheckCircle2, RefreshCw, Upload, FileText, X, Database, Clock, History } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { UnmatchedSpeakersManager } from "@/components/UnmatchedSpeakersManager";
@@ -20,6 +20,24 @@ interface UploadResult {
   error?: string;
   skipped?: boolean;
   reason?: string;
+}
+
+interface SyncLogEntry {
+  triggeredBy: 'manual' | 'scheduled';
+  startTime: string;
+  endTime: string;
+  durationMs: number;
+  lastKnownSession: string | null;
+  recordsFound: number;
+  recordsInserted: number;
+  recordsSkipped: number;
+  errors: Array<{ sessionNumber: string; error: string }>;
+}
+
+interface SyncLogsResponse {
+  totalLogs: number;
+  latestSync: SyncLogEntry | null;
+  logs: SyncLogEntry[];
 }
 
 export default function HansardAdmin() {
@@ -78,6 +96,12 @@ export default function HansardAdmin() {
 
   const { data: hansardRecords, isLoading } = useQuery<any[]>({
     queryKey: ["/api/hansard-records"],
+  });
+
+  // Query for sync logs
+  const { data: syncLogs, isLoading: syncLogsLoading, refetch: refetchSyncLogs } = useQuery<SyncLogsResponse>({
+    queryKey: ["/api/admin/hansard-sync-logs"],
+    refetchInterval: 60000, // Refresh every minute
   });
 
   const deleteMutation = useMutation({
@@ -927,6 +951,123 @@ export default function HansardAdmin() {
                 </>
               )}
             </Button>
+          </CardContent>
+        </Card>
+
+        {/* Sync Logs Card */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <History className="h-5 w-5" />
+              Hansard Sync Logs
+            </CardTitle>
+            <CardDescription>
+              View history of automatic and manual Hansard sync operations (runs daily at 12:00 PM Malaysia time)
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-muted-foreground">
+                {syncLogsLoading ? "Loading..." : `${syncLogs?.totalLogs || 0} sync operations logged`}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => refetchSyncLogs()}
+                disabled={syncLogsLoading}
+              >
+                <RefreshCw className={`h-4 w-4 mr-2 ${syncLogsLoading ? 'animate-spin' : ''}`} />
+                Refresh
+              </Button>
+            </div>
+
+            {syncLogs?.latestSync && (
+              <Alert className={syncLogs.latestSync.errors.length > 0 ? "border-orange-500" : "border-green-500"}>
+                <Clock className="h-4 w-4" />
+                <AlertDescription>
+                  <div className="font-medium">
+                    Latest sync: {new Date(syncLogs.latestSync.startTime).toLocaleString('en-MY', { timeZone: 'Asia/Kuala_Lumpur' })}
+                  </div>
+                  <div className="text-sm mt-1">
+                    {syncLogs.latestSync.triggeredBy === 'scheduled' ? '⏰ Scheduled' : '👤 Manual'} |
+                    Found: {syncLogs.latestSync.recordsFound} |
+                    Inserted: {syncLogs.latestSync.recordsInserted} |
+                    Skipped: {syncLogs.latestSync.recordsSkipped} |
+                    Duration: {(syncLogs.latestSync.durationMs / 1000).toFixed(1)}s
+                    {syncLogs.latestSync.errors.length > 0 && (
+                      <span className="text-orange-600"> | Errors: {syncLogs.latestSync.errors.length}</span>
+                    )}
+                  </div>
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {syncLogs?.logs && syncLogs.logs.length > 0 ? (
+              <div className="max-h-64 overflow-y-auto border rounded-md">
+                <table className="w-full text-sm">
+                  <thead className="bg-muted sticky top-0">
+                    <tr>
+                      <th className="p-2 text-left">Time</th>
+                      <th className="p-2 text-left">Type</th>
+                      <th className="p-2 text-center">Found</th>
+                      <th className="p-2 text-center">Inserted</th>
+                      <th className="p-2 text-center">Errors</th>
+                      <th className="p-2 text-right">Duration</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {syncLogs.logs.map((log, index) => (
+                      <tr key={index} className={`border-t ${log.errors.length > 0 ? 'bg-orange-50 dark:bg-orange-950/20' : ''}`}>
+                        <td className="p-2 whitespace-nowrap">
+                          {new Date(log.startTime).toLocaleString('en-MY', {
+                            timeZone: 'Asia/Kuala_Lumpur',
+                            month: 'short',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </td>
+                        <td className="p-2">
+                          {log.triggeredBy === 'scheduled' ? (
+                            <span className="inline-flex items-center gap-1 text-blue-600">
+                              <Clock className="h-3 w-3" /> Auto
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 text-purple-600">
+                              👤 Manual
+                            </span>
+                          )}
+                        </td>
+                        <td className="p-2 text-center">{log.recordsFound}</td>
+                        <td className="p-2 text-center">
+                          {log.recordsInserted > 0 ? (
+                            <span className="text-green-600 font-medium">{log.recordsInserted}</span>
+                          ) : (
+                            <span className="text-muted-foreground">0</span>
+                          )}
+                        </td>
+                        <td className="p-2 text-center">
+                          {log.errors.length > 0 ? (
+                            <span className="text-orange-600 font-medium" title={log.errors.map(e => `${e.sessionNumber}: ${e.error}`).join('\n')}>
+                              {log.errors.length}
+                            </span>
+                          ) : (
+                            <span className="text-green-600">✓</span>
+                          )}
+                        </td>
+                        <td className="p-2 text-right text-muted-foreground">
+                          {(log.durationMs / 1000).toFixed(1)}s
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="text-center text-muted-foreground py-8">
+                No sync logs yet. Logs will appear after the first sync operation.
+              </div>
+            )}
           </CardContent>
         </Card>
 
