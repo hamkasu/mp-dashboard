@@ -4,7 +4,7 @@
  * Use this if drizzle-kit push fails or if you need to manually apply migrations
  */
 
-import { pool } from "../server/db";
+import { pool, isDatabaseAvailable } from "../server/db";
 import { readFileSync } from "fs";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
@@ -13,6 +13,10 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 async function runMigration(filename: string) {
+  if (!pool) {
+    console.error("Database pool not available");
+    return false;
+  }
   const migrationPath = join(__dirname, "..", "migrations", filename);
   console.log(`\nRunning migration: ${filename}`);
 
@@ -29,6 +33,11 @@ async function runMigration(filename: string) {
 
 async function main() {
   console.log("Starting manual migration process...\n");
+
+  if (!isDatabaseAvailable() || !pool) {
+    console.error("DATABASE_URL not set. Cannot run migrations.");
+    process.exit(1);
+  }
 
   // List of migrations to run in order
   const migrations = [

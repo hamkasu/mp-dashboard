@@ -1,4 +1,4 @@
-import { db } from "../server/db";
+import { db, isDatabaseAvailable } from "../server/db";
 import { constituencies } from "@shared/schema";
 import { promises as fs } from "fs";
 import path from "path";
@@ -18,6 +18,12 @@ interface PovertyDataRow {
 async function importPovertyData() {
   try {
     console.log("Starting poverty data import...");
+
+    // Check if database is available
+    if (!isDatabaseAvailable() || !db) {
+      console.error("DATABASE_URL not set. Cannot import poverty data.");
+      process.exit(1);
+    }
 
     // Read the CSV file
     const csvPath = path.join(process.cwd(), "poverty_by_constituency.csv");
