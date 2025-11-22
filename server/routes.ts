@@ -3465,5 +3465,139 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
+  // Admin endpoint to analyze Hansard transcripts for inappropriate language
+  app.get("/api/admin/analyze-language", requireAdmin, async (req, res) => {
+    try {
+      console.log("🔍 Analyzing Hansard transcripts for inappropriate language...");
+
+      // Common inappropriate/unparliamentary words in Malaysian parliament context
+      // These include Malay and English terms that are considered unparliamentary
+      const inappropriatePatterns = [
+        // English swear words
+        /\b(damn|bloody|hell|stupid|idiot|fool|rubbish|nonsense|liar|corrupt|thief|crook)\b/gi,
+        // Malay inappropriate terms commonly flagged in parliament
+        /\b(bodoh|bangang|gila|sial|celaka|babi|anjing|sundal|bangsat|pukimak|lancau|setan|iblis|jahanam|haram|kafir|munafik|pengkhianat|penipu|perompak|penjenayah)\b/gi,
+        // Unparliamentary phrases
+        /\b(shut up|tutup mulut|diam|keluar|go out|get out)\b/gi,
+        // Accusations
+        /\b(pembohong|bohong|tipu|menipu|rasuah|korup)\b/gi,
+      ];
+
+      const allRecords = await storage.getAllHansardRecords();
+      console.log(`📊 Analyzing ${allRecords.length} Hansard records...`);
+
+      const results: Array<{
+        sessionNumber: string;
+        sessionDate: string;
+        mpId?: string;
+        mpName?: string;
+        constituency?: string;
+        word: string;
+        context: string;
+        lineNumber: number;
+      }> = [];
+
+      const mpStats = new Map<string, { mpId: string; mpName: string; constituency: string; count: number; words: string[] }>();
+
+      for (const record of allRecords) {
+        if (!record.transcript) continue;
+
+        const lines = record.transcript.split('\n');
+        let currentSpeaker: { mpId?: string; mpName?: string; constituency?: string } = {};
+
+        // Speaker pattern to identify who is speaking
+        const speakerPattern = /^(?:Tuan|Puan|Dato['']?|Datuk|Dr\.?|Yang Berhormat|Ir\.|Ts\.)\s+([^[\]:\n]+?)\s*\[([^\]]+)\]\s*:/i;
+
+        for (let i = 0; i < lines.length; i++) {
+          const line = lines[i];
+
+          // Check if this line starts a new speaker
+          const speakerMatch = line.match(speakerPattern);
+          if (speakerMatch) {
+            const extractedName = speakerMatch[1].trim();
+            const extractedConstituency = speakerMatch[2].trim();
+
+            // Try to find MP in database
+            const allMps = await storage.getAllMps();
+            const matchedMp = allMps.find(mp =>
+              mp.constituency.toLowerCase() === extractedConstituency.toLowerCase() ||
+              mp.name.toLowerCase().includes(extractedName.toLowerCase().split(' ').slice(-1)[0])
+            );
+
+            currentSpeaker = {
+              mpId: matchedMp?.id,
+              mpName: matchedMp?.name || extractedName,
+              constituency: matchedMp?.constituency || extractedConstituency
+            };
+          }
+
+          // Check for inappropriate words
+          for (const pattern of inappropriatePatterns) {
+            const matches = line.matchAll(pattern);
+            for (const match of matches) {
+              const word = match[0].toLowerCase();
+              const contextStart = Math.max(0, match.index! - 50);
+              const contextEnd = Math.min(line.length, match.index! + match[0].length + 50);
+              const context = line.substring(contextStart, contextEnd);
+
+              results.push({
+                sessionNumber: record.sessionNumber,
+                sessionDate: record.sessionDate instanceof Date
+                  ? record.sessionDate.toISOString().split('T')[0]
+                  : String(record.sessionDate).split('T')[0],
+                mpId: currentSpeaker.mpId,
+                mpName: currentSpeaker.mpName,
+                constituency: currentSpeaker.constituency,
+                word,
+                context: `...${context}...`,
+                lineNumber: i + 1
+              });
+
+              // Update MP stats
+              if (currentSpeaker.mpId) {
+                const existing = mpStats.get(currentSpeaker.mpId) || {
+                  mpId: currentSpeaker.mpId,
+                  mpName: currentSpeaker.mpName || 'Unknown',
+                  constituency: currentSpeaker.constituency || 'Unknown',
+                  count: 0,
+                  words: []
+                };
+                existing.count++;
+                if (!existing.words.includes(word)) {
+                  existing.words.push(word);
+                }
+                mpStats.set(currentSpeaker.mpId, existing);
+              }
+            }
+          }
+        }
+      }
+
+      // Sort MPs by usage count
+      const mpRanking = Array.from(mpStats.values())
+        .sort((a, b) => b.count - a.count);
+
+      console.log(`✅ Analysis complete. Found ${results.length} instances.`);
+
+      res.json({
+        summary: {
+          totalRecordsAnalyzed: allRecords.length,
+          totalInstancesFound: results.length,
+          uniqueMpsIdentified: mpStats.size
+        },
+        mpRanking: mpRanking.slice(0, 20), // Top 20 MPs
+        recentInstances: results.slice(-50), // Last 50 instances
+        wordFrequency: results.reduce((acc, r) => {
+          acc[r.word] = (acc[r.word] || 0) + 1;
+          return acc;
+        }, {} as Record<string, number>)
+      });
+
+    } catch (error) {
+      console.error("Error analyzing language:", error);
+      res.status(500).json({ error: "Failed to analyze", details: String(error) });
+    }
+  });
+
   // Server is now passed in from index.ts, no need to create it here
 }
