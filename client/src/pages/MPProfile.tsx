@@ -282,9 +282,19 @@ export default function MPProfile() {
                   <div className="flex items-start gap-3">
                     <TrendingDown className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
                     <div>
-                      <p className="font-medium text-sm text-muted-foreground uppercase tracking-wide mb-1">
-                        {t('profile.povertyIncidence')}
-                      </p>
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <p className="font-medium text-sm text-muted-foreground uppercase tracking-wide">
+                          {t('profile.povertyIncidence')}
+                        </p>
+                        <Tooltip>
+                          <TooltipTrigger>
+                            <Info className="h-3.5 w-3.5 text-muted-foreground" />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>{t('profile.povertySource')}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </div>
                       <p className="text-lg font-semibold">{(constituency.povertyIncidence / 10).toFixed(1)}%</p>
                     </div>
                   </div>

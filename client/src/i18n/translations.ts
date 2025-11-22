@@ -137,6 +137,7 @@ export const translations = {
       parliamentCode: "Parliament Code",
       gender: "Gender",
       povertyIncidence: "Poverty Incidence",
+      povertySource: "Source: DOSM Kawasanku 2022",
       swornInDate: "Sworn In Date",
 
       // Contact
@@ -717,6 +718,7 @@ export const translations = {
       parliamentCode: "Kod Parlimen",
       gender: "Jantina",
       povertyIncidence: "Kadar Kemiskinan",
+      povertySource: "Sumber: DOSM Kawasanku 2022",
       swornInDate: "Tarikh Mengangkat Sumpah",
 
       // Contact / Hubungi
