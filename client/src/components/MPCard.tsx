@@ -1,8 +1,8 @@
-import { MapPin, UserCircle, Wallet, Calendar, Mic, TrendingDown, ScrollText, MessageSquareWarning } from "lucide-react";
+import { MapPin, UserCircle, Wallet, Calendar, Mic, TrendingDown, ScrollText, MessageSquareWarning, HelpCircle } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import type { Mp, LegislativeProposal } from "@shared/schema";
+import type { Mp, LegislativeProposal, ParliamentaryQuestion } from "@shared/schema";
 import { Link } from "wouter";
 import { calculateTotalSalary, formatCurrency } from "@/lib/utils";
 import { useLanguage } from "@/i18n/LanguageContext";
@@ -12,6 +12,7 @@ import type { LanguageStat } from "./MPGrid";
 interface MPCardProps {
   mp: Mp;
   bills?: LegislativeProposal[];
+  oralQuestions?: ParliamentaryQuestion[];
   languageStats?: LanguageStat;
 }
 
@@ -46,7 +47,7 @@ function getPovertyColor(povertyRate: number): string {
   return "text-red-600 dark:text-red-400";
 }
 
-export function MPCard({ mp, bills, languageStats }: MPCardProps) {
+export function MPCard({ mp, bills, oralQuestions, languageStats }: MPCardProps) {
   const { t } = useLanguage();
   const { data: constituency } = useConstituencyByCode(mp.parliamentCode);
   const initials = mp.name
@@ -205,6 +206,29 @@ export function MPCard({ mp, bills, languageStats }: MPCardProps) {
                     {bills.length > 3 && (
                       <p className="text-xs text-muted-foreground italic">
                         +{bills.length - 3} {t('mpCard.more')}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {oralQuestions && oralQuestions.length > 0 && (
+              <div className="flex items-start gap-2">
+                <HelpCircle className="h-4 w-4 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-blue-600 dark:text-blue-400" data-testid={`text-questions-${mp.id}`}>
+                    {oralQuestions.length} {oralQuestions.length === 1 ? t('mpCard.oralQuestion') : t('mpCard.oralQuestions')}
+                  </p>
+                  <div className="space-y-1 mt-1">
+                    {oralQuestions.slice(0, 3).map((question, index) => (
+                      <p key={question.id} className="text-xs text-muted-foreground line-clamp-1" title={question.topic}>
+                        {index + 1}. {question.topic}
+                      </p>
+                    ))}
+                    {oralQuestions.length > 3 && (
+                      <p className="text-xs text-muted-foreground italic">
+                        +{oralQuestions.length - 3} {t('mpCard.more')}
                       </p>
                     )}
                   </div>

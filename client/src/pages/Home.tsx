@@ -132,6 +132,18 @@ export default function Home() {
     return map;
   }, [legislativeProposals]);
 
+  // Create a lookup map for oral questions (with details) by MP ID
+  const oralQuestionsByMpId = useMemo(() => {
+    const map = new Map<string, ParliamentaryQuestion[]>();
+    parliamentaryQuestions
+      .filter(q => q.questionType?.toLowerCase() === 'oral' || q.questionType?.toLowerCase() === 'lisan')
+      .forEach((q) => {
+        const existing = map.get(q.mpId) || [];
+        map.set(q.mpId, [...existing, q]);
+      });
+    return map;
+  }, [parliamentaryQuestions]);
+
   // Create a lookup map for poverty by parliament code
   const povertyByCode = useMemo(() => {
     const map = new Map<string, number>();
@@ -562,7 +574,7 @@ export default function Home() {
             <StatisticsCards stats={stats || defaultStats} isLoading={isLoading} />
 
             {/* MP Grid */}
-            <MPGrid mps={filteredMps} isLoading={isLoading} billsByMpId={billsByMpId} languageStatsByMpId={inappropriateLanguageByMpId} />
+            <MPGrid mps={filteredMps} isLoading={isLoading} billsByMpId={billsByMpId} oralQuestionsByMpId={oralQuestionsByMpId} languageStatsByMpId={inappropriateLanguageByMpId} />
           </div>
         </main>
       </div>
