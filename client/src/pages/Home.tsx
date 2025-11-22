@@ -12,11 +12,11 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Scale, ExternalLink, AlertTriangle, Eye } from "lucide-react";
 import { Link } from "wouter";
-import type { Mp, CourtCase, SprmInvestigation } from "@shared/schema";
+import type { Mp, CourtCase, SprmInvestigation, LegislativeProposal } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { useConstituencies } from "@/hooks/use-constituencies";
 
-type SortOption = "name" | "attendance-best" | "attendance-worst" | "speeches-most" | "speeches-fewest" | "poverty-highest" | "poverty-lowest";
+type SortOption = "name" | "attendance-best" | "attendance-worst" | "speeches-most" | "speeches-fewest" | "poverty-highest" | "poverty-lowest" | "bills-raised";
 
 export default function Home() {
   const { t } = useLanguage();
@@ -56,6 +56,23 @@ export default function Home() {
 
   // Fetch constituency data for poverty sorting
   const { data: constituencies = [] } = useConstituencies();
+
+  // Fetch legislative proposals for bills sorting
+  const { data: legislativeProposals = [] } = useQuery<LegislativeProposal[]>({
+    queryKey: ["/api/legislative-proposals"],
+  });
+
+  // Create a lookup map for bills count by MP ID
+  const billsCountByMpId = useMemo(() => {
+    const map = new Map<string, number>();
+    legislativeProposals
+      .filter(p => p.type?.toLowerCase() === 'bill')
+      .forEach((p) => {
+        const current = map.get(p.mpId) || 0;
+        map.set(p.mpId, current + 1);
+      });
+    return map;
+  }, [legislativeProposals]);
 
   // Create a lookup map for poverty by parliament code
   const povertyByCode = useMemo(() => {
@@ -144,12 +161,18 @@ export default function Home() {
         const povertyB = povertyByCode.get(codeB) ?? Infinity;
         return povertyA - povertyB; // Lowest first
       });
+    } else if (sortBy === "bills-raised") {
+      filtered = [...filtered].sort((a, b) => {
+        const billsA = billsCountByMpId.get(a.id) ?? 0;
+        const billsB = billsCountByMpId.get(b.id) ?? 0;
+        return billsB - billsA; // Most bills first
+      });
     } else {
       filtered = [...filtered].sort((a, b) => a.name.localeCompare(b.name));
     }
 
     return filtered;
-  }, [mps, searchQuery, selectedParties, selectedStates, sortBy, povertyByCode]);
+  }, [mps, searchQuery, selectedParties, selectedStates, sortBy, povertyByCode, billsCountByMpId]);
 
   const availableStates = useMemo(() => {
     const states = Array.from(new Set(mps.map((mp) => mp.state)));
