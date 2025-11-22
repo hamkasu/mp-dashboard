@@ -1,4 +1,4 @@
-import { MapPin, UserCircle, Wallet, Calendar, Mic, TrendingDown, ScrollText } from "lucide-react";
+import { MapPin, UserCircle, Wallet, Calendar, Mic, TrendingDown, ScrollText, MessageSquareWarning } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -7,10 +7,12 @@ import { Link } from "wouter";
 import { calculateTotalSalary, formatCurrency } from "@/lib/utils";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { useConstituencyByCode } from "@/hooks/use-constituencies";
+import type { LanguageStat } from "./MPGrid";
 
 interface MPCardProps {
   mp: Mp;
   bills?: LegislativeProposal[];
+  languageStats?: LanguageStat;
 }
 
 const PARTY_COLORS: Record<string, string> = {
@@ -44,7 +46,7 @@ function getPovertyColor(povertyRate: number): string {
   return "text-red-600 dark:text-red-400";
 }
 
-export function MPCard({ mp, bills }: MPCardProps) {
+export function MPCard({ mp, bills, languageStats }: MPCardProps) {
   const { t } = useLanguage();
   const { data: constituency } = useConstituencyByCode(mp.parliamentCode);
   const initials = mp.name
@@ -204,6 +206,29 @@ export function MPCard({ mp, bills }: MPCardProps) {
                       <p className="text-xs text-muted-foreground italic">
                         +{bills.length - 3} {t('mpCard.more')}
                       </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {languageStats && languageStats.count > 0 && (
+              <div className="flex items-start gap-2">
+                <MessageSquareWarning className="h-4 w-4 text-orange-600 dark:text-orange-400 shrink-0 mt-0.5" />
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-orange-600 dark:text-orange-400" data-testid={`text-language-${mp.id}`}>
+                    {languageStats.count} {t('mpCard.inappropriateInstances')}
+                  </p>
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {languageStats.words.slice(0, 5).map((word, index) => (
+                      <span key={index} className="text-xs bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 px-1.5 py-0.5 rounded">
+                        {word}
+                      </span>
+                    ))}
+                    {languageStats.words.length > 5 && (
+                      <span className="text-xs text-muted-foreground italic">
+                        +{languageStats.words.length - 5} {t('mpCard.more')}
+                      </span>
                     )}
                   </div>
                 </div>

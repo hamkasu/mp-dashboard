@@ -64,6 +64,7 @@ export const translations = {
       sortHighestPoverty: "Highest Poverty",
       sortLowestPoverty: "Lowest Poverty",
       sortBillsRaised: "Bills Raised",
+      sortInappropriateLanguage: "Inappropriate Language",
       party: "Party",
       state: "State",
       selected: "selected",
@@ -89,6 +90,7 @@ export const translations = {
       bill: "bill raised",
       bills: "bills raised",
       more: "more",
+      inappropriateInstances: "inappropriate language instances",
     },
 
     // Home Page
@@ -649,6 +651,7 @@ export const translations = {
       sortHighestPoverty: "Kemiskinan Tertinggi",
       sortLowestPoverty: "Kemiskinan Terendah",
       sortBillsRaised: "Rang Undang-Undang Dikemukakan",
+      sortInappropriateLanguage: "Bahasa Tidak Wajar",
       party: "Parti",
       state: "Negeri",
       selected: "dipilih",
@@ -674,6 +677,7 @@ export const translations = {
       bill: "rang undang-undang dikemukakan",
       bills: "rang undang-undang dikemukakan",
       more: "lagi",
+      inappropriateInstances: "kes bahasa tidak wajar",
     },
 
     // Home Page / Laman Utama

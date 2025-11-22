@@ -2,10 +2,19 @@ import { MPCard } from "./MPCard";
 import type { Mp, LegislativeProposal } from "@shared/schema";
 import { UserCircle } from "lucide-react";
 
+export interface LanguageStat {
+  mpId: string;
+  mpName: string;
+  constituency: string;
+  count: number;
+  words: string[];
+}
+
 interface MPGridProps {
   mps: Mp[];
   isLoading?: boolean;
   billsByMpId?: Map<string, LegislativeProposal[]>;
+  languageStatsByMpId?: Map<string, LanguageStat>;
 }
 
 function MPCardSkeleton() {
@@ -39,7 +48,7 @@ function EmptyState() {
   );
 }
 
-export function MPGrid({ mps, isLoading, billsByMpId }: MPGridProps) {
+export function MPGrid({ mps, isLoading, billsByMpId, languageStatsByMpId }: MPGridProps) {
   if (isLoading) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
@@ -57,7 +66,7 @@ export function MPGrid({ mps, isLoading, billsByMpId }: MPGridProps) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
       {mps.map((mp) => (
-        <MPCard key={mp.id} mp={mp} bills={billsByMpId?.get(mp.id)} />
+        <MPCard key={mp.id} mp={mp} bills={billsByMpId?.get(mp.id)} languageStats={languageStatsByMpId?.get(mp.id)} />
       ))}
     </div>
   );
