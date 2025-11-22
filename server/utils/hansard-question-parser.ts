@@ -1,4 +1,4 @@
-import * as pdf from 'pdf-parse';
+import pdf from 'pdf-parse';
 
 export interface ParsedQuestion {
   mpName: string;
