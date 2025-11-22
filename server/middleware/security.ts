@@ -27,7 +27,7 @@ export const uploadRateLimit = rateLimit({
 // Moderate rate limiting for all mutation operations
 export const mutationRateLimit = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // 100 requests per window
+  max: 300, // 300 requests per window
   message: 'Too many requests. Please slow down.',
   standardHeaders: true,
   legacyHeaders: false,
@@ -36,7 +36,7 @@ export const mutationRateLimit = rateLimit({
 // Light rate limiting for GET requests
 export const readRateLimit = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 1000, // 1000 requests per window
+  max: 5000, // 5000 requests per window
   message: 'Too many requests. Please slow down.',
   standardHeaders: true,
   legacyHeaders: false,
