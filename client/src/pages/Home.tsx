@@ -16,7 +16,15 @@ import type { Mp, CourtCase, SprmInvestigation, LegislativeProposal } from "@sha
 import { apiRequest } from "@/lib/queryClient";
 import { useConstituencies } from "@/hooks/use-constituencies";
 
-type SortOption = "name" | "attendance-best" | "attendance-worst" | "speeches-most" | "speeches-fewest" | "poverty-highest" | "poverty-lowest" | "bills-raised";
+type SortOption = "name" | "attendance-best" | "attendance-worst" | "speeches-most" | "speeches-fewest" | "poverty-highest" | "poverty-lowest" | "bills-raised" | "inappropriate-language";
+
+interface LanguageAnalysisMpStat {
+  mpId: string;
+  mpName: string;
+  constituency: string;
+  count: number;
+  words: string[];
+}
 
 export default function Home() {
   const { t } = useLanguage();
@@ -61,6 +69,27 @@ export default function Home() {
   const { data: legislativeProposals = [] } = useQuery<LegislativeProposal[]>({
     queryKey: ["/api/legislative-proposals"],
   });
+
+  // Fetch language analysis for inappropriate language sorting
+  const { data: languageAnalysis } = useQuery<{
+    summary: { totalRecordsAnalyzed: number; totalInstancesFound: number; uniqueMpsIdentified: number };
+    mpRanking: LanguageAnalysisMpStat[];
+  }>({
+    queryKey: ["/api/admin/analyze-language"],
+    retry: false,
+    staleTime: 1000 * 60 * 5, // Cache for 5 minutes
+  });
+
+  // Create a lookup map for inappropriate language count by MP ID
+  const inappropriateLanguageByMpId = useMemo(() => {
+    const map = new Map<string, LanguageAnalysisMpStat>();
+    if (languageAnalysis?.mpRanking) {
+      languageAnalysis.mpRanking.forEach((stat) => {
+        map.set(stat.mpId, stat);
+      });
+    }
+    return map;
+  }, [languageAnalysis]);
 
   // Create a lookup map for bills count by MP ID
   const billsCountByMpId = useMemo(() => {
@@ -179,12 +208,18 @@ export default function Home() {
         const billsB = billsCountByMpId.get(b.id) ?? 0;
         return billsB - billsA; // Most bills first
       });
+    } else if (sortBy === "inappropriate-language") {
+      filtered = [...filtered].sort((a, b) => {
+        const countA = inappropriateLanguageByMpId.get(a.id)?.count ?? 0;
+        const countB = inappropriateLanguageByMpId.get(b.id)?.count ?? 0;
+        return countB - countA; // Most inappropriate language first
+      });
     } else {
       filtered = [...filtered].sort((a, b) => a.name.localeCompare(b.name));
     }
 
     return filtered;
-  }, [mps, searchQuery, selectedParties, selectedStates, sortBy, povertyByCode, billsCountByMpId]);
+  }, [mps, searchQuery, selectedParties, selectedStates, sortBy, povertyByCode, billsCountByMpId, inappropriateLanguageByMpId]);
 
   const availableStates = useMemo(() => {
     const states = Array.from(new Set(mps.map((mp) => mp.state)));
@@ -498,7 +533,7 @@ export default function Home() {
             <StatisticsCards stats={stats || defaultStats} isLoading={isLoading} />
 
             {/* MP Grid */}
-            <MPGrid mps={filteredMps} isLoading={isLoading} billsByMpId={billsByMpId} />
+            <MPGrid mps={filteredMps} isLoading={isLoading} billsByMpId={billsByMpId} languageStatsByMpId={inappropriateLanguageByMpId} />
           </div>
         </main>
       </div>
