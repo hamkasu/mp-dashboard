@@ -192,9 +192,11 @@ export class HansardBillMotionParser {
   }
 
   private extractSponsor(block: string): { mpId?: string; mpName?: string; constituency?: string } {
-    const sponsorPattern = /(?:Tuan|Puan|Dato|Datuk|Dr\.|Yang Berhormat)\s+([^(:\n]+?)(?:\s*\(([^)]+)\))?/i;
-    const sponsorMatch = block.match(sponsorPattern);
-    
+    // Try square brackets first [Constituency], then parentheses (Constituency)
+    const sponsorPatternSquareBrackets = /(?:Tuan|Puan|Dato['']?|Datuk|Dr\.?|Yang Berhormat|Ir\.|Ts\.)\s+([^[\]:\n]+?)\s*\[([^\]]+)\]/i;
+    const sponsorPatternParentheses = /(?:Tuan|Puan|Dato['']?|Datuk|Dr\.?|Yang Berhormat|Ir\.|Ts\.)\s+([^(:\n]+?)(?:\s*\(([^)]+)\))?/i;
+    const sponsorMatch = block.match(sponsorPatternSquareBrackets) || block.match(sponsorPatternParentheses);
+
     if (!sponsorMatch) {
       return {};
     }
