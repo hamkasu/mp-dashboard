@@ -14,8 +14,9 @@ import { Scale, ExternalLink, AlertTriangle, Eye } from "lucide-react";
 import { Link } from "wouter";
 import type { Mp, CourtCase, SprmInvestigation } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
+import { useConstituencies } from "@/hooks/use-constituencies";
 
-type SortOption = "name" | "attendance-best" | "attendance-worst" | "speeches-most" | "speeches-fewest";
+type SortOption = "name" | "attendance-best" | "attendance-worst" | "speeches-most" | "speeches-fewest" | "poverty-highest" | "poverty-lowest";
 
 export default function Home() {
   const { t } = useLanguage();
@@ -52,7 +53,21 @@ export default function Home() {
   const { data: pageViewData } = useQuery<{ count: number }>({
     queryKey: ["/api/page-views", "home"],
   });
-  
+
+  // Fetch constituency data for poverty sorting
+  const { data: constituencies = [] } = useConstituencies();
+
+  // Create a lookup map for poverty by parliament code
+  const povertyByCode = useMemo(() => {
+    const map = new Map<string, number>();
+    constituencies.forEach((c) => {
+      if (c.povertyIncidence !== null) {
+        map.set(c.parliamentCode, c.povertyIncidence);
+      }
+    });
+    return map;
+  }, [constituencies]);
+
   useEffect(() => {
     apiRequest("POST", "/api/page-views", { page: "home" });
   }, []);
@@ -111,12 +126,30 @@ export default function Home() {
       filtered = [...filtered].sort((a, b) => {
         return a.totalSpeechInstances - b.totalSpeechInstances;
       });
+    } else if (sortBy === "poverty-highest") {
+      filtered = [...filtered].sort((a, b) => {
+        // Normalize code format: P210 -> P.210
+        const codeA = a.parliamentCode.replace(/^P(\d+)$/, (_, num) => `P.${num.padStart(3, '0')}`);
+        const codeB = b.parliamentCode.replace(/^P(\d+)$/, (_, num) => `P.${num.padStart(3, '0')}`);
+        const povertyA = povertyByCode.get(codeA) ?? -1;
+        const povertyB = povertyByCode.get(codeB) ?? -1;
+        return povertyB - povertyA; // Highest first
+      });
+    } else if (sortBy === "poverty-lowest") {
+      filtered = [...filtered].sort((a, b) => {
+        // Normalize code format: P210 -> P.210
+        const codeA = a.parliamentCode.replace(/^P(\d+)$/, (_, num) => `P.${num.padStart(3, '0')}`);
+        const codeB = b.parliamentCode.replace(/^P(\d+)$/, (_, num) => `P.${num.padStart(3, '0')}`);
+        const povertyA = povertyByCode.get(codeA) ?? Infinity;
+        const povertyB = povertyByCode.get(codeB) ?? Infinity;
+        return povertyA - povertyB; // Lowest first
+      });
     } else {
       filtered = [...filtered].sort((a, b) => a.name.localeCompare(b.name));
     }
 
     return filtered;
-  }, [mps, searchQuery, selectedParties, selectedStates, sortBy]);
+  }, [mps, searchQuery, selectedParties, selectedStates, sortBy, povertyByCode]);
 
   const availableStates = useMemo(() => {
     const states = Array.from(new Set(mps.map((mp) => mp.state)));
