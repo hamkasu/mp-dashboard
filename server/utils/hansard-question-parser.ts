@@ -1,5 +1,3 @@
-import pdf from 'pdf-parse';
-
 export interface ParsedQuestion {
   mpName: string;
   constituency: string;
@@ -22,14 +20,16 @@ export interface HansardParseResult {
  * Parses Hansard PDF to extract parliamentary questions and constituency information
  */
 export class HansardQuestionParser {
-  
+
   /**
    * Parse PDF buffer and extract questions
    */
   async parsePdf(pdfBuffer: Buffer): Promise<HansardParseResult> {
-    const data = await pdf(pdfBuffer);
+    // Use dynamic import for CommonJS module compatibility
+    const pdfParse = await import('pdf-parse').then(m => m.default || m);
+    const data = await pdfParse(pdfBuffer);
     const text = data.text;
-    
+
     return this.parseText(text);
   }
 
