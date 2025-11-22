@@ -134,6 +134,7 @@ export const translations = {
       party: "Party",
       parliamentCode: "Parliament Code",
       gender: "Gender",
+      povertyIncidence: "Poverty Incidence",
       swornInDate: "Sworn In Date",
 
       // Contact
@@ -711,6 +712,7 @@ export const translations = {
       party: "Parti",
       parliamentCode: "Kod Parlimen",
       gender: "Jantina",
+      povertyIncidence: "Kadar Kemiskinan",
       swornInDate: "Tarikh Mengangkat Sumpah",
 
       // Contact / Hubungi

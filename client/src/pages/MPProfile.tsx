@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useRoute, Link } from "wouter";
 import { useLanguage } from "@/i18n/LanguageContext";
-import { ArrowLeft, MapPin, UserCircle, Flag, FileText, Wallet, Calendar, Scale, ExternalLink, AlertTriangle, Info, MessageSquare, HelpCircle, Gavel, FileQuestion, ScrollText, Phone, Mail, MapPinned, Printer, Share2 } from "lucide-react";
+import { ArrowLeft, MapPin, UserCircle, Flag, FileText, Wallet, Calendar, Scale, ExternalLink, AlertTriangle, Info, MessageSquare, HelpCircle, Gavel, FileQuestion, ScrollText, Phone, Mail, MapPinned, Printer, Share2, TrendingDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -15,6 +15,7 @@ import { HansardParticipation15th } from "@/components/HansardParticipation15th"
 import { HansardSpeakingRecord } from "@/components/HansardSpeakingRecord";
 import type { Mp, CourtCase, SprmInvestigation, LegislativeProposal, DebateParticipation, ParliamentaryQuestion, HansardRecord } from "@shared/schema";
 import { calculateTotalSalary, calculateYearlyBreakdown, formatCurrency, getPublicationName } from "@/lib/utils";
+import { useConstituencyByCode } from "@/hooks/use-constituencies";
 import { format } from "date-fns";
 
 const PARTY_COLORS: Record<string, string> = {
@@ -81,6 +82,9 @@ export default function MPProfile() {
     queryKey: [`/api/mps/${mpId}/hansard-participation`],
     enabled: !!mpId,
   });
+
+  // Fetch constituency data for poverty incidence
+  const { data: constituency } = useConstituencyByCode(mp?.parliamentCode);
 
   const [activityTab, setActivityTab] = useState("bills");
 
@@ -273,6 +277,18 @@ export default function MPProfile() {
                     <p className="text-lg font-semibold">{mp.gender}</p>
                   </div>
                 </div>
+
+                {constituency?.povertyIncidence !== null && constituency?.povertyIncidence !== undefined && (
+                  <div className="flex items-start gap-3">
+                    <TrendingDown className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-medium text-sm text-muted-foreground uppercase tracking-wide mb-1">
+                        {t('profile.povertyIncidence')}
+                      </p>
+                      <p className="text-lg font-semibold">{(constituency.povertyIncidence / 10).toFixed(1)}%</p>
+                    </div>
+                  </div>
+                )}
 
                 {/* Contact Details */}
                 {mp.email && (
