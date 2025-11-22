@@ -12,11 +12,11 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Scale, ExternalLink, AlertTriangle, Eye } from "lucide-react";
 import { Link } from "wouter";
-import type { Mp, CourtCase, SprmInvestigation, LegislativeProposal } from "@shared/schema";
+import type { Mp, CourtCase, SprmInvestigation, LegislativeProposal, ParliamentaryQuestion } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { useConstituencies } from "@/hooks/use-constituencies";
 
-type SortOption = "name" | "attendance-best" | "attendance-worst" | "speeches-most" | "speeches-fewest" | "poverty-highest" | "poverty-lowest" | "bills-raised" | "inappropriate-language";
+type SortOption = "name" | "attendance-best" | "attendance-worst" | "speeches-most" | "speeches-fewest" | "poverty-highest" | "poverty-lowest" | "bills-raised" | "oral-questions" | "inappropriate-language";
 
 interface LanguageAnalysisMpStat {
   mpId: string;
@@ -79,6 +79,23 @@ export default function Home() {
     retry: false,
     staleTime: 1000 * 60 * 5, // Cache for 5 minutes
   });
+
+  // Fetch parliamentary questions for oral questions sorting
+  const { data: parliamentaryQuestions = [] } = useQuery<ParliamentaryQuestion[]>({
+    queryKey: ["/api/parliamentary-questions"],
+  });
+
+  // Create a lookup map for oral questions count by MP ID
+  const oralQuestionsCountByMpId = useMemo(() => {
+    const map = new Map<string, number>();
+    parliamentaryQuestions
+      .filter(q => q.questionType?.toLowerCase() === 'oral' || q.questionType?.toLowerCase() === 'lisan')
+      .forEach((q) => {
+        const current = map.get(q.mpId) || 0;
+        map.set(q.mpId, current + 1);
+      });
+    return map;
+  }, [parliamentaryQuestions]);
 
   // Create a lookup map for inappropriate language count by MP ID
   const inappropriateLanguageByMpId = useMemo(() => {
@@ -210,6 +227,14 @@ export default function Home() {
         const billsB = billsCountByMpId.get(b.id) ?? 0;
         return billsB - billsA; // Most bills first
       });
+    } else if (sortBy === "oral-questions") {
+      // Filter to only show MPs with oral questions, then sort
+      filtered = filtered.filter(mp => (oralQuestionsCountByMpId.get(mp.id) ?? 0) > 0);
+      filtered = [...filtered].sort((a, b) => {
+        const countA = oralQuestionsCountByMpId.get(a.id) ?? 0;
+        const countB = oralQuestionsCountByMpId.get(b.id) ?? 0;
+        return countB - countA; // Most oral questions first
+      });
     } else if (sortBy === "inappropriate-language") {
       // Filter to only show MPs with inappropriate language data, then sort
       filtered = filtered.filter(mp => (inappropriateLanguageByMpId.get(mp.id)?.count ?? 0) > 0);
@@ -223,7 +248,7 @@ export default function Home() {
     }
 
     return filtered;
-  }, [mps, searchQuery, selectedParties, selectedStates, sortBy, povertyByCode, billsCountByMpId, inappropriateLanguageByMpId]);
+  }, [mps, searchQuery, selectedParties, selectedStates, sortBy, povertyByCode, billsCountByMpId, oralQuestionsCountByMpId, inappropriateLanguageByMpId]);
 
   const availableStates = useMemo(() => {
     const states = Array.from(new Set(mps.map((mp) => mp.state)));
