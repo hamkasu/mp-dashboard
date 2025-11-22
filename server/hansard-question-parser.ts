@@ -97,8 +97,10 @@ export class HansardQuestionParser {
     const questionNumberMatch = block.match(/(?:Soalan|Question)?\s*(\d+)[.:]/i);
     const questionNumber = questionNumberMatch ? questionNumberMatch[1] : undefined;
 
-    const mpPattern = /(?:Tuan|Puan|Dato|Datuk|Dr\.|Yang Berhormat)\s+([^(:\n]+?)(?:\s*\(([^)]+)\))?(?:\s*:|\s+minta)/i;
-    const mpMatch = block.match(mpPattern);
+    // Try square brackets first [Constituency], then parentheses (Constituency)
+    const mpPatternSquareBrackets = /(?:Tuan|Puan|Dato['']?|Datuk|Dr\.?|Yang Berhormat|Ir\.|Ts\.)\s+([^[\]:\n]+?)\s*\[([^\]]+)\](?:\s*:|\s+minta)/i;
+    const mpPatternParentheses = /(?:Tuan|Puan|Dato['']?|Datuk|Dr\.?|Yang Berhormat|Ir\.|Ts\.)\s+([^(:\n]+?)(?:\s*\(([^)]+)\))?(?:\s*:|\s+minta)/i;
+    const mpMatch = block.match(mpPatternSquareBrackets) || block.match(mpPatternParentheses);
     
     let mpId: string | undefined;
     let mpName: string | undefined;
