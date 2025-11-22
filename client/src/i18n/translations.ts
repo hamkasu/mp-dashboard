@@ -86,6 +86,9 @@ export const translations = {
       avg: "avg",
       speechesPerSession: "speeches/session",
       hansardSpeakingParticipation: "Hansard speaking participation",
+      bill: "bill raised",
+      bills: "bills raised",
+      more: "more",
     },
 
     // Home Page
@@ -668,6 +671,9 @@ export const translations = {
       avg: "purata",
       speechesPerSession: "ucapan/sidang",
       hansardSpeakingParticipation: "Penyertaan ucapan Hansard",
+      bill: "rang undang-undang dikemukakan",
+      bills: "rang undang-undang dikemukakan",
+      more: "lagi",
     },
 
     // Home Page / Laman Utama

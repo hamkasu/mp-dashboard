@@ -1,8 +1,8 @@
-import { MapPin, UserCircle, Wallet, Calendar, Mic, TrendingDown } from "lucide-react";
+import { MapPin, UserCircle, Wallet, Calendar, Mic, TrendingDown, ScrollText } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import type { Mp } from "@shared/schema";
+import type { Mp, LegislativeProposal } from "@shared/schema";
 import { Link } from "wouter";
 import { calculateTotalSalary, formatCurrency } from "@/lib/utils";
 import { useLanguage } from "@/i18n/LanguageContext";
@@ -10,6 +10,7 @@ import { useConstituencyByCode } from "@/hooks/use-constituencies";
 
 interface MPCardProps {
   mp: Mp;
+  bills?: LegislativeProposal[];
 }
 
 const PARTY_COLORS: Record<string, string> = {
@@ -43,7 +44,7 @@ function getPovertyColor(povertyRate: number): string {
   return "text-red-600 dark:text-red-400";
 }
 
-export function MPCard({ mp }: MPCardProps) {
+export function MPCard({ mp, bills }: MPCardProps) {
   const { t } = useLanguage();
   const { data: constituency } = useConstituencyByCode(mp.parliamentCode);
   const initials = mp.name
@@ -185,7 +186,30 @@ export function MPCard({ mp }: MPCardProps) {
                 </p>
               </div>
             </div>
-            
+
+            {bills && bills.length > 0 && (
+              <div className="flex items-start gap-2">
+                <ScrollText className="h-4 w-4 text-green-600 dark:text-green-400 shrink-0 mt-0.5" />
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-green-600 dark:text-green-400" data-testid={`text-bills-${mp.id}`}>
+                    {bills.length} {bills.length === 1 ? t('mpCard.bill') : t('mpCard.bills')}
+                  </p>
+                  <div className="space-y-1 mt-1">
+                    {bills.slice(0, 3).map((bill, index) => (
+                      <p key={bill.id} className="text-xs text-muted-foreground line-clamp-1" title={bill.title}>
+                        {index + 1}. {bill.title}
+                      </p>
+                    ))}
+                    {bills.length > 3 && (
+                      <p className="text-xs text-muted-foreground italic">
+                        +{bills.length - 3} {t('mpCard.more')}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
             <p className="text-xs text-muted-foreground font-mono">
               {mp.parliamentCode}
             </p>
