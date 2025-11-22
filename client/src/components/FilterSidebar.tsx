@@ -7,7 +7,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { useLanguage } from "@/i18n/LanguageContext";
 
-type SortOption = "name" | "attendance-best" | "attendance-worst" | "speeches-most" | "speeches-fewest" | "poverty-highest" | "poverty-lowest" | "bills-raised" | "inappropriate-language";
+type SortOption = "name" | "attendance-best" | "attendance-worst" | "speeches-most" | "speeches-fewest" | "poverty-highest" | "poverty-lowest" | "bills-raised" | "oral-questions" | "inappropriate-language";
 
 interface FilterSidebarProps {
   parties: { party: string; count: number }[];
@@ -107,6 +107,12 @@ export function FilterSidebar({
                 <RadioGroupItem value="bills-raised" id="sort-bills-raised" data-testid="radio-sort-bills-raised" />
                 <Label htmlFor="sort-bills-raised" className="text-sm font-normal cursor-pointer">
                   {t('filters.sortBillsRaised')}
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="oral-questions" id="sort-oral-questions" data-testid="radio-sort-oral-questions" />
+                <Label htmlFor="sort-oral-questions" className="text-sm font-normal cursor-pointer">
+                  {t('filters.sortOralQuestions')}
                 </Label>
               </div>
               <div className="flex items-center space-x-2">
