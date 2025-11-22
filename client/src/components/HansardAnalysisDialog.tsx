@@ -101,23 +101,26 @@ export function HansardAnalysisDialog({ hansardRecord, trigger }: HansardAnalysi
   // Filter to only show hansard records that have PDFs available
   const hansardRecords = allHansardRecords?.filter(record => record.hasPdf) || [];
 
+  // Get the currently selected hansard record (either from dropdown or prop)
+  const selectedHansard = allHansardRecords?.find(r => r.id === selectedHansardId) || hansardRecord;
+
   const filteredMps = (() => {
     if (!mps) return [];
-    
-    if (!hansardRecord.speakers || hansardRecord.speakers.length === 0) {
+
+    if (!selectedHansard?.speakers || selectedHansard.speakers.length === 0) {
       return mps;
     }
 
-    const speakerMpIds = hansardRecord.speakers
+    const speakerMpIds = selectedHansard.speakers
       .filter(speaker => speaker.mpId)
       .map(speaker => speaker.mpId);
-    
+
     if (speakerMpIds.length === 0) {
       return mps;
     }
 
     const filtered = mps.filter(mp => speakerMpIds.includes(mp.id));
-    
+
     return filtered.length > 0 ? filtered : mps;
   })();
 
@@ -237,7 +240,11 @@ export function HansardAnalysisDialog({ hansardRecord, trigger }: HansardAnalysi
                   ) : (
                     <Select
                       value={selectedHansardId}
-                      onValueChange={setSelectedHansardId}
+                      onValueChange={(value) => {
+                        setSelectedHansardId(value);
+                        setSelectedMpId(""); // Reset MP selection when session changes
+                        setAnalysisResult(null); // Clear previous results
+                      }}
                       disabled={analyzeMutation.isPending}
                     >
                       <SelectTrigger id="hansard-select-dialog" data-testid="select-hansard-dialog">
