@@ -3500,10 +3500,31 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
+  // Cache for language analysis results
+  let languageAnalysisCache: {
+    data: any;
+    timestamp: number;
+    recordCount: number;
+  } | null = null;
+  const CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes
+
   // Public endpoint to analyze Hansard transcripts for inappropriate language
   // Used by homepage to display MPs with unparliamentary language
   app.get("/api/admin/analyze-language", async (req, res) => {
     try {
+      // Check if we have valid cached data
+      const allRecords = await storage.getAllHansardRecords();
+      const currentRecordCount = allRecords.length;
+      const now = Date.now();
+
+      // Use cache if: exists, not expired, and record count hasn't changed
+      if (languageAnalysisCache &&
+          (now - languageAnalysisCache.timestamp) < CACHE_TTL_MS &&
+          languageAnalysisCache.recordCount === currentRecordCount) {
+        console.log("📊 Returning cached language analysis results");
+        return res.json(languageAnalysisCache.data);
+      }
+
       console.log("🔍 Analyzing Hansard transcripts for inappropriate language...");
 
       // Common inappropriate/unparliamentary words in Malaysian parliament context
@@ -3519,7 +3540,6 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         /\b(pembohong|bohong|tipu|menipu|rasuah|korup)\b/gi,
       ];
 
-      const allRecords = await storage.getAllHansardRecords();
       console.log(`📊 Analyzing ${allRecords.length} Hansard records...`);
 
       const results: Array<{
@@ -3615,19 +3635,28 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
 
       console.log(`✅ Analysis complete. Found ${results.length} instances.`);
 
-      res.json({
+      const responseData = {
         summary: {
           totalRecordsAnalyzed: allRecords.length,
           totalInstancesFound: results.length,
           uniqueMpsIdentified: mpStats.size
         },
-        mpRanking: mpRanking.slice(0, 20), // Top 20 MPs
+        mpRanking, // Return all MPs, not just top 20
         recentInstances: results.slice(-50), // Last 50 instances
         wordFrequency: results.reduce((acc, r) => {
           acc[r.word] = (acc[r.word] || 0) + 1;
           return acc;
         }, {} as Record<string, number>)
-      });
+      };
+
+      // Cache the results
+      languageAnalysisCache = {
+        data: responseData,
+        timestamp: Date.now(),
+        recordCount: currentRecordCount
+      };
+
+      res.json(responseData);
 
     } catch (error) {
       console.error("Error analyzing language:", error);

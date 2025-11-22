@@ -71,13 +71,13 @@ export default function Home() {
   });
 
   // Fetch language analysis for inappropriate language sorting
-  const { data: languageAnalysis } = useQuery<{
+  const { data: languageAnalysis, isLoading: languageAnalysisLoading } = useQuery<{
     summary: { totalRecordsAnalyzed: number; totalInstancesFound: number; uniqueMpsIdentified: number };
     mpRanking: LanguageAnalysisMpStat[];
   }>({
     queryKey: ["/api/admin/analyze-language"],
     retry: false,
-    staleTime: 1000 * 60 * 5, // Cache for 5 minutes
+    staleTime: 1000 * 60 * 30, // Cache for 30 minutes (matches server cache)
   });
 
   // Fetch parliamentary questions for oral questions sorting
@@ -574,7 +574,15 @@ export default function Home() {
             <StatisticsCards stats={stats || defaultStats} isLoading={isLoading} />
 
             {/* MP Grid */}
-            <MPGrid mps={filteredMps} isLoading={isLoading} billsByMpId={billsByMpId} oralQuestionsByMpId={oralQuestionsByMpId} languageStatsByMpId={inappropriateLanguageByMpId} />
+            {sortBy === "inappropriate-language" && languageAnalysisLoading ? (
+              <div className="flex flex-col items-center justify-center py-16 gap-4">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+                <p className="text-muted-foreground">Analyzing Hansard transcripts for inappropriate language...</p>
+                <p className="text-xs text-muted-foreground">This may take a moment on first load</p>
+              </div>
+            ) : (
+              <MPGrid mps={filteredMps} isLoading={isLoading} billsByMpId={billsByMpId} oralQuestionsByMpId={oralQuestionsByMpId} languageStatsByMpId={inappropriateLanguageByMpId} />
+            )}
           </div>
         </main>
       </div>
