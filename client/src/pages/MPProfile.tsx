@@ -295,7 +295,7 @@ export default function MPProfile() {
                           </TooltipContent>
                         </Tooltip>
                       </div>
-                      <p className="text-lg font-semibold">{(constituency.povertyIncidence / 10).toFixed(1)}%</p>
+                      <p className="text-lg font-semibold">{constituency.povertyIncidence?.toFixed(1)}%</p>
                     </div>
                   </div>
                 )}
