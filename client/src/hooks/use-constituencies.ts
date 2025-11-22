@@ -22,7 +22,9 @@ export function useConstituencyByCode(code: string | undefined) {
     queryKey: ["constituency", code],
     queryFn: async () => {
       if (!code) return null;
-      const response = await fetch(`/api/constituencies/code/${code}`);
+      // Normalize code format: P210 -> P.210, P001 -> P.001
+      const normalizedCode = code.replace(/^P(\d+)$/, (_, num) => `P.${num.padStart(3, '0')}`);
+      const response = await fetch(`/api/constituencies/code/${normalizedCode}`);
       if (!response.ok) {
         if (response.status === 404) return null;
         throw new Error("Failed to fetch constituency");
