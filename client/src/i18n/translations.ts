@@ -162,6 +162,10 @@ export const translations = {
       contactAddress: "Contact Address",
       serviceAddress: "Service Address",
       socialMedia: "Social Media",
+      facebook: "Facebook",
+      instagram: "Instagram",
+      twitter: "X (Twitter)",
+      tiktok: "TikTok",
 
       // Attendance
       parliamentAttendance: "Parliament Attendance",
@@ -752,6 +756,10 @@ export const translations = {
       contactAddress: "Alamat Perhubungan",
       serviceAddress: "Alamat Perkhidmatan",
       socialMedia: "Media Sosial",
+      facebook: "Facebook",
+      instagram: "Instagram",
+      twitter: "X (Twitter)",
+      tiktok: "TikTok",
 
       // Attendance / Kehadiran
       parliamentAttendance: "Kehadiran Parlimen",

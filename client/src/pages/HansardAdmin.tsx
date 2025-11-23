@@ -9,7 +9,7 @@ import { Header } from "@/components/Header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, Download, Trash2, AlertTriangle, CheckCircle2, RefreshCw, Upload, FileText, X, Database, Clock, History } from "lucide-react";
+import { Loader2, Download, Trash2, AlertTriangle, CheckCircle2, RefreshCw, Upload, FileText, X, Database, Clock, History, Share2 } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { UnmatchedSpeakersManager } from "@/components/UnmatchedSpeakersManager";
@@ -305,6 +305,34 @@ export default function HansardAdmin() {
   const handleRefreshMpData = () => {
     if (confirm("This will recalculate all MP attendance, speech counts, and performance metrics from Hansard records. Continue?")) {
       refreshMpDataMutation.mutate();
+    }
+  };
+
+  // Social Media Update mutation
+  const updateSocialMediaMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/admin/update-mp-social-media");
+      return await res.json();
+    },
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/mps"] });
+      toast({
+        title: "Success",
+        description: `Updated ${data.results.updated} MPs with social media data. ${data.results.notFound} not found.`,
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update social media data",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleUpdateSocialMedia = () => {
+    if (confirm("This will update MP profiles with social media URLs from the scraped data file. Continue?")) {
+      updateSocialMediaMutation.mutate();
     }
   };
 
@@ -952,6 +980,49 @@ export default function HansardAdmin() {
                 <>
                   <Database className="mr-2 h-4 w-4" />
                   Refresh MP Data
+                </>
+              )}
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* Update MP Social Media Card */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Share2 className="h-5 w-5" />
+              Update MP Social Media
+            </CardTitle>
+            <CardDescription>
+              Update MP profiles with social media links from politicians.my
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <p className="text-sm text-muted-foreground">
+                This will update MP profiles with Facebook, Instagram, Twitter/X, and TikTok URLs from the scraped data file (scripts/mp-social-media-scraped.json).
+              </p>
+              <Alert>
+                <AlertDescription>
+                  Currently contains social media data for 38 MPs. Add more MPs to the JSON file to expand coverage.
+                </AlertDescription>
+              </Alert>
+            </div>
+            <Button
+              onClick={handleUpdateSocialMedia}
+              disabled={updateSocialMediaMutation.isPending}
+              className="w-full"
+              data-testid="button-update-social-media"
+            >
+              {updateSocialMediaMutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Updating Social Media...
+                </>
+              ) : (
+                <>
+                  <Share2 className="mr-2 h-4 w-4" />
+                  Update Social Media Data
                 </>
               )}
             </Button>

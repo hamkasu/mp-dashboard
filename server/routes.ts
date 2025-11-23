@@ -3668,5 +3668,125 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
+  // Admin endpoint to update MP social media data from scraped JSON
+  app.post("/api/admin/update-mp-social-media", requireAdmin, async (req, res) => {
+    try {
+      console.log("🔄 Updating MP social media data...");
+
+      const { readFile } = await import('fs/promises');
+      const { join } = await import('path');
+      const { eq, ilike } = await import('drizzle-orm');
+
+      // Read the scraped data file
+      const jsonPath = join(process.cwd(), 'scripts', 'mp-social-media-scraped.json');
+      let scrapedData: Array<{
+        name: string;
+        parliamentCode: string;
+        constituency: string;
+        facebookUrl?: string | null;
+        instagramUrl?: string | null;
+        twitterUrl?: string | null;
+        tiktokUrl?: string | null;
+      }>;
+
+      try {
+        const data = await readFile(jsonPath, 'utf-8');
+        scrapedData = JSON.parse(data);
+      } catch (fileError) {
+        console.error("Error reading social media data file:", fileError);
+        return res.status(404).json({
+          error: "Social media data file not found",
+          details: "scripts/mp-social-media-scraped.json is missing"
+        });
+      }
+
+      console.log(`Found ${scrapedData.length} social media records to process`);
+
+      let updated = 0;
+      let notFound = 0;
+      let noData = 0;
+      let errors = 0;
+      const errorDetails: string[] = [];
+
+      for (const socialMedia of scrapedData) {
+        try {
+          // Check if there's any social media data
+          const hasSocialMedia = socialMedia.facebookUrl || socialMedia.instagramUrl ||
+                                 socialMedia.twitterUrl || socialMedia.tiktokUrl;
+
+          if (!hasSocialMedia) {
+            noData++;
+            continue;
+          }
+
+          // Try to find the MP in the database by parliament code first
+          let matchingMps = await db
+            .select()
+            .from(mps)
+            .where(eq(mps.parliamentCode, socialMedia.parliamentCode))
+            .limit(1);
+
+          if (matchingMps.length === 0) {
+            // Fall back to constituency matching
+            matchingMps = await db
+              .select()
+              .from(mps)
+              .where(ilike(mps.constituency, `%${socialMedia.constituency}%`))
+              .limit(5);
+          }
+
+          if (matchingMps.length === 0) {
+            console.log(`⚠ No match found for: ${socialMedia.name} (${socialMedia.parliamentCode})`);
+            notFound++;
+            continue;
+          }
+
+          const bestMatch = matchingMps[0];
+
+          // Update the MP with social media information
+          const updateData: Record<string, string | null> = {};
+
+          if (socialMedia.facebookUrl) updateData.facebookUrl = socialMedia.facebookUrl;
+          if (socialMedia.instagramUrl) updateData.instagramUrl = socialMedia.instagramUrl;
+          if (socialMedia.twitterUrl) updateData.twitterUrl = socialMedia.twitterUrl;
+          if (socialMedia.tiktokUrl) updateData.tiktokUrl = socialMedia.tiktokUrl;
+
+          if (Object.keys(updateData).length > 0) {
+            await db
+              .update(mps)
+              .set(updateData)
+              .where(eq(mps.id, bestMatch.id));
+
+            console.log(`✓ Updated ${bestMatch.name}: ${Object.keys(updateData).join(', ')}`);
+            updated++;
+          }
+
+        } catch (error) {
+          console.error(`✗ Error processing ${socialMedia.name}:`, error);
+          errorDetails.push(`${socialMedia.name}: ${String(error)}`);
+          errors++;
+        }
+      }
+
+      console.log(`✅ Social media update complete: ${updated} updated, ${notFound} not found, ${errors} errors`);
+
+      res.json({
+        message: "Social media update completed",
+        results: {
+          totalProcessed: scrapedData.length,
+          updated,
+          notFound,
+          noData,
+          errors,
+          errorDetails: errorDetails.slice(0, 10)
+        }
+      });
+
+    } catch (error) {
+      console.error("Error updating MP social media:", error);
+      res.status(500).json({ error: "Failed to update social media", details: String(error) });
+    }
+  });
+
   // Server is now passed in from index.ts, no need to create it here
 }
