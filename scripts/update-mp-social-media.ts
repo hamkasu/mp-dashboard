@@ -7,8 +7,8 @@
  * Usage: tsx scripts/update-mp-social-media.ts
  */
 
-import { db } from '../db';
-import { mps } from '@db/schema';
+import { db } from '../server/db';
+import { mps } from '../shared/schema';
 import { eq, or, ilike } from 'drizzle-orm';
 import { readFile } from 'fs/promises';
 
