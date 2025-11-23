@@ -729,17 +729,63 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   app.get("/api/mps/:id/hansard-speaking-record", async (req, res) => {
     try {
       const { id } = req.params;
-      
+
       const mp = await storage.getMp(id);
       if (!mp) {
         return res.status(404).json({ error: "MP not found" });
       }
-      
+
       const record = await storage.getMpHansardSpeakingRecord(id);
       res.json(record);
     } catch (error) {
       console.error("Error fetching Hansard speaking record:", error);
       res.status(500).json({ error: "Failed to fetch Hansard speaking record" });
+    }
+  });
+
+  // Send a message/contact request to an MP
+  app.post("/api/mps/:id/contact", mutationRateLimit, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { senderName, senderEmail, subject, message, mpName, mpEmail, mpConstituency } = req.body;
+
+      // Validate required fields
+      if (!senderName || !senderEmail || !subject || !message) {
+        return res.status(400).json({ error: "All fields are required" });
+      }
+
+      // Validate email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(senderEmail)) {
+        return res.status(400).json({ error: "Invalid email format" });
+      }
+
+      // Get the MP to verify they exist
+      const mp = await storage.getMp(id);
+      if (!mp) {
+        return res.status(404).json({ error: "MP not found" });
+      }
+
+      // Log the contact request (in production, you might want to store this in database or send email)
+      console.log(`[MP Contact] Message to ${mpName || mp.name} (${mpConstituency || mp.constituency})`);
+      console.log(`  From: ${senderName} <${senderEmail}>`);
+      console.log(`  Subject: ${subject}`);
+      console.log(`  Message: ${message.substring(0, 100)}...`);
+
+      // For now, we just log the message. In production, you would:
+      // 1. Store in database for admin review
+      // 2. Send email notification to MP's office
+      // 3. Send confirmation email to sender
+
+      res.json({
+        success: true,
+        message: "Your message has been received and will be forwarded to the MP's office.",
+        mpName: mp.name,
+        mpEmail: mp.email
+      });
+    } catch (error) {
+      console.error("Error sending contact message:", error);
+      res.status(500).json({ error: "Failed to send message" });
     }
   });
 

@@ -17,6 +17,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Summarizer } from "@/components/Summarizer";
 import { HansardParticipation15th } from "@/components/HansardParticipation15th";
 import { HansardSpeakingRecord } from "@/components/HansardSpeakingRecord";
+import { ContactMPDialog } from "@/components/ContactMPDialog";
 import type { Mp, CourtCase, SprmInvestigation, LegislativeProposal, DebateParticipation, ParliamentaryQuestion, HansardRecord } from "@shared/schema";
 import { calculateTotalSalary, calculateYearlyBreakdown, formatCurrency, getPublicationName } from "@/lib/utils";
 import { useConstituencyByCode } from "@/hooks/use-constituencies";
@@ -247,6 +248,19 @@ export default function MPProfile() {
                   </Badge>
                 </div>
               </div>
+
+              {/* Send Message Button */}
+              <ContactMPDialog
+                mpId={mp.id}
+                mpName={mp.name}
+                mpEmail={mp.email}
+                mpConstituency={mp.constituency}
+              >
+                <Button variant="default" className="gap-2">
+                  <MessageSquare className="h-4 w-4" />
+                  {t('profile.sendMessage')}
+                </Button>
+              </ContactMPDialog>
 
               <Separator />
 
