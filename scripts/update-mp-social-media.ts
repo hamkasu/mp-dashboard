@@ -11,6 +11,11 @@ import { db } from '../server/db';
 import { mps } from '../shared/schema';
 import { eq, or, ilike } from 'drizzle-orm';
 import { readFile } from 'fs/promises';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 interface MPSocialMedia {
   name: string;
@@ -26,8 +31,9 @@ async function updateMPSocialMedia() {
   console.log('Loading scraped MP social media data...');
 
   try {
-    // Read the scraped data file
-    const data = await readFile('./scripts/mp-social-media-scraped.json', 'utf-8');
+    // Read the scraped data file (resolve path relative to this script)
+    const jsonPath = join(__dirname, 'mp-social-media-scraped.json');
+    const data = await readFile(jsonPath, 'utf-8');
     const scrapedData: MPSocialMedia[] = JSON.parse(data);
 
     console.log(`Found ${scrapedData.length} social media records to process\n`);
