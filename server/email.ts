@@ -2,19 +2,17 @@
  * Copyright by Calmic Sdn Bhd
  */
 
-import sgMail from "@sendgrid/mail";
+import { Resend } from "resend";
 
-// Initialize SendGrid with API key from environment
-const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY;
-const FROM_EMAIL = process.env.FROM_EMAIL || "noreply@myparliament.my";
+// Initialize Resend with API key from environment
+const RESEND_API_KEY = process.env.RESEND_API_KEY;
+const FROM_EMAIL = process.env.FROM_EMAIL || "onboarding@resend.dev";
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "";
 
-if (SENDGRID_API_KEY) {
-  sgMail.setApiKey(SENDGRID_API_KEY);
-}
+const resend = RESEND_API_KEY ? new Resend(RESEND_API_KEY) : null;
 
 export function isEmailConfigured(): boolean {
-  return !!SENDGRID_API_KEY;
+  return !!RESEND_API_KEY;
 }
 
 interface ContactMessageParams {
@@ -32,8 +30,8 @@ interface ContactMessageParams {
  * If MP has no email, sends to admin email instead
  */
 export async function sendContactEmail(params: ContactMessageParams): Promise<{ success: boolean; error?: string }> {
-  if (!SENDGRID_API_KEY) {
-    console.warn("[Email] SendGrid not configured - message will only be logged");
+  if (!resend) {
+    console.warn("[Email] Resend not configured - message will only be logged");
     return { success: false, error: "Email service not configured" };
   }
 
@@ -46,24 +44,6 @@ export async function sendContactEmail(params: ContactMessageParams): Promise<{ 
     console.warn(`[Email] No recipient email for ${mpName} and no admin email configured`);
     return { success: false, error: "No recipient email available" };
   }
-
-  const emailContent = `
-New message from constituent via MyParliament Dashboard
-
-MP: ${mpName}
-Constituency: ${mpConstituency}
-
-From: ${senderName}
-Email: ${senderEmail}
-Subject: ${subject}
-
-Message:
-${message}
-
----
-This message was sent via the MyParliament Dashboard contact form.
-To reply, please respond directly to ${senderEmail}
-  `.trim();
 
   const htmlContent = `
 <!DOCTYPE html>
@@ -108,14 +88,18 @@ To reply, please respond directly to ${senderEmail}
   `.trim();
 
   try {
-    await sgMail.send({
-      to: recipientEmail,
+    const { error } = await resend.emails.send({
       from: FROM_EMAIL,
+      to: recipientEmail,
       replyTo: senderEmail,
       subject: `[MyParliament] ${subject} - Message from ${senderName}`,
-      text: emailContent,
       html: htmlContent,
     });
+
+    if (error) {
+      console.error("[Email] Failed to send:", error.message);
+      return { success: false, error: error.message };
+    }
 
     console.log(`[Email] Sent contact message to ${recipientEmail} for ${mpName}`);
     return { success: true };
@@ -129,7 +113,7 @@ To reply, please respond directly to ${senderEmail}
  * Send confirmation email to the constituent
  */
 export async function sendConfirmationEmail(params: ContactMessageParams): Promise<{ success: boolean; error?: string }> {
-  if (!SENDGRID_API_KEY) {
+  if (!resend) {
     return { success: false, error: "Email service not configured" };
   }
 
@@ -172,12 +156,17 @@ export async function sendConfirmationEmail(params: ContactMessageParams): Promi
   `.trim();
 
   try {
-    await sgMail.send({
-      to: senderEmail,
+    const { error } = await resend.emails.send({
       from: FROM_EMAIL,
+      to: senderEmail,
       subject: `[MyParliament] Message Sent to ${mpName}`,
       html: htmlContent,
     });
+
+    if (error) {
+      console.error("[Email] Failed to send confirmation:", error.message);
+      return { success: false, error: error.message };
+    }
 
     console.log(`[Email] Sent confirmation to ${senderEmail}`);
     return { success: true };
