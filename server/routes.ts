@@ -46,6 +46,7 @@ import {
   auditMiddleware
 } from "./middleware/security";
 import { requireAdmin, getCurrentUsername } from "./simple-auth";
+import { sendContactEmail, sendConfirmationEmail, isEmailConfigured } from "./email";
 
 // Configure multer for file uploads
 const upload = multer({
@@ -747,7 +748,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   app.post("/api/mps/:id/contact", mutationRateLimit, async (req, res) => {
     try {
       const { id } = req.params;
-      const { senderName, senderEmail, subject, message, mpName, mpEmail, mpConstituency } = req.body;
+      const { senderName, senderEmail, subject, message } = req.body;
 
       // Validate required fields
       if (!senderName || !senderEmail || !subject || !message) {
@@ -766,20 +767,41 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         return res.status(404).json({ error: "MP not found" });
       }
 
-      // Log the contact request (in production, you might want to store this in database or send email)
-      console.log(`[MP Contact] Message to ${mpName || mp.name} (${mpConstituency || mp.constituency})`);
+      // Log the contact request
+      console.log(`[MP Contact] Message to ${mp.name} (${mp.constituency})`);
       console.log(`  From: ${senderName} <${senderEmail}>`);
       console.log(`  Subject: ${subject}`);
       console.log(`  Message: ${message.substring(0, 100)}...`);
 
-      // For now, we just log the message. In production, you would:
-      // 1. Store in database for admin review
-      // 2. Send email notification to MP's office
-      // 3. Send confirmation email to sender
+      // Send email via SendGrid if configured
+      let emailSent = false;
+      if (isEmailConfigured()) {
+        const emailParams = {
+          mpName: mp.name,
+          mpEmail: mp.email,
+          mpConstituency: mp.constituency,
+          senderName,
+          senderEmail,
+          subject,
+          message,
+        };
+
+        // Send email to MP's office
+        const result = await sendContactEmail(emailParams);
+        emailSent = result.success;
+
+        // Send confirmation to constituent (don't block on failure)
+        sendConfirmationEmail(emailParams).catch(err => {
+          console.error("[Email] Failed to send confirmation:", err);
+        });
+      }
 
       res.json({
         success: true,
-        message: "Your message has been received and will be forwarded to the MP's office.",
+        emailSent,
+        message: emailSent
+          ? "Your message has been sent to the MP's office."
+          : "Your message has been received and logged. Email delivery is not configured.",
         mpName: mp.name,
         mpEmail: mp.email
       });
