@@ -53,6 +53,11 @@ export const mps = pgTable("mps", {
   mobileNumber: text("mobile_number"),
   socialMedia: text("social_media"),
   serviceAddress: text("service_address"),
+  // Individual social media profiles
+  facebookUrl: text("facebook_url"),
+  instagramUrl: text("instagram_url"),
+  twitterUrl: text("twitter_url"),
+  tiktokUrl: text("tiktok_url"),
 });
 
 export const insertMpSchema = createInsertSchema(mps).omit({
