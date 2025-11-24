@@ -495,3 +495,96 @@ export const insertConstituencySchema = createInsertSchema(constituencies).omit(
 
 export type InsertConstituency = z.infer<typeof insertConstituencySchema>;
 export type Constituency = typeof constituencies.$inferSelect;
+
+// AI Analysis tables
+export const hansardTopicAnalysis = pgTable("hansard_topic_analysis", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  hansardRecordId: varchar("hansard_record_id").notNull().references(() => hansardRecords.id, { onDelete: "cascade" }),
+  topics: jsonb("topics").$type<Array<{ topic: string; relevance: number; keywords: string[] }>>().notNull(),
+  analyzedAt: timestamp("analyzed_at").notNull().default(sql`NOW()`),
+});
+
+export const insertHansardTopicAnalysisSchema = createInsertSchema(hansardTopicAnalysis).omit({
+  id: true,
+  analyzedAt: true,
+});
+
+export type InsertHansardTopicAnalysis = z.infer<typeof insertHansardTopicAnalysisSchema>;
+export type HansardTopicAnalysis = typeof hansardTopicAnalysis.$inferSelect;
+
+export const hansardSentimentAnalysis = pgTable("hansard_sentiment_analysis", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  hansardRecordId: varchar("hansard_record_id").notNull().references(() => hansardRecords.id, { onDelete: "cascade" }),
+  overallSentiment: text("overall_sentiment").notNull(),
+  sentimentScore: integer("sentiment_score").notNull(),
+  confidence: integer("confidence").notNull(),
+  keyPoints: jsonb("key_points").$type<Array<{ point: string; sentiment: string }>>().notNull(),
+  analyzedAt: timestamp("analyzed_at").notNull().default(sql`NOW()`),
+});
+
+export const insertHansardSentimentAnalysisSchema = createInsertSchema(hansardSentimentAnalysis).omit({
+  id: true,
+  analyzedAt: true,
+});
+
+export type InsertHansardSentimentAnalysis = z.infer<typeof insertHansardSentimentAnalysisSchema>;
+export type HansardSentimentAnalysis = typeof hansardSentimentAnalysis.$inferSelect;
+
+export const hansardSpeakerAnalysis = pgTable("hansard_speaker_analysis", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  hansardRecordId: varchar("hansard_record_id").notNull().references(() => hansardRecords.id, { onDelete: "cascade" }),
+  speakerInsights: jsonb("speaker_insights").$type<Array<{ 
+    mpId: string; 
+    mpName: string; 
+    topicsDiscussed: string[]; 
+    sentiment: string;
+    keyArguments: string[];
+  }>>().notNull(),
+  analyzedAt: timestamp("analyzed_at").notNull().default(sql`NOW()`),
+});
+
+export const insertHansardSpeakerAnalysisSchema = createInsertSchema(hansardSpeakerAnalysis).omit({
+  id: true,
+  analyzedAt: true,
+});
+
+export type InsertHansardSpeakerAnalysis = z.infer<typeof insertHansardSpeakerAnalysisSchema>;
+export type HansardSpeakerAnalysis = typeof hansardSpeakerAnalysis.$inferSelect;
+
+export const hansardDetailedSummary = pgTable("hansard_detailed_summary", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  hansardRecordId: varchar("hansard_record_id").notNull().references(() => hansardRecords.id, { onDelete: "cascade" }),
+  language: text("language").notNull().default("en"),
+  keyArguments: jsonb("key_arguments").$type<string[]>().notNull(),
+  decisions: jsonb("decisions").$type<string[]>().notNull(),
+  actionItems: jsonb("action_items").$type<string[]>().notNull(),
+  controversialPoints: jsonb("controversial_points").$type<string[]>().notNull(),
+  summary: text("summary").notNull(),
+  analyzedAt: timestamp("analyzed_at").notNull().default(sql`NOW()`),
+});
+
+export const insertHansardDetailedSummarySchema = createInsertSchema(hansardDetailedSummary).omit({
+  id: true,
+  analyzedAt: true,
+});
+
+export type InsertHansardDetailedSummary = z.infer<typeof insertHansardDetailedSummarySchema>;
+export type HansardDetailedSummary = typeof hansardDetailedSummary.$inferSelect;
+
+export const hansardQaCache = pgTable("hansard_qa_cache", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  hansardRecordId: varchar("hansard_record_id").notNull().references(() => hansardRecords.id, { onDelete: "cascade" }),
+  question: text("question").notNull(),
+  answer: text("answer").notNull(),
+  context: text("context").notNull(),
+  relevanceScore: integer("relevance_score").notNull(),
+  createdAt: timestamp("created_at").notNull().default(sql`NOW()`),
+});
+
+export const insertHansardQaCacheSchema = createInsertSchema(hansardQaCache).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertHansardQaCache = z.infer<typeof insertHansardQaCacheSchema>;
+export type HansardQaCache = typeof hansardQaCache.$inferSelect;
