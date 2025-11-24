@@ -3605,7 +3605,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         // English swear words
         /\b(fuck|shit|damn|bloody|hell|stupid|idiot|fool|rubbish|nonsense|liar|corrupt|thief|crook)\b/gi,
         // Malay inappropriate terms commonly flagged in parliament
-        /\b(bodoh|bangang|gila|sial|celaka|babi|anjing|sundal|bangsat|pukimak|lancau|setan|iblis|jahanam|haram|kafir|munafik|pengkhianat|penipu|perompak|penjenayah)\b/gi,
+        /\b(bodoh|bangang|gila|sial|celaka|babi|anjing|sundal|bangsat|pukimak|lancau|setan|iblis|jahanam|haram|kafir|munafik|pengkhianat|penipu|perompak|pelacur|haramjadah|puki|lahanat|bohsia|cibai|nate)\b/gi,
         // Unparliamentary phrases
         /\b(shut up|tutup mulut|diam|go out|get out)\b/gi,
         // Accusations
