@@ -90,13 +90,19 @@ ${transcript.substring(0, 50000)}`;
       contents: prompt,
     });
 
-    const rawJson = response.text;
-    if (rawJson) {
-      const data = JSON.parse(rawJson);
-      return data.topics;
+    const rawJson = response.response?.text();
+    if (!rawJson) {
+      console.error("Empty response from Gemini API for topic extraction");
+      return [];
     }
 
-    return [];
+    try {
+      const data = JSON.parse(rawJson);
+      return data.topics || [];
+    } catch (parseError) {
+      console.error("Failed to parse topic extraction JSON:", parseError, "Raw:", rawJson);
+      return [];
+    }
   } catch (error) {
     console.error("Error in topic extraction:", error);
     throw new Error(`Failed to extract topics: ${error}`);
@@ -157,12 +163,17 @@ ${transcript.substring(0, 50000)}`;
       contents: prompt,
     });
 
-    const rawJson = response.text;
-    if (rawJson) {
-      return JSON.parse(rawJson);
+    const rawJson = response.response?.text();
+    if (!rawJson) {
+      throw new Error("Empty response from Gemini API for sentiment analysis");
     }
 
-    throw new Error("Empty response from model");
+    try {
+      return JSON.parse(rawJson);
+    } catch (parseError) {
+      console.error("Failed to parse sentiment analysis JSON:", parseError, "Raw:", rawJson);
+      throw new Error(`Failed to parse sentiment analysis response: ${parseError}`);
+    }
   } catch (error) {
     console.error("Error in sentiment analysis:", error);
     throw new Error(`Failed to analyze sentiment: ${error}`);
@@ -233,13 +244,19 @@ ${transcript.substring(0, 50000)}`;
       contents: prompt,
     });
 
-    const rawJson = response.text;
-    if (rawJson) {
-      const data = JSON.parse(rawJson);
-      return data.speakers;
+    const rawJson = response.response?.text();
+    if (!rawJson) {
+      console.error("Empty response from Gemini API for speaker analysis");
+      return [];
     }
 
-    return [];
+    try {
+      const data = JSON.parse(rawJson);
+      return data.speakers || [];
+    } catch (parseError) {
+      console.error("Failed to parse speaker analysis JSON:", parseError, "Raw:", rawJson);
+      return [];
+    }
   } catch (error) {
     console.error("Error in speaker analysis:", error);
     throw new Error(`Failed to analyze speakers: ${error}`);
@@ -298,12 +315,17 @@ ${transcript.substring(0, 50000)}`;
       contents: prompt,
     });
 
-    const rawJson = response.text;
-    if (rawJson) {
-      return JSON.parse(rawJson);
+    const rawJson = response.response?.text();
+    if (!rawJson) {
+      throw new Error("Empty response from Gemini API for detailed summary");
     }
 
-    throw new Error("Empty response from model");
+    try {
+      return JSON.parse(rawJson);
+    } catch (parseError) {
+      console.error("Failed to parse detailed summary JSON:", parseError, "Raw:", rawJson);
+      throw new Error(`Failed to parse detailed summary response: ${parseError}`);
+    }
   } catch (error) {
     console.error("Error in detailed summary:", error);
     throw new Error(`Failed to generate detailed summary: ${error}`);
@@ -350,12 +372,17 @@ ${context.substring(0, 40000)}`;
       contents: prompt,
     });
 
-    const rawJson = response.text;
-    if (rawJson) {
-      return JSON.parse(rawJson);
+    const rawJson = response.response?.text();
+    if (!rawJson) {
+      throw new Error("Empty response from Gemini API for Q&A");
     }
 
-    throw new Error("Empty response from model");
+    try {
+      return JSON.parse(rawJson);
+    } catch (parseError) {
+      console.error("Failed to parse Q&A JSON:", parseError, "Raw:", rawJson);
+      throw new Error(`Failed to parse Q&A response: ${parseError}`);
+    }
   } catch (error) {
     console.error("Error in Q&A:", error);
     throw new Error(`Failed to answer question: ${error}`);
