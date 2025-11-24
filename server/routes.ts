@@ -266,10 +266,32 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         const DEWAN_RAKYAT_SALARY = 25700;
         const MONTHLY_FIXED_ALLOWANCES = 2500 + 1500 + 1500 + 1500 + 300 + 1500 + 900 + 1500; // Entertainment, special non-admin, fixed travel, fuel, toll, driver, phone
 
+        // Ministerial salaries (after 20% voluntary paycut)
+        // Prime Minister takes no ministerial salary
+        const DEPUTY_PRIME_MINISTER_SALARY = 18168.15;
+        const MINISTER_SALARY = 14907.20;
+        const DEPUTY_MINISTER_SALARY = 10847.65;
+
         const baseMonthlySalary = DEWAN_RAKYAT_SALARY;
 
-        // Total monthly recurring
-        const totalMonthly = baseMonthlySalary + MONTHLY_FIXED_ALLOWANCES;
+        // Calculate ministerial salary based on role
+        let ministerialSalary = 0;
+        if (mp.role) {
+          const roleLower = mp.role.toLowerCase();
+          if (roleLower.includes("deputy prime minister") || roleLower.includes("timbalan perdana menteri")) {
+            ministerialSalary = DEPUTY_PRIME_MINISTER_SALARY;
+          } else if (roleLower.includes("deputy minister") || roleLower.includes("timbalan menteri")) {
+            ministerialSalary = DEPUTY_MINISTER_SALARY;
+          } else if (roleLower.includes("minister") || roleLower.includes("menteri")) {
+            // Minister but not Prime Minister (PM takes no salary) or Deputy
+            if (!roleLower.includes("prime minister") || roleLower.includes("deputy")) {
+              ministerialSalary = MINISTER_SALARY;
+            }
+          }
+        }
+
+        // Total monthly recurring (including ministerial salary)
+        const totalMonthly = baseMonthlySalary + ministerialSalary + MONTHLY_FIXED_ALLOWANCES;
 
         // Cumulative attendance-based allowances (lifetime)
         const PARLIAMENT_SITTING_PER_DAY = 400;
