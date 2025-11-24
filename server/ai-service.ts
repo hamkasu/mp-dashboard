@@ -144,6 +144,97 @@ Provide your analysis in the following JSON format (respond ONLY with valid JSON
   }
 }
 
+export interface SpeakerAnalysisResult {
+  topicsDiscussed: string[];
+  keyArguments: string[];
+  stance?: string;
+}
+
+/**
+ * Analyze a specific speaker's contributions and extract topics/arguments
+ */
+export async function analyzeSpeakerContributions(
+  speakerName: string,
+  speeches: string[]
+): Promise<{ success: boolean; analysis?: SpeakerAnalysisResult; error?: string }> {
+
+  if (!OPENROUTER_API_KEY) {
+    return { success: false, error: "AI not configured" };
+  }
+
+  if (!speeches || speeches.length === 0) {
+    return {
+      success: true,
+      analysis: {
+        topicsDiscussed: [],
+        keyArguments: [],
+      }
+    };
+  }
+
+  // Combine speeches (limit to avoid token overflow)
+  const combinedSpeeches = speeches.join("\n\n").substring(0, 8000);
+
+  const prompt = `Analyze these speeches by ${speakerName} in Malaysian Parliament.
+
+SPEECHES:
+${combinedSpeeches}
+
+Extract the following in JSON format (respond ONLY with valid JSON):
+{
+  "topicsDiscussed": ["topic1", "topic2", "topic3"],
+  "keyArguments": ["main point 1", "main point 2"],
+  "stance": "brief description of their position/stance"
+}
+
+Keep topics concise (2-4 words each). List 2-5 topics and 1-3 key arguments.`;
+
+  const result = await callAI(prompt);
+
+  if (!result.success) {
+    return { success: false, error: result.error };
+  }
+
+  try {
+    let jsonStr = result.content!;
+    const jsonMatch = jsonStr.match(/```(?:json)?\s*([\s\S]*?)```/);
+    if (jsonMatch) {
+      jsonStr = jsonMatch[1];
+    }
+
+    const analysis = JSON.parse(jsonStr.trim()) as SpeakerAnalysisResult;
+    return { success: true, analysis };
+  } catch {
+    return {
+      success: true,
+      analysis: {
+        topicsDiscussed: [],
+        keyArguments: [],
+      }
+    };
+  }
+}
+
+/**
+ * Batch analyze multiple speakers (with rate limiting)
+ */
+export async function batchAnalyzeSpeakers(
+  speakers: Array<{ name: string; speeches: string[] }>
+): Promise<Map<string, SpeakerAnalysisResult>> {
+  const results = new Map<string, SpeakerAnalysisResult>();
+
+  for (const speaker of speakers) {
+    const result = await analyzeSpeakerContributions(speaker.name, speaker.speeches);
+    if (result.success && result.analysis) {
+      results.set(speaker.name, result.analysis);
+    }
+    // Rate limiting - wait 500ms between requests
+    await new Promise(resolve => setTimeout(resolve, 500));
+  }
+
+  return results;
+}
+
 /**
  * Generate a simple summary for a Hansard session
  */
