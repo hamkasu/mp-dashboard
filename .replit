@@ -16,6 +16,10 @@ localPort = 5000
 externalPort = 80
 
 [[ports]]
+localPort = 33077
+externalPort = 5000
+
+[[ports]]
 localPort = 43409
 externalPort = 8099
 
@@ -101,3 +105,8 @@ waitForPort = 5000
 [agent]
 integrations = ["javascript_mem_db:1.0.0", "javascript_auth_all_persistance:1.0.0", "javascript_gemini:1.0.0"]
 expertMode = true
+
+[userenv]
+
+[userenv.shared]
+GEMINI_API_KEY = "AIzaSyAwoj0ZHxSEt1vZR8vQc4rJDs-qggyl2dA"

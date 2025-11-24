@@ -87,7 +87,7 @@ ${transcript.substring(0, 50000)}`;
           required: ["topics"],
         },
       },
-      contents: prompt,
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
     });
 
     const rawJson = response.response?.text();
@@ -160,7 +160,7 @@ ${transcript.substring(0, 50000)}`;
           required: ["overallSentiment", "sentimentScore", "confidence", "keyPoints"],
         },
       },
-      contents: prompt,
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
     });
 
     const rawJson = response.response?.text();
@@ -241,7 +241,7 @@ ${transcript.substring(0, 50000)}`;
           required: ["speakers"],
         },
       },
-      contents: prompt,
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
     });
 
     const rawJson = response.response?.text();
@@ -312,7 +312,7 @@ ${transcript.substring(0, 50000)}`;
           required: ["keyArguments", "decisions", "actionItems", "controversialPoints", "summary"],
         },
       },
-      contents: prompt,
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
     });
 
     const rawJson = response.response?.text();
@@ -369,7 +369,7 @@ ${context.substring(0, 40000)}`;
           required: ["answer", "relevanceScore"],
         },
       },
-      contents: prompt,
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
     });
 
     const rawJson = response.response?.text();
