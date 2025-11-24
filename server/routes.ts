@@ -3603,7 +3603,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       // These include Malay and English terms that are considered unparliamentary
       const inappropriatePatterns = [
         // English swear words
-        /\b(damn|bloody|hell|stupid|idiot|fool|rubbish|nonsense|liar|corrupt|thief|crook)\b/gi,
+        /\b(fuck|shit|damn|bloody|hell|stupid|idiot|fool|rubbish|nonsense|liar|corrupt|thief|crook)\b/gi,
         // Malay inappropriate terms commonly flagged in parliament
         /\b(bodoh|bangang|gila|sial|celaka|babi|anjing|sundal|bangsat|pukimak|lancau|setan|iblis|jahanam|haram|kafir|munafik|pengkhianat|penipu|perompak|penjenayah)\b/gi,
         // Unparliamentary phrases
