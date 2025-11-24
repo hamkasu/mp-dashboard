@@ -37,6 +37,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { ConstituencyAttendance } from "@/components/ConstituencyAttendance";
 import { HansardAnalysisDialog } from "@/components/HansardAnalysisDialog";
+import { HansardAIInsights } from "@/components/HansardAIInsights";
 
 export default function HansardPage() {
   const { t } = useLanguage();
@@ -302,7 +303,7 @@ export default function HansardPage() {
                     </Button>
                   )}
                   <HansardAnalysisDialog
-                    hansardRecord={record}
+                    hansardRecord={record as any}
                     trigger={
                       <Button
                         data-testid={`button-analysis-${record.id}`}
@@ -311,6 +312,19 @@ export default function HansardPage() {
                       >
                         <BarChart3 className="w-4 h-4 mr-2" />
                         {t('hansard.analysis')}
+                      </Button>
+                    }
+                  />
+                  <HansardAIInsights
+                    hansardRecord={record as any}
+                    trigger={
+                      <Button
+                        data-testid={`button-ai-insights-${record.id}`}
+                        variant="outline"
+                        size="sm"
+                      >
+                        <Sparkles className="w-4 h-4 mr-2" />
+                        AI Insights
                       </Button>
                     }
                   />
