@@ -9,7 +9,7 @@ import { Header } from "@/components/Header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, Download, Trash2, AlertTriangle, CheckCircle2, RefreshCw, Upload, FileText, X, Database, Clock, History, Share2, Sparkles, StopCircle } from "lucide-react";
+import { Loader2, Download, Trash2, AlertTriangle, CheckCircle2, RefreshCw, Upload, FileText, X, Database, Clock, History, Share2, Sparkles, StopCircle, Users } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { UnmatchedSpeakersManager } from "@/components/UnmatchedSpeakersManager";
@@ -388,6 +388,34 @@ export default function HansardAdmin() {
       : "This will analyze Hansard records that don't have AI summaries yet. Continue?";
     if (confirm(message)) {
       startAIAnalysisMutation.mutate({ forceReanalyze });
+    }
+  };
+
+  // Cabinet Roles Update mutation
+  const updateCabinetRolesMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/admin/update-cabinet-roles");
+      return await res.json();
+    },
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/mps"] });
+      toast({
+        title: "Cabinet Roles Updated",
+        description: `Updated ${data.results.updated} MPs. ${data.results.notFound} not found.`,
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update cabinet roles",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleUpdateCabinetRoles = () => {
+    if (confirm("This will update MP profiles with Minister/Deputy Minister roles. Continue?")) {
+      updateCabinetRolesMutation.mutate();
     }
   };
 
@@ -1078,6 +1106,49 @@ export default function HansardAdmin() {
                 <>
                   <Share2 className="mr-2 h-4 w-4" />
                   Update Social Media Data
+                </>
+              )}
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* Update Cabinet Roles Card */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5" />
+              Update Cabinet Roles
+            </CardTitle>
+            <CardDescription>
+              Update MP profiles with Minister/Deputy Minister positions
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <p className="text-sm text-muted-foreground">
+                This will update MP profiles with their cabinet positions (Ministers and Deputy Ministers) from the latest cabinet data.
+              </p>
+              <Alert>
+                <AlertDescription>
+                  Includes 31 Ministers and 28 Deputy Ministers based on the December 2023 cabinet reshuffle.
+                </AlertDescription>
+              </Alert>
+            </div>
+            <Button
+              onClick={handleUpdateCabinetRoles}
+              disabled={updateCabinetRolesMutation.isPending}
+              className="w-full"
+              data-testid="button-update-cabinet-roles"
+            >
+              {updateCabinetRolesMutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Updating Cabinet Roles...
+                </>
+              ) : (
+                <>
+                  <Users className="mr-2 h-4 w-4" />
+                  Update Cabinet Roles
                 </>
               )}
             </Button>

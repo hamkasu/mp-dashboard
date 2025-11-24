@@ -3925,5 +3925,147 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
+  // Update MP cabinet roles (Ministers/Deputy Ministers)
+  app.post("/api/admin/update-cabinet-roles", requireAdmin, async (req, res) => {
+    try {
+      console.log("🔄 Updating cabinet roles...");
+
+      const { ilike, or, eq } = await import('drizzle-orm');
+
+      // Cabinet Ministers
+      const ministers = [
+        { name: "Anwar Ibrahim", role: "Prime Minister & Minister of Finance" },
+        { name: "Ahmad Zahid Hamidi", role: "Deputy Prime Minister, Minister of Rural & Regional Development" },
+        { name: "Fadillah Yusof", role: "Deputy Prime Minister, Minister of Energy Transition & Water Transformation" },
+        { name: "Rafizi Ramli", role: "Minister of Economy" },
+        { name: "Nik Nazmi", role: "Minister of Natural Resources & Environmental Sustainability" },
+        { name: "Mohamad Hasan", role: "Minister of Foreign Affairs" },
+        { name: "Mohamed Khaled Nordin", role: "Minister of Defence" },
+        { name: "Saifuddin Nasution", role: "Minister of Home Affairs" },
+        { name: "Tengku Zafrul", role: "Minister of Investment, Trade & Industry" },
+        { name: "Dzulkefly Ahmad", role: "Minister of Health" },
+        { name: "Fadhlina Sidek", role: "Minister of Education" },
+        { name: "Zambry Abd Kadir", role: "Minister of Higher Education" },
+        { name: "Loke Siew Fook", role: "Minister of Transport" },
+        { name: "Alexander Nanta Linggi", role: "Minister of Works" },
+        { name: "Nga Kor Ming", role: "Minister of Housing & Local Government" },
+        { name: "Mohamad Sabu", role: "Minister of Agriculture & Food Security" },
+        { name: "Hannah Yeoh", role: "Minister of Youth & Sports" },
+        { name: "Nancy Shukri", role: "Minister of Women, Family & Community Development" },
+        { name: "Gobind Singh", role: "Minister of Digital" },
+        { name: "Ahmad Fahmi", role: "Minister of Communications" },
+        { name: "Steven Sim", role: "Minister of Human Resources" },
+        { name: "Chang Lih Kang", role: "Minister of Science, Technology & Innovation" },
+        { name: "Tiong King Sing", role: "Minister of Tourism, Arts & Culture" },
+        { name: "Johari Abdul Ghani", role: "Minister of Plantation & Commodities" },
+        { name: "Ewon Benedick", role: "Minister of Entrepreneurship & Cooperatives" },
+        { name: "Armizan Mohd Ali", role: "Minister of Domestic Trade & Cost of Living" },
+        { name: "Amir Hamzah", role: "Minister of Finance II" },
+        { name: "Azalina Othman", role: "Minister in PM's Department (Law & Institutional Reform)" },
+        { name: "Mohd Na'im Mokhtar", role: "Minister in PM's Department (Religious Affairs)" },
+        { name: "Zaliha Mustafa", role: "Minister in PM's Department (Federal Territories)" },
+        { name: "Aaron Ago Dagang", role: "Minister of National Unity" },
+      ];
+
+      // Deputy Ministers
+      const deputyMinisters = [
+        { name: "Lim Hui Ying", role: "Deputy Minister of Finance" },
+        { name: "Rubiah Wang", role: "Deputy Minister of Rural & Regional Development" },
+        { name: "Akmal Nasrullah", role: "Deputy Minister of Energy Transition & Public Utilities" },
+        { name: "Hasbi Habibollah", role: "Deputy Minister of Transport" },
+        { name: "Arthur Joseph Kurup", role: "Deputy Minister of Agriculture & Food Security" },
+        { name: "Hanifah Hajar Taib", role: "Deputy Minister of Economy" },
+        { name: "Aiman Athirah", role: "Deputy Minister of Local Government Development" },
+        { name: "Mohamad Alamin", role: "Deputy Minister of Foreign Affairs" },
+        { name: "Ahmad Maslan", role: "Deputy Minister of Works" },
+        { name: "Shamsul Anuar", role: "Deputy Minister of Home Affairs" },
+        { name: "Liew Chin Tong", role: "Deputy Minister of Investment, Trade & Industry" },
+        { name: "Adly Zahari", role: "Deputy Minister of Defence" },
+        { name: "Mohammad Yusof Apdal", role: "Deputy Minister of Science, Technology & Innovation" },
+        { name: "Noraini Ahmad", role: "Deputy Minister of Women, Family & Community Development" },
+        { name: "Kulasegaran", role: "Deputy Minister in PM's Department (Law & Institutional Reform)" },
+        { name: "Huang Tiong Sii", role: "Deputy Minister of Natural Resources & Sustainability" },
+        { name: "Ramanan", role: "Deputy Minister of Entrepreneur Development & Cooperatives" },
+        { name: "Mustapha Sakmud", role: "Deputy Minister of Higher Education" },
+        { name: "Teo Nie Ching", role: "Deputy Minister of Communications" },
+        { name: "Wong Kah Woh", role: "Deputy Minister of Education" },
+        { name: "Saraswathy Kandasami", role: "Deputy Minister of Unity" },
+        { name: "Zulkifli Hassan", role: "Deputy Minister in PM's Department (Religious Affairs)" },
+        { name: "Adam Adli", role: "Deputy Minister of Youth & Sports" },
+        { name: "Fuziah Salleh", role: "Deputy Minister of Domestic Trade & Cost of Living" },
+        { name: "Chan Foon Hin", role: "Deputy Minister of Plantation & Commodities" },
+        { name: "Lukanisman Awang Sauni", role: "Deputy Minister of Health" },
+        { name: "Ugak Anak Kumbong", role: "Deputy Minister of Digital" },
+        { name: "Abdul Rahman Mohamad", role: "Deputy Minister of Human Resources" },
+      ];
+
+      const allCabinet = [...ministers, ...deputyMinisters];
+      let updated = 0;
+      let notFound = 0;
+      const notFoundNames: string[] = [];
+
+      for (const member of allCabinet) {
+        const searchTerms = member.name.split(" ").filter(t => t.length > 2);
+
+        const matchingMps = await db!
+          .select()
+          .from(mps)
+          .where(
+            or(
+              ...searchTerms.map(term => ilike(mps.name, `%${term}%`))
+            )
+          )
+          .limit(5);
+
+        let bestMatch = null;
+        let bestScore = 0;
+
+        for (const mp of matchingMps) {
+          const mpNameLower = mp.name.toLowerCase();
+          let score = 0;
+          for (const term of searchTerms) {
+            if (mpNameLower.includes(term.toLowerCase())) {
+              score++;
+            }
+          }
+          if (score > bestScore) {
+            bestScore = score;
+            bestMatch = mp;
+          }
+        }
+
+        if (bestMatch && bestScore >= Math.min(2, searchTerms.length)) {
+          await db!
+            .update(mps)
+            .set({ role: member.role })
+            .where(eq(mps.id, bestMatch.id));
+
+          console.log(`✅ ${member.name} → ${bestMatch.name}: ${member.role}`);
+          updated++;
+        } else {
+          console.log(`❌ Not found: ${member.name}`);
+          notFoundNames.push(member.name);
+          notFound++;
+        }
+      }
+
+      console.log(`✅ Cabinet roles update complete: ${updated} updated, ${notFound} not found`);
+
+      res.json({
+        message: "Cabinet roles update completed",
+        results: {
+          totalProcessed: allCabinet.length,
+          updated,
+          notFound,
+          notFoundNames: notFoundNames.slice(0, 10)
+        }
+      });
+
+    } catch (error) {
+      console.error("Error updating cabinet roles:", error);
+      res.status(500).json({ error: "Failed to update cabinet roles", details: String(error) });
+    }
+  });
+
   // Server is now passed in from index.ts, no need to create it here
 }
