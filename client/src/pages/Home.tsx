@@ -21,6 +21,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { useConstituencies } from "@/hooks/use-constituencies";
 
 type SortOption = "name" | "attendance-best" | "attendance-worst" | "speeches-most" | "speeches-fewest" | "poverty-highest" | "poverty-lowest" | "bills-raised" | "oral-questions" | "inappropriate-language";
+type CabinetFilter = "all" | "ministers" | "deputy-ministers" | "cabinet";
 
 interface LanguageAnalysisMpStat {
   mpId: string;
@@ -36,6 +37,7 @@ export default function Home() {
   const [selectedParties, setSelectedParties] = useState<string[]>([]);
   const [selectedStates, setSelectedStates] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState<SortOption>("name");
+  const [cabinetFilter, setCabinetFilter] = useState<CabinetFilter>("all");
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [searchDialogOpen, setSearchDialogOpen] = useState(false);
 
@@ -181,7 +183,23 @@ export default function Home() {
       const matchesState =
         selectedStates.length === 0 || selectedStates.includes(mp.state);
 
-      return matchesSearch && matchesParty && matchesState;
+      // Cabinet position filter
+      let matchesCabinet = true;
+      if (cabinetFilter !== "all") {
+        const role = (mp.role || "").toLowerCase();
+        if (cabinetFilter === "ministers") {
+          // Ministers but NOT Deputy Ministers
+          matchesCabinet = role.includes("minister") && !role.includes("deputy");
+        } else if (cabinetFilter === "deputy-ministers") {
+          // Deputy Ministers only
+          matchesCabinet = role.includes("deputy minister");
+        } else if (cabinetFilter === "cabinet") {
+          // All cabinet members (both Ministers and Deputy Ministers)
+          matchesCabinet = role.includes("minister");
+        }
+      }
+
+      return matchesSearch && matchesParty && matchesState && matchesCabinet;
     });
 
     // Apply sorting
@@ -264,7 +282,7 @@ export default function Home() {
     }
 
     return filtered;
-  }, [mps, searchQuery, selectedParties, selectedStates, sortBy, povertyByCode, billsCountByMpId, oralQuestionsCountByMpId, inappropriateLanguageByMpId]);
+  }, [mps, searchQuery, selectedParties, selectedStates, sortBy, cabinetFilter, povertyByCode, billsCountByMpId, oralQuestionsCountByMpId, inappropriateLanguageByMpId]);
 
   const availableStates = useMemo(() => {
     const states = Array.from(new Set(mps.map((mp) => mp.state)));
@@ -311,6 +329,11 @@ export default function Home() {
   const handleClearFilters = () => {
     setSelectedParties([]);
     setSelectedStates([]);
+    setCabinetFilter("all");
+  };
+
+  const handleCabinetFilterChange = (filter: CabinetFilter) => {
+    setCabinetFilter(filter);
   };
 
   return (
@@ -334,9 +357,11 @@ export default function Home() {
             selectedParties={selectedParties}
             selectedStates={selectedStates}
             sortBy={sortBy}
+            cabinetFilter={cabinetFilter}
             onPartyToggle={handlePartyToggle}
             onStateToggle={handleStateToggle}
             onSortChange={setSortBy}
+            onCabinetFilterChange={handleCabinetFilterChange}
             onClearFilters={handleClearFilters}
           />
         </aside>
@@ -350,9 +375,11 @@ export default function Home() {
               selectedParties={selectedParties}
               selectedStates={selectedStates}
               sortBy={sortBy}
+              cabinetFilter={cabinetFilter}
               onPartyToggle={handlePartyToggle}
               onStateToggle={handleStateToggle}
               onSortChange={setSortBy}
+              onCabinetFilterChange={handleCabinetFilterChange}
               onClearFilters={handleClearFilters}
               isMobile
               onClose={() => setMobileFiltersOpen(false)}

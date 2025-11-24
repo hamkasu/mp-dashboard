@@ -13,15 +13,19 @@ import { useLanguage } from "@/i18n/LanguageContext";
 
 type SortOption = "name" | "attendance-best" | "attendance-worst" | "speeches-most" | "speeches-fewest" | "poverty-highest" | "poverty-lowest" | "bills-raised" | "oral-questions" | "inappropriate-language";
 
+type CabinetFilter = "all" | "ministers" | "deputy-ministers" | "cabinet";
+
 interface FilterSidebarProps {
   parties: { party: string; count: number }[];
   states: string[];
   selectedParties: string[];
   selectedStates: string[];
   sortBy: SortOption;
+  cabinetFilter: CabinetFilter;
   onPartyToggle: (party: string) => void;
   onStateToggle: (state: string) => void;
   onSortChange: (sort: SortOption) => void;
+  onCabinetFilterChange: (filter: CabinetFilter) => void;
   onClearFilters: () => void;
   isMobile?: boolean;
   onClose?: () => void;
@@ -33,15 +37,17 @@ export function FilterSidebar({
   selectedParties,
   selectedStates,
   sortBy,
+  cabinetFilter,
   onPartyToggle,
   onStateToggle,
   onSortChange,
+  onCabinetFilterChange,
   onClearFilters,
   isMobile,
   onClose,
 }: FilterSidebarProps) {
   const { t } = useLanguage();
-  const hasActiveFilters = selectedParties.length > 0 || selectedStates.length > 0;
+  const hasActiveFilters = selectedParties.length > 0 || selectedStates.length > 0 || cabinetFilter !== "all";
 
   return (
     <div className="flex flex-col h-full">
@@ -123,6 +129,41 @@ export function FilterSidebar({
                 <RadioGroupItem value="inappropriate-language" id="sort-inappropriate-language" data-testid="radio-sort-inappropriate-language" />
                 <Label htmlFor="sort-inappropriate-language" className="text-sm font-normal cursor-pointer">
                   {t('filters.sortInappropriateLanguage')}
+                </Label>
+              </div>
+            </RadioGroup>
+          </div>
+
+          <Separator />
+
+          {/* Cabinet Position Filter */}
+          <div className="space-y-3">
+            <h3 className="text-sm font-medium uppercase tracking-wide">
+              {t('filters.cabinetPosition')}
+            </h3>
+            <RadioGroup value={cabinetFilter} onValueChange={(value) => onCabinetFilterChange(value as CabinetFilter)}>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="all" id="cabinet-all" data-testid="radio-cabinet-all" />
+                <Label htmlFor="cabinet-all" className="text-sm font-normal cursor-pointer">
+                  {t('filters.allMPs')}
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="cabinet" id="cabinet-cabinet" data-testid="radio-cabinet-cabinet" />
+                <Label htmlFor="cabinet-cabinet" className="text-sm font-normal cursor-pointer">
+                  {t('filters.cabinetMembers')}
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="ministers" id="cabinet-ministers" data-testid="radio-cabinet-ministers" />
+                <Label htmlFor="cabinet-ministers" className="text-sm font-normal cursor-pointer">
+                  {t('filters.ministersOnly')}
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="deputy-ministers" id="cabinet-deputy" data-testid="radio-cabinet-deputy" />
+                <Label htmlFor="cabinet-deputy" className="text-sm font-normal cursor-pointer">
+                  {t('filters.deputyMinistersOnly')}
                 </Label>
               </div>
             </RadioGroup>
