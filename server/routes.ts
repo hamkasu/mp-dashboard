@@ -47,6 +47,8 @@ import {
 } from "./middleware/security";
 import { requireAdmin, getCurrentUsername } from "./simple-auth";
 import { sendContactEmail, sendConfirmationEmail, isEmailConfigured } from "./email";
+import { runBulkHansardAnalysis, getAnalysisJobStatus, cancelAnalysisJob } from "./hansard-ai-analyzer";
+import { isAIConfigured } from "./ai-service";
 
 // Configure multer for file uploads
 const upload = multer({
@@ -4067,6 +4069,73 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     } catch (error) {
       console.error("Error updating MP social media:", error);
       res.status(500).json({ error: "Failed to update social media", details: String(error) });
+    }
+  });
+
+  // Admin endpoint to start bulk AI analysis of Hansard records
+  app.post("/api/admin/analyze-hansard-bulk", requireAdmin, async (req, res) => {
+    try {
+      if (!isAIConfigured()) {
+        return res.status(400).json({
+          error: "AI service not configured",
+          message: "Set OPENROUTER_API_KEY environment variable to enable AI analysis"
+        });
+      }
+
+      const { forceReanalyze = false, limit = 0 } = req.body;
+
+      // Check if job is already running
+      const currentStatus = getAnalysisJobStatus();
+      if (currentStatus && currentStatus.status === "running") {
+        return res.status(409).json({
+          error: "Analysis job already running",
+          status: currentStatus
+        });
+      }
+
+      // Start the job in the background
+      console.log(`[Admin] Starting bulk Hansard AI analysis (forceReanalyze: ${forceReanalyze}, limit: ${limit})`);
+
+      // Don't await - run in background
+      runBulkHansardAnalysis({ forceReanalyze, limit, delayMs: 1500 })
+        .catch(err => console.error("[Admin] Bulk analysis error:", err));
+
+      res.json({
+        message: "Bulk AI analysis started",
+        status: "running"
+      });
+
+    } catch (error) {
+      console.error("Error starting bulk analysis:", error);
+      res.status(500).json({ error: "Failed to start analysis", details: String(error) });
+    }
+  });
+
+  // Get status of bulk AI analysis job
+  app.get("/api/admin/analyze-hansard-status", requireAdmin, async (req, res) => {
+    try {
+      const status = getAnalysisJobStatus();
+      res.json({
+        configured: isAIConfigured(),
+        job: status
+      });
+    } catch (error) {
+      console.error("Error getting analysis status:", error);
+      res.status(500).json({ error: "Failed to get status" });
+    }
+  });
+
+  // Cancel bulk AI analysis job
+  app.post("/api/admin/analyze-hansard-cancel", requireAdmin, async (req, res) => {
+    try {
+      const cancelled = cancelAnalysisJob();
+      res.json({
+        cancelled,
+        message: cancelled ? "Cancellation requested" : "No running job to cancel"
+      });
+    } catch (error) {
+      console.error("Error cancelling analysis:", error);
+      res.status(500).json({ error: "Failed to cancel" });
     }
   });
 
