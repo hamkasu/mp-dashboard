@@ -90,7 +90,7 @@ ${transcript.substring(0, 50000)}`;
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
     });
 
-    const rawJson = response.response?.text();
+    const rawJson = response.text;
     if (!rawJson) {
       console.error("Empty response from Gemini API for topic extraction");
       return [];
@@ -163,7 +163,7 @@ ${transcript.substring(0, 50000)}`;
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
     });
 
-    const rawJson = response.response?.text();
+    const rawJson = response.text;
     if (!rawJson) {
       throw new Error("Empty response from Gemini API for sentiment analysis");
     }
@@ -244,7 +244,7 @@ ${transcript.substring(0, 50000)}`;
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
     });
 
-    const rawJson = response.response?.text();
+    const rawJson = response.text;
     if (!rawJson) {
       console.error("Empty response from Gemini API for speaker analysis");
       return [];
@@ -315,7 +315,7 @@ ${transcript.substring(0, 50000)}`;
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
     });
 
-    const rawJson = response.response?.text();
+    const rawJson = response.text;
     if (!rawJson) {
       throw new Error("Empty response from Gemini API for detailed summary");
     }
@@ -372,7 +372,7 @@ ${context.substring(0, 40000)}`;
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
     });
 
-    const rawJson = response.response?.text();
+    const rawJson = response.text;
     if (!rawJson) {
       throw new Error("Empty response from Gemini API for Q&A");
     }
