@@ -129,6 +129,19 @@ export interface IStorage {
   getConstituencyByCode(parliamentCode: string): Promise<Constituency | undefined>;
   getAllConstituencies(): Promise<Constituency[]>;
   getConstituenciesByState(state: string): Promise<Constituency[]>;
+
+  // AI Analysis methods
+  getTopicAnalysis(hansardRecordId: string): Promise<any | undefined>;
+  saveTopicAnalysis(data: any): Promise<any>;
+  getSentimentAnalysis(hansardRecordId: string): Promise<any | undefined>;
+  saveSentimentAnalysis(data: any): Promise<any>;
+  getSpeakerAnalysis(hansardRecordId: string): Promise<any | undefined>;
+  saveSpeakerAnalysis(data: any): Promise<any>;
+  getDetailedSummary(hansardRecordId: string, language: string): Promise<any | undefined>;
+  saveDetailedSummary(data: any): Promise<any>;
+  getQaCache(hansardRecordId: string, question: string): Promise<any | undefined>;
+  saveQaCache(data: any): Promise<any>;
+  getHansardById(id: string): Promise<HansardRecord | undefined>;
 }
 
 export class MemStorage implements IStorage {
@@ -1589,6 +1602,51 @@ export class MemStorage implements IStorage {
   async getConstituenciesByState(state: string): Promise<Constituency[]> {
     return [];
   }
+
+  // AI Analysis methods (stub implementations for MemStorage)
+  async getHansardById(id: string): Promise<HansardRecord | undefined> {
+    return this.getHansardRecord(id);
+  }
+
+  async getTopicAnalysis(hansardRecordId: string): Promise<any | undefined> {
+    return undefined;
+  }
+
+  async saveTopicAnalysis(data: any): Promise<any> {
+    return data;
+  }
+
+  async getSentimentAnalysis(hansardRecordId: string): Promise<any | undefined> {
+    return undefined;
+  }
+
+  async saveSentimentAnalysis(data: any): Promise<any> {
+    return data;
+  }
+
+  async getSpeakerAnalysis(hansardRecordId: string): Promise<any | undefined> {
+    return undefined;
+  }
+
+  async saveSpeakerAnalysis(data: any): Promise<any> {
+    return data;
+  }
+
+  async getDetailedSummary(hansardRecordId: string, language: string): Promise<any | undefined> {
+    return undefined;
+  }
+
+  async saveDetailedSummary(data: any): Promise<any> {
+    return data;
+  }
+
+  async getQaCache(hansardRecordId: string, question: string): Promise<any | undefined> {
+    return undefined;
+  }
+
+  async saveQaCache(data: any): Promise<any> {
+    return data;
+  }
 }
 
 // Database storage implementation using Drizzle ORM
@@ -2632,6 +2690,75 @@ export class DbStorage implements IStorage {
 
   async getConstituenciesByState(state: string): Promise<Constituency[]> {
     return db.select().from(constituencies).where(eq(constituencies.state, state));
+  }
+
+  // AI Analysis methods
+  async getHansardById(id: string): Promise<HansardRecord | undefined> {
+    return this.getHansardRecord(id);
+  }
+
+  async getTopicAnalysis(hansardRecordId: string): Promise<any | undefined> {
+    const { hansardTopicAnalysis } = await import("@shared/schema");
+    const result = await db.select().from(hansardTopicAnalysis).where(eq(hansardTopicAnalysis.hansardRecordId, hansardRecordId)).limit(1);
+    return result[0];
+  }
+
+  async saveTopicAnalysis(data: any): Promise<any> {
+    const { hansardTopicAnalysis } = await import("@shared/schema");
+    const result = await db.insert(hansardTopicAnalysis).values(data).returning();
+    return result[0];
+  }
+
+  async getSentimentAnalysis(hansardRecordId: string): Promise<any | undefined> {
+    const { hansardSentimentAnalysis } = await import("@shared/schema");
+    const result = await db.select().from(hansardSentimentAnalysis).where(eq(hansardSentimentAnalysis.hansardRecordId, hansardRecordId)).limit(1);
+    return result[0];
+  }
+
+  async saveSentimentAnalysis(data: any): Promise<any> {
+    const { hansardSentimentAnalysis } = await import("@shared/schema");
+    const result = await db.insert(hansardSentimentAnalysis).values(data).returning();
+    return result[0];
+  }
+
+  async getSpeakerAnalysis(hansardRecordId: string): Promise<any | undefined> {
+    const { hansardSpeakerAnalysis } = await import("@shared/schema");
+    const result = await db.select().from(hansardSpeakerAnalysis).where(eq(hansardSpeakerAnalysis.hansardRecordId, hansardRecordId)).limit(1);
+    return result[0];
+  }
+
+  async saveSpeakerAnalysis(data: any): Promise<any> {
+    const { hansardSpeakerAnalysis } = await import("@shared/schema");
+    const result = await db.insert(hansardSpeakerAnalysis).values(data).returning();
+    return result[0];
+  }
+
+  async getDetailedSummary(hansardRecordId: string, language: string): Promise<any | undefined> {
+    const { hansardDetailedSummary } = await import("@shared/schema");
+    const result = await db.select().from(hansardDetailedSummary)
+      .where(sql`${hansardDetailedSummary.hansardRecordId} = ${hansardRecordId} AND ${hansardDetailedSummary.language} = ${language}`)
+      .limit(1);
+    return result[0];
+  }
+
+  async saveDetailedSummary(data: any): Promise<any> {
+    const { hansardDetailedSummary } = await import("@shared/schema");
+    const result = await db.insert(hansardDetailedSummary).values(data).returning();
+    return result[0];
+  }
+
+  async getQaCache(hansardRecordId: string, question: string): Promise<any | undefined> {
+    const { hansardQaCache } = await import("@shared/schema");
+    const result = await db.select().from(hansardQaCache)
+      .where(sql`${hansardQaCache.hansardRecordId} = ${hansardRecordId} AND ${hansardQaCache.question} = ${question}`)
+      .limit(1);
+    return result[0];
+  }
+
+  async saveQaCache(data: any): Promise<any> {
+    const { hansardQaCache } = await import("@shared/schema");
+    const result = await db.insert(hansardQaCache).values(data).returning();
+    return result[0];
   }
 }
 

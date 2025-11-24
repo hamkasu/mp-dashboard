@@ -2684,6 +2684,220 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
+  // AI Analysis endpoints using Gemini
+  app.post("/api/analyze/topics/:hansardId", mutationRateLimit, async (req, res) => {
+    try {
+      const { hansardId } = req.params;
+      const hansard = await storage.getHansardById(hansardId);
+      
+      if (!hansard) {
+        return res.status(404).json({ error: "Hansard record not found" });
+      }
+
+      // Check if analysis already exists
+      const existing = await storage.getTopicAnalysis(hansardId);
+      if (existing) {
+        return res.json(existing);
+      }
+
+      // Extract topics using Gemini
+      const { extractTopics } = await import("./services/gemini.js");
+      const speakerNames = hansard.speakers?.map(s => s.mpName) || [];
+      const topics = await extractTopics(hansard.transcript, speakerNames);
+
+      // Store in database
+      const analysis = await storage.saveTopicAnalysis({
+        hansardRecordId: hansardId,
+        topics,
+      });
+
+      res.json(analysis);
+    } catch (error) {
+      console.error("Error in topic extraction:", error);
+      res.status(500).json({ error: "Failed to extract topics", details: String(error) });
+    }
+  });
+
+  app.post("/api/analyze/sentiment/:hansardId", mutationRateLimit, async (req, res) => {
+    try {
+      const { hansardId } = req.params;
+      const hansard = await storage.getHansardById(hansardId);
+      
+      if (!hansard) {
+        return res.status(404).json({ error: "Hansard record not found" });
+      }
+
+      // Check if analysis already exists
+      const existing = await storage.getSentimentAnalysis(hansardId);
+      if (existing) {
+        return res.json(existing);
+      }
+
+      // Analyze sentiment using Gemini
+      const { analyzeSentiment } = await import("./services/gemini.js");
+      const result = await analyzeSentiment(hansard.transcript);
+
+      // Store in database
+      const analysis = await storage.saveSentimentAnalysis({
+        hansardRecordId: hansardId,
+        overallSentiment: result.overallSentiment,
+        sentimentScore: result.sentimentScore,
+        confidence: result.confidence,
+        keyPoints: result.keyPoints,
+      });
+
+      res.json(analysis);
+    } catch (error) {
+      console.error("Error in sentiment analysis:", error);
+      res.status(500).json({ error: "Failed to analyze sentiment", details: String(error) });
+    }
+  });
+
+  app.post("/api/analyze/speakers/:hansardId", mutationRateLimit, async (req, res) => {
+    try {
+      const { hansardId } = req.params;
+      const hansard = await storage.getHansardById(hansardId);
+      
+      if (!hansard) {
+        return res.status(404).json({ error: "Hansard record not found" });
+      }
+
+      // Check if analysis already exists
+      const existing = await storage.getSpeakerAnalysis(hansardId);
+      if (existing) {
+        return res.json(existing);
+      }
+
+      // Analyze speakers using Gemini
+      const { analyzeSpeakers } = await import("./services/gemini.js");
+      const speakers = hansard.speakers?.map(s => ({
+        mpId: s.mpId,
+        mpName: s.mpName,
+      })) || [];
+      
+      const insights = await analyzeSpeakers(hansard.transcript, speakers);
+
+      // Store in database
+      const analysis = await storage.saveSpeakerAnalysis({
+        hansardRecordId: hansardId,
+        speakerInsights: insights,
+      });
+
+      res.json(analysis);
+    } catch (error) {
+      console.error("Error in speaker analysis:", error);
+      res.status(500).json({ error: "Failed to analyze speakers", details: String(error) });
+    }
+  });
+
+  app.post("/api/analyze/detailed-summary/:hansardId", mutationRateLimit, async (req, res) => {
+    try {
+      const { hansardId } = req.params;
+      const { language = "en" } = req.body;
+      
+      const hansard = await storage.getHansardById(hansardId);
+      
+      if (!hansard) {
+        return res.status(404).json({ error: "Hansard record not found" });
+      }
+
+      // Check if analysis already exists for this language
+      const existing = await storage.getDetailedSummary(hansardId, language);
+      if (existing) {
+        return res.json(existing);
+      }
+
+      // Generate detailed summary using Gemini
+      const { generateDetailedSummary } = await import("./services/gemini.js");
+      const result = await generateDetailedSummary(hansard.transcript, language as "en" | "ms");
+
+      // Store in database
+      const analysis = await storage.saveDetailedSummary({
+        hansardRecordId: hansardId,
+        language,
+        keyArguments: result.keyArguments,
+        decisions: result.decisions,
+        actionItems: result.actionItems,
+        controversialPoints: result.controversialPoints,
+        summary: result.summary,
+      });
+
+      res.json(analysis);
+    } catch (error) {
+      console.error("Error in detailed summary:", error);
+      res.status(500).json({ error: "Failed to generate detailed summary", details: String(error) });
+    }
+  });
+
+  app.post("/api/hansard/:hansardId/qa", mutationRateLimit, async (req, res) => {
+    try {
+      const { hansardId } = req.params;
+      const { question } = req.body;
+
+      if (!question) {
+        return res.status(400).json({ error: "Question is required" });
+      }
+
+      const hansard = await storage.getHansardById(hansardId);
+      
+      if (!hansard) {
+        return res.status(404).json({ error: "Hansard record not found" });
+      }
+
+      // Check cache first
+      const cached = await storage.getQaCache(hansardId, question);
+      if (cached) {
+        return res.json(cached);
+      }
+
+      // Answer question using Gemini
+      const { answerQuestion } = await import("./services/gemini.js");
+      const result = await answerQuestion(question, hansard.transcript);
+
+      // Cache the result
+      const qaResult = await storage.saveQaCache({
+        hansardRecordId: hansardId,
+        question,
+        answer: result.answer,
+        context: hansard.transcript.substring(0, 1000),
+        relevanceScore: result.relevanceScore,
+      });
+
+      res.json(qaResult);
+    } catch (error) {
+      console.error("Error in Q&A:", error);
+      res.status(500).json({ error: "Failed to answer question", details: String(error) });
+    }
+  });
+
+  // Get all analysis for a Hansard record
+  app.get("/api/analyze/:hansardId", async (req, res) => {
+    try {
+      const { hansardId } = req.params;
+      
+      const [topics, sentiment, speakers, summaryEn, summaryMs] = await Promise.all([
+        storage.getTopicAnalysis(hansardId).catch(() => null),
+        storage.getSentimentAnalysis(hansardId).catch(() => null),
+        storage.getSpeakerAnalysis(hansardId).catch(() => null),
+        storage.getDetailedSummary(hansardId, "en").catch(() => null),
+        storage.getDetailedSummary(hansardId, "ms").catch(() => null),
+      ]);
+
+      res.json({
+        topics,
+        sentiment,
+        speakers,
+        detailedSummary: {
+          en: summaryEn,
+          ms: summaryMs,
+        },
+      });
+    } catch (error) {
+      console.error("Error fetching analysis:", error);
+      res.status(500).json({ error: "Failed to fetch analysis" });
+    }
+  });
+
   // Admin endpoint to manually trigger database seeding (for Railway/production)
   app.post("/api/admin/seed", requireAdmin, async (req, res) => {
     try {
