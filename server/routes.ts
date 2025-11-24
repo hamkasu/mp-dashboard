@@ -3607,7 +3607,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         // Malay inappropriate terms commonly flagged in parliament
         /\b(bodoh|bangang|gila|sial|celaka|babi|anjing|sundal|bangsat|pukimak|lancau|setan|iblis|jahanam|haram|kafir|munafik|pengkhianat|penipu|perompak|penjenayah)\b/gi,
         // Unparliamentary phrases
-        /\b(shut up|tutup mulut|diam|keluar|go out|get out)\b/gi,
+        /\b(shut up|tutup mulut|diam|go out|get out)\b/gi,
         // Accusations
         /\b(pembohong|bohong|tipu|menipu|rasuah|korup)\b/gi,
       ];
