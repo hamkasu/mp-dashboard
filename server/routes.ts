@@ -1471,7 +1471,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   });
 
   // Analyze Hansard PDF for specific MP speeches (transient analysis, no persistence)
-  app.post("/api/hansard-analysis", requireAdmin, mutationRateLimit, auditMiddleware('hansard-analysis'), async (req, res) => {
+  app.post("/api/hansard-analysis", mutationRateLimit, auditMiddleware('hansard-analysis'), async (req, res) => {
     try {
       const requestSchema = z.object({
         hansardRecordId: z.string(),
