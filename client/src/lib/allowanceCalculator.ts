@@ -10,6 +10,14 @@ export const ALLOWANCE_RATES = {
   DEWAN_RAKYAT_SALARY: 25700,
   DEWAN_NEGARA_SALARY: 11000,
 
+  // Ministerial Salaries (after 20% voluntary paycut)
+  // Prime Minister takes no ministerial salary
+  PRIME_MINISTER_SALARY: 0,
+  DEPUTY_PRIME_MINISTER_SALARY: 18168.15,
+  MINISTER_SALARY: 14907.20,
+  DEPUTY_MINISTER_SALARY: 10847.65,
+  PARLIAMENTARY_SECRETARY_SALARY: 7187.40,
+
   // Daily Attendance Allowances (Cumulative from sworn-in date)
   PARLIAMENT_SITTING_PER_DAY: 400,
   GOVERNMENT_MEETING_PER_DAY: 300,
@@ -39,6 +47,7 @@ export const ALLOWANCE_RATES = {
 export interface AllowanceBreakdown {
   // Monthly Fixed
   baseSalary: number;
+  ministerialSalary: number;
   entertainment: number;
   specialNonAdmin: number;
   fixedTravel: number;
@@ -46,22 +55,73 @@ export interface AllowanceBreakdown {
   toll: number;
   driver: number;
   phoneBill: number;
-  
+
   // Cumulative (lifetime from sworn-in date)
   parliamentSittingTotal: number;
   governmentMeetingTotal: number;
   totalCumulativeAttendance: number;
-  
+
   // Totals (recurring only)
   totalMonthlyFixed: number;
   totalMonthly: number;
   totalAnnual: number;
-  
+
   // Additional Info
   isMinister: boolean;
+  isCabinetMember: boolean;
+  cabinetRole?: string;
   ministerialPosition?: string;
   daysAttended: number;
   governmentMeetingDays: number;
+}
+
+// Determine ministerial salary based on role
+export function getMinisterialSalary(role: string | null | undefined): number {
+  if (!role) return 0;
+  const roleLower = role.toLowerCase();
+
+  // Check specific positions (order matters - check more specific first)
+  if (roleLower.includes("prime minister") && !roleLower.includes("deputy")) {
+    return ALLOWANCE_RATES.PRIME_MINISTER_SALARY;
+  }
+  if (roleLower.includes("deputy prime minister") || roleLower.includes("timbalan perdana menteri")) {
+    return ALLOWANCE_RATES.DEPUTY_PRIME_MINISTER_SALARY;
+  }
+  if (roleLower.includes("deputy minister") || roleLower.includes("timbalan menteri")) {
+    return ALLOWANCE_RATES.DEPUTY_MINISTER_SALARY;
+  }
+  if (roleLower.includes("minister") || roleLower.includes("menteri")) {
+    return ALLOWANCE_RATES.MINISTER_SALARY;
+  }
+  if (roleLower.includes("parliamentary secretary") || roleLower.includes("setiausaha parlimen")) {
+    return ALLOWANCE_RATES.PARLIAMENTARY_SECRETARY_SALARY;
+  }
+
+  return 0;
+}
+
+// Get cabinet role type for display
+export function getCabinetRoleType(role: string | null | undefined): string | undefined {
+  if (!role) return undefined;
+  const roleLower = role.toLowerCase();
+
+  if (roleLower.includes("prime minister") && !roleLower.includes("deputy")) {
+    return "Prime Minister";
+  }
+  if (roleLower.includes("deputy prime minister") || roleLower.includes("timbalan perdana menteri")) {
+    return "Deputy Prime Minister";
+  }
+  if (roleLower.includes("deputy minister") || roleLower.includes("timbalan menteri")) {
+    return "Deputy Minister";
+  }
+  if (roleLower.includes("minister") || roleLower.includes("menteri")) {
+    return "Minister";
+  }
+  if (roleLower.includes("parliamentary secretary") || roleLower.includes("setiausaha parlimen")) {
+    return "Parliamentary Secretary";
+  }
+
+  return undefined;
 }
 
 export interface PeriodicAllowances {
@@ -80,6 +140,11 @@ export function calculateMpAllowances(
   // Base salary (Dewan Rakyat MPs)
   const baseSalary = ALLOWANCE_RATES.DEWAN_RAKYAT_SALARY;
 
+  // Ministerial salary based on cabinet role (after 20% paycut)
+  const ministerialSalary = getMinisterialSalary(mp.role);
+  const isCabinetMember = ministerialSalary > 0 || (mp.role?.toLowerCase().includes("prime minister") && !mp.role?.toLowerCase().includes("deputy"));
+  const cabinetRole = getCabinetRoleType(mp.role);
+
   // Monthly fixed allowances
   const entertainment = ALLOWANCE_RATES.ENTERTAINMENT;
   const specialNonAdmin = ALLOWANCE_RATES.SPECIAL_NON_ADMIN_MP;
@@ -88,15 +153,17 @@ export function calculateMpAllowances(
   const toll = ALLOWANCE_RATES.TOLL;
   const driver = ALLOWANCE_RATES.DRIVER;
   const phoneBill = ALLOWANCE_RATES.PHONE_BILL;
-  
+
   // Cumulative allowances based on lifetime attendance (from sworn-in date)
   const parliamentSittingTotal = mp.daysAttended * ALLOWANCE_RATES.PARLIAMENT_SITTING_PER_DAY;
   const governmentMeetingTotal = mp.governmentMeetingDays * ALLOWANCE_RATES.GOVERNMENT_MEETING_PER_DAY;
   const totalCumulativeAttendance = parliamentSittingTotal + governmentMeetingTotal;
-  
+
   // Calculate recurring monthly totals (excluding cumulative attendance)
+  // Include ministerial salary in total
   const totalMonthlyFixed =
     baseSalary +
+    ministerialSalary +
     entertainment +
     specialNonAdmin +
     fixedTravel +
@@ -110,6 +177,7 @@ export function calculateMpAllowances(
 
   return {
     baseSalary,
+    ministerialSalary,
     entertainment,
     specialNonAdmin,
     fixedTravel,
@@ -124,6 +192,8 @@ export function calculateMpAllowances(
     totalMonthly,
     totalAnnual,
     isMinister,
+    isCabinetMember,
+    cabinetRole,
     ministerialPosition: mp.ministerialPosition || undefined,
     daysAttended: mp.daysAttended,
     governmentMeetingDays: mp.governmentMeetingDays,

@@ -20,6 +20,7 @@ import { HansardSpeakingRecord } from "@/components/HansardSpeakingRecord";
 import { ContactMPDialog } from "@/components/ContactMPDialog";
 import type { Mp, CourtCase, SprmInvestigation, LegislativeProposal, DebateParticipation, ParliamentaryQuestion, HansardRecord } from "@shared/schema";
 import { calculateTotalSalary, calculateYearlyBreakdown, formatCurrency, getPublicationName } from "@/lib/utils";
+import { getMinisterialSalary, getCabinetRoleType, ALLOWANCE_RATES } from "@/lib/allowanceCalculator";
 import { useConstituencyByCode } from "@/hooks/use-constituencies";
 import { format } from "date-fns";
 
@@ -138,13 +139,21 @@ export default function MPProfile() {
     .toUpperCase();
 
   const partyColor = PARTY_COLORS[mp.party] || "bg-muted text-muted-foreground";
-  const monthlySalary = mp.mpAllowance;
+
+  // Calculate ministerial salary based on cabinet role (after 20% paycut)
+  const ministerialSalary = getMinisterialSalary(mp.role);
+  const cabinetRoleType = getCabinetRoleType(mp.role);
+  const hasCabinetRole = cabinetRoleType !== undefined;
+
+  // Total monthly salary includes MP allowance + ministerial salary
+  const baseMpSalary = mp.mpAllowance;
+  const monthlySalary = baseMpSalary + ministerialSalary;
   const yearlySalary = monthlySalary * 12;
-  
+
   // Use real attendance from Hansard records
   const totalSessions = (mp as any).totalHansardSessions || mp.totalParliamentDays || 0;
   const sessionsAttended = (mp as any).hansardSessionsAttended || mp.daysAttended || 0;
-  
+
   const totalSalary = calculateTotalSalary(mp.swornInDate, monthlySalary, sessionsAttended, mp.parliamentSittingAllowance);
   const formattedSwornInDate = format(new Date(mp.swornInDate), "MMMM d, yyyy");
   const yearlyBreakdown = calculateYearlyBreakdown(mp.swornInDate, monthlySalary);
@@ -1108,9 +1117,47 @@ export default function MPProfile() {
                         <td className="py-3 px-4 font-medium">{t('profile.baseMpAllowance')}</td>
                         <td className="text-center py-3 px-4 text-sm text-muted-foreground">{t('profile.monthly')}</td>
                         <td className="text-right py-3 px-4 font-semibold" data-testid="text-base-allowance">
-                          {formatCurrency(mp.mpAllowance)}
+                          {formatCurrency(baseMpSalary)}
                         </td>
                       </tr>
+                      {hasCabinetRole && ministerialSalary > 0 && (
+                        <tr className="border-b hover:bg-muted/50 transition-colors bg-amber-50 dark:bg-amber-950/20">
+                          <td className="py-3 px-4 font-medium">
+                            <div className="flex items-center gap-2">
+                              <Badge variant="secondary" className="bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-200">
+                                {cabinetRoleType}
+                              </Badge>
+                              {t('profile.ministerialSalary')}
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {t('profile.ministerialSalaryNote')}
+                            </p>
+                          </td>
+                          <td className="text-center py-3 px-4 text-sm text-muted-foreground">{t('profile.monthly')}</td>
+                          <td className="text-right py-3 px-4 font-semibold text-amber-700 dark:text-amber-400" data-testid="text-ministerial-salary">
+                            {formatCurrency(ministerialSalary)}
+                          </td>
+                        </tr>
+                      )}
+                      {hasCabinetRole && ministerialSalary === 0 && (
+                        <tr className="border-b hover:bg-muted/50 transition-colors bg-amber-50 dark:bg-amber-950/20">
+                          <td className="py-3 px-4 font-medium">
+                            <div className="flex items-center gap-2">
+                              <Badge variant="secondary" className="bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-200">
+                                {cabinetRoleType}
+                              </Badge>
+                              {t('profile.ministerialSalary')}
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {t('profile.pmNoSalaryNote')}
+                            </p>
+                          </td>
+                          <td className="text-center py-3 px-4 text-sm text-muted-foreground">{t('profile.monthly')}</td>
+                          <td className="text-right py-3 px-4 font-semibold text-amber-700 dark:text-amber-400" data-testid="text-ministerial-salary">
+                            {formatCurrency(0)}
+                          </td>
+                        </tr>
+                      )}
                       <tr className="border-b hover:bg-muted/50 transition-colors">
                         <td className="py-3 px-4 font-medium">{t('profile.entertainmentAllowance')}</td>
                         <td className="text-center py-3 px-4 text-sm text-muted-foreground">{t('profile.monthly')}</td>

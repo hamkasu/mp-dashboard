@@ -233,6 +233,9 @@ export const translations = {
       day: "day",
       days: "days",
       daysCumulative: "days (cumulative since sworn in)",
+      ministerialSalary: "Ministerial Salary",
+      ministerialSalaryNote: "After 20% voluntary paycut",
+      pmNoSalaryNote: "Prime Minister takes no ministerial salary",
 
       yearlyBreakdown: "Yearly Allowance Breakdown",
       year: "Year",
@@ -843,6 +846,9 @@ export const translations = {
       day: "hari",
       days: "hari",
       daysCumulative: "hari (kumulatif sejak mengangkat sumpah)",
+      ministerialSalary: "Gaji Menteri",
+      ministerialSalaryNote: "Selepas potongan sukarela 20%",
+      pmNoSalaryNote: "Perdana Menteri tidak mengambil gaji menteri",
 
       yearlyBreakdown: "Pecahan Elaun Tahunan",
       year: "Tahun",
