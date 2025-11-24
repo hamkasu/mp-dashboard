@@ -9,7 +9,7 @@ import { Header } from "@/components/Header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, Download, Trash2, AlertTriangle, CheckCircle2, RefreshCw, Upload, FileText, X, Database, Clock, History, Share2 } from "lucide-react";
+import { Loader2, Download, Trash2, AlertTriangle, CheckCircle2, RefreshCw, Upload, FileText, X, Database, Clock, History, Share2, Sparkles, StopCircle } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { UnmatchedSpeakersManager } from "@/components/UnmatchedSpeakersManager";
@@ -333,6 +333,61 @@ export default function HansardAdmin() {
   const handleUpdateSocialMedia = () => {
     if (confirm("This will update MP profiles with social media URLs from the scraped data file. Continue?")) {
       updateSocialMediaMutation.mutate();
+    }
+  };
+
+  // AI Analysis status query
+  const { data: aiAnalysisStatus, refetch: refetchAIStatus } = useQuery({
+    queryKey: ["/api/admin/analyze-hansard-status"],
+    refetchInterval: (query) => {
+      const data = query.state.data as any;
+      return data?.job?.status === "running" ? 2000 : false;
+    },
+  });
+
+  // AI Analysis mutation
+  const startAIAnalysisMutation = useMutation({
+    mutationFn: async (options: { forceReanalyze?: boolean; limit?: number }) => {
+      const res = await apiRequest("POST", "/api/admin/analyze-hansard-bulk", options);
+      return await res.json();
+    },
+    onSuccess: () => {
+      refetchAIStatus();
+      toast({
+        title: "AI Analysis Started",
+        description: "Background analysis of Hansard records has begun. This may take a while.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to start AI analysis",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Cancel AI Analysis mutation
+  const cancelAIAnalysisMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/admin/analyze-hansard-cancel");
+      return await res.json();
+    },
+    onSuccess: () => {
+      refetchAIStatus();
+      toast({
+        title: "Cancelled",
+        description: "AI analysis job cancellation requested",
+      });
+    },
+  });
+
+  const handleStartAIAnalysis = (forceReanalyze: boolean = false) => {
+    const message = forceReanalyze
+      ? "This will re-analyze ALL Hansard records with AI. This may take a long time and consume API credits. Continue?"
+      : "This will analyze Hansard records that don't have AI summaries yet. Continue?";
+    if (confirm(message)) {
+      startAIAnalysisMutation.mutate({ forceReanalyze });
     }
   };
 
@@ -1025,6 +1080,92 @@ export default function HansardAdmin() {
                   Update Social Media Data
                 </>
               )}
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* AI Analysis Card */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5" />
+              AI Hansard Analysis
+            </CardTitle>
+            <CardDescription>
+              Use AI (Qwen via OpenRouter) to analyze and summarize Hansard records
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {(aiAnalysisStatus as any)?.configured === false && (
+              <Alert variant="destructive">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription>
+                  AI not configured. Set OPENROUTER_API_KEY environment variable.
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {(aiAnalysisStatus as any)?.job?.status === "running" && (
+              <Alert>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <AlertDescription>
+                  <div className="font-medium">Analysis in progress...</div>
+                  <div className="text-sm mt-1">
+                    Processing: {(aiAnalysisStatus as any).job.currentSession || "..."}<br />
+                    Progress: {(aiAnalysisStatus as any).job.processed} / {(aiAnalysisStatus as any).job.total}<br />
+                    Success: {(aiAnalysisStatus as any).job.successful} | Failed: {(aiAnalysisStatus as any).job.failed}
+                  </div>
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {(aiAnalysisStatus as any)?.job?.status === "completed" && (
+              <Alert className="border-green-500">
+                <CheckCircle2 className="h-4 w-4 text-green-500" />
+                <AlertDescription>
+                  Last job completed: {(aiAnalysisStatus as any).job.successful} successful, {(aiAnalysisStatus as any).job.failed} failed
+                </AlertDescription>
+              </Alert>
+            )}
+
+            <div className="flex gap-2">
+              <Button
+                onClick={() => handleStartAIAnalysis(false)}
+                disabled={startAIAnalysisMutation.isPending || (aiAnalysisStatus as any)?.job?.status === "running" || !(aiAnalysisStatus as any)?.configured}
+                className="flex-1"
+              >
+                {startAIAnalysisMutation.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Starting...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="mr-2 h-4 w-4" />
+                    Analyze New Records
+                  </>
+                )}
+              </Button>
+
+              {(aiAnalysisStatus as any)?.job?.status === "running" && (
+                <Button
+                  variant="destructive"
+                  onClick={() => cancelAIAnalysisMutation.mutate()}
+                  disabled={cancelAIAnalysisMutation.isPending}
+                >
+                  <StopCircle className="mr-2 h-4 w-4" />
+                  Cancel
+                </Button>
+              )}
+            </div>
+
+            <Button
+              variant="outline"
+              onClick={() => handleStartAIAnalysis(true)}
+              disabled={startAIAnalysisMutation.isPending || (aiAnalysisStatus as any)?.job?.status === "running" || !(aiAnalysisStatus as any)?.configured}
+              className="w-full"
+            >
+              Re-analyze All Records
             </Button>
           </CardContent>
         </Card>
