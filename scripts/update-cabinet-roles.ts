@@ -7,7 +7,8 @@ import { db } from '../server/db';
 import { mps } from '../shared/schema';
 import { ilike, or } from 'drizzle-orm';
 
-// Cabinet Ministers (as of December 2023 reshuffle)
+// Cabinet Ministers (as of December 2023 reshuffle, updated November 2024)
+// NOTE: Ewon Benedick resigned as Minister of Entrepreneur Development & Cooperatives in November 2024
 // NOTE: 5 Cabinet members are Senators (Dewan Negara), not MPs, and are excluded from this update:
 // Ministers (Senators):
 // - Tengku Zafrul (Minister of Investment, Trade & Industry)
@@ -19,7 +20,7 @@ import { ilike, or } from 'drizzle-orm';
 const ministers = [
   { name: "Anwar Ibrahim", role: "Prime Minister & Minister of Finance" },
   { name: "Ahmad Zahid Hamidi", role: "Deputy Prime Minister, Minister of Rural & Regional Development" },
-  { name: "Fadillah Yusof", role: "Deputy Prime Minister, Minister of Energy Transition & Public Utilities" },
+  { name: "Fadillah Yusof", role: "Deputy Prime Minister, Minister of Energy Transition & Renewable Energy" },
   { name: "Rafizi Ramli", role: "Minister of Economy" },
   { name: "Nik Nazmi", role: "Minister of Natural Resources & Sustainability" },
   { name: "Mohamad Hasan", role: "Minister of Foreign Affairs" },
@@ -35,11 +36,10 @@ const ministers = [
   { name: "Nancy Shukri", role: "Minister of Women, Family & Community Development" },
   { name: "Gobind Singh Deo", role: "Minister of Digital" },
   { name: "Ahmad Fahmi Mohamed Fadzil", role: "Minister of Communications" },
-  { name: "Sim Chee Keong", role: "Minister of Human Resources" },
+  { name: "Steven Sim Chee Keong", role: "Minister of Human Resources" },
   { name: "Chang Lih Kang", role: "Minister of Science, Technology & Innovation" },
   { name: "Tiong King Sing", role: "Minister of Tourism, Arts & Culture" },
   { name: "Johari Abdul Ghani", role: "Minister of Plantation & Commodities" },
-  { name: "Ewon Benedick", role: "Minister of Entrepreneur Development & Cooperatives" },
   { name: "Armizan Mohd Ali", role: "Minister of Domestic Trade & Cost of Living" },
   { name: "Azalina Othman", role: "Minister in PM's Department (Law & Institutional Reform)" },
   { name: "Mohd Na'im Mokhtar", role: "Minister in PM's Department (Religious Affairs)" },
@@ -51,7 +51,7 @@ const ministers = [
 const deputyMinisters = [
   { name: "Lim Hui Ying", role: "Deputy Minister of Finance" },
   { name: "Rubiah Wang", role: "Deputy Minister of Rural & Regional Development" },
-  { name: "Akmal Nasrullah", role: "Deputy Minister of Energy Transition & Public Utilities" },
+  { name: "Akmal Nasrullah", role: "Deputy Minister of Energy Transition & Renewable Energy" },
   { name: "Hasbi Habibollah", role: "Deputy Minister of Transport" },
   { name: "Arthur Joseph Kurup", role: "Deputy Minister of Agriculture & Food Securities" },
   { name: "Hanifah Hajar Taib", role: "Deputy Minister of Economy" },
@@ -154,6 +154,7 @@ async function updateCabinetRoles() {
   console.log(`   Deputy Ministers:`);
   console.log(`   - Zulkifli Hasan (Deputy Minister in PM's Department - Religious Affairs)`);
   console.log(`   - Fuziah Salleh (Deputy Minister of Domestic Trade & Cost of Living)`);
+  console.log(`\n   Note: Ewon Benedick resigned in November 2024 and is no longer included.`);
 
   process.exit(0);
 }
