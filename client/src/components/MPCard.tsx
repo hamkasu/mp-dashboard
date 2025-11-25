@@ -9,6 +9,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import type { Mp, LegislativeProposal, ParliamentaryQuestion } from "@shared/schema";
 import { Link } from "wouter";
 import { calculateTotalSalary, formatCurrency } from "@/lib/utils";
+import { getMinisterialSalary, getCabinetRoleType } from "@/lib/allowanceCalculator";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { useConstituencyByCode } from "@/hooks/use-constituencies";
 import type { LanguageStat } from "./MPGrid";
@@ -62,13 +63,21 @@ export function MPCard({ mp, bills, oralQuestions, languageStats }: MPCardProps)
     .toUpperCase();
 
   const partyColor = PARTY_COLORS[mp.party] || "bg-muted text-muted-foreground";
-  const monthlySalary = mp.mpAllowance;
+
+  // Calculate ministerial salary based on cabinet role (after 20% paycut)
+  const ministerialSalary = getMinisterialSalary(mp.role);
+  const cabinetRoleType = getCabinetRoleType(mp.role);
+  const hasCabinetRole = cabinetRoleType !== undefined;
+
+  // Total monthly salary includes MP allowance + ministerial salary
+  const baseMpSalary = mp.mpAllowance;
+  const monthlySalary = baseMpSalary + ministerialSalary;
   const yearlySalary = monthlySalary * 12;
-  
+
   // Use Hansard-based attendance if available, otherwise fall back to static fields
   const totalSessions = (mp as any).totalHansardSessions ?? mp.totalParliamentDays;
   const sessionsAttended = (mp as any).hansardSessionsAttended ?? mp.daysAttended;
-  
+
   const totalSalary = calculateTotalSalary(mp.swornInDate, monthlySalary, sessionsAttended, mp.parliamentSittingAllowance);
   
   const attendanceRate = totalSessions > 0 
@@ -121,6 +130,11 @@ export function MPCard({ mp, bills, oralQuestions, languageStats }: MPCardProps)
             <Badge className={partyColor} data-testid={`badge-party-${mp.id}`}>
               {mp.party}
             </Badge>
+            {hasCabinetRole && (
+              <Badge variant="secondary" className="bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-200" data-testid={`badge-cabinet-${mp.id}`}>
+                {cabinetRoleType}
+              </Badge>
+            )}
           </div>
 
           <div className="space-y-1 text-sm">
@@ -153,6 +167,11 @@ export function MPCard({ mp, bills, oralQuestions, languageStats }: MPCardProps)
                   <div>
                     <p className="font-medium" data-testid={`text-monthly-allowance-${mp.id}`}>{formatCurrency(monthlySalary)}</p>
                     <p className="text-xs text-muted-foreground">{t('mpCard.monthly')}</p>
+                    {hasCabinetRole && ministerialSalary > 0 && (
+                      <p className="text-xs text-amber-600 dark:text-amber-400 mt-0.5">
+                        +{formatCurrency(ministerialSalary)} ministerial
+                      </p>
+                    )}
                   </div>
                   <div>
                     <p className="font-medium" data-testid={`text-yearly-allowance-${mp.id}`}>{formatCurrency(yearlySalary)}</p>
