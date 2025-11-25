@@ -1130,7 +1130,7 @@ export default function HansardAdmin() {
               </p>
               <Alert>
                 <AlertDescription>
-                  Includes 31 Ministers and 28 Deputy Ministers based on the December 2023 cabinet reshuffle.
+                  Includes 31 Ministers and 29 Deputy Ministers based on the December 2023 cabinet reshuffle.
                 </AlertDescription>
               </Alert>
             </div>
