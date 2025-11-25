@@ -86,6 +86,15 @@ async function updateCabinetRoles() {
 
   console.log("🔄 Updating cabinet roles for Ministers and Deputy Ministers...\n");
 
+  // Step 1: Clear all existing cabinet roles to prevent misassignments
+  console.log("📝 Clearing all existing cabinet roles...");
+  const { sql } = await import('drizzle-orm');
+  const clearResult = await db
+    .update(mps)
+    .set({ role: null })
+    .where(sql`${mps.role} IS NOT NULL AND (${mps.role} LIKE '%Minister%' OR ${mps.role} LIKE '%Prime Minister%')`);
+  console.log("✓ Cleared existing cabinet roles\n");
+
   const allCabinet = [...ministers, ...deputyMinisters];
   let updated = 0;
   let notFound = 0;
