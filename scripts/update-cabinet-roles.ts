@@ -8,10 +8,14 @@ import { mps } from '../shared/schema';
 import { ilike, or } from 'drizzle-orm';
 
 // Cabinet Ministers (as of December 2023 reshuffle)
-// NOTE: 3 Ministers are Senators (Dewan Negara), not MPs, and are excluded from this update:
+// NOTE: 5 Cabinet members are Senators (Dewan Negara), not MPs, and are excluded from this update:
+// Ministers (Senators):
 // - Tengku Zafrul (Minister of Investment, Trade & Industry)
 // - Zambry Abd Kadir (Minister of Higher Education)
 // - Amir Hamzah Azizan (Minister of Finance II)
+// Deputy Ministers (Senators):
+// - Zulkifli Hasan (Deputy Minister in PM's Department - Religious Affairs)
+// - Fuziah Salleh (Deputy Minister of Domestic Trade & Cost of Living)
 const ministers = [
   { name: "Anwar Ibrahim", role: "Prime Minister & Minister of Finance" },
   { name: "Ahmad Zahid Hamidi", role: "Deputy Prime Minister, Minister of Rural & Regional Development" },
@@ -67,10 +71,8 @@ const deputyMinisters = [
   { name: "Teo Nie Ching", role: "Deputy Minister of Communications" },
   { name: "Wong Kah Woh", role: "Deputy Minister of Education" },
   { name: "Saraswathy Kandasami", role: "Deputy Minister of Unity" },
-  { name: "Zulkifli Hassan", role: "Deputy Minister in PM's Department (Religious Affairs)" },
   { name: "Adam Adli", role: "Deputy Minister of Youth & Sports" },
-  { name: "Fuziah Salleh", role: "Deputy Minister of Domestic Trade & Cost of Living" },
-  { name: "Chan Foon Hin", role: "Deputy Minister of Plantation & Commodities" },
+  { name: "Chan Foong Hin", role: "Deputy Minister of Plantation & Commodities" },
   { name: "Lukanisman Awang Sauni", role: "Deputy Minister of Health" },
   { name: "Ugak Anak Kumbong", role: "Deputy Minister of Digital" },
   { name: "Abdul Rahman Mohamad", role: "Deputy Minister of Human Resources" },
@@ -144,10 +146,14 @@ async function updateCabinetRoles() {
   console.log(`   Updated: ${updated}`);
   console.log(`   Not found: ${notFound}`);
   console.log(`   Total attempted: ${allCabinet.length}`);
-  console.log(`\n   Note: 3 cabinet members are Senators (not MPs) and excluded from this update:`);
+  console.log(`\n   Note: 5 cabinet members are Senators (not MPs) and excluded from this update:`);
+  console.log(`   Ministers:`);
   console.log(`   - Tengku Zafrul (Minister of Investment, Trade & Industry)`);
   console.log(`   - Zambry Abd Kadir (Minister of Higher Education)`);
   console.log(`   - Amir Hamzah Azizan (Minister of Finance II)`);
+  console.log(`   Deputy Ministers:`);
+  console.log(`   - Zulkifli Hasan (Deputy Minister in PM's Department - Religious Affairs)`);
+  console.log(`   - Fuziah Salleh (Deputy Minister of Domestic Trade & Cost of Living)`);
 
   process.exit(0);
 }
