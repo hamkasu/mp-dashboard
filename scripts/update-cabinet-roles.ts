@@ -108,6 +108,7 @@ async function updateCabinetRoles() {
       // Find best match (name contains most search terms)
       let bestMatch = null;
       let bestScore = 0;
+      let bestMatchPercentage = 0;
 
       for (const mp of matchingMps) {
         const mpNameLower = mp.name.toLowerCase();
@@ -117,9 +118,24 @@ async function updateCabinetRoles() {
             score++;
           }
         }
-        if (score > bestScore) {
+
+        // Calculate match percentage
+        const matchPercentage = score / searchTerms.length;
+
+        // Only consider if it matches at least 66% of terms (at least 2/3)
+        // AND has the highest score so far
+        if (matchPercentage >= 0.66 && score > bestScore) {
           bestScore = score;
+          bestMatchPercentage = matchPercentage;
           bestMatch = mp;
+        } else if (matchPercentage >= 0.66 && score === bestScore) {
+          // If same score, prefer the one with more matching terms relative to MP name length
+          const currentMpTerms = mp.name.split(" ").filter(t => t.length > 2).length;
+          const bestMatchTerms = bestMatch ? bestMatch.name.split(" ").filter(t => t.length > 2).length : 0;
+
+          if (currentMpTerms <= bestMatchTerms) {
+            bestMatch = mp;
+          }
         }
       }
 
