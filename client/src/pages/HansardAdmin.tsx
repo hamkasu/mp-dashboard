@@ -1130,7 +1130,8 @@ export default function HansardAdmin() {
               </p>
               <Alert>
                 <AlertDescription>
-                  Includes 31 Ministers and 29 Deputy Ministers based on the December 2023 cabinet reshuffle.
+                  Includes 28 Ministers and 29 Deputy Ministers (57 total MPs) based on the December 2023 cabinet reshuffle.
+                  Note: 3 cabinet ministers are Senators, not MPs, and are not included in this update.
                 </AlertDescription>
               </Alert>
             </div>
