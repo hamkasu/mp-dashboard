@@ -114,19 +114,21 @@ export function MPCard({ mp, bills, oralQuestions, languageStats }: MPCardProps)
         
         <CardContent className="p-4 space-y-3">
           <div className="space-y-2">
-            <h3 className="text-lg font-semibold leading-tight line-clamp-2" data-testid={`text-mp-name-${mp.id}`}>
+            <h3 className="text-lg font-semibold leading-tight line-clamp-2 min-h-[3.5rem]" data-testid={`text-mp-name-${mp.id}`}>
               {mp.title && <span className="text-muted-foreground text-sm">{mp.title} </span>}
               {mp.name}
             </h3>
-            
-            {mp.role && (
-              <p className="text-xs text-muted-foreground uppercase tracking-wide">
-                {mp.role}
-              </p>
-            )}
+
+            <div className="min-h-[2.5rem]">
+              {mp.role && (
+                <p className="text-xs text-muted-foreground uppercase tracking-wide">
+                  {mp.role}
+                </p>
+              )}
+            </div>
           </div>
 
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-2 flex-wrap min-h-[1.75rem]">
             <Badge className={`${partyColor} h-6`} data-testid={`badge-party-${mp.id}`}>
               {mp.party}
             </Badge>
@@ -143,14 +145,16 @@ export function MPCard({ mp, bills, oralQuestions, languageStats }: MPCardProps)
               <div className="flex-1 min-w-0">
                 <p className="font-medium line-clamp-1">{mp.constituency}</p>
                 <p className="text-xs text-muted-foreground">{mp.state}</p>
-                {constituency?.povertyIncidence !== null && constituency?.povertyIncidence !== undefined && (
-                  <div className="flex items-center gap-1 mt-1">
-                    <TrendingDown className="h-3 w-3 text-muted-foreground" />
-                    <p className={`text-xs font-medium ${getPovertyColor(constituency.povertyIncidence)}`}>
-                      {constituency.povertyIncidence.toFixed(1)}% poverty rate
-                    </p>
-                  </div>
-                )}
+                <div className="min-h-[1.5rem] mt-1">
+                  {constituency?.povertyIncidence !== null && constituency?.povertyIncidence !== undefined && (
+                    <div className="flex items-center gap-1">
+                      <TrendingDown className="h-3 w-3 text-muted-foreground" />
+                      <p className={`text-xs font-medium ${getPovertyColor(constituency.povertyIncidence)}`}>
+                        {constituency.povertyIncidence.toFixed(1)}% poverty rate
+                      </p>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -164,14 +168,16 @@ export function MPCard({ mp, bills, oralQuestions, languageStats }: MPCardProps)
                   <p className="text-xs text-muted-foreground">{t('mpCard.totalEarned')}</p>
                 </div>
                 <div className="grid grid-cols-2 gap-2 pt-1 border-t border-muted">
-                  <div>
+                  <div className="min-h-[4rem]">
                     <p className="font-medium" data-testid={`text-monthly-allowance-${mp.id}`}>{formatCurrency(monthlySalary)}</p>
                     <p className="text-xs text-muted-foreground">{t('mpCard.monthly')}</p>
-                    {hasCabinetRole && ministerialSalary > 0 && (
-                      <p className="text-xs text-amber-600 dark:text-amber-400 mt-0.5">
-                        +{formatCurrency(ministerialSalary)} ministerial
-                      </p>
-                    )}
+                    <div className="min-h-[1.25rem] mt-0.5">
+                      {hasCabinetRole && ministerialSalary > 0 && (
+                        <p className="text-xs text-amber-600 dark:text-amber-400">
+                          +{formatCurrency(ministerialSalary)} ministerial
+                        </p>
+                      )}
+                    </div>
                   </div>
                   <div>
                     <p className="font-medium" data-testid={`text-yearly-allowance-${mp.id}`}>{formatCurrency(yearlySalary)}</p>
@@ -181,7 +187,7 @@ export function MPCard({ mp, bills, oralQuestions, languageStats }: MPCardProps)
               </div>
             </div>
             
-            <div className="flex items-start gap-2">
+            <div className="flex items-start gap-2 min-h-[4.5rem]">
               <Calendar className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
               <div className="flex-1 min-w-0">
                 <p className={`font-semibold ${attendanceColor}`} data-testid={`text-attendance-${mp.id}`}>
@@ -194,7 +200,7 @@ export function MPCard({ mp, bills, oralQuestions, languageStats }: MPCardProps)
               </div>
             </div>
 
-            <div className="flex items-start gap-2">
+            <div className="flex items-start gap-2 min-h-[3.5rem]">
               <Mic className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
               <div className="flex-1 min-w-0">
                 <p className={`font-semibold ${speakingColor}`} data-testid={`text-speaking-${mp.id}`}>
