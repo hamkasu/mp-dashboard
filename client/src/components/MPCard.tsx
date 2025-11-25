@@ -127,11 +127,11 @@ export function MPCard({ mp, bills, oralQuestions, languageStats }: MPCardProps)
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">
-            <Badge className={partyColor} data-testid={`badge-party-${mp.id}`}>
+            <Badge className={`${partyColor} h-6`} data-testid={`badge-party-${mp.id}`}>
               {mp.party}
             </Badge>
             {hasCabinetRole && (
-              <Badge variant="secondary" className="bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-200" data-testid={`badge-cabinet-${mp.id}`}>
+              <Badge variant="secondary" className="bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-200 h-6" data-testid={`badge-cabinet-${mp.id}`}>
                 {cabinetRoleType}
               </Badge>
             )}
