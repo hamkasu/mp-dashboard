@@ -8,6 +8,10 @@ import { mps } from '../shared/schema';
 import { ilike, or } from 'drizzle-orm';
 
 // Cabinet Ministers (as of December 2023 reshuffle)
+// NOTE: 3 Ministers are Senators (Dewan Negara), not MPs, and are excluded from this update:
+// - Tengku Zafrul (Minister of Investment, Trade & Industry)
+// - Zambry Abd Kadir (Minister of Higher Education)
+// - Amir Hamzah Azizan (Minister of Finance II)
 const ministers = [
   { name: "Anwar Ibrahim", role: "Prime Minister & Minister of Finance" },
   { name: "Ahmad Zahid Hamidi", role: "Deputy Prime Minister, Minister of Rural & Regional Development" },
@@ -17,25 +21,22 @@ const ministers = [
   { name: "Mohamad Hasan", role: "Minister of Foreign Affairs" },
   { name: "Mohamed Khaled Nordin", role: "Minister of Defence" },
   { name: "Saifuddin Nasution", role: "Minister of Home Affairs" },
-  { name: "Tengku Zafrul", role: "Minister of Investment, Trade & Industry" },
   { name: "Dzulkefly Ahmad", role: "Minister of Health" },
   { name: "Fadhlina Sidek", role: "Minister of Education" },
-  { name: "Zambry Abd Kadir", role: "Minister of Higher Education" },
-  { name: "Anthony Loke", role: "Minister of Transport" },
+  { name: "Loke Siew Fook", role: "Minister of Transport" },
   { name: "Alexander Nanta Linggi", role: "Minister of Works" },
   { name: "Nga Kor Ming", role: "Minister of Local Government Development" },
   { name: "Mohamad Sabu", role: "Minister of Agriculture & Food Securities" },
   { name: "Hannah Yeoh", role: "Minister of Youth & Sports" },
   { name: "Nancy Shukri", role: "Minister of Women, Family & Community Development" },
-  { name: "Gobind Singh", role: "Minister of Digital" },
-  { name: "Fahmi Fadzil", role: "Minister of Communications" },
-  { name: "Steven Sim", role: "Minister of Human Resources" },
+  { name: "Gobind Singh Deo", role: "Minister of Digital" },
+  { name: "Ahmad Fahmi Mohamed Fadzil", role: "Minister of Communications" },
+  { name: "Sim Chee Keong", role: "Minister of Human Resources" },
   { name: "Chang Lih Kang", role: "Minister of Science, Technology & Innovation" },
   { name: "Tiong King Sing", role: "Minister of Tourism, Arts & Culture" },
   { name: "Johari Abdul Ghani", role: "Minister of Plantation & Commodities" },
   { name: "Ewon Benedick", role: "Minister of Entrepreneur Development & Cooperatives" },
   { name: "Armizan Mohd Ali", role: "Minister of Domestic Trade & Cost of Living" },
-  { name: "Amir Hamzah", role: "Minister of Finance II" },
   { name: "Azalina Othman", role: "Minister in PM's Department (Law & Institutional Reform)" },
   { name: "Mohd Na'im Mokhtar", role: "Minister in PM's Department (Religious Affairs)" },
   { name: "Zaliha Mustafa", role: "Minister in PM's Department (Federal Territories)" },
@@ -142,7 +143,11 @@ async function updateCabinetRoles() {
   console.log(`\n📊 Summary:`);
   console.log(`   Updated: ${updated}`);
   console.log(`   Not found: ${notFound}`);
-  console.log(`   Total: ${allCabinet.length}`);
+  console.log(`   Total attempted: ${allCabinet.length}`);
+  console.log(`\n   Note: 3 cabinet members are Senators (not MPs) and excluded from this update:`);
+  console.log(`   - Tengku Zafrul (Minister of Investment, Trade & Industry)`);
+  console.log(`   - Zambry Abd Kadir (Minister of Higher Education)`);
+  console.log(`   - Amir Hamzah Azizan (Minister of Finance II)`);
 
   process.exit(0);
 }
