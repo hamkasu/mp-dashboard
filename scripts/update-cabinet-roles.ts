@@ -122,6 +122,13 @@ async function updateCabinetRoles() {
       for (const mp of matchingMps) {
         const mpNameLower = mp.name.toLowerCase();
 
+        // PARTY FILTER: Opposition parties cannot be in Unity Government cabinet
+        const oppositionParties = ['PN', 'MUDA', 'WARISAN', 'BEBAS'];
+        if (oppositionParties.includes(mp.party)) {
+          console.log(`⚠️  Skipping opposition party member: ${mp.name} (${mp.party}) for ${member.name}`);
+          continue;
+        }
+
         // HARDCODED EXCLUSION: Prevent Abdul Ghani Ahmad from being matched as Johari Abdul Ghani
         if (member.name === "Johari Abdul Ghani" && mpNameLower.includes("abdul ghani ahmad")) {
           console.log(`⚠️  Skipping incorrect match: ${mp.name} for ${member.name}`);
