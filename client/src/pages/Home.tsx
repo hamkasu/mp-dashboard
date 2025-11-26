@@ -464,6 +464,7 @@ export default function Home() {
                         <p className="text-xs font-medium text-muted-foreground mb-1">Includes:</p>
                         <ul className="text-xs text-blue-800 dark:text-blue-200 space-y-0.5">
                           <li>• Base salaries (RM 25,700/month)</li>
+                          <li>• Ministers' salaries and allowances</li>
                           <li>• Monthly fixed allowances (entertainment, travel, fuel, etc.)</li>
                         </ul>
                       </div>
