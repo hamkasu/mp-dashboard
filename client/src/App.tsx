@@ -23,6 +23,7 @@ import Allowances from "@/pages/Allowances";
 import Disclaimer from "@/pages/Disclaimer";
 import Analytics from "@/pages/analytics";
 import AdminLogin from "@/pages/AdminLogin";
+import Blog from "@/pages/Blog";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -34,6 +35,7 @@ function Router() {
       <Route path="/hansard" component={Hansard} />
       <Route path="/parliament-guide" component={ParliamentGuide} />
       <Route path="/constitution" component={Constitution} />
+      <Route path="/blog" component={Blog} />
       <Route path="/attendance" component={Attendance} />
       <Route path="/allowances" component={Allowances} />
       <Route path="/disclaimer" component={Disclaimer} />
