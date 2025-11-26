@@ -94,12 +94,16 @@ export default function HansardAnalysis() {
   const [selectedMpId, setSelectedMpId] = useState<string>("");
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
 
+  // OPTIMIZATION: Add staleTime to cache MP data for 5 minutes (MPs don't change often)
   const { data: mps, isLoading: mpsLoading } = useQuery<MP[]>({
     queryKey: ["/api/mps"],
+    staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
+  // OPTIMIZATION: Add staleTime to cache hansard records for 2 minutes
   const { data: allHansardRecords, isLoading: hansardLoading } = useQuery<HansardRecordWithPdf[]>({
     queryKey: ["/api/hansard-records"],
+    staleTime: 2 * 60 * 1000, // 2 minutes
   });
 
   // Filter to only show hansard records that have PDFs available

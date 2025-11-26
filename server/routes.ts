@@ -1066,27 +1066,66 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   // Get all Hansard records
   app.get("/api/hansard-records", async (req, res) => {
     try {
-      const records = await storage.getAllHansardRecords();
-      
-      // Check which records have PDFs attached
-      const recordsWithPdfStatus = await Promise.all(
-        records.map(async (record) => {
-          const { eq, and } = await import("drizzle-orm");
-          const [pdfFile] = await db.select({ id: hansardPdfFiles.id })
-            .from(hansardPdfFiles)
-            .where(and(
-              eq(hansardPdfFiles.hansardRecordId, record.id),
-              eq(hansardPdfFiles.isPrimary, true)
-            ))
-            .limit(1);
-          
-          return {
-            ...fixHansardPdfUrls(record, req),
-            hasPdf: !!pdfFile
-          };
+      // OPTIMIZATION: Fetch records with minimal columns (exclude large transcript and JSONB)
+      const { eq, and, inArray, desc } = await import("drizzle-orm");
+
+      // OPTIMIZATION: Optional pagination support
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 0; // 0 = no limit (backwards compatible)
+      const offset = limit > 0 ? (page - 1) * limit : 0;
+
+      let query = db
+        .select({
+          id: hansardRecords.id,
+          sessionNumber: hansardRecords.sessionNumber,
+          sessionDate: hansardRecords.sessionDate,
+          parliamentTerm: hansardRecords.parliamentTerm,
+          sitting: hansardRecords.sitting,
+          summary: hansardRecords.summary,
+          summaryLanguage: hansardRecords.summaryLanguage,
+          summarizedAt: hansardRecords.summarizedAt,
+          pdfLinks: hansardRecords.pdfLinks,
+          topics: hansardRecords.topics,
+          constituenciesPresent: hansardRecords.constituenciesPresent,
+          constituenciesAbsent: hansardRecords.constituenciesAbsent,
+          createdAt: hansardRecords.createdAt,
+          // Exclude: transcript (can be huge), speakers, speakerStats, voteRecords, attendedMpIds, absentMpIds
         })
-      );
-      
+        .from(hansardRecords)
+        .orderBy(desc(hansardRecords.sessionDate));
+
+      if (limit > 0) {
+        query = query.limit(limit).offset(offset) as any;
+      }
+
+      const records = await query;
+
+      if (records.length === 0) {
+        return res.json([]);
+      }
+
+      // OPTIMIZATION: Fetch PDF status for all records in ONE query instead of N queries (fixes N+1 problem)
+      const recordIds = records.map(r => r.id);
+      const pdfFiles = await db
+        .select({
+          hansardRecordId: hansardPdfFiles.hansardRecordId,
+          id: hansardPdfFiles.id,
+        })
+        .from(hansardPdfFiles)
+        .where(and(
+          inArray(hansardPdfFiles.hansardRecordId, recordIds),
+          eq(hansardPdfFiles.isPrimary, true)
+        ));
+
+      // Create a Set for O(1) lookup
+      const recordsWithPdfs = new Set(pdfFiles.map(pdf => pdf.hansardRecordId));
+
+      // Combine records with PDF status
+      const recordsWithPdfStatus = records.map((record) => ({
+        ...fixHansardPdfUrls(record as any, req),
+        hasPdf: recordsWithPdfs.has(record.id)
+      }));
+
       res.json(recordsWithPdfStatus);
     } catch (error) {
       console.error("Error fetching Hansard records:", error);
