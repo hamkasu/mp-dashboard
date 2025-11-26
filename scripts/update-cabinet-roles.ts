@@ -129,12 +129,6 @@ async function updateCabinetRoles() {
           continue;
         }
 
-        // HARDCODED EXCLUSION: Prevent Abdul Ghani Ahmad from being matched as Johari Abdul Ghani
-        if (member.name === "Johari Abdul Ghani" && mpNameLower.includes("abdul ghani ahmad")) {
-          console.log(`⚠️  Skipping incorrect match: ${mp.name} for ${member.name}`);
-          continue;
-        }
-
         let score = 0;
         for (const term of searchTerms) {
           if (mpNameLower.includes(term.toLowerCase())) {
