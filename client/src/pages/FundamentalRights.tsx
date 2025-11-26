@@ -93,10 +93,13 @@ export default function FundamentalRights() {
           summary: "Every person has the right to profess and practice their religion.",
           points: [
             "Freedom to profess and practice any religion",
-            "Right to propagate religious beliefs (subject to state law for Muslims)",
+            "Right to propagate religious beliefs (subject to state law restrictions on propagating to Muslims)",
             "No person shall be compelled to pay any tax for purposes of a religion other than their own",
             "Parents have the right to determine their children's religious upbringing (under 18 years)",
-            "Islam is the religion of the Federation, but other religions may be practiced in peace and harmony"
+            "Islam is the religion of the Federation, but other religions may be practiced in peace and harmony",
+            "Special qualifications for Muslims: State law may control or restrict propagation of any religious doctrine or belief among persons professing the religion of Islam",
+            "Muslims are subject to Syariah law in matters of personal and family law, administered by Syariah courts",
+            "Conversion from Islam (apostasy) is subject to State Islamic law and Syariah court procedures"
           ]
         },
         {
@@ -223,10 +226,13 @@ export default function FundamentalRights() {
           summary: "Setiap orang mempunyai hak untuk menganut dan mengamalkan agamanya.",
           points: [
             "Kebebasan untuk menganut dan mengamalkan sebarang agama",
-            "Hak untuk menyebarkan kepercayaan agama (tertakluk kepada undang-undang negeri untuk orang Islam)",
+            "Hak untuk menyebarkan kepercayaan agama (tertakluk kepada sekatan undang-undang negeri ke atas penyebaran kepada orang Islam)",
             "Tiada seorang pun boleh dipaksa membayar cukai untuk tujuan agama selain agamanya sendiri",
             "Ibu bapa mempunyai hak untuk menentukan pendidikan agama anak mereka (bawah 18 tahun)",
-            "Islam adalah agama Persekutuan, tetapi agama lain boleh diamalkan dengan aman dan harmoni"
+            "Islam adalah agama Persekutuan, tetapi agama lain boleh diamalkan dengan aman dan harmoni",
+            "Kelayakan khas untuk orang Islam: Undang-undang negeri boleh mengawal atau menyekat penyebaran apa-apa doktrin atau kepercayaan agama di kalangan orang yang menganut agama Islam",
+            "Orang Islam tertakluk kepada undang-undang Syariah dalam hal ehwal peribadi dan keluarga, ditadbir oleh mahkamah Syariah",
+            "Pertukaran agama daripada Islam (murtad) tertakluk kepada undang-undang Islam Negeri dan prosedur mahkamah Syariah"
           ]
         },
         {
