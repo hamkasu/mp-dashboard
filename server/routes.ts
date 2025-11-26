@@ -133,10 +133,18 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         
         const totalHansardSessions = relevantSessions.length;
         
-        // Count sessions where MP was NOT absent
-        const sessionsAttended = relevantSessions.filter(record => 
-          !record.absentMpIds || !record.absentMpIds.includes(mp.id)
-        ).length;
+        // Count sessions where MP attended
+        // If attendedMpIds exists (new system), use explicit attendance tracking
+        // Otherwise fall back to "not absent = attended" (old system)
+        const sessionsAttended = relevantSessions.filter(record => {
+          if (record.attendedMpIds && record.attendedMpIds.length > 0) {
+            // New system: explicitly marked as attended
+            return record.attendedMpIds.includes(mp.id);
+          } else {
+            // Old system: not marked as absent = attended
+            return !record.absentMpIds || !record.absentMpIds.includes(mp.id);
+          }
+        }).length;
         
         // Count sessions where MP spoke (only from relevant sessions)
         const sessionsSpoke = relevantSessions.filter(record => 
@@ -195,10 +203,18 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       
       const totalHansardSessions = relevantSessions.length;
       
-      // Count sessions where MP was NOT absent
-      const sessionsAttended = relevantSessions.filter(record => 
-        !record.absentMpIds || !record.absentMpIds.includes(mp.id)
-      ).length;
+      // Count sessions where MP attended
+      // If attendedMpIds exists (new system), use explicit attendance tracking
+      // Otherwise fall back to "not absent = attended" (old system)
+      const sessionsAttended = relevantSessions.filter(record => {
+        if (record.attendedMpIds && record.attendedMpIds.length > 0) {
+          // New system: explicitly marked as attended
+          return record.attendedMpIds.includes(mp.id);
+        } else {
+          // Old system: not marked as absent = attended
+          return !record.absentMpIds || !record.absentMpIds.includes(mp.id);
+        }
+      }).length;
       
       // Count sessions where MP spoke (only from relevant sessions)
       const sessionsSpoke = relevantSessions.filter(record => 
