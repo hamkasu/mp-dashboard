@@ -2,7 +2,7 @@
  * Copyright by Calmic Sdn Bhd
  */
 
-import { Search, Menu, Home, FileText, BookOpen, UserCheck, Calculator, BarChart3, ExternalLink, ChevronDown, AlertCircle, GraduationCap, TrendingUp, Scale, Shield, MessageSquare } from "lucide-react";
+import { Search, Menu, Home, FileText, BookOpen, UserCheck, Calculator, BarChart3, ExternalLink, ChevronDown, AlertCircle, GraduationCap, TrendingUp, Scale, Shield, MessageSquare, Newspaper } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -108,6 +108,17 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
             >
               <Shield className="w-4 h-4" />
               <span>{t('nav.admin')}</span>
+            </Button>
+          </Link>
+          <Link href="/blog">
+            <Button
+              variant={location === "/blog" ? "secondary" : "ghost"}
+              size="sm"
+              data-testid="nav-blog"
+              className="gap-2"
+            >
+              <Newspaper className="w-4 h-4" />
+              <span>{t('nav.blog')}</span>
             </Button>
           </Link>
           <DropdownMenu>
