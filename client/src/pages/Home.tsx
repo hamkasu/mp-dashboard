@@ -464,7 +464,7 @@ export default function Home() {
                         <p className="text-xs font-medium text-muted-foreground mb-1">Includes:</p>
                         <ul className="text-xs text-blue-800 dark:text-blue-200 space-y-0.5">
                           <li>• Base salaries (RM 25,700/month)</li>
-                          <li>• Ministers' salaries and allowances</li>
+                          <li>• Ministers' salaries and allowances*</li>
                           <li>• Monthly fixed allowances (entertainment, travel, fuel, etc.)</li>
                         </ul>
                       </div>
@@ -476,6 +476,9 @@ export default function Home() {
                         </ul>
                       </div>
                     </div>
+                    <p className="text-xs text-blue-800 dark:text-blue-200 mt-2">
+                      *Note: PM receives no salary. Other ministers have taken a 20% voluntary paycut.
+                    </p>
                     <p className="text-xs text-muted-foreground italic">
                       Calculated based on individual sworn-in dates and attendance records. Does not include periodic allowances (handphone, computer, attire purchases).
                     </p>
