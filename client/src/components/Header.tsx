@@ -99,6 +99,17 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
               <span>{t('nav.constitution')}</span>
             </Button>
           </Link>
+          <Link href="/fundamental-rights">
+            <Button
+              variant={location === "/fundamental-rights" ? "secondary" : "ghost"}
+              size="sm"
+              data-testid="nav-fundamental-rights"
+              className="gap-2"
+            >
+              <Shield className="w-4 h-4" />
+              <span>{t('nav.fundamentalRights')}</span>
+            </Button>
+          </Link>
           <Link href="/hansard-admin">
             <Button
               variant={location === "/hansard-admin" ? "secondary" : "ghost"}
