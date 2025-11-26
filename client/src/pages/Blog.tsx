@@ -6,76 +6,19 @@ import { Header } from "@/components/Header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Newspaper, Calendar, Clock, ArrowRight } from "lucide-react";
 import { useLanguage } from "@/i18n/LanguageContext";
-
-interface BlogPost {
-  id: string;
-  title: {
-    en: string;
-    ms: string;
-  };
-  excerpt: {
-    en: string;
-    ms: string;
-  };
-  date: string;
-  readTime: number;
-  category: string;
-  author: string;
-}
-
-// Sample blog posts - to be replaced with actual data from backend
-const blogPosts: BlogPost[] = [
-  {
-    id: "1",
-    title: {
-      en: "Understanding Parliamentary Procedures",
-      ms: "Memahami Prosedur Parlimen"
-    },
-    excerpt: {
-      en: "Learn about the key procedures and protocols that govern how the Malaysian Parliament operates on a daily basis.",
-      ms: "Ketahui tentang prosedur dan protokol utama yang mengawal operasi harian Parlimen Malaysia."
-    },
-    date: "2025-01-15",
-    readTime: 5,
-    category: "Parliament Guide",
-    author: "Editorial Team"
-  },
-  {
-    id: "2",
-    title: {
-      en: "The Role of MPs in Budget Approval",
-      ms: "Peranan Ahli Parlimen dalam Kelulusan Bajet"
-    },
-    excerpt: {
-      en: "Discover how Members of Parliament participate in the budget approval process and hold the government accountable for public spending.",
-      ms: "Temui bagaimana Ahli Parlimen mengambil bahagian dalam proses kelulusan bajet dan mempertanggungjawabkan kerajaan terhadap perbelanjaan awam."
-    },
-    date: "2025-01-10",
-    readTime: 7,
-    category: "Analysis",
-    author: "Editorial Team"
-  },
-  {
-    id: "3",
-    title: {
-      en: "How to Contact Your MP",
-      ms: "Cara Menghubungi Ahli Parlimen Anda"
-    },
-    excerpt: {
-      en: "A practical guide on how constituents can effectively reach out to their representatives and make their voices heard.",
-      ms: "Panduan praktikal tentang cara pengundi boleh menghubungi wakil mereka dengan berkesan dan menyuarakan pendapat mereka."
-    },
-    date: "2025-01-05",
-    readTime: 4,
-    category: "Civic Engagement",
-    author: "Editorial Team"
-  }
-];
+import { useQuery } from "@tanstack/react-query";
+import type { BlogPost } from "@shared/schema";
 
 export default function Blog() {
   const { t, language } = useLanguage();
+
+  const { data: blogPosts, isLoading } = useQuery<BlogPost[]>({
+    queryKey: ["/api/blog-posts"],
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -106,7 +49,24 @@ export default function Blog() {
             </p>
           </div>
 
-          {blogPosts.length === 0 ? (
+          {isLoading ? (
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {[1, 2, 3].map((i) => (
+                <Card key={i} className="flex flex-col">
+                  <CardHeader>
+                    <div className="space-y-3">
+                      <Skeleton className="h-6 w-24" />
+                      <Skeleton className="h-8 w-full" />
+                      <Skeleton className="h-16 w-full" />
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <Skeleton className="h-10 w-full" />
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : !blogPosts || blogPosts.length === 0 ? (
             <Card>
               <CardContent className="py-12">
                 <div className="text-center space-y-4">
@@ -134,10 +94,10 @@ export default function Blog() {
                         {post.category}
                       </Badge>
                       <CardTitle className="text-xl leading-tight" data-testid={`blog-post-title-${post.id}`}>
-                        {language === 'ms' ? post.title.ms : post.title.en}
+                        {language === 'ms' ? post.titleMs : post.titleEn}
                       </CardTitle>
                       <CardDescription className="line-clamp-3" data-testid={`blog-post-excerpt-${post.id}`}>
-                        {language === 'ms' ? post.excerpt.ms : post.excerpt.en}
+                        {language === 'ms' ? post.excerptMs : post.excerptEn}
                       </CardDescription>
                     </div>
                   </CardHeader>
@@ -145,7 +105,7 @@ export default function Blog() {
                     <div className="flex items-center gap-4 text-sm text-muted-foreground">
                       <div className="flex items-center gap-1.5">
                         <Calendar className="w-4 h-4" />
-                        <span data-testid={`blog-post-date-${post.id}`}>{formatDate(post.date)}</span>
+                        <span data-testid={`blog-post-date-${post.id}`}>{formatDate(post.publishedAt)}</span>
                       </div>
                       <div className="flex items-center gap-1.5">
                         <Clock className="w-4 h-4" />
