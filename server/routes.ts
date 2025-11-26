@@ -19,6 +19,8 @@ import {
   insertParliamentaryQuestionSchema,
   insertHansardRecordSchema,
   updateHansardRecordSchema,
+  insertBlogPostSchema,
+  updateBlogPostSchema,
   mps,
   hansardPdfFiles,
   hansardRecords,
@@ -27,7 +29,8 @@ import {
   speakerMappings,
   insertSpeakerMappingSchema,
   parliamentaryQuestions,
-  legislativeProposals
+  legislativeProposals,
+  blogPosts
 } from "@shared/schema";
 import crypto from "crypto";
 import { HansardScraper, ConstituencyAttendanceCounts } from "./hansard-scraper";
@@ -4339,6 +4342,169 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     } catch (error) {
       console.error("Error updating cabinet roles:", error);
       res.status(500).json({ error: "Failed to update cabinet roles", details: String(error) });
+    }
+  });
+
+  // ======================
+  // Blog Posts API
+  // ======================
+
+  // Get all published blog posts (public)
+  app.get("/api/blog-posts", async (req, res) => {
+    try {
+      const { desc } = await import("drizzle-orm");
+      const { includeUnpublished } = req.query;
+
+      let query = db.select().from(blogPosts).orderBy(desc(blogPosts.publishedAt));
+
+      // Only show published posts unless explicitly requesting unpublished (admin only)
+      if (!includeUnpublished) {
+        const { eq } = await import("drizzle-orm");
+        query = query.where(eq(blogPosts.isPublished, true)) as any;
+      }
+
+      const posts = await query;
+      res.json(posts);
+    } catch (error) {
+      console.error("Error fetching blog posts:", error);
+      res.status(500).json({ error: "Failed to fetch blog posts" });
+    }
+  });
+
+  // Get single blog post by slug (public)
+  app.get("/api/blog-posts/slug/:slug", async (req, res) => {
+    try {
+      const { slug } = req.params;
+      const { eq } = await import("drizzle-orm");
+
+      const [post] = await db.select().from(blogPosts).where(eq(blogPosts.slug, slug)).limit(1);
+
+      if (!post) {
+        return res.status(404).json({ error: "Blog post not found" });
+      }
+
+      // Only allow viewing unpublished posts if user is admin
+      if (!post.isPublished && !getCurrentUsername(req)) {
+        return res.status(404).json({ error: "Blog post not found" });
+      }
+
+      res.json(post);
+    } catch (error) {
+      console.error("Error fetching blog post:", error);
+      res.status(500).json({ error: "Failed to fetch blog post" });
+    }
+  });
+
+  // Get single blog post by ID (admin)
+  app.get("/api/blog-posts/:id", requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { eq } = await import("drizzle-orm");
+
+      const [post] = await db.select().from(blogPosts).where(eq(blogPosts.id, id)).limit(1);
+
+      if (!post) {
+        return res.status(404).json({ error: "Blog post not found" });
+      }
+
+      res.json(post);
+    } catch (error) {
+      console.error("Error fetching blog post:", error);
+      res.status(500).json({ error: "Failed to fetch blog post" });
+    }
+  });
+
+  // Create new blog post (admin only)
+  app.post("/api/blog-posts", requireAdmin, mutationRateLimit, auditMiddleware('blog-post'), async (req, res) => {
+    try {
+      const validation = insertBlogPostSchema.safeParse(req.body);
+
+      if (!validation.success) {
+        return res.status(400).json({
+          error: "Invalid blog post data",
+          details: validation.error.errors.map(e => e.message).join(", ")
+        });
+      }
+
+      const username = getCurrentUsername(req);
+      const newPost = {
+        ...validation.data,
+        createdBy: username || undefined,
+      };
+
+      const [created] = await db.insert(blogPosts).values(newPost).returning();
+
+      console.log(`✅ Blog post created: ${created.titleEn} by ${username}`);
+      res.status(201).json(created);
+    } catch (error: any) {
+      console.error("Error creating blog post:", error);
+      if (error.code === '23505') { // Unique constraint violation
+        return res.status(400).json({ error: "A blog post with this slug already exists" });
+      }
+      res.status(500).json({ error: "Failed to create blog post" });
+    }
+  });
+
+  // Update blog post (admin only)
+  app.patch("/api/blog-posts/:id", requireAdmin, mutationRateLimit, auditMiddleware('blog-post'), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const validation = updateBlogPostSchema.safeParse(req.body);
+
+      if (!validation.success) {
+        return res.status(400).json({
+          error: "Invalid blog post data",
+          details: validation.error.errors.map(e => e.message).join(", ")
+        });
+      }
+
+      const { eq } = await import("drizzle-orm");
+      const updateData = {
+        ...validation.data,
+        updatedAt: new Date(),
+      };
+
+      const [updated] = await db
+        .update(blogPosts)
+        .set(updateData)
+        .where(eq(blogPosts.id, id))
+        .returning();
+
+      if (!updated) {
+        return res.status(404).json({ error: "Blog post not found" });
+      }
+
+      console.log(`✅ Blog post updated: ${updated.titleEn} by ${getCurrentUsername(req)}`);
+      res.json(updated);
+    } catch (error: any) {
+      console.error("Error updating blog post:", error);
+      if (error.code === '23505') {
+        return res.status(400).json({ error: "A blog post with this slug already exists" });
+      }
+      res.status(500).json({ error: "Failed to update blog post" });
+    }
+  });
+
+  // Delete blog post (admin only)
+  app.delete("/api/blog-posts/:id", requireAdmin, mutationRateLimit, auditMiddleware('blog-post'), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { eq } = await import("drizzle-orm");
+
+      const [deleted] = await db
+        .delete(blogPosts)
+        .where(eq(blogPosts.id, id))
+        .returning();
+
+      if (!deleted) {
+        return res.status(404).json({ error: "Blog post not found" });
+      }
+
+      console.log(`✅ Blog post deleted: ${deleted.titleEn} by ${getCurrentUsername(req)}`);
+      res.json({ message: "Blog post deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting blog post:", error);
+      res.status(500).json({ error: "Failed to delete blog post" });
     }
   });
 

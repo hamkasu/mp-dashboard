@@ -496,6 +496,44 @@ export const insertConstituencySchema = createInsertSchema(constituencies).omit(
 export type InsertConstituency = z.infer<typeof insertConstituencySchema>;
 export type Constituency = typeof constituencies.$inferSelect;
 
+// Blog Posts table for articles and news
+export const blogPosts = pgTable("blog_posts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  titleEn: text("title_en").notNull(),
+  titleMs: text("title_ms").notNull(),
+  excerptEn: text("excerpt_en").notNull(),
+  excerptMs: text("excerpt_ms").notNull(),
+  contentEn: text("content_en").notNull(),
+  contentMs: text("content_ms").notNull(),
+  category: text("category").notNull(),
+  author: text("author").notNull(),
+  readTime: integer("read_time").notNull(), // in minutes
+  publishedAt: timestamp("published_at").notNull(),
+  isPublished: boolean("is_published").notNull().default(false),
+  slug: text("slug").notNull().unique(),
+  imageUrl: text("image_url"),
+  createdBy: varchar("created_by"),
+  createdAt: timestamp("created_at").notNull().default(sql`NOW()`),
+  updatedAt: timestamp("updated_at").notNull().default(sql`NOW()`),
+});
+
+export const insertBlogPostSchema = createInsertSchema(blogPosts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  readTime: z.number().min(1).max(60),
+  isPublished: z.boolean().optional().default(false),
+  imageUrl: z.string().nullable().optional(),
+  createdBy: z.string().nullable().optional(),
+});
+
+export const updateBlogPostSchema = insertBlogPostSchema.partial();
+
+export type InsertBlogPost = z.infer<typeof insertBlogPostSchema>;
+export type UpdateBlogPost = z.infer<typeof updateBlogPostSchema>;
+export type BlogPost = typeof blogPosts.$inferSelect;
+
 // AI Analysis tables
 export const hansardTopicAnalysis = pgTable("hansard_topic_analysis", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
