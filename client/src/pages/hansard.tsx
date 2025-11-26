@@ -11,7 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Search, FileText, Calendar, Download, Sparkles, CheckCircle, Users, UserX, MapPin, Trash2, BarChart3 } from "lucide-react";
+import { Search, FileText, Calendar, Download, Sparkles, CheckCircle, Users, UserX, MapPin, Trash2, BarChart3, Edit } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest, getQueryFn } from "@/lib/queryClient";
 import type { HansardRecord } from "@shared/schema";
@@ -38,6 +38,7 @@ import {
 import { ConstituencyAttendance } from "@/components/ConstituencyAttendance";
 import { HansardAnalysisDialog } from "@/components/HansardAnalysisDialog";
 import { HansardAIInsights } from "@/components/HansardAIInsights";
+import { AttendanceEditor } from "@/components/AttendanceEditor";
 
 export default function HansardPage() {
   const { t } = useLanguage();
@@ -45,6 +46,7 @@ export default function HansardPage() {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [openDialogId, setOpenDialogId] = useState<string | null>(null);
+  const [attendanceEditorRecord, setAttendanceEditorRecord] = useState<HansardRecord | null>(null);
   const { toast } = useToast();
 
   // Check if user is admin
@@ -330,42 +332,53 @@ export default function HansardPage() {
                   />
 
                   {user && user.role === "admin" && (
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button
-                          data-testid={`button-delete-${record.id}`}
-                          variant="outline"
-                          size="sm"
-                          disabled={deleteMutation.isPending}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>{t('hansard.deleteTitle')}</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            {t('hansard.deleteDescription')} "{record.sessionNumber}"
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel
-                            data-testid="button-cancel-delete"
+                    <>
+                      <Button
+                        data-testid={`button-edit-attendance-${record.id}`}
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setAttendanceEditorRecord(record)}
+                      >
+                        <Edit className="w-4 h-4 mr-2" />
+                        Edit Attendance
+                      </Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            data-testid={`button-delete-${record.id}`}
+                            variant="outline"
+                            size="sm"
                             disabled={deleteMutation.isPending}
                           >
-                            {t('hansard.cancelDelete')}
-                          </AlertDialogCancel>
-                          <AlertDialogAction
-                            data-testid="button-confirm-delete"
-                            onClick={() => deleteMutation.mutate(record.id)}
-                            disabled={deleteMutation.isPending}
-                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                          >
-                            {deleteMutation.isPending ? t('hansard.deleting') : t('hansard.deleteConfirm')}
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>{t('hansard.deleteTitle')}</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              {t('hansard.deleteDescription')} "{record.sessionNumber}"
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel
+                              data-testid="button-cancel-delete"
+                              disabled={deleteMutation.isPending}
+                            >
+                              {t('hansard.cancelDelete')}
+                            </AlertDialogCancel>
+                            <AlertDialogAction
+                              data-testid="button-confirm-delete"
+                              onClick={() => deleteMutation.mutate(record.id)}
+                              disabled={deleteMutation.isPending}
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            >
+                              {deleteMutation.isPending ? t('hansard.deleting') : t('hansard.deleteConfirm')}
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </>
                   )}
                 </div>
               </div>
@@ -505,6 +518,15 @@ export default function HansardPage() {
         ))}
       </div>
     </div>
+
+    {/* Attendance Editor Dialog */}
+    {attendanceEditorRecord && (
+      <AttendanceEditor
+        hansardRecord={attendanceEditorRecord}
+        open={!!attendanceEditorRecord}
+        onOpenChange={(open) => !open && setAttendanceEditorRecord(null)}
+      />
+    )}
     </>
   );
 }
