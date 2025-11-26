@@ -66,7 +66,12 @@ export function AttendanceEditor({ hansardRecord, open, onOpenChange }: Attendan
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/hansard-records"] });
       queryClient.invalidateQueries({ queryKey: [`/api/hansard-records/${hansardRecord.id}/constituency-attendance`] });
-      queryClient.invalidateQueries({ queryKey: ["/api/mps"] });
+      // Invalidate all MP queries including individual MP queries with IDs
+      queryClient.invalidateQueries({
+        predicate: (query) =>
+          Array.isArray(query.queryKey) &&
+          query.queryKey[0] === "/api/mps"
+      });
       toast({
         title: t('common.save'),
         description: "Attendance records updated successfully",
