@@ -63,9 +63,11 @@ export default function Home() {
   const { data: sprmInvestigations = [], isLoading: sprmInvestigationsLoading } = useQuery<SprmInvestigation[]>({
     queryKey: ["/api/sprm-investigations"],
   });
-  
-  const { data: pageViewData } = useQuery<{ count: number }>({
-    queryKey: ["/api/page-views", "home"],
+
+  // Fetch visitor analytics summary for total visits
+  const { data: analyticsData } = useQuery<{ totalVisits: number; uniqueVisitors: number }>({
+    queryKey: ["/api/analytics/summary"],
+    staleTime: 2 * 60 * 1000, // Cache for 2 minutes
   });
 
   // Fetch constituency data for poverty sorting
@@ -424,10 +426,10 @@ export default function Home() {
                 <h2 className="text-2xl md:text-3xl font-bold tracking-tight">
                   {t('nav.mps')}
                 </h2>
-                {pageViewData && (
+                {analyticsData && (
                   <div className="flex items-center gap-1.5 text-sm text-muted-foreground" data-testid="page-view-count">
                     <Eye className="w-4 h-4" />
-                    <span>{pageViewData.count.toLocaleString()} views</span>
+                    <span>{analyticsData.totalVisits.toLocaleString()} visits</span>
                   </div>
                 )}
               </div>
