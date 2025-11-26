@@ -9,10 +9,14 @@ import { Header } from "@/components/Header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, Download, Trash2, AlertTriangle, CheckCircle2, RefreshCw, Upload, FileText, X, Database, Clock, History, Share2, Sparkles, StopCircle, Users } from "lucide-react";
+import { Loader2, Download, Trash2, AlertTriangle, CheckCircle2, RefreshCw, Upload, FileText, X, Database, Clock, History, Share2, Sparkles, StopCircle, Users, Edit } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { UnmatchedSpeakersManager } from "@/components/UnmatchedSpeakersManager";
+import { AttendanceEditor } from "@/components/AttendanceEditor";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import type { HansardRecord } from "@shared/schema";
+import { format } from "date-fns";
 
 interface UploadResult {
   success: boolean;
@@ -88,6 +92,8 @@ export default function HansardAdmin() {
   const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(null);
   const [diagnosticsResult, setDiagnosticsResult] = useState<any>(null);
   const [reprocessResult, setReprocessResult] = useState<any>(null);
+  const [selectedHansardId, setSelectedHansardId] = useState<string>("");
+  const [attendanceEditorRecord, setAttendanceEditorRecord] = useState<HansardRecord | null>(null);
 
   // Cleanup polling interval on unmount
   useEffect(() => {
@@ -1027,6 +1033,79 @@ export default function HansardAdmin() {
           </CardContent>
         </Card>
 
+        {/* Edit Attendance Card */}
+        <Card className="border-blue-500">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Edit className="h-5 w-5" />
+              Edit MP Attendance
+            </CardTitle>
+            <CardDescription>
+              Manually update MP attendance records for any Hansard session
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <p className="text-sm text-muted-foreground">
+                Select a Hansard session to edit attendance. You can mark MPs as attended or absent, and the system will automatically recalculate attendance statistics.
+              </p>
+              <Alert>
+                <AlertDescription>
+                  Changes will update MP attendance rates across the entire system.
+                </AlertDescription>
+              </Alert>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Select Hansard Session</label>
+              <Select
+                value={selectedHansardId}
+                onValueChange={(value) => {
+                  setSelectedHansardId(value);
+                  const record = hansardRecords?.find((r: HansardRecord) => r.id === value);
+                  if (record) {
+                    setAttendanceEditorRecord(record);
+                  }
+                }}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Choose a session to edit..." />
+                </SelectTrigger>
+                <SelectContent className="max-h-[300px]">
+                  {hansardRecords?.sort((a: HansardRecord, b: HansardRecord) =>
+                    new Date(b.sessionDate).getTime() - new Date(a.sessionDate).getTime()
+                  ).map((record: HansardRecord) => (
+                    <SelectItem key={record.id} value={record.id}>
+                      {record.sessionNumber} - {format(new Date(record.sessionDate), "MMM dd, yyyy")}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {selectedHansardId && (
+              <div className="pt-2">
+                <p className="text-sm text-muted-foreground mb-3">
+                  Click below to open the attendance editor for the selected session.
+                </p>
+                <Button
+                  onClick={() => {
+                    const record = hansardRecords?.find((r: HansardRecord) => r.id === selectedHansardId);
+                    if (record) {
+                      setAttendanceEditorRecord(record);
+                    }
+                  }}
+                  className="w-full"
+                  data-testid="button-open-attendance-editor"
+                >
+                  <Edit className="mr-2 h-4 w-4" />
+                  Open Attendance Editor
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -1532,6 +1611,20 @@ export default function HansardAdmin() {
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {/* Attendance Editor Dialog */}
+      {attendanceEditorRecord && (
+        <AttendanceEditor
+          hansardRecord={attendanceEditorRecord}
+          open={!!attendanceEditorRecord}
+          onOpenChange={(open) => {
+            if (!open) {
+              setAttendanceEditorRecord(null);
+              setSelectedHansardId("");
+            }
+          }}
+        />
       )}
       </div>
     </div>
