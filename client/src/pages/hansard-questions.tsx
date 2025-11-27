@@ -4,6 +4,7 @@
 
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { Header } from "@/components/Header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -110,15 +111,17 @@ export default function HansardQuestions() {
   };
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between gap-4 flex-wrap">
-        <div>
-          <h1 className="text-3xl font-bold">Hansard Question Analyzer</h1>
-          <p className="text-muted-foreground">
-            Upload Hansard PDFs to analyze parliamentary questions by constituency
-          </p>
+    <div className="min-h-screen bg-background">
+      <Header />
+      <div className="p-6 space-y-6">
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          <div>
+            <h1 className="text-3xl font-bold">Hansard Question Analyzer</h1>
+            <p className="text-muted-foreground">
+              Upload Hansard PDFs to analyze parliamentary questions by constituency
+            </p>
+          </div>
         </div>
-      </div>
 
       {/* Upload Section */}
       <Card>
@@ -340,6 +343,7 @@ export default function HansardQuestions() {
           </Card>
         </>
       )}
+      </div>
     </div>
   );
 }
