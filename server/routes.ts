@@ -587,6 +587,16 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   app.post("/api/court-cases", mutationRateLimit, auditMiddleware('court-case'), async (req, res) => {
     try {
       const validatedData = insertCourtCaseSchema.parse(req.body);
+      
+      // Validate that the MP exists to prevent orphaned records
+      const mp = await storage.getMp(validatedData.mpId);
+      if (!mp) {
+        return res.status(400).json({ 
+          error: "Invalid MP ID", 
+          details: `MP with ID "${validatedData.mpId}" does not exist. Please use a valid MP ID.` 
+        });
+      }
+      
       const courtCase = await storage.createCourtCase(validatedData);
       res.status(201).json(courtCase);
     } catch (error) {
@@ -603,6 +613,18 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     try {
       const { id } = req.params;
       const validatedData = insertCourtCaseSchema.partial().parse(req.body);
+      
+      // If updating mpId, validate that the new MP exists
+      if (validatedData.mpId) {
+        const mp = await storage.getMp(validatedData.mpId);
+        if (!mp) {
+          return res.status(400).json({ 
+            error: "Invalid MP ID", 
+            details: `MP with ID "${validatedData.mpId}" does not exist. Please use a valid MP ID.` 
+          });
+        }
+      }
+      
       const courtCase = await storage.updateCourtCase(id, validatedData);
       
       if (!courtCase) {
@@ -680,6 +702,16 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   app.post("/api/sprm-investigations", mutationRateLimit, auditMiddleware('sprm-investigation'), async (req, res) => {
     try {
       const validatedData = insertSprmInvestigationSchema.parse(req.body);
+      
+      // Validate that the MP exists to prevent orphaned records
+      const mp = await storage.getMp(validatedData.mpId);
+      if (!mp) {
+        return res.status(400).json({ 
+          error: "Invalid MP ID", 
+          details: `MP with ID "${validatedData.mpId}" does not exist. Please use a valid MP ID.` 
+        });
+      }
+      
       const investigation = await storage.createSprmInvestigation(validatedData);
       res.status(201).json(investigation);
     } catch (error) {
@@ -696,6 +728,18 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     try {
       const { id } = req.params;
       const validatedData = updateSprmInvestigationSchema.parse(req.body);
+      
+      // If updating mpId, validate that the new MP exists
+      if (validatedData.mpId) {
+        const mp = await storage.getMp(validatedData.mpId);
+        if (!mp) {
+          return res.status(400).json({ 
+            error: "Invalid MP ID", 
+            details: `MP with ID "${validatedData.mpId}" does not exist. Please use a valid MP ID.` 
+          });
+        }
+      }
+      
       const investigation = await storage.updateSprmInvestigation(id, validatedData);
       
       if (!investigation) {
@@ -5034,6 +5078,269 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     } catch (error) {
       console.error("Error incrementing blog post views:", error);
       res.status(500).json({ error: "Failed to increment views" });
+    }
+  });
+
+  // Admin endpoint to diagnose orphaned court cases and SPRM investigations
+  app.get("/api/admin/diagnose-orphaned-records", requireAdmin, async (_req, res) => {
+    try {
+      console.log("🔍 Diagnosing orphaned court cases and SPRM investigations...");
+      
+      const { notInArray, inArray } = await import("drizzle-orm");
+      
+      // Get all MPs
+      const allMps = await storage.getAllMps();
+      const mpIds = new Set(allMps.map(mp => mp.id));
+      const mpNameMatcher = new MPNameMatcher(allMps);
+      
+      // Get all court cases
+      const allCourtCases = await storage.getAllCourtCases();
+      
+      // Get all SPRM investigations
+      const allSprmInvestigations = await storage.getAllSprmInvestigations();
+      
+      // Find orphaned court cases (mp_id doesn't exist in mps table)
+      const orphanedCourtCases = allCourtCases.filter(cc => !mpIds.has(cc.mpId));
+      
+      // Find orphaned SPRM investigations
+      const orphanedSprmInvestigations = allSprmInvestigations.filter(si => !mpIds.has(si.mpId));
+      
+      // Try to match orphaned records to MPs using case titles
+      const courtCaseSuggestions = orphanedCourtCases.map(cc => {
+        // Extract MP name from title (e.g., "Public Prosecutor v Ahmad Zahid Hamidi - VL...")
+        const titleMatch = cc.title.match(/(?:v|vs\.?)\s+([A-Za-z\s]+?)(?:\s*[-–—]|\s*$)/i);
+        const extractedName = titleMatch ? titleMatch[1].trim() : null;
+        
+        let suggestedMpId: string | null = null;
+        let suggestedMpName: string | null = null;
+        let matchConfidence: number = 0;
+        
+        if (extractedName) {
+          suggestedMpId = mpNameMatcher.matchName(extractedName);
+          if (suggestedMpId) {
+            const mp = allMps.find(m => m.id === suggestedMpId);
+            suggestedMpName = mp?.name || null;
+            matchConfidence = 0.9;
+          }
+        }
+        
+        return {
+          id: cc.id,
+          caseNumber: cc.caseNumber,
+          title: cc.title,
+          currentMpId: cc.mpId,
+          extractedName,
+          suggestedMpId,
+          suggestedMpName,
+          matchConfidence,
+          canAutoFix: !!suggestedMpId
+        };
+      });
+      
+      const sprmSuggestions = orphanedSprmInvestigations.map(si => {
+        // Extract MP name from title 
+        const titleMatch = si.title.match(/(?:probe|investigation|case)\s*[-–—:]\s*([A-Za-z\s]+?)(?:\s*[-–—]|\s*$)/i);
+        const extractedName = titleMatch ? titleMatch[1].trim() : null;
+        
+        let suggestedMpId: string | null = null;
+        let suggestedMpName: string | null = null;
+        let matchConfidence: number = 0;
+        
+        if (extractedName) {
+          suggestedMpId = mpNameMatcher.matchName(extractedName);
+          if (suggestedMpId) {
+            const mp = allMps.find(m => m.id === suggestedMpId);
+            suggestedMpName = mp?.name || null;
+            matchConfidence = 0.9;
+          }
+        }
+        
+        return {
+          id: si.id,
+          caseNumber: si.caseNumber,
+          title: si.title,
+          currentMpId: si.mpId,
+          extractedName,
+          suggestedMpId,
+          suggestedMpName,
+          matchConfidence,
+          canAutoFix: !!suggestedMpId
+        };
+      });
+      
+      const autoFixableCourtCases = courtCaseSuggestions.filter(s => s.canAutoFix).length;
+      const autoFixableSprmInvestigations = sprmSuggestions.filter(s => s.canAutoFix).length;
+      
+      console.log(`📊 Found ${orphanedCourtCases.length} orphaned court cases (${autoFixableCourtCases} auto-fixable)`);
+      console.log(`📊 Found ${orphanedSprmInvestigations.length} orphaned SPRM investigations (${autoFixableSprmInvestigations} auto-fixable)`);
+      
+      res.json({
+        summary: {
+          totalMps: allMps.length,
+          totalCourtCases: allCourtCases.length,
+          totalSprmInvestigations: allSprmInvestigations.length,
+          orphanedCourtCases: orphanedCourtCases.length,
+          orphanedSprmInvestigations: orphanedSprmInvestigations.length,
+          autoFixableCourtCases,
+          autoFixableSprmInvestigations
+        },
+        courtCaseSuggestions,
+        sprmSuggestions
+      });
+    } catch (error) {
+      console.error("Error diagnosing orphaned records:", error);
+      res.status(500).json({ error: "Failed to diagnose orphaned records", details: String(error) });
+    }
+  });
+
+  // Admin endpoint to fix orphaned court cases and SPRM investigations
+  app.post("/api/admin/fix-orphaned-records", requireAdmin, mutationRateLimit, auditMiddleware('fix-orphaned'), async (req, res) => {
+    try {
+      console.log("🔧 Fixing orphaned court cases and SPRM investigations...");
+      
+      const { courtCaseFixes, sprmFixes } = req.body as {
+        courtCaseFixes?: Array<{ id: string; newMpId: string }>;
+        sprmFixes?: Array<{ id: string; newMpId: string }>;
+      };
+      
+      const results = {
+        courtCasesFixed: 0,
+        courtCasesFailed: [] as string[],
+        sprmInvestigationsFixed: 0,
+        sprmInvestigationsFailed: [] as string[]
+      };
+      
+      // Fix court cases
+      if (courtCaseFixes && courtCaseFixes.length > 0) {
+        for (const fix of courtCaseFixes) {
+          try {
+            const updated = await storage.updateCourtCase(fix.id, { mpId: fix.newMpId });
+            if (updated) {
+              results.courtCasesFixed++;
+              console.log(`✓ Fixed court case ${fix.id} -> MP ${fix.newMpId}`);
+            } else {
+              results.courtCasesFailed.push(fix.id);
+            }
+          } catch (err) {
+            console.error(`Failed to fix court case ${fix.id}:`, err);
+            results.courtCasesFailed.push(fix.id);
+          }
+        }
+      }
+      
+      // Fix SPRM investigations
+      if (sprmFixes && sprmFixes.length > 0) {
+        for (const fix of sprmFixes) {
+          try {
+            const updated = await storage.updateSprmInvestigation(fix.id, { mpId: fix.newMpId });
+            if (updated) {
+              results.sprmInvestigationsFixed++;
+              console.log(`✓ Fixed SPRM investigation ${fix.id} -> MP ${fix.newMpId}`);
+            } else {
+              results.sprmInvestigationsFailed.push(fix.id);
+            }
+          } catch (err) {
+            console.error(`Failed to fix SPRM investigation ${fix.id}:`, err);
+            results.sprmInvestigationsFailed.push(fix.id);
+          }
+        }
+      }
+      
+      console.log(`✅ Fix complete: ${results.courtCasesFixed} court cases, ${results.sprmInvestigationsFixed} SPRM investigations`);
+      
+      res.json({
+        message: "Fix operation completed",
+        results
+      });
+    } catch (error) {
+      console.error("Error fixing orphaned records:", error);
+      res.status(500).json({ error: "Failed to fix orphaned records", details: String(error) });
+    }
+  });
+
+  // Admin endpoint to auto-fix all orphaned records that have suggested matches
+  app.post("/api/admin/auto-fix-orphaned-records", requireAdmin, mutationRateLimit, auditMiddleware('auto-fix-orphaned'), async (req, res) => {
+    try {
+      console.log("🤖 Auto-fixing orphaned court cases and SPRM investigations...");
+      
+      const allMps = await storage.getAllMps();
+      const mpIds = new Set(allMps.map(mp => mp.id));
+      const mpNameMatcher = new MPNameMatcher(allMps);
+      
+      const allCourtCases = await storage.getAllCourtCases();
+      const allSprmInvestigations = await storage.getAllSprmInvestigations();
+      
+      const results = {
+        courtCasesFixed: 0,
+        courtCasesFailed: [] as Array<{ id: string; title: string; reason: string }>,
+        sprmInvestigationsFixed: 0,
+        sprmInvestigationsFailed: [] as Array<{ id: string; title: string; reason: string }>
+      };
+      
+      // Fix orphaned court cases
+      for (const cc of allCourtCases) {
+        if (!mpIds.has(cc.mpId)) {
+          // Try to match from title
+          const titleMatch = cc.title.match(/(?:v|vs\.?)\s+([A-Za-z\s]+?)(?:\s*[-–—]|\s*$)/i);
+          const extractedName = titleMatch ? titleMatch[1].trim() : null;
+          
+          if (extractedName) {
+            const suggestedMpId = mpNameMatcher.matchName(extractedName);
+            if (suggestedMpId) {
+              try {
+                await storage.updateCourtCase(cc.id, { mpId: suggestedMpId });
+                results.courtCasesFixed++;
+                const mp = allMps.find(m => m.id === suggestedMpId);
+                console.log(`✓ Fixed court case "${cc.caseNumber}" -> ${mp?.name}`);
+              } catch (err) {
+                results.courtCasesFailed.push({ id: cc.id, title: cc.title, reason: String(err) });
+              }
+            } else {
+              results.courtCasesFailed.push({ id: cc.id, title: cc.title, reason: `No MP match found for "${extractedName}"` });
+            }
+          } else {
+            results.courtCasesFailed.push({ id: cc.id, title: cc.title, reason: "Could not extract MP name from title" });
+          }
+        }
+      }
+      
+      // Fix orphaned SPRM investigations
+      for (const si of allSprmInvestigations) {
+        if (!mpIds.has(si.mpId)) {
+          // Try to match from title - SPRM titles might have different format
+          const titleMatch = si.title.match(/(?:probe|investigation|case|against)\s*[-–—:]\s*([A-Za-z\s]+?)(?:\s*[-–—]|\s*$)/i) ||
+                            si.title.match(/([A-Za-z\s]+?)(?:\s*[-–—])/i);
+          const extractedName = titleMatch ? titleMatch[1].trim() : null;
+          
+          if (extractedName) {
+            const suggestedMpId = mpNameMatcher.matchName(extractedName);
+            if (suggestedMpId) {
+              try {
+                await storage.updateSprmInvestigation(si.id, { mpId: suggestedMpId });
+                results.sprmInvestigationsFixed++;
+                const mp = allMps.find(m => m.id === suggestedMpId);
+                console.log(`✓ Fixed SPRM investigation "${si.caseNumber}" -> ${mp?.name}`);
+              } catch (err) {
+                results.sprmInvestigationsFailed.push({ id: si.id, title: si.title, reason: String(err) });
+              }
+            } else {
+              results.sprmInvestigationsFailed.push({ id: si.id, title: si.title, reason: `No MP match found for "${extractedName}"` });
+            }
+          } else {
+            results.sprmInvestigationsFailed.push({ id: si.id, title: si.title, reason: "Could not extract MP name from title" });
+          }
+        }
+      }
+      
+      console.log(`✅ Auto-fix complete: ${results.courtCasesFixed} court cases, ${results.sprmInvestigationsFixed} SPRM investigations`);
+      
+      res.json({
+        message: "Auto-fix operation completed",
+        results
+      });
+    } catch (error) {
+      console.error("Error auto-fixing orphaned records:", error);
+      res.status(500).json({ error: "Failed to auto-fix orphaned records", details: String(error) });
     }
   });
 
