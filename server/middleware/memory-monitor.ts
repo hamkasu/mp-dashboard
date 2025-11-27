@@ -9,12 +9,12 @@
  */
 import { Request, Response, NextFunction } from 'express';
 
-// Memory thresholds (in MB) - configured for 6GB heap limit
-const MEMORY_WARNING_THRESHOLD = 4200; // 4.2GB - warn (68% of heap)
-const MEMORY_CRITICAL_THRESHOLD = 4800; // 4.8GB - force GC (78% of heap)
-const MEMORY_DANGER_THRESHOLD = 5400; // 5.4GB - emergency GC (88% of heap)
-const MEMORY_CIRCUIT_BREAKER_THRESHOLD = 5700; // 5.7GB - reject new requests (93%)
-const HEAP_LIMIT = 6144; // 6GB heap limit
+// Memory thresholds (in MB) - configured for 32GB heap limit
+const MEMORY_WARNING_THRESHOLD = 22528; // 22GB - warn (69% of heap)
+const MEMORY_CRITICAL_THRESHOLD = 25600; // 25GB - force GC (78% of heap)
+const MEMORY_DANGER_THRESHOLD = 28672; // 28GB - emergency GC (88% of heap)
+const MEMORY_CIRCUIT_BREAKER_THRESHOLD = 30720; // 30GB - reject new requests (94%)
+const HEAP_LIMIT = 32768; // 32GB heap limit
 
 let lastGcTime = Date.now();
 let lastWarningTime = 0;
@@ -31,7 +31,7 @@ const expensiveEndpointPatterns = [
   '/api/mps',
   '/pdf'
 ];
-const MAX_CONCURRENT_EXPENSIVE_REQUESTS = 3; // Limit concurrent expensive requests
+const MAX_CONCURRENT_EXPENSIVE_REQUESTS = 15; // Limit concurrent expensive requests (scaled for 32GB RAM)
 let currentExpensiveRequests = 0;
 
 /**

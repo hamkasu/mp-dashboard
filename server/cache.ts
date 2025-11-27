@@ -16,7 +16,7 @@ export class MemoryCache<T> {
   private maxAge: number; // Max age in milliseconds
   private currentSize = 0;
 
-  constructor(maxSizeMB: number = 50, maxAgeMinutes: number = 30) {
+  constructor(maxSizeMB: number = 200, maxAgeMinutes: number = 60) { // Defaults scaled for 32GB RAM
     this.maxSize = maxSizeMB * 1024 * 1024; // Convert MB to bytes
     this.maxAge = maxAgeMinutes * 60 * 1000; // Convert minutes to milliseconds
   }

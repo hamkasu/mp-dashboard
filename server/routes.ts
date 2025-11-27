@@ -191,12 +191,12 @@ async function getMpAttendanceStats(storage: any): Promise<Map<string, MpAttenda
 
 export async function registerRoutes(app: Express, httpServer: Server): Promise<void> {
   // Initialize caches for memory-intensive operations
-  // Increased cache size for Replit's 6GB memory allocation
+  // Increased cache size for Replit's 32GB memory allocation
   const hansardSpeakersCache = new MemoryCache<{
     hansardRecordId: string;
     sessionNumber: string;
     speakers: any[];
-  }>(50, 30); // 50MB cache, 30 minute expiry
+  }>(500, 60); // 500MB cache, 60 minute expiry for 32GB RAM
 
   // Start automatic cleanup of expired cache entries every 5 minutes
   startCacheCleanup(hansardSpeakersCache, 5);
