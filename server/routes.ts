@@ -2533,9 +2533,23 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       
       const allMps = await storage.getAllMps();
       const absentMpIds = new Set(record.absentMpIds || []);
+      const attendedMpIds = new Set(record.attendedMpIds || []);
+      const hasExplicitAttendance = attendedMpIds.size > 0;
       
-      const attendedMps = allMps.filter(mp => !absentMpIds.has(mp.id));
-      const absentMps = allMps.filter(mp => absentMpIds.has(mp.id));
+      // Use explicit attendedMpIds if available (new system)
+      // Otherwise fall back to "not absent = attended" (old system)
+      const attendedMps = allMps.filter(mp => {
+        if (hasExplicitAttendance) {
+          return attendedMpIds.has(mp.id);
+        }
+        return !absentMpIds.has(mp.id);
+      });
+      const absentMps = allMps.filter(mp => {
+        if (hasExplicitAttendance) {
+          return !attendedMpIds.has(mp.id);
+        }
+        return absentMpIds.has(mp.id);
+      });
       
       const attendedConstituencies = attendedMps.map(mp => ({
         constituency: mp.constituency,
@@ -2558,10 +2572,19 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
           acc[mp.state] = { total: 0, attended: 0, absent: 0 };
         }
         acc[mp.state].total++;
-        if (absentMpIds.has(mp.id)) {
-          acc[mp.state].absent++;
+        // Use same logic as above for consistency
+        if (hasExplicitAttendance) {
+          if (attendedMpIds.has(mp.id)) {
+            acc[mp.state].attended++;
+          } else {
+            acc[mp.state].absent++;
+          }
         } else {
-          acc[mp.state].attended++;
+          if (absentMpIds.has(mp.id)) {
+            acc[mp.state].absent++;
+          } else {
+            acc[mp.state].attended++;
+          }
         }
         return acc;
       }, {} as Record<string, { total: number; attended: number; absent: number }>);
@@ -2650,6 +2673,8 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         for (const record of records) {
           const recordDate = new Date(record.sessionDate);
           const absentMpIds = new Set(record.absentMpIds || []);
+          const attendedMpIds = new Set(record.attendedMpIds || []);
+          const hasExplicitAttendance = attendedMpIds.size > 0;
           
           // Find the MP who was representing this constituency at the time of this session
           // MP's term is active if: sessionDate >= swornInDate AND (termEndDate is null OR sessionDate <= termEndDate)
@@ -2663,10 +2688,21 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
           
           if (activeMp) {
             totalSessionsRelevant++;
-            if (absentMpIds.has(activeMp.id)) {
-              sessionsAbsent++;
+            // Use explicit attendedMpIds if available (new system)
+            // Otherwise fall back to "not absent = attended" (old system)
+            if (hasExplicitAttendance) {
+              if (attendedMpIds.has(activeMp.id)) {
+                sessionsAttended++;
+              } else {
+                sessionsAbsent++;
+              }
             } else {
-              sessionsAttended++;
+              // Fallback to old system
+              if (absentMpIds.has(activeMp.id)) {
+                sessionsAbsent++;
+              } else {
+                sessionsAttended++;
+              }
             }
           }
         }
@@ -2755,14 +2791,22 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       
       const reportData = records.map(record => {
         const absentMpIds = record.absentMpIds || [];
+        const attendedMpIds = record.attendedMpIds || [];
+        const hasExplicitAttendance = attendedMpIds.length > 0;
         const mpIdMap = new Map(allMps.map(mp => [mp.id, mp]));
         
-        const absentMps = absentMpIds
-          .map(id => mpIdMap.get(id))
-          .filter((mp): mp is NonNullable<typeof mp> => mp !== undefined)
-          .filter(mp => filteredMps.some(fmp => fmp.id === mp.id));
+        // Use explicit attendedMpIds if available (new system)
+        // Otherwise fall back to "not absent = attended" (old system)
+        const absentMps = hasExplicitAttendance
+          ? filteredMps.filter(mp => !attendedMpIds.includes(mp.id))
+          : absentMpIds
+              .map(id => mpIdMap.get(id))
+              .filter((mp): mp is NonNullable<typeof mp> => mp !== undefined)
+              .filter(mp => filteredMps.some(fmp => fmp.id === mp.id));
         
-        const attendedMps = filteredMps.filter(mp => !absentMpIds.includes(mp.id));
+        const attendedMps = hasExplicitAttendance
+          ? filteredMps.filter(mp => attendedMpIds.includes(mp.id))
+          : filteredMps.filter(mp => !absentMpIds.includes(mp.id));
         
         return {
           id: record.id,
