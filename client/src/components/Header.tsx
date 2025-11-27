@@ -117,17 +117,6 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
               <span>{t('nav.fundamentalRights')}</span>
             </Button>
           </Link>
-          <Link href="/hansard-admin">
-            <Button
-              variant={location === "/hansard-admin" ? "secondary" : "ghost"}
-              size="sm"
-              data-testid="nav-hansard-admin"
-              className="gap-2"
-            >
-              <Shield className="w-4 h-4" />
-              <span>{t('nav.admin')}</span>
-            </Button>
-          </Link>
           <Link href="/blog">
             <Button
               variant={location === "/blog" ? "secondary" : "ghost"}
@@ -140,17 +129,36 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
             </Button>
           </Link>
           {authStatus?.isAdmin && (
-            <Link href="/blog-admin">
-              <Button
-                variant={location === "/blog-admin" ? "secondary" : "ghost"}
-                size="sm"
-                data-testid="nav-blog-admin"
-                className="gap-2"
-              >
-                <Edit className="w-4 h-4" />
-                <span>Blog Admin</span>
-              </Button>
-            </Link>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant={location === "/hansard-admin" || location === "/blog-admin" ? "secondary" : "ghost"}
+                  size="sm"
+                  data-testid="nav-admin-dropdown"
+                  className="gap-2"
+                >
+                  <Shield className="w-4 h-4" />
+                  <span>{t('nav.admin')}</span>
+                  <ChevronDown className="w-3 h-3 ml-1" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start">
+                <DropdownMenuItem
+                  onSelect={() => setLocation("/hansard-admin")}
+                  data-testid="nav-hansard-admin"
+                >
+                  <BookOpen className="w-4 h-4 mr-2" />
+                  <span>Hansard Admin</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onSelect={() => setLocation("/blog-admin")}
+                  data-testid="nav-blog-admin"
+                >
+                  <Edit className="w-4 h-4 mr-2" />
+                  <span>Blog Admin</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           )}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
