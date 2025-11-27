@@ -105,7 +105,7 @@ export function MPCard({ mp, bills, oralQuestions, languageStats }: MPCardProps)
               className="object-cover w-full h-full"
               loading="lazy"
               decoding="async"
-              fetchpriority="low"
+              fetchPriority="low"
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center bg-muted">
