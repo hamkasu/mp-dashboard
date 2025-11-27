@@ -512,6 +512,7 @@ export const blogPosts = pgTable("blog_posts", {
   isPublished: boolean("is_published").notNull().default(false),
   slug: text("slug").notNull().unique(),
   imageUrl: text("image_url"),
+  views: integer("views").notNull().default(0),
   createdBy: varchar("created_by"),
   createdAt: timestamp("created_at").notNull().default(sql`NOW()`),
   updatedAt: timestamp("updated_at").notNull().default(sql`NOW()`),
@@ -519,6 +520,7 @@ export const blogPosts = pgTable("blog_posts", {
 
 export const insertBlogPostSchema = createInsertSchema(blogPosts).omit({
   id: true,
+  views: true,
   createdAt: true,
   updatedAt: true,
 }).extend({
