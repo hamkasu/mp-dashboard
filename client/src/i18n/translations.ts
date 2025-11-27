@@ -435,6 +435,8 @@ export const translations = {
       noMpSelectedDesc: "Please select an MP to analyze",
       noHansardWithPdfs: "No Hansard sessions with PDFs available",
       reextractNote: "Re-extract parliamentary activities from existing Hansard records using improved parsing logic",
+      selectSessionFirst: "Select a Hansard session first",
+      noSpeakersFound: "No MPs spoke in this session",
     },
 
     // Analytics Page
@@ -1050,6 +1052,8 @@ export const translations = {
       noMpSelectedDesc: "Sila pilih Ahli Parlimen untuk analisis",
       noHansardWithPdfs: "Tiada sidang Hansard dengan PDF tersedia",
       reextractNote: "Ekstrak semula aktiviti parlimen daripada rekod Hansard sedia ada menggunakan logik penghuraian yang diperbaiki",
+      selectSessionFirst: "Pilih sidang Hansard terlebih dahulu",
+      noSpeakersFound: "Tiada Ahli Parlimen berucap dalam sidang ini",
     },
 
     // Analytics Page / Halaman Analitik

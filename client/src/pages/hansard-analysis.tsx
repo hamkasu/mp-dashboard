@@ -110,12 +110,28 @@ export default function HansardAnalysis() {
   // Filter to only show hansard records that have PDFs available
   const hansardRecords = allHansardRecords?.filter(record => record.hasPdf) || [];
 
+  // Fetch MPs who spoke in the selected Hansard session
+  const { data: speakersData, isLoading: speakersLoading } = useQuery<{
+    hansardRecordId: string;
+    sessionNumber: string;
+    speakers: MP[];
+  }>({
+    queryKey: [`/api/hansard-records/${selectedHansardId}/speakers`],
+    enabled: !!selectedHansardId, // Only fetch when a Hansard is selected
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+
+  // Use filtered speakers if available, otherwise show all MPs
+  const availableMps = selectedHansardId && speakersData?.speakers
+    ? speakersData.speakers
+    : (mps || []);
+
   const analyzeMutation = useMutation({
     mutationFn: async (data: { hansardRecordId: string; mpId: string }) => {
       const headers: Record<string, string> = {
         "Content-Type": "application/json",
       };
-      
+
       const response = await fetch("/api/hansard-analysis", {
         method: "POST",
         body: JSON.stringify(data),
@@ -145,6 +161,13 @@ export default function HansardAnalysis() {
       });
     },
   });
+
+  // Reset MP selection when Hansard selection changes
+  const handleHansardChange = (value: string) => {
+    setSelectedHansardId(value);
+    setSelectedMpId(""); // Reset MP selection
+    setAnalysisResult(null); // Clear previous results
+  };
 
   const reextractActivitiesMutation = useMutation({
     mutationFn: async () => {
@@ -237,7 +260,7 @@ export default function HansardAnalysis() {
                 ) : (
                   <Select
                     value={selectedHansardId}
-                    onValueChange={setSelectedHansardId}
+                    onValueChange={handleHansardChange}
                     disabled={analyzeMutation.isPending}
                   >
                     <SelectTrigger id="hansard-select" data-testid="select-hansard">
@@ -264,23 +287,33 @@ export default function HansardAnalysis() {
 
               <div className="space-y-2">
                 <Label htmlFor="mp-select">{t('hansardAnalysis.selectMp')}</Label>
-                {mpsLoading ? (
+                {(mpsLoading || (selectedHansardId && speakersLoading)) ? (
                   <Skeleton className="h-10 w-full" />
                 ) : (
                   <Select
                     value={selectedMpId}
                     onValueChange={setSelectedMpId}
-                    disabled={analyzeMutation.isPending}
+                    disabled={analyzeMutation.isPending || !selectedHansardId}
                   >
                     <SelectTrigger id="mp-select" data-testid="select-mp">
-                      <SelectValue placeholder={t('hansardAnalysis.chooseConstituency')} />
+                      <SelectValue placeholder={
+                        selectedHansardId
+                          ? t('hansardAnalysis.chooseConstituency')
+                          : t('hansardAnalysis.selectSessionFirst')
+                      } />
                     </SelectTrigger>
                     <SelectContent>
-                      {[...(mps ?? [])].sort((a, b) => a.constituency.localeCompare(b.constituency)).map((mp) => (
-                        <SelectItem key={mp.id} value={mp.id}>
-                          {mp.constituency} - {mp.name}
+                      {availableMps.length > 0 ? (
+                        [...availableMps].sort((a, b) => a.constituency.localeCompare(b.constituency)).map((mp) => (
+                          <SelectItem key={mp.id} value={mp.id}>
+                            {mp.constituency} - {mp.name}
+                          </SelectItem>
+                        ))
+                      ) : (
+                        <SelectItem value="none" disabled>
+                          {selectedHansardId ? t('hansardAnalysis.noSpeakersFound') : t('hansardAnalysis.selectSessionFirst')}
                         </SelectItem>
-                      ))}
+                      )}
                     </SelectContent>
                   </Select>
                 )}
