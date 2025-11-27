@@ -9,12 +9,12 @@
  */
 import { Request, Response, NextFunction } from 'express';
 
-// Memory thresholds (in MB) - configured for 512MB heap limit (Railway compatible)
-const MEMORY_WARNING_THRESHOLD = 350; // 350MB - warn (68% of heap)
-const MEMORY_CRITICAL_THRESHOLD = 400; // 400MB - force GC (78% of heap)
-const MEMORY_DANGER_THRESHOLD = 450; // 450MB - emergency GC (88% of heap)
-const MEMORY_CIRCUIT_BREAKER_THRESHOLD = 480; // 480MB - reject new requests (94%)
-const HEAP_LIMIT = 512; // 512MB heap limit
+// Memory thresholds (in MB) - configured for 24GB heap limit (75% of 32GB container)
+const MEMORY_WARNING_THRESHOLD = 16384; // 16GB - warn (67% of heap)
+const MEMORY_CRITICAL_THRESHOLD = 20480; // 20GB - force GC (83% of heap)
+const MEMORY_DANGER_THRESHOLD = 24576; // 24GB - emergency GC (100% of heap)
+const MEMORY_CIRCUIT_BREAKER_THRESHOLD = 26624; // 26GB - reject new requests
+const HEAP_LIMIT = 24576; // 24GB heap limit
 
 let lastGcTime = Date.now();
 let lastWarningTime = 0;
@@ -31,7 +31,7 @@ const expensiveEndpointPatterns = [
   '/api/mps',
   '/pdf'
 ];
-const MAX_CONCURRENT_EXPENSIVE_REQUESTS = 3; // Limit concurrent expensive requests (scaled for 512MB RAM)
+const MAX_CONCURRENT_EXPENSIVE_REQUESTS = 15; // Limit concurrent expensive requests (scaled for 24GB RAM)
 let currentExpensiveRequests = 0;
 
 /**
