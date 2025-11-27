@@ -113,6 +113,82 @@ function extractTopics(transcript: string): string[] {
   return Array.from(topics).slice(0, 10);
 }
 
+// Cache for pre-computed MP attendance statistics to avoid expensive recalculation
+interface MpAttendanceStats {
+  mpId: string;
+  totalHansardSessions: number;
+  hansardSessionsAttended: number;
+  hansardSessionsSpoke: number;
+  totalSpeechInstances: number;
+}
+
+let mpAttendanceCache: Map<string, MpAttendanceStats> | null = null;
+let mpAttendanceCacheTime: number = 0;
+const MP_ATTENDANCE_CACHE_TTL = 5 * 60 * 1000; // 5 minutes cache
+
+async function getMpAttendanceStats(storage: any): Promise<Map<string, MpAttendanceStats>> {
+  const now = Date.now();
+  
+  // Return cached data if still valid
+  if (mpAttendanceCache && (now - mpAttendanceCacheTime) < MP_ATTENDANCE_CACHE_TTL) {
+    return mpAttendanceCache;
+  }
+  
+  const mps = await storage.getAllMps();
+  const hansardRecords = await storage.getAllHansardRecords();
+  
+  const statsMap = new Map<string, MpAttendanceStats>();
+  
+  for (const mp of mps) {
+    const mpSwornInDate = new Date(mp.swornInDate).toISOString().split('T')[0];
+    
+    const relevantSessions = hansardRecords.filter((record: any) => {
+      const sessionDate = new Date(record.sessionDate).toISOString().split('T')[0];
+      return sessionDate >= mpSwornInDate;
+    });
+    
+    const totalHansardSessions = relevantSessions.length;
+    
+    const sessionsAttended = relevantSessions.filter((record: any) => {
+      if (record.attendedMpIds && record.attendedMpIds.length > 0) {
+        return record.attendedMpIds.includes(mp.id);
+      } else {
+        return !record.absentMpIds || !record.absentMpIds.includes(mp.id);
+      }
+    }).length;
+    
+    const sessionsSpoke = relevantSessions.filter((record: any) => 
+      (record.speakerStats && record.speakerStats.some((stat: any) => stat.mpId === mp.id)) ||
+      (record.speakers && record.speakers.some((speaker: any) => speaker.mpId === mp.id))
+    ).length;
+    
+    const totalSpeeches = relevantSessions.reduce((total: number, record: any) => {
+      if (record.speakerStats) {
+        const mpStat = record.speakerStats.find((stat: any) => stat.mpId === mp.id);
+        if (mpStat && (mpStat as any).totalSpeeches) {
+          return total + (mpStat as any).totalSpeeches;
+        }
+      }
+      return total;
+    }, 0);
+    
+    statsMap.set(mp.id, {
+      mpId: mp.id,
+      totalHansardSessions,
+      hansardSessionsAttended: sessionsAttended,
+      hansardSessionsSpoke: sessionsSpoke,
+      totalSpeechInstances: totalSpeeches
+    });
+  }
+  
+  // Update cache
+  mpAttendanceCache = statsMap;
+  mpAttendanceCacheTime = now;
+  
+  // Clear references to allow GC
+  return statsMap;
+}
+
 export async function registerRoutes(app: Express, httpServer: Server): Promise<void> {
   // Initialize caches for memory-intensive operations
   // Increased cache size for Replit's 6GB memory allocation
@@ -124,6 +200,124 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
 
   // Start automatic cleanup of expired cache entries every 5 minutes
   startCacheCleanup(hansardSpeakersCache, 5);
+  
+  // Paginated MPs endpoint - lighter weight than loading all MPs
+  app.get("/api/mps/paginated", async (req, res) => {
+    try {
+      const page = Math.max(1, parseInt(req.query.page as string) || 1);
+      const limit = Math.min(50, Math.max(1, parseInt(req.query.limit as string) || 20));
+      const sortBy = (req.query.sortBy as string) || 'name';
+      const sortOrder = (req.query.sortOrder as string) === 'desc' ? 'desc' : 'asc';
+      const search = (req.query.search as string) || '';
+      const parties = req.query.parties ? (req.query.parties as string).split(',') : [];
+      const states = req.query.states ? (req.query.states as string).split(',') : [];
+      const cabinetFilter = (req.query.cabinet as string) || 'all';
+      
+      // Get all MPs (this is fast, just DB read)
+      const allMps = await storage.getAllMps();
+      
+      // Get cached attendance stats (expensive calculation is cached)
+      const attendanceStats = await getMpAttendanceStats(storage);
+      
+      // Apply filters
+      let filteredMps = allMps.filter(mp => {
+        // Search filter
+        if (search) {
+          const searchLower = search.toLowerCase();
+          const matchesSearch = 
+            mp.name.toLowerCase().includes(searchLower) ||
+            mp.constituency.toLowerCase().includes(searchLower) ||
+            (mp.parliamentCode ?? '').toLowerCase().includes(searchLower) ||
+            (mp.state ?? '').toLowerCase().includes(searchLower);
+          if (!matchesSearch) return false;
+        }
+        
+        // Party filter
+        if (parties.length > 0 && !parties.includes(mp.party)) return false;
+        
+        // State filter
+        if (states.length > 0 && !states.includes(mp.state)) return false;
+        
+        // Cabinet filter
+        if (cabinetFilter !== 'all') {
+          const role = (mp.role || '').toLowerCase();
+          if (cabinetFilter === 'ministers') {
+            if (!role.includes('minister') || role.includes('deputy')) return false;
+          } else if (cabinetFilter === 'deputy-ministers') {
+            if (!role.includes('deputy minister')) return false;
+          } else if (cabinetFilter === 'cabinet') {
+            if (!role.includes('minister')) return false;
+          }
+        }
+        
+        return true;
+      });
+      
+      // Apply sorting
+      filteredMps.sort((a, b) => {
+        const statsA = attendanceStats.get(a.id);
+        const statsB = attendanceStats.get(b.id);
+        
+        let comparison = 0;
+        
+        switch (sortBy) {
+          case 'attendance-best':
+          case 'attendance-worst': {
+            const totalA = statsA?.totalHansardSessions ?? a.totalParliamentDays;
+            const attendedA = statsA?.hansardSessionsAttended ?? a.daysAttended;
+            const totalB = statsB?.totalHansardSessions ?? b.totalParliamentDays;
+            const attendedB = statsB?.hansardSessionsAttended ?? b.daysAttended;
+            const rateA = totalA > 0 ? (attendedA / totalA) : 0;
+            const rateB = totalB > 0 ? (attendedB / totalB) : 0;
+            comparison = sortBy === 'attendance-best' ? rateB - rateA : rateA - rateB;
+            break;
+          }
+          case 'speeches-most':
+          case 'speeches-fewest': {
+            const speechesA = statsA?.totalSpeechInstances ?? a.totalSpeechInstances;
+            const speechesB = statsB?.totalSpeechInstances ?? b.totalSpeechInstances;
+            comparison = sortBy === 'speeches-most' ? speechesB - speechesA : speechesA - speechesB;
+            break;
+          }
+          default:
+            comparison = a.name.localeCompare(b.name);
+        }
+        
+        return sortOrder === 'desc' ? -comparison : comparison;
+      });
+      
+      // Calculate pagination
+      const totalItems = filteredMps.length;
+      const totalPages = Math.ceil(totalItems / limit);
+      const offset = (page - 1) * limit;
+      
+      // Get page of MPs with their stats
+      const paginatedMps = filteredMps.slice(offset, offset + limit).map(mp => {
+        const stats = attendanceStats.get(mp.id);
+        return {
+          ...mp,
+          totalHansardSessions: stats?.totalHansardSessions ?? 0,
+          hansardSessionsAttended: stats?.hansardSessionsAttended ?? 0,
+          hansardSessionsSpoke: stats?.hansardSessionsSpoke ?? 0,
+          totalSpeechInstances: stats?.totalSpeechInstances ?? mp.totalSpeechInstances
+        };
+      });
+      
+      res.json({
+        data: paginatedMps,
+        pagination: {
+          page,
+          limit,
+          totalItems,
+          totalPages,
+          hasMore: page < totalPages
+        }
+      });
+    } catch (error) {
+      console.error("Error fetching paginated MPs:", error);
+      res.status(500).json({ error: "Failed to fetch MPs" });
+    }
+  });
 
   // Get all MPs
   app.get("/api/mps", async (_req, res) => {

@@ -14,11 +14,23 @@ import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Scale, ExternalLink, AlertTriangle, Eye } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Scale, ExternalLink, AlertTriangle, Eye, ChevronLeft, ChevronRight } from "lucide-react";
 import { Link } from "wouter";
 import type { Mp, CourtCase, SprmInvestigation, LegislativeProposal, ParliamentaryQuestion } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { useConstituencies } from "@/hooks/use-constituencies";
+
+interface PaginatedMpsResponse {
+  data: Mp[];
+  pagination: {
+    page: number;
+    limit: number;
+    totalItems: number;
+    totalPages: number;
+    hasMore: boolean;
+  };
+}
 
 type SortOption = "name" | "attendance-best" | "attendance-worst" | "speeches-most" | "speeches-fewest" | "poverty-highest" | "poverty-lowest" | "bills-raised" | "oral-questions" | "inappropriate-language";
 type CabinetFilter = "all" | "ministers" | "deputy-ministers" | "cabinet";
@@ -40,10 +52,52 @@ export default function Home() {
   const [cabinetFilter, setCabinetFilter] = useState<CabinetFilter>("all");
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [searchDialogOpen, setSearchDialogOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 20;
 
-  const { data: mps = [], isLoading: mpsLoading } = useQuery<Mp[]>({
-    queryKey: ["/api/mps"],
+  // Special sort modes require all MPs for client-side filtering/sorting
+  const SPECIAL_SORT_MODES: SortOption[] = ["bills-raised", "oral-questions", "inappropriate-language", "poverty-highest", "poverty-lowest"];
+  const isSpecialSortMode = SPECIAL_SORT_MODES.includes(sortBy);
+
+  // Build query string for paginated API
+  const paginatedQueryParams = useMemo(() => {
+    const params = new URLSearchParams();
+    params.set('page', currentPage.toString());
+    params.set('limit', ITEMS_PER_PAGE.toString());
+    if (sortBy !== 'name') params.set('sortBy', sortBy);
+    if (searchQuery) params.set('search', searchQuery);
+    if (selectedParties.length > 0) params.set('parties', selectedParties.join(','));
+    if (selectedStates.length > 0) params.set('states', selectedStates.join(','));
+    if (cabinetFilter !== 'all') params.set('cabinet', cabinetFilter);
+    return params.toString();
+  }, [currentPage, sortBy, searchQuery, selectedParties, selectedStates, cabinetFilter]);
+
+  // Use paginated API for standard sorts, non-paginated for special sorts
+  const { data: paginatedData, isLoading: paginatedLoading } = useQuery<PaginatedMpsResponse>({
+    queryKey: ["/api/mps/paginated", paginatedQueryParams],
+    queryFn: async () => {
+      const response = await fetch(`/api/mps/paginated?${paginatedQueryParams}`);
+      if (!response.ok) throw new Error('Failed to fetch MPs');
+      return response.json();
+    },
+    enabled: !isSpecialSortMode,
   });
+
+  // Fetch all MPs for special sort modes that need client-side processing
+  const { data: allMps = [], isLoading: allMpsLoading } = useQuery<Mp[]>({
+    queryKey: ["/api/mps"],
+    enabled: isSpecialSortMode,
+  });
+
+  // Use paginated data for standard sorts, all data for special sorts
+  const mps = isSpecialSortMode ? allMps : (paginatedData?.data ?? []);
+  const pagination = isSpecialSortMode ? null : paginatedData?.pagination;
+  const mpsLoading = isSpecialSortMode ? allMpsLoading : paginatedLoading;
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [sortBy, searchQuery, selectedParties, selectedStates, cabinetFilter]);
 
   const { data: stats, isLoading: statsLoading } = useQuery<{
     totalMps: number;
@@ -169,122 +223,90 @@ export default function Home() {
 
   const isLoading = mpsLoading || statsLoading;
 
-  // Filter and sort MPs
+  // For special sort options (poverty, bills, oral questions, inappropriate language)
+  // that require additional data not available in the paginated API,
+  // apply client-side filtering and sorting to all MPs
   const filteredMps = useMemo(() => {
-    let filtered = mps.filter((mp) => {
-      const matchesSearch =
-        searchQuery === "" ||
-        mp.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        mp.constituency.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (mp.parliamentCode ?? "").toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (mp.state ?? "").toLowerCase().includes(searchQuery.toLowerCase());
+    let filtered = [...mps];
 
-      const matchesParty =
-        selectedParties.length === 0 || selectedParties.includes(mp.party);
-
-      const matchesState =
-        selectedStates.length === 0 || selectedStates.includes(mp.state);
-
-      // Cabinet position filter
-      let matchesCabinet = true;
-      if (cabinetFilter !== "all") {
-        const role = (mp.role || "").toLowerCase();
-        if (cabinetFilter === "ministers") {
-          // Ministers but NOT Deputy Ministers
-          matchesCabinet = role.includes("minister") && !role.includes("deputy");
-        } else if (cabinetFilter === "deputy-ministers") {
-          // Deputy Ministers only
-          matchesCabinet = role.includes("deputy minister");
-        } else if (cabinetFilter === "cabinet") {
-          // All cabinet members (both Ministers and Deputy Ministers)
-          matchesCabinet = role.includes("minister");
-        }
+    // For special sort modes, apply client-side filtering since we're using /api/mps (all MPs)
+    if (isSpecialSortMode) {
+      // Apply search filter
+      if (searchQuery) {
+        const query = searchQuery.toLowerCase();
+        filtered = filtered.filter(mp => 
+          mp.name.toLowerCase().includes(query) ||
+          mp.constituency.toLowerCase().includes(query) ||
+          mp.party.toLowerCase().includes(query) ||
+          mp.state.toLowerCase().includes(query)
+        );
       }
 
-      return matchesSearch && matchesParty && matchesState && matchesCabinet;
-    });
+      // Apply party filter
+      if (selectedParties.length > 0) {
+        filtered = filtered.filter(mp => selectedParties.includes(mp.party));
+      }
 
-    // Apply sorting
-    if (sortBy === "attendance-best") {
+      // Apply state filter
+      if (selectedStates.length > 0) {
+        filtered = filtered.filter(mp => selectedStates.includes(mp.state));
+      }
+
+      // Apply cabinet filter
+      if (cabinetFilter !== "all") {
+        if (cabinetFilter === "cabinet") {
+          filtered = filtered.filter(mp => mp.isMinister || mp.isDeputyMinister);
+        } else if (cabinetFilter === "ministers") {
+          filtered = filtered.filter(mp => mp.isMinister);
+        } else if (cabinetFilter === "deputy-ministers") {
+          filtered = filtered.filter(mp => mp.isDeputyMinister);
+        }
+      }
+    }
+
+    // Special sort options that require additional client-side data
+    if (sortBy === "poverty-highest") {
       filtered = [...filtered].sort((a, b) => {
-        // Use Hansard-based attendance if available
-        const totalA = (a as any).totalHansardSessions ?? a.totalParliamentDays;
-        const attendedA = (a as any).hansardSessionsAttended ?? a.daysAttended;
-        const totalB = (b as any).totalHansardSessions ?? b.totalParliamentDays;
-        const attendedB = (b as any).hansardSessionsAttended ?? b.daysAttended;
-        
-        const rateA = totalA > 0 ? (attendedA / totalA) : 0;
-        const rateB = totalB > 0 ? (attendedB / totalB) : 0;
-        return rateB - rateA;
-      });
-    } else if (sortBy === "attendance-worst") {
-      filtered = [...filtered].sort((a, b) => {
-        // Use Hansard-based attendance if available
-        const totalA = (a as any).totalHansardSessions ?? a.totalParliamentDays;
-        const attendedA = (a as any).hansardSessionsAttended ?? a.daysAttended;
-        const totalB = (b as any).totalHansardSessions ?? b.totalParliamentDays;
-        const attendedB = (b as any).hansardSessionsAttended ?? b.daysAttended;
-        
-        const rateA = totalA > 0 ? (attendedA / totalA) : 0;
-        const rateB = totalB > 0 ? (attendedB / totalB) : 0;
-        return rateA - rateB;
-      });
-    } else if (sortBy === "speeches-most") {
-      filtered = [...filtered].sort((a, b) => {
-        return b.totalSpeechInstances - a.totalSpeechInstances;
-      });
-    } else if (sortBy === "speeches-fewest") {
-      filtered = [...filtered].sort((a, b) => {
-        return a.totalSpeechInstances - b.totalSpeechInstances;
-      });
-    } else if (sortBy === "poverty-highest") {
-      filtered = [...filtered].sort((a, b) => {
-        // Normalize code format: P210 -> P.210
-        const codeA = a.parliamentCode.replace(/^P(\d+)$/, (_, num) => `P.${num.padStart(3, '0')}`);
-        const codeB = b.parliamentCode.replace(/^P(\d+)$/, (_, num) => `P.${num.padStart(3, '0')}`);
+        const codeA = a.parliamentCode.replace(/^P(\d+)$/, (_, num: string) => `P.${num.padStart(3, '0')}`);
+        const codeB = b.parliamentCode.replace(/^P(\d+)$/, (_, num: string) => `P.${num.padStart(3, '0')}`);
         const povertyA = povertyByCode.get(codeA) ?? -1;
         const povertyB = povertyByCode.get(codeB) ?? -1;
-        return povertyB - povertyA; // Highest first
+        return povertyB - povertyA;
       });
     } else if (sortBy === "poverty-lowest") {
       filtered = [...filtered].sort((a, b) => {
-        // Normalize code format: P210 -> P.210
-        const codeA = a.parliamentCode.replace(/^P(\d+)$/, (_, num) => `P.${num.padStart(3, '0')}`);
-        const codeB = b.parliamentCode.replace(/^P(\d+)$/, (_, num) => `P.${num.padStart(3, '0')}`);
+        const codeA = a.parliamentCode.replace(/^P(\d+)$/, (_, num: string) => `P.${num.padStart(3, '0')}`);
+        const codeB = b.parliamentCode.replace(/^P(\d+)$/, (_, num: string) => `P.${num.padStart(3, '0')}`);
         const povertyA = povertyByCode.get(codeA) ?? Infinity;
         const povertyB = povertyByCode.get(codeB) ?? Infinity;
-        return povertyA - povertyB; // Lowest first
+        return povertyA - povertyB;
       });
     } else if (sortBy === "bills-raised") {
-      // Filter to only show MPs with bills, then sort
       filtered = filtered.filter(mp => (billsCountByMpId.get(mp.id) ?? 0) > 0);
       filtered = [...filtered].sort((a, b) => {
         const billsA = billsCountByMpId.get(a.id) ?? 0;
         const billsB = billsCountByMpId.get(b.id) ?? 0;
-        return billsB - billsA; // Most bills first
+        return billsB - billsA;
       });
     } else if (sortBy === "oral-questions") {
-      // Filter to only show MPs with oral questions, then sort
       filtered = filtered.filter(mp => (oralQuestionsCountByMpId.get(mp.id) ?? 0) > 0);
       filtered = [...filtered].sort((a, b) => {
         const countA = oralQuestionsCountByMpId.get(a.id) ?? 0;
         const countB = oralQuestionsCountByMpId.get(b.id) ?? 0;
-        return countB - countA; // Most oral questions first
+        return countB - countA;
       });
     } else if (sortBy === "inappropriate-language") {
-      // Filter to only show MPs with inappropriate language data, then sort
       filtered = filtered.filter(mp => (inappropriateLanguageByMpId.get(mp.id)?.count ?? 0) > 0);
       filtered = [...filtered].sort((a, b) => {
         const countA = inappropriateLanguageByMpId.get(a.id)?.count ?? 0;
         const countB = inappropriateLanguageByMpId.get(b.id)?.count ?? 0;
-        return countB - countA; // Most inappropriate language first
+        return countB - countA;
       });
-    } else {
-      filtered = [...filtered].sort((a, b) => a.name.localeCompare(b.name));
     }
+    // For name, attendance, and speeches sorts, the server already sorted the data
 
     return filtered;
-  }, [mps, searchQuery, selectedParties, selectedStates, sortBy, cabinetFilter, povertyByCode, billsCountByMpId, oralQuestionsCountByMpId, inappropriateLanguageByMpId]);
+  }, [mps, sortBy, povertyByCode, billsCountByMpId, oralQuestionsCountByMpId, inappropriateLanguageByMpId, isSpecialSortMode, searchQuery, selectedParties, selectedStates, cabinetFilter]);
 
   const availableStates = useMemo(() => {
     const states = Array.from(new Set(mps.map((mp) => mp.state)));
@@ -619,6 +641,41 @@ export default function Home() {
               </div>
             ) : (
               <MPGrid mps={filteredMps} isLoading={isLoading} billsByMpId={billsByMpId} oralQuestionsByMpId={oralQuestionsByMpId} languageStatsByMpId={inappropriateLanguageByMpId} />
+            )}
+
+            {/* Pagination Controls */}
+            {pagination && pagination.totalPages > 1 && (
+              <div className="flex items-center justify-center gap-4 pt-6 pb-4" data-testid="pagination-controls">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage === 1 || mpsLoading}
+                  data-testid="button-prev-page"
+                >
+                  <ChevronLeft className="h-4 w-4 mr-1" />
+                  Previous
+                </Button>
+                
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <span>Page</span>
+                  <span className="font-medium text-foreground">{currentPage}</span>
+                  <span>of</span>
+                  <span className="font-medium text-foreground">{pagination.totalPages}</span>
+                  <span className="hidden sm:inline">({pagination.totalItems} MPs)</span>
+                </div>
+                
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(p => Math.min(pagination.totalPages, p + 1))}
+                  disabled={currentPage >= pagination.totalPages || mpsLoading}
+                  data-testid="button-next-page"
+                >
+                  Next
+                  <ChevronRight className="h-4 w-4 ml-1" />
+                </Button>
+              </div>
             )}
           </div>
         </main>
