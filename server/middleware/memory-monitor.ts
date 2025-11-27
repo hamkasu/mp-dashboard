@@ -1,15 +1,15 @@
 /**
- * Memory monitoring and management for Railway deployment
+ * Memory monitoring and management for Replit deployment
  * Helps prevent out-of-memory crashes by tracking and managing memory usage
  */
 import { Request, Response, NextFunction } from 'express';
 
-// Memory thresholds (in MB) - configured for 4GB Railway plan
-// Heap limit is 3072MB (3GB), leaving 1GB for system
-const MEMORY_WARNING_THRESHOLD = 2000; // 2GB - warn (65% of heap)
-const MEMORY_CRITICAL_THRESHOLD = 2400; // 2.4GB - force GC (78% of heap)
-const MEMORY_DANGER_THRESHOLD = 2700; // 2.7GB - emergency GC (88% of heap)
-const HEAP_LIMIT = 3072; // 3GB heap limit
+// Memory thresholds (in MB) - configured for 6GB Replit plan
+// Heap limit is 5120MB (5GB), leaving 1GB for system
+const MEMORY_WARNING_THRESHOLD = 3500; // 3.5GB - warn (68% of heap)
+const MEMORY_CRITICAL_THRESHOLD = 4000; // 4GB - force GC (78% of heap)
+const MEMORY_DANGER_THRESHOLD = 4500; // 4.5GB - emergency GC (88% of heap)
+const HEAP_LIMIT = 5120; // 5GB heap limit
 
 let lastGcTime = Date.now();
 let lastWarningTime = 0;
