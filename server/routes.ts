@@ -1769,15 +1769,74 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         return res.json(cached);
       }
 
-      console.log(`🔍 Cache miss for Hansard speakers: ${hansardRecordId} - parsing PDF...`);
-
       // Fetch the Hansard record from database
       const hansardRecord = await storage.getHansardRecord(hansardRecordId);
       if (!hansardRecord) {
         return res.status(404).json({ error: "Hansard record not found" });
       }
 
-      console.log(`📊 Fetching speakers for Hansard session ${hansardRecord.sessionNumber}`);
+      // PRIORITY 1: Check for pre-computed speaker data in database (instant!)
+      if (hansardRecord.speakerStats && Array.isArray(hansardRecord.speakerStats) && hansardRecord.speakerStats.length > 0) {
+        console.log(`⚡ Using pre-computed speaker data for ${hansardRecord.sessionNumber} (${hansardRecord.speakerStats.length} speakers)`);
+        
+        // Get MP details for the pre-computed speaker IDs
+        const speakerMpIds = new Set(hansardRecord.speakerStats.map((s: any) => s.mpId));
+        const allMps = await db.select().from(mps);
+        
+        const speakerMps = allMps
+          .filter(mp => speakerMpIds.has(mp.id))
+          .map(mp => ({
+            id: mp.id,
+            name: mp.name,
+            constituency: mp.constituency,
+            party: mp.party,
+            photoUrl: mp.photoUrl,
+          }))
+          .sort((a, b) => a.constituency.localeCompare(b.constituency));
+
+        const result = {
+          hansardRecordId,
+          sessionNumber: hansardRecord.sessionNumber,
+          speakers: speakerMps,
+          preComputed: true,
+        };
+
+        // Cache for future requests
+        hansardSpeakersCache.set(hansardRecordId, result);
+        return res.json(result);
+      }
+
+      // PRIORITY 2: Check for speakers array in database
+      if (hansardRecord.speakers && Array.isArray(hansardRecord.speakers) && hansardRecord.speakers.length > 0) {
+        console.log(`⚡ Using speakers array for ${hansardRecord.sessionNumber} (${hansardRecord.speakers.length} speakers)`);
+        
+        const speakerMpIds = new Set(hansardRecord.speakers.map((s: any) => s.mpId));
+        const allMps = await db.select().from(mps);
+        
+        const speakerMps = allMps
+          .filter(mp => speakerMpIds.has(mp.id))
+          .map(mp => ({
+            id: mp.id,
+            name: mp.name,
+            constituency: mp.constituency,
+            party: mp.party,
+            photoUrl: mp.photoUrl,
+          }))
+          .sort((a, b) => a.constituency.localeCompare(b.constituency));
+
+        const result = {
+          hansardRecordId,
+          sessionNumber: hansardRecord.sessionNumber,
+          speakers: speakerMps,
+          preComputed: true,
+        };
+
+        hansardSpeakersCache.set(hansardRecordId, result);
+        return res.json(result);
+      }
+
+      // FALLBACK: Parse PDF on-demand (for records without pre-computed data)
+      console.log(`🔍 No pre-computed data for ${hansardRecord.sessionNumber} - parsing PDF...`);
 
       // Get all MPs from database
       const allMps = await db.select().from(mps);
@@ -1846,6 +1905,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         hansardRecordId,
         sessionNumber: hansardRecord.sessionNumber,
         speakers: speakerMps,
+        preComputed: false,
       };
 
       // Cache the result to avoid re-parsing
