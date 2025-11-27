@@ -106,7 +106,29 @@ export function serveStatic(app: Express) {
     );
   }
 
-  app.use(express.static(distPath));
+  // Aggressive caching for static assets to reduce bandwidth costs
+  app.use(express.static(distPath, {
+    maxAge: '1y', // Cache for 1 year (static assets have hashed filenames)
+    immutable: true, // Tell browsers this file will never change
+    etag: true, // Enable ETags for validation
+    lastModified: true, // Enable Last-Modified header
+    setHeaders: (res, path) => {
+      // Cache JS, CSS, fonts, images aggressively (1 year)
+      if (path.endsWith('.js') || path.endsWith('.css') ||
+          path.endsWith('.woff') || path.endsWith('.woff2') ||
+          path.endsWith('.ttf') || path.endsWith('.eot') ||
+          path.endsWith('.png') || path.endsWith('.jpg') ||
+          path.endsWith('.jpeg') || path.endsWith('.gif') ||
+          path.endsWith('.svg') || path.endsWith('.webp') ||
+          path.endsWith('.ico')) {
+        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+      }
+      // Cache HTML for shorter time (1 hour) to allow updates
+      else if (path.endsWith('.html')) {
+        res.setHeader('Cache-Control', 'public, max-age=3600, must-revalidate');
+      }
+    }
+  }));
   
   app.get("/sitemap.xml", (_req, res) => {
     const sitemapPath = path.join(distPath, "sitemap.xml");

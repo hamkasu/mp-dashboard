@@ -4,6 +4,7 @@
 
 import express, { type Request, Response, NextFunction } from "express";
 import { createServer } from "http";
+import compression from "compression";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { startHansardCron } from "./hansard-cron";
@@ -44,6 +45,21 @@ app.use(corsConfig);
 
 // Security headers
 app.use(helmetConfig);
+
+// Gzip compression to reduce bandwidth costs on Railway
+// Compress all responses > 1KB (default threshold)
+app.use(compression({
+  level: 6, // Balanced compression level (0-9, 6 is default)
+  threshold: 1024, // Only compress responses larger than 1KB
+  filter: (req, res) => {
+    // Don't compress if client doesn't accept encoding
+    if (req.headers['x-no-compression']) {
+      return false;
+    }
+    // Use compression filter default
+    return compression.filter(req, res);
+  }
+}));
 
 // Global rate limiting for all requests
 app.use(readRateLimit);
@@ -92,7 +108,22 @@ app.use((req, res, next) => {
 });
 
 // Serve static files from attached_assets (for PDFs and other uploads)
-app.use('/attached_assets', express.static('attached_assets'));
+// Cache PDFs and uploads for 1 week since they rarely change
+app.use('/attached_assets', express.static('attached_assets', {
+  maxAge: '7d', // Cache for 1 week
+  etag: true,
+  lastModified: true,
+  setHeaders: (res, path) => {
+    // PDFs and documents can be cached for a week
+    if (path.endsWith('.pdf') || path.endsWith('.doc') || path.endsWith('.docx')) {
+      res.setHeader('Cache-Control', 'public, max-age=604800'); // 7 days
+    }
+    // Images in uploads can be cached longer
+    else if (path.endsWith('.png') || path.endsWith('.jpg') || path.endsWith('.jpeg')) {
+      res.setHeader('Cache-Control', 'public, max-age=2592000'); // 30 days
+    }
+  }
+}));
 
 // Start listening IMMEDIATELY so health checks pass while routes are being registered
 // This is critical for Railway deployment - health checks start as soon as the process runs

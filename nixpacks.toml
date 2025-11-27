@@ -3,11 +3,17 @@ NODE_ENV = "production"
 NIXPACKS_NODE_VERSION = "20"
 NPM_CONFIG_FUND = "false"
 NPM_CONFIG_UPDATE_NOTIFIER = "false"
+# Disable npm progress bars to speed up install
+NPM_CONFIG_PROGRESS = "false"
+NPM_CONFIG_LOGLEVEL = "error"
 
 [phases.install]
-cmds = ["npm ci"]
+# Use npm ci for faster, deterministic installs
+# Cache node_modules to reduce build time and costs
+cmds = ["npm ci --prefer-offline --no-audit"]
 
 [phases.build]
+# Build with optimizations
 cmds = ["npm run build"]
 
 [start]
