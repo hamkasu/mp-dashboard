@@ -12,7 +12,7 @@ import { trackVisitorAnalytics } from "./analytics-middleware";
 import { helmetConfig, readRateLimit } from "./middleware/security";
 import { corsConfig } from "./middleware/cors";
 import { responseSizeLimiter } from "./middleware/response-limiter";
-import { memoryMonitor, startMemoryLogging } from "./middleware/memory-monitor";
+import { memoryMonitor, startMemoryLogging, getMemoryStatus } from "./middleware/memory-monitor";
 import { setupAuth } from "./simple-auth";
 import { runStartupTasks } from "./startup-tasks";
 import { isDatabaseAvailable } from "./db";
@@ -40,6 +40,13 @@ app.set("trust proxy", 1);
 // even if other parts of the app haven't fully initialized
 app.get("/health", (_req, res) => {
   res.status(200).json({ status: "ok", timestamp: new Date().toISOString() });
+});
+
+// Memory status endpoint for monitoring
+app.get("/api/memory-status", (_req, res) => {
+  const memoryStatus = getMemoryStatus();
+  const statusCode = memoryStatus.status === 'danger' ? 503 : 200;
+  res.status(statusCode).json(memoryStatus);
 });
 
 // CORS - must be before other middleware to handle preflight requests
