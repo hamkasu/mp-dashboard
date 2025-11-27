@@ -4,12 +4,12 @@
  */
 import { Request, Response, NextFunction } from 'express';
 
-// Memory thresholds (in MB) - configured for 6GB Replit plan
-// Heap limit is 5120MB (5GB), leaving 1GB for system
-const MEMORY_WARNING_THRESHOLD = 3500; // 3.5GB - warn (68% of heap)
-const MEMORY_CRITICAL_THRESHOLD = 4000; // 4GB - force GC (78% of heap)
-const MEMORY_DANGER_THRESHOLD = 4500; // 4.5GB - emergency GC (88% of heap)
-const HEAP_LIMIT = 5120; // 5GB heap limit
+// Memory thresholds (in MB) - configured for 7GB Replit plan
+// Heap limit is 6144MB (6GB), leaving 1GB for system
+const MEMORY_WARNING_THRESHOLD = 4200; // 4.2GB - warn (68% of heap)
+const MEMORY_CRITICAL_THRESHOLD = 4800; // 4.8GB - force GC (78% of heap)
+const MEMORY_DANGER_THRESHOLD = 5400; // 5.4GB - emergency GC (88% of heap)
+const HEAP_LIMIT = 6144; // 6GB heap limit
 
 let lastGcTime = Date.now();
 let lastWarningTime = 0;
