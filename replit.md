@@ -5,6 +5,14 @@ This web application provides a comprehensive dashboard for Malaysian Members of
 
 ## Recent Changes
 
+### November 27, 2025 - 32GB Memory Optimization
+Optimized application for 32GB RAM allocation:
+- Updated memory thresholds: warning at 22GB, critical at 25GB, danger at 28GB, circuit breaker at 30GB
+- Increased concurrent expensive request limit from 3 to 15
+- Expanded Hansard speakers cache from 50MB to 500MB with 60-minute expiry
+- Updated Node.js heap limit to 32GB (--max-old-space-size=32768) in dev and production scripts
+- Default cache size increased to 200MB for new cache instances
+
 ### November 19, 2025 - Railway Authentication Fix
 Fixed "Failed to serialize user into session" error for Railway production deployments:
 - Improved passport session serialization with robust error handling and type validation
