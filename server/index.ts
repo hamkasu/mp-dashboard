@@ -12,6 +12,7 @@ import { trackVisitorAnalytics } from "./analytics-middleware";
 import { helmetConfig, readRateLimit } from "./middleware/security";
 import { corsConfig } from "./middleware/cors";
 import { responseSizeLimiter } from "./middleware/response-limiter";
+import { memoryMonitor, startMemoryLogging } from "./middleware/memory-monitor";
 import { setupAuth } from "./simple-auth";
 import { runStartupTasks } from "./startup-tasks";
 import { isDatabaseAvailable } from "./db";
@@ -74,6 +75,9 @@ app.use(express.urlencoded({ extended: false }));
 
 // Response size limiter to prevent costly large responses
 app.use(responseSizeLimiter);
+
+// Memory monitoring for Railway (prevents OOM crashes)
+app.use(memoryMonitor);
 
 // Track visitor analytics
 app.use(trackVisitorAnalytics());
@@ -187,4 +191,9 @@ server.listen({
 
   // Start the daily Hansard sync cron job
   startHansardCron();
+
+  // Start memory monitoring (log every 10 minutes in production)
+  if (process.env.NODE_ENV === "production") {
+    startMemoryLogging(10);
+  }
 })();
