@@ -5,6 +5,7 @@
 import { useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { Header } from "@/components/Header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -211,13 +212,15 @@ export default function HansardAnalysis() {
   };
 
   return (
-    <div className="container mx-auto p-6 max-w-7xl">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold mb-2">{t('hansardAnalysis.title')}</h1>
-        <p className="text-muted-foreground">
-          {t('hansardAnalysis.subtitle')}
-        </p>
-      </div>
+    <div className="min-h-screen bg-background">
+      <Header />
+      <div className="container mx-auto p-6 max-w-7xl">
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold mb-2">{t('hansardAnalysis.title')}</h1>
+          <p className="text-muted-foreground">
+            {t('hansardAnalysis.subtitle')}
+          </p>
+        </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-1">

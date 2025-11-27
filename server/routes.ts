@@ -4567,5 +4567,28 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
+  // Increment blog post views
+  app.post("/api/blog-posts/:id/view", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { eq, sql } = await import("drizzle-orm");
+
+      const [updated] = await db
+        .update(blogPosts)
+        .set({ views: sql`${blogPosts.views} + 1` })
+        .where(eq(blogPosts.id, id))
+        .returning({ id: blogPosts.id, views: blogPosts.views });
+
+      if (!updated) {
+        return res.status(404).json({ error: "Blog post not found" });
+      }
+
+      res.json({ views: updated.views });
+    } catch (error) {
+      console.error("Error incrementing blog post views:", error);
+      res.status(500).json({ error: "Failed to increment views" });
+    }
+  });
+
   // Server is now passed in from index.ts, no need to create it here
 }

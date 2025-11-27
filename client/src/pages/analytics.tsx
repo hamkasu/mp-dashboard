@@ -3,6 +3,7 @@
  */
 
 import { useQuery } from "@tanstack/react-query";
+import { Header } from "@/components/Header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, Globe, FileText, TrendingUp } from "lucide-react";
 import { format } from "date-fns";
@@ -58,25 +59,30 @@ export default function Analytics() {
 
   if (summaryLoading || recentLoading || timelineLoading) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4" />
-          <p className="text-muted-foreground">{t('analytics.loadingAnalytics')}</p>
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="flex items-center justify-center h-full">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4" />
+            <p className="text-muted-foreground">{t('analytics.loadingAnalytics')}</p>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold mb-2" data-testid="text-analytics-title">
-          {t('analytics.title')}
-        </h1>
-        <p className="text-muted-foreground">
-          {t('analytics.subtitle')}
-        </p>
-      </div>
+    <div className="min-h-screen bg-background">
+      <Header />
+      <div className="container mx-auto p-6 space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold mb-2" data-testid="text-analytics-title">
+            {t('analytics.title')}
+          </h1>
+          <p className="text-muted-foreground">
+            {t('analytics.subtitle')}
+          </p>
+        </div>
 
       {/* Summary Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -269,6 +275,7 @@ export default function Analytics() {
           </CardContent>
         </Card>
       )}
+      </div>
     </div>
   );
 }

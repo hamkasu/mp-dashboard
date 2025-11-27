@@ -7,9 +7,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Newspaper, Calendar, Clock, ArrowRight } from "lucide-react";
+import { Newspaper, Calendar, Clock, ArrowRight, Eye } from "lucide-react";
 import { useLanguage } from "@/i18n/LanguageContext";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { queryClient, apiRequest } from "@/lib/queryClient";
 import type { BlogPost } from "@shared/schema";
 
 export default function Blog() {
@@ -19,6 +20,21 @@ export default function Blog() {
     queryKey: ["/api/blog-posts"],
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
+
+  const incrementViewMutation = useMutation({
+    mutationFn: async (postId: string) => {
+      return await apiRequest("POST", `/api/blog-posts/${postId}/view`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/blog-posts"] });
+    },
+  });
+
+  const handleReadArticle = (postId: string) => {
+    incrementViewMutation.mutate(postId);
+    // In a real app, this would navigate to the full article page
+    // For now, we just increment the view count
+  };
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -102,7 +118,7 @@ export default function Blog() {
                     </div>
                   </CardHeader>
                   <CardContent className="flex-1 flex flex-col justify-end space-y-4">
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                    <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
                       <div className="flex items-center gap-1.5">
                         <Calendar className="w-4 h-4" />
                         <span data-testid={`blog-post-date-${post.id}`}>{formatDate(post.publishedAt)}</span>
@@ -113,11 +129,18 @@ export default function Blog() {
                           {post.readTime} {language === 'ms' ? 'min' : 'min read'}
                         </span>
                       </div>
+                      <div className="flex items-center gap-1.5">
+                        <Eye className="w-4 h-4" />
+                        <span data-testid={`blog-post-views-${post.id}`}>
+                          {post.views || 0} {language === 'ms' ? 'pembaca' : 'readers'}
+                        </span>
+                      </div>
                     </div>
                     <Button
                       variant="ghost"
                       className="w-full justify-between group"
                       data-testid={`blog-post-read-${post.id}`}
+                      onClick={() => handleReadArticle(post.id)}
                     >
                       <span>{language === 'ms' ? 'Baca Artikel' : 'Read Article'}</span>
                       <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
