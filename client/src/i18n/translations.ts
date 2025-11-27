@@ -105,6 +105,7 @@ export const translations = {
       oralQuestions: "oral questions",
       more: "more",
       inappropriateInstances: "inappropriate language instances",
+      memberOfParliament: "Member of Parliament",
     },
 
     // Home Page
@@ -722,6 +723,7 @@ export const translations = {
       oralQuestions: "soalan lisan",
       more: "lagi",
       inappropriateInstances: "kes bahasa tidak wajar",
+      memberOfParliament: "Ahli Parlimen",
     },
 
     // Home Page / Laman Utama
