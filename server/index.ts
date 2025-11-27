@@ -11,6 +11,7 @@ import { startHansardCron } from "./hansard-cron";
 import { trackVisitorAnalytics } from "./analytics-middleware";
 import { helmetConfig, readRateLimit } from "./middleware/security";
 import { corsConfig } from "./middleware/cors";
+import { responseSizeLimiter } from "./middleware/response-limiter";
 import { setupAuth } from "./simple-auth";
 import { runStartupTasks } from "./startup-tasks";
 import { isDatabaseAvailable } from "./db";
@@ -71,6 +72,9 @@ app.use(express.json({
 }));
 app.use(express.urlencoded({ extended: false }));
 
+// Response size limiter to prevent costly large responses
+app.use(responseSizeLimiter);
+
 // Track visitor analytics
 app.use(trackVisitorAnalytics());
 
@@ -91,16 +95,25 @@ app.use((req, res, next) => {
   res.on("finish", () => {
     const duration = Date.now() - start;
     if (path.startsWith("/api")) {
-      let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
-      if (capturedJsonResponse) {
-        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
-      }
+      // In production, only log slow requests (>1s) or errors to reduce I/O costs
+      const isProduction = process.env.NODE_ENV === 'production';
+      const isSlow = duration > 1000;
+      const isError = res.statusCode >= 400;
 
-      if (logLine.length > 80) {
-        logLine = logLine.slice(0, 79) + "…";
-      }
+      if (!isProduction || isSlow || isError) {
+        let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
 
-      log(logLine);
+        // Only include response body in non-production or for errors
+        if (!isProduction && capturedJsonResponse) {
+          logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
+        }
+
+        if (logLine.length > 80) {
+          logLine = logLine.slice(0, 79) + "…";
+        }
+
+        log(logLine);
+      }
     }
   });
 
