@@ -1,0 +1,29 @@
+🚨🚨 DANGER: 5997MB / 6144MB (98%)
+📊 /api/constituencies/code/P.010: Memory +72MB → 6005MB
+12:12:01 PM [express] GET /api/constituencies/code/P.010 200 in 5545ms
+📊 /api/constituencies/code/P.122: Memory +72MB → 6005MB
+12:12:01 PM [express] GET /api/constituencies/code/P.122 200 in 5545ms
+ 1: 0xb76dc5 node::OOMErrorHandler(char const*, v8::OOMDetails const&) [node]
+ 2: 0xee6120 v8::Utils::ReportOOMFailure(v8::internal::Isolate*, char const*, v8::OOMDetails const&) [node]
+ 3: 0xee6407 v8::internal::V8::FatalProcessOutOfMemory(v8::internal::Isolate*, char const*, v8::OOMDetails const&) [node]
+ 4: 0x10f8055  [node]
+ 5: 0x10f85e4 v8::internal::Heap::RecomputeLimits(v8::internal::GarbageCollector) [node]
+<--- Last few GCs --->
+ 6: 0x110f4d4 v8::internal::Heap::PerformGarbageCollection(v8::internal::GarbageCollector, v8::internal::GarbageCollectionReason, char const*) [node]
+ 7: 0x110fcec v8::internal::Heap::CollectGarbage(v8::internal::AllocationSpace, v8::internal::GarbageCollectionReason, v8::GCCallbackFlags) [node]
+[13:0x352a0360]   593358 ms: Mark-Compact 6006.7 (6186.7) -> 5992.3 (6185.7) MB, 592.57 / 0.00 ms  (average mu = 0.180, current mu = 0.083) allocation failure; scavenge might not succeed
+[13:0x352a0360]   593834 ms: Mark-Compact 6010.8 (6188.4) -> 5995.7 (6188.4) MB, 377.51 / 0.03 ms  (average mu = 0.191, current mu = 0.208) allocation failure; scavenge might not succeed
+<--- JS stacktrace --->
+FATAL ERROR: Ineffective mark-compacts near heap limit Allocation failed - JavaScript heap out of memory
+----- Native stack trace -----
+ 8: 0x10e5ff1 v8::internal::HeapAllocator::AllocateRawWithLightRetrySlowPath(int, v8::internal::AllocationType, v8::internal::AllocationOrigin, v8::internal::AllocationAlignment) [node]
+ 9: 0x10e7185 v8::internal::HeapAllocator::AllocateRawWithRetryOrFailSlowPath(int, v8::internal::AllocationType, v8::internal::AllocationOrigin, v8::internal::AllocationAlignment) [node]
+10: 0x10c38a6 v8::internal::Factory::AllocateRaw(int, v8::internal::AllocationType, v8::internal::AllocationAlignment) [node]
+11: 0x10b54d4 v8::internal::FactoryBase<v8::internal::Factory>::AllocateRawWithImmortalMap(int, v8::internal::AllocationType, v8::internal::Map, v8::internal::AllocationAlignment) [node]
+12: 0x10b87e7 v8::internal::FactoryBase<v8::internal::Factory>::NewRawTwoByteString(int, v8::internal::AllocationType) [node]
+13: 0x10ced1b v8::internal::Factory::NewStringFromUtf8(v8::base::Vector<char const> const&, v8::internal::AllocationType) [node]
+14: 0xef89b2 v8::String::NewFromUtf8(v8::Isolate*, char const*, v8::NewStringType, int) [node]
+15: 0xddd531  [node]
+16: 0xc806e0  [node]
+17: 0x7f065260d546 
+Aborted
