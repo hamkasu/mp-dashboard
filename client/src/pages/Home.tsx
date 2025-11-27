@@ -445,7 +445,7 @@ export default function Home() {
                 )}
               </div>
               <p className="text-muted-foreground">
-                {filteredMps.length} {t('common.of')} {(stats || defaultStats).totalMps} {t('nav.mps')}
+                {(stats || defaultStats).totalMps} {t('nav.mps')}
               </p>
             </div>
 
