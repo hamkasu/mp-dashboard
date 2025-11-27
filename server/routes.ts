@@ -37,6 +37,7 @@ import { HansardScraper, ConstituencyAttendanceCounts } from "./hansard-scraper"
 import { MPNameMatcher } from "./mp-name-matcher";
 import { runHansardSync } from "./hansard-cron";
 import { HansardPdfParser } from "./hansard-pdf-parser";
+import { MemoryCache, startCacheCleanup } from "./cache";
 import { db } from "./db";
 import { eq, sql } from "drizzle-orm";
 import { normalizeParliamentTerm } from "@shared/utils";
@@ -113,6 +114,15 @@ function extractTopics(transcript: string): string[] {
 }
 
 export async function registerRoutes(app: Express, httpServer: Server): Promise<void> {
+  // Initialize caches for memory-intensive operations
+  const hansardSpeakersCache = new MemoryCache<{
+    hansardRecordId: string;
+    sessionNumber: string;
+    speakers: any[];
+  }>(50, 30); // 50MB cache, 30 minute expiry
+
+  // Start automatic cleanup of expired cache entries
+  startCacheCleanup(hansardSpeakersCache, 10); // Cleanup every 10 minutes
 
   // Get all MPs
   app.get("/api/mps", async (_req, res) => {
@@ -1557,6 +1567,15 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     try {
       const hansardRecordId = req.params.id;
 
+      // Check cache first
+      const cached = hansardSpeakersCache.get(hansardRecordId);
+      if (cached) {
+        console.log(`💾 Cache hit for Hansard speakers: ${hansardRecordId}`);
+        return res.json(cached);
+      }
+
+      console.log(`🔍 Cache miss for Hansard speakers: ${hansardRecordId} - parsing PDF...`);
+
       // Fetch the Hansard record from database
       const hansardRecord = await storage.getHansardRecord(hansardRecordId);
       if (!hansardRecord) {
@@ -1628,11 +1647,22 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
 
       console.log(`✅ Found ${speakerMps.length} MPs who spoke in session ${hansardRecord.sessionNumber}`);
 
-      res.json({
+      const result = {
         hansardRecordId,
         sessionNumber: hansardRecord.sessionNumber,
         speakers: speakerMps,
-      });
+      };
+
+      // Cache the result to avoid re-parsing
+      hansardSpeakersCache.set(hansardRecordId, result);
+
+      // Clear pdfBuffer to free memory
+      pdfBuffer = null as any;
+      if (global.gc) {
+        global.gc();
+      }
+
+      res.json(result);
     } catch (error) {
       console.error("Error fetching Hansard speakers:", error);
       res.status(500).json({
