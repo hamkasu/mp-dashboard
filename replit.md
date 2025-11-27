@@ -13,13 +13,15 @@ Moved speaker parsing from on-demand to pre-computed at scrape time for faster p
 - Created backfill script (`npm run backfill-speakers`) to pre-compute speakers for existing records
 - Backfill downloads and saves PDFs to database if only URL available, preventing repeated HTTP fetches
 
-### November 27, 2025 - 32GB Memory Optimization
-Optimized application for 32GB RAM allocation:
-- Updated memory thresholds: warning at 22GB, critical at 25GB, danger at 28GB, circuit breaker at 30GB
-- Increased concurrent expensive request limit from 3 to 15
-- Expanded Hansard speakers cache from 50MB to 500MB with 60-minute expiry
-- Updated Node.js heap limit to 32GB (--max-old-space-size=32768) in dev and production scripts
-- Default cache size increased to 200MB for new cache instances
+### November 27, 2025 - Railway Memory Crash Fix (512MB Optimization)
+Fixed OOM crashes on Railway by reducing memory footprint from 13GB+ to under 512MB:
+- Reduced Node.js heap limit from 32GB to 512MB (--max-old-space-size=512)
+- Updated memory thresholds: warning at 350MB, critical at 400MB, danger at 450MB, circuit breaker at 480MB
+- Added pagination to bulk AI analysis: processes 5 records at a time instead of loading all
+- Added `getHansardRecordIds()` and `getHansardRecordsBatch()` storage methods with stable ORDER BY
+- Implemented automatic garbage collection (forceGC) between batches and when heap exceeds 300MB
+- Reduced MAX_CONCURRENT_EXPENSIVE_REQUESTS from 15 to 3 to match smaller memory footprint
+- Added 30-second GC cooldown to prevent excessive GC calls
 
 ### November 19, 2025 - Railway Authentication Fix
 Fixed "Failed to serialize user into session" error for Railway production deployments:
