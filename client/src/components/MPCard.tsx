@@ -120,11 +120,9 @@ export function MPCard({ mp, bills, oralQuestions, languageStats }: MPCardProps)
             </h3>
 
             <div className="min-h-[2.5rem]">
-              {mp.role && (
-                <p className="text-xs text-muted-foreground uppercase tracking-wide">
-                  {mp.role}
-                </p>
-              )}
+              <p className="text-xs text-muted-foreground uppercase tracking-wide">
+                {mp.role || t('mpCard.memberOfParliament').toUpperCase()}
+              </p>
             </div>
           </div>
 
