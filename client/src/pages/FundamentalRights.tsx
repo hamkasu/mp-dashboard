@@ -7,11 +7,15 @@ import { useLanguage } from "@/i18n/LanguageContext";
 import { Header } from "@/components/Header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Scale, Shield, Home, MessageCircle, Globe, GraduationCap, Wallet } from "lucide-react";
+import { Scale, Shield, Home, MessageCircle, Globe, GraduationCap, Wallet, Printer } from "lucide-react";
 
 export default function FundamentalRights() {
   const { language: contextLanguage } = useLanguage();
   const [language, setLanguage] = useState<"en" | "bm">(contextLanguage === "ms" ? "bm" : "en");
+
+  const handlePrint = () => {
+    window.print();
+  };
 
   const content = {
     en: {
@@ -285,9 +289,69 @@ export default function FundamentalRights() {
   const currentContent = content[language];
 
   return (
-    <div className="min-h-screen bg-background">
-      <Header />
-      <main className="max-w-5xl mx-auto px-4 py-8 md:px-6 lg:px-8">
+    <>
+      <style>{`
+        @media print {
+          @page {
+            size: A5;
+            margin: 10mm;
+          }
+
+          body {
+            font-size: 9pt;
+            line-height: 1.3;
+          }
+
+          .print\\:hidden {
+            display: none !important;
+          }
+
+          h1 {
+            font-size: 14pt;
+            margin-bottom: 4pt;
+          }
+
+          h2 {
+            font-size: 11pt;
+            margin-bottom: 3pt;
+          }
+
+          p {
+            font-size: 8pt;
+            margin-bottom: 4pt;
+          }
+
+          ul {
+            margin: 0;
+            padding-left: 12pt;
+          }
+
+          li {
+            font-size: 8pt;
+            margin-bottom: 2pt;
+            page-break-inside: avoid;
+          }
+
+          .card {
+            page-break-inside: avoid;
+            margin-bottom: 6pt;
+            border: 0.5pt solid #ccc;
+          }
+
+          /* Hide header navigation */
+          header {
+            display: none !important;
+          }
+
+          /* Compact spacing */
+          * {
+            box-shadow: none !important;
+          }
+        }
+      `}</style>
+      <div className="min-h-screen bg-background">
+        <Header />
+        <main className="max-w-5xl mx-auto px-4 py-8 md:px-6 lg:px-8">
         <div className="flex flex-col gap-6">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div>
@@ -301,7 +365,7 @@ export default function FundamentalRights() {
                 {currentContent.subtitle}
               </p>
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 print:hidden">
               <Button
                 variant={language === "en" ? "default" : "outline"}
                 size="sm"
@@ -315,6 +379,14 @@ export default function FundamentalRights() {
                 onClick={() => setLanguage("bm")}
               >
                 Bahasa Malaysia
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handlePrint}
+              >
+                <Printer className="w-4 h-4 mr-2" />
+                {language === "en" ? "Print A5" : "Cetak A5"}
               </Button>
             </div>
           </div>
@@ -404,5 +476,6 @@ export default function FundamentalRights() {
         </div>
       </main>
     </div>
+    </>
   );
 }
