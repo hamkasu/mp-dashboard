@@ -2,7 +2,7 @@
  * Copyright by Calmic Sdn Bhd
  */
 
-import { Search, Menu, Home, FileText, BookOpen, UserCheck, Calculator, BarChart3, ExternalLink, ChevronDown, AlertCircle, GraduationCap, TrendingUp, Scale, Shield, MessageSquare, Newspaper } from "lucide-react";
+import { Search, Menu, Home, FileText, BookOpen, UserCheck, Calculator, BarChart3, ExternalLink, ChevronDown, AlertCircle, GraduationCap, TrendingUp, Scale, Shield, MessageSquare, Newspaper, Edit } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -13,6 +13,7 @@ import {
 import { Link, useLocation } from "wouter";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { useLanguage } from "@/i18n/LanguageContext";
+import { useQuery } from "@tanstack/react-query";
 
 interface HeaderProps {
   onMenuClick?: () => void;
@@ -22,6 +23,12 @@ interface HeaderProps {
 export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
   const [location, setLocation] = useLocation();
   const { t } = useLanguage();
+
+  // Check admin authentication
+  const { data: authStatus } = useQuery<{ isAdmin: boolean }>({
+    queryKey: ["/api/admin/auth-status"],
+    retry: false,
+  });
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shadow-sm">
@@ -132,6 +139,19 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
               <span>{t('nav.blog')}</span>
             </Button>
           </Link>
+          {authStatus?.isAdmin && (
+            <Link href="/blog-admin">
+              <Button
+                variant={location === "/blog-admin" ? "secondary" : "ghost"}
+                size="sm"
+                data-testid="nav-blog-admin"
+                className="gap-2"
+              >
+                <Edit className="w-4 h-4" />
+                <span>Blog Admin</span>
+              </Button>
+            </Link>
+          )}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
