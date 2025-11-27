@@ -1779,19 +1779,33 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       if (hansardRecord.speakerStats && Array.isArray(hansardRecord.speakerStats) && hansardRecord.speakerStats.length > 0) {
         console.log(`⚡ Using pre-computed speaker data for ${hansardRecord.sessionNumber} (${hansardRecord.speakerStats.length} speakers)`);
         
+        // Build a map of speaker stats for enrichment
+        const speakerStatsMap = new Map<string, { totalSpeeches: number; speakingOrder: number }>();
+        for (const stat of hansardRecord.speakerStats as any[]) {
+          speakerStatsMap.set(stat.mpId, {
+            totalSpeeches: stat.totalSpeeches || 1,
+            speakingOrder: stat.speakingOrder || 0,
+          });
+        }
+        
         // Get MP details for the pre-computed speaker IDs
         const speakerMpIds = new Set(hansardRecord.speakerStats.map((s: any) => s.mpId));
         const allMps = await db.select().from(mps);
         
         const speakerMps = allMps
           .filter(mp => speakerMpIds.has(mp.id))
-          .map(mp => ({
-            id: mp.id,
-            name: mp.name,
-            constituency: mp.constituency,
-            party: mp.party,
-            photoUrl: mp.photoUrl,
-          }))
+          .map(mp => {
+            const stats = speakerStatsMap.get(mp.id);
+            return {
+              id: mp.id,
+              name: mp.name,
+              constituency: mp.constituency,
+              party: mp.party,
+              photoUrl: mp.photoUrl,
+              totalSpeeches: stats?.totalSpeeches || 1,
+              speakingOrder: stats?.speakingOrder || 0,
+            };
+          })
           .sort((a, b) => a.constituency.localeCompare(b.constituency));
 
         const result = {
@@ -1810,18 +1824,32 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       if (hansardRecord.speakers && Array.isArray(hansardRecord.speakers) && hansardRecord.speakers.length > 0) {
         console.log(`⚡ Using speakers array for ${hansardRecord.sessionNumber} (${hansardRecord.speakers.length} speakers)`);
         
+        // Build a map of speaker data for enrichment
+        const speakersMap = new Map<string, { totalSpeeches?: number; speakingOrder?: number }>();
+        for (const speaker of hansardRecord.speakers as any[]) {
+          speakersMap.set(speaker.mpId, {
+            totalSpeeches: speaker.totalSpeeches || 1,
+            speakingOrder: speaker.speakingOrder || 0,
+          });
+        }
+        
         const speakerMpIds = new Set(hansardRecord.speakers.map((s: any) => s.mpId));
         const allMps = await db.select().from(mps);
         
         const speakerMps = allMps
           .filter(mp => speakerMpIds.has(mp.id))
-          .map(mp => ({
-            id: mp.id,
-            name: mp.name,
-            constituency: mp.constituency,
-            party: mp.party,
-            photoUrl: mp.photoUrl,
-          }))
+          .map(mp => {
+            const data = speakersMap.get(mp.id);
+            return {
+              id: mp.id,
+              name: mp.name,
+              constituency: mp.constituency,
+              party: mp.party,
+              photoUrl: mp.photoUrl,
+              totalSpeeches: data?.totalSpeeches || 1,
+              speakingOrder: data?.speakingOrder || 0,
+            };
+          })
           .sort((a, b) => a.constituency.localeCompare(b.constituency));
 
         const result = {

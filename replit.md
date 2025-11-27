@@ -5,6 +5,14 @@ This web application provides a comprehensive dashboard for Malaysian Members of
 
 ## Recent Changes
 
+### November 27, 2025 - Pre-computed Hansard Speaker Data
+Moved speaker parsing from on-demand to pre-computed at scrape time for faster page loads:
+- Updated `/api/hansard-records/:id/speakers` endpoint to prioritize pre-computed data from database
+- Response now includes rich speaker data: totalSpeeches and speakingOrder per MP
+- Falls back to PDF parsing only for records without pre-computed data
+- Created backfill script (`npm run backfill-speakers`) to pre-compute speakers for existing records
+- Backfill downloads and saves PDFs to database if only URL available, preventing repeated HTTP fetches
+
 ### November 27, 2025 - 32GB Memory Optimization
 Optimized application for 32GB RAM allocation:
 - Updated memory thresholds: warning at 22GB, critical at 25GB, danger at 28GB, circuit breaker at 30GB
