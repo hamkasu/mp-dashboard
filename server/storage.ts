@@ -6,7 +6,7 @@ import { type Mp, type InsertMp, type CourtCase, type InsertCourtCase, type Sprm
 import { randomUUID } from "crypto";
 import { db, pool } from "./db";
 import { mps, courtCases, sprmInvestigations, legislativeProposals, debateParticipations, parliamentaryQuestions, hansardRecords, pageViews, userActivityLog, constituencies } from "@shared/schema";
-import { eq, sql } from "drizzle-orm";
+import { eq, sql, desc } from "drizzle-orm";
 import { MPNameMatcher } from "./mp-name-matcher";
 import { HansardScraper } from "./hansard-scraper";
 import { ConstituencyMatcher } from "./constituency-matcher";
@@ -110,6 +110,10 @@ export interface IStorage {
   deleteBulkHansardRecords(ids: string[]): Promise<number>;
   deleteAllHansardRecords(): Promise<number>;
   checkPdfExistsByMd5(md5Hash: string): Promise<{ exists: boolean; sessionNumber?: string; originalFilename?: string }>;
+  
+  // Pagination methods for memory-efficient bulk operations
+  getHansardRecordIds(): Promise<string[]>;
+  getHansardRecordsBatch(offset: number, limit: number, includeWithSummary?: boolean): Promise<HansardRecord[]>;
   
   // Page View methods
   incrementPageView(page: string): Promise<number>;
@@ -1259,6 +1263,19 @@ export class MemStorage implements IStorage {
 
   async checkPdfExistsByMd5(md5Hash: string): Promise<{ exists: boolean; sessionNumber?: string; originalFilename?: string }> {
     return { exists: false };
+  }
+
+  // Pagination methods for memory-efficient bulk operations
+  async getHansardRecordIds(): Promise<string[]> {
+    return Array.from(this.hansardRecords.keys());
+  }
+
+  async getHansardRecordsBatch(offset: number, limit: number, includeWithSummary: boolean = true): Promise<HansardRecord[]> {
+    const allRecords = Array.from(this.hansardRecords.values());
+    const filteredRecords = includeWithSummary 
+      ? allRecords 
+      : allRecords.filter(r => !r.summary || r.summary.startsWith("Parliamentary session"));
+    return filteredRecords.slice(offset, offset + limit);
   }
   
   // Page View methods
@@ -2617,6 +2634,31 @@ export class DbStorage implements IStorage {
     } catch (error) {
       console.error("Error checking PDF by MD5:", error);
       return { exists: false };
+    }
+  }
+
+  // Pagination methods for memory-efficient bulk operations
+  async getHansardRecordIds(): Promise<string[]> {
+    const result = await db.select({ id: hansardRecords.id })
+      .from(hansardRecords)
+      .orderBy(desc(hansardRecords.sessionDate), desc(hansardRecords.id));
+    return result.map(r => r.id);
+  }
+
+  async getHansardRecordsBatch(offset: number, limit: number, includeWithSummary: boolean = true): Promise<HansardRecord[]> {
+    if (includeWithSummary) {
+      return await db.select()
+        .from(hansardRecords)
+        .orderBy(desc(hansardRecords.sessionDate), desc(hansardRecords.id))
+        .limit(limit)
+        .offset(offset);
+    } else {
+      return await db.select()
+        .from(hansardRecords)
+        .where(sql`${hansardRecords.summary} IS NULL OR ${hansardRecords.summary} LIKE 'Parliamentary session%'`)
+        .orderBy(desc(hansardRecords.sessionDate), desc(hansardRecords.id))
+        .limit(limit)
+        .offset(offset);
     }
   }
   

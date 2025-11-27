@@ -1,5 +1,6 @@
 /**
  * Copyright by Calmic Sdn Bhd
+ * Memory-optimized: Added GC calls between iterations to prevent OOM crashes
  */
 
 import cron from 'node-cron';
@@ -10,6 +11,7 @@ import { HansardSpeechAnalyzer } from './hansard-speech-analyzer';
 import crypto from 'crypto';
 import { getPublicBaseUrl, buildPdfUrl } from './utils/url-helper';
 import { db } from './db';
+import { forceGC, getMemoryUsage } from './middleware/memory-monitor';
 
 export interface HansardSyncResult {
   triggeredBy: 'manual' | 'scheduled';
@@ -191,6 +193,13 @@ export async function runHansardSync(options: { triggeredBy: 'manual' | 'schedul
           sessionNumber: `${metadata.sessionNumber} (${metadata.sessionDate.toISOString().split('T')[0]})`,
           error: error.message
         });
+      }
+
+      // Memory cleanup after each record to prevent OOM during large syncs
+      const memory = getMemoryUsage();
+      if (memory.heapUsed > 300) { // If using more than 300MB, force GC
+        console.log(`🧹 [Hansard Sync] Memory cleanup (${memory.heapUsed}MB used)`);
+        forceGC(true);
       }
     }
 

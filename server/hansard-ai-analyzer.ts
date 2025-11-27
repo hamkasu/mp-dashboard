@@ -1,11 +1,15 @@
 /**
  * Copyright by Calmic Sdn Bhd
  * Background job for AI analysis of Hansard records
+ * Memory-optimized: Processes records in batches to prevent OOM crashes
  */
 
 import { storage } from "./storage";
 import { analyzeHansardTranscript, generateHansardSummary, isAIConfigured } from "./ai-service";
 import { jobTracker } from "./job-tracker";
+import { forceGC } from "./middleware/memory-monitor";
+
+const BATCH_SIZE = 5; // Process 5 records at a time to limit memory usage
 
 export interface AnalysisJobProgress {
   total: number;
@@ -36,6 +40,7 @@ export function cancelAnalysisJob(): boolean {
 
 /**
  * Run bulk AI analysis on all Hansard records that don't have summaries
+ * Memory-optimized: Uses pagination to avoid loading all records into memory
  */
 export async function runBulkHansardAnalysis(options: {
   forceReanalyze?: boolean;
@@ -54,18 +59,13 @@ export async function runBulkHansardAnalysis(options: {
 
   cancelRequested = false;
 
-  // Get all Hansard records
-  const allRecords = await storage.getAllHansardRecords();
-
-  // Filter records that need analysis
-  const recordsToAnalyze = forceReanalyze
-    ? allRecords
-    : allRecords.filter(r => !r.summary || r.summary.startsWith("Parliamentary session"));
-
-  const recordsToProcess = limit > 0 ? recordsToAnalyze.slice(0, limit) : recordsToAnalyze;
+  // Get count of records that need analysis (without loading full data)
+  // We'll fetch records in batches to avoid memory issues
+  const allRecordIds = await storage.getHansardRecordIds();
+  const totalRecords = limit > 0 ? Math.min(allRecordIds.length, limit) : allRecordIds.length;
 
   currentJob = {
-    total: recordsToProcess.length,
+    total: totalRecords,
     processed: 0,
     successful: 0,
     failed: 0,
@@ -74,61 +74,88 @@ export async function runBulkHansardAnalysis(options: {
     errors: [],
   };
 
-  console.log(`[AI Analysis] Starting bulk analysis of ${recordsToProcess.length} Hansard records`);
+  console.log(`[AI Analysis] Starting bulk analysis of up to ${totalRecords} Hansard records (batch size: ${BATCH_SIZE})`);
 
-  for (const record of recordsToProcess) {
-    if (cancelRequested) {
-      currentJob.status = "cancelled";
-      console.log("[AI Analysis] Job cancelled by user");
+  let offset = 0;
+  let processedCount = 0;
+
+  // Process records in batches
+  while (processedCount < totalRecords && !cancelRequested) {
+    // Fetch one batch at a time
+    const batch = await storage.getHansardRecordsBatch(offset, BATCH_SIZE, forceReanalyze);
+    
+    if (batch.length === 0) {
+      console.log(`[AI Analysis] No more records to process`);
       break;
     }
 
-    currentJob.currentSession = record.sessionNumber;
+    console.log(`[AI Analysis] Processing batch ${Math.floor(offset / BATCH_SIZE) + 1} (${batch.length} records)`);
 
-    try {
-      console.log(`[AI Analysis] Processing ${record.sessionNumber} (${record.sessionDate})`);
-
-      // Get transcript from the record
-      const transcript = record.transcript || "";
-
-      if (!transcript || transcript.length < 100) {
-        console.log(`[AI Analysis] Skipping ${record.sessionNumber} - no transcript`);
-        currentJob.processed++;
-        continue;
+    for (const record of batch) {
+      if (cancelRequested) {
+        currentJob.status = "cancelled";
+        console.log("[AI Analysis] Job cancelled by user");
+        break;
       }
 
-      // Generate analysis
-      const result = await analyzeHansardTranscript(
-        record.sessionNumber,
-        record.sessionDate.toISOString().split("T")[0],
-        transcript
-      );
+      if (limit > 0 && processedCount >= limit) {
+        break;
+      }
 
-      if (result.success && result.analysis) {
-        // Update the record with the AI summary
-        await storage.updateHansardRecord(record.id, {
-          summary: result.analysis.summary,
-        });
+      currentJob.currentSession = record.sessionNumber;
 
-        console.log(`[AI Analysis] Updated ${record.sessionNumber}: ${result.analysis.summary.substring(0, 100)}...`);
-        currentJob.successful++;
-      } else {
-        console.error(`[AI Analysis] Failed ${record.sessionNumber}: ${result.error}`);
-        currentJob.errors.push(`${record.sessionNumber}: ${result.error}`);
+      try {
+        console.log(`[AI Analysis] Processing ${record.sessionNumber} (${record.sessionDate})`);
+
+        // Get transcript from the record
+        const transcript = record.transcript || "";
+
+        if (!transcript || transcript.length < 100) {
+          console.log(`[AI Analysis] Skipping ${record.sessionNumber} - no transcript`);
+          currentJob.processed++;
+          processedCount++;
+          continue;
+        }
+
+        // Generate analysis
+        const result = await analyzeHansardTranscript(
+          record.sessionNumber,
+          record.sessionDate.toISOString().split("T")[0],
+          transcript
+        );
+
+        if (result.success && result.analysis) {
+          // Update the record with the AI summary
+          await storage.updateHansardRecord(record.id, {
+            summary: result.analysis.summary,
+          });
+
+          console.log(`[AI Analysis] Updated ${record.sessionNumber}: ${result.analysis.summary.substring(0, 100)}...`);
+          currentJob.successful++;
+        } else {
+          console.error(`[AI Analysis] Failed ${record.sessionNumber}: ${result.error}`);
+          currentJob.errors.push(`${record.sessionNumber}: ${result.error}`);
+          currentJob.failed++;
+        }
+      } catch (error: any) {
+        console.error(`[AI Analysis] Error processing ${record.sessionNumber}:`, error.message);
+        currentJob.errors.push(`${record.sessionNumber}: ${error.message}`);
         currentJob.failed++;
       }
-    } catch (error: any) {
-      console.error(`[AI Analysis] Error processing ${record.sessionNumber}:`, error.message);
-      currentJob.errors.push(`${record.sessionNumber}: ${error.message}`);
-      currentJob.failed++;
+
+      currentJob.processed++;
+      processedCount++;
+
+      // Rate limiting delay
+      if (delayMs > 0) {
+        await new Promise(resolve => setTimeout(resolve, delayMs));
+      }
     }
 
-    currentJob.processed++;
-
-    // Rate limiting delay
-    if (delayMs > 0 && currentJob.processed < recordsToProcess.length) {
-      await new Promise(resolve => setTimeout(resolve, delayMs));
-    }
+    // Force garbage collection after each batch to free memory
+    forceGC(false);
+    
+    offset += BATCH_SIZE;
   }
 
   if (currentJob.status === "running") {
@@ -136,6 +163,9 @@ export async function runBulkHansardAnalysis(options: {
   }
   currentJob.completedAt = new Date();
   currentJob.currentSession = undefined;
+
+  // Final cleanup
+  forceGC(true);
 
   console.log(`[AI Analysis] Completed. Processed: ${currentJob.processed}, Success: ${currentJob.successful}, Failed: ${currentJob.failed}`);
 
