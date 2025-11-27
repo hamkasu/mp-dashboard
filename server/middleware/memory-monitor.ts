@@ -4,13 +4,17 @@
  */
 import { Request, Response, NextFunction } from 'express';
 
-// Memory thresholds (in MB)
-const MEMORY_WARNING_THRESHOLD = 1024; // 1GB - warn
-const MEMORY_CRITICAL_THRESHOLD = 1280; // 1.25GB - force GC
-const MEMORY_MAX_THRESHOLD = 1400; // 1.4GB - critical
+// Memory thresholds (in MB) - adjusted based on crash patterns
+// Heap limit is 1536MB, so we need to act MUCH earlier
+const MEMORY_WARNING_THRESHOLD = 900; // 900MB - warn
+const MEMORY_CRITICAL_THRESHOLD = 1100; // 1.1GB - force GC (LOWERED from 1.28GB)
+const MEMORY_DANGER_THRESHOLD = 1300; // 1.3GB - emergency GC with shorter cooldown
 
 let lastGcTime = Date.now();
-const GC_COOLDOWN = 30000; // 30 seconds between forced GC
+let lastWarningTime = 0;
+const GC_COOLDOWN = 20000; // 20 seconds between forced GC (reduced from 30s)
+const EMERGENCY_GC_COOLDOWN = 5000; // 5 seconds in emergency
+const WARNING_COOLDOWN = 60000; // 60 seconds between warning logs (reduces spam)
 
 /**
  * Get current memory usage in MB
@@ -28,18 +32,25 @@ export function getMemoryUsage() {
 /**
  * Force garbage collection if available
  */
-function forceGC() {
+function forceGC(emergency: boolean = false) {
   if (global.gc) {
     const now = Date.now();
+    const cooldown = emergency ? EMERGENCY_GC_COOLDOWN : GC_COOLDOWN;
+
     // Only GC if enough time has passed since last GC
-    if (now - lastGcTime > GC_COOLDOWN) {
-      console.log('♻️  Forcing garbage collection...');
+    if (now - lastGcTime > cooldown) {
+      const beforeGc = getMemoryUsage();
+      const level = emergency ? '🚨 EMERGENCY' : '♻️  Regular';
+      console.log(`${level} GC... (Heap: ${beforeGc.heapUsed}MB)`);
       global.gc();
       lastGcTime = now;
       const afterGc = getMemoryUsage();
-      console.log(`✓ GC complete. Heap: ${afterGc.heapUsed}MB / ${afterGc.heapTotal}MB`);
+      const freed = beforeGc.heapUsed - afterGc.heapUsed;
+      console.log(`✓ GC freed ${freed}MB. Heap: ${afterGc.heapUsed}/${afterGc.heapTotal}MB (limit: 1536MB)`);
+      return freed;
     }
   }
+  return 0;
 }
 
 /**
@@ -47,23 +58,37 @@ function forceGC() {
  */
 export function memoryMonitor(req: Request, res: Response, next: NextFunction) {
   const memory = getMemoryUsage();
+  const now = Date.now();
 
-  // Critical level - force GC immediately
-  if (memory.heapUsed > MEMORY_CRITICAL_THRESHOLD) {
-    console.warn(`⚠️  Memory critical: ${memory.heapUsed}MB (threshold: ${MEMORY_CRITICAL_THRESHOLD}MB)`);
-    forceGC();
+  // DANGER - Emergency GC with shorter cooldown
+  if (memory.heapUsed > MEMORY_DANGER_THRESHOLD) {
+    console.error(`🚨🚨 DANGER: ${memory.heapUsed}MB / 1536MB (${Math.round(memory.heapUsed/1536*100)}%)`);
+    forceGC(true); // Emergency GC
   }
-  // Warning level - log
+  // Critical level - force GC
+  else if (memory.heapUsed > MEMORY_CRITICAL_THRESHOLD) {
+    if (now - lastWarningTime > WARNING_COOLDOWN) {
+      console.warn(`🚨 CRITICAL: ${memory.heapUsed}MB (threshold: ${MEMORY_CRITICAL_THRESHOLD}MB)`);
+      lastWarningTime = now;
+    }
+    forceGC(false);
+  }
+  // Warning level - only log if cooldown expired (prevents spam)
   else if (memory.heapUsed > MEMORY_WARNING_THRESHOLD) {
-    console.warn(`⚠️  Memory high: ${memory.heapUsed}MB (threshold: ${MEMORY_WARNING_THRESHOLD}MB)`);
+    if (now - lastWarningTime > WARNING_COOLDOWN) {
+      console.warn(`⚠️  Elevated: ${memory.heapUsed}MB (threshold: ${MEMORY_WARNING_THRESHOLD}MB)`);
+      lastWarningTime = now;
+    }
   }
 
   // Log memory on response finish for expensive operations
   res.on('finish', () => {
-    if (req.path.includes('/pdf') || req.path.includes('/hansard')) {
+    if (req.path.includes('/pdf') || req.path.includes('/hansard') || req.path.includes('/constituencies')) {
       const afterMemory = getMemoryUsage();
-      if (afterMemory.heapUsed > memory.heapUsed + 50) { // Increased by 50MB
-        console.log(`📊 ${req.path}: Memory +${afterMemory.heapUsed - memory.heapUsed}MB → ${afterMemory.heapUsed}MB`);
+      const delta = afterMemory.heapUsed - memory.heapUsed;
+      // Only log if memory increased significantly (>30MB, lowered from 50MB)
+      if (delta > 30) {
+        console.log(`📊 ${req.path}: Memory +${delta}MB → ${afterMemory.heapUsed}MB`);
       }
     }
   });
@@ -77,11 +102,13 @@ export function memoryMonitor(req: Request, res: Response, next: NextFunction) {
 export function startMemoryLogging(intervalMinutes: number = 5) {
   setInterval(() => {
     const memory = getMemoryUsage();
-    console.log(`📊 Memory: Heap ${memory.heapUsed}/${memory.heapTotal}MB, RSS ${memory.rss}MB`);
+    const pct = Math.round((memory.heapUsed / 1536) * 100);
+    console.log(`📊 Memory: ${memory.heapUsed}/${memory.heapTotal}MB (${pct}% of limit), RSS ${memory.rss}MB`);
 
     // Auto-GC if memory is high during idle times
-    if (memory.heapUsed > MEMORY_WARNING_THRESHOLD) {
-      forceGC();
+    if (memory.heapUsed > MEMORY_CRITICAL_THRESHOLD) {
+      console.log('🧹 Periodic cleanup GC...');
+      forceGC(false);
     }
   }, intervalMinutes * 60 * 1000);
 }
