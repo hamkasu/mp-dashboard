@@ -241,16 +241,13 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
         <div className="flex-1 flex justify-end items-center gap-2">
           {onSearchClick && (
             <Button
-              variant="outline"
+              variant="ghost"
+              size="icon"
               onClick={onSearchClick}
-              className="gap-2 max-w-xs w-full justify-start text-muted-foreground"
+              className="h-9 w-9"
               data-testid="button-search"
             >
-              <Search className="h-4 w-4" />
-              <span className="hidden sm:inline">{t('nav.searchMps')}</span>
-              <kbd className="hidden md:inline-flex ml-auto h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium">
-                <span className="text-xs">⌘</span>K
-              </kbd>
+              <Search className="h-5 w-5" />
             </Button>
           )}
           <LanguageSwitcher />
