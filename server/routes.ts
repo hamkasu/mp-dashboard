@@ -115,14 +115,15 @@ function extractTopics(transcript: string): string[] {
 
 export async function registerRoutes(app: Express, httpServer: Server): Promise<void> {
   // Initialize caches for memory-intensive operations
+  // Reduced cache size for Railway's memory constraints
   const hansardSpeakersCache = new MemoryCache<{
     hansardRecordId: string;
     sessionNumber: string;
     speakers: any[];
-  }>(50, 30); // 50MB cache, 30 minute expiry
+  }>(15, 20); // 15MB cache (reduced from 50MB), 20 minute expiry (reduced from 30min)
 
-  // Start automatic cleanup of expired cache entries
-  startCacheCleanup(hansardSpeakersCache, 10); // Cleanup every 10 minutes
+  // Start automatic cleanup of expired cache entries every 5 minutes (more frequent)
+  startCacheCleanup(hansardSpeakersCache, 5);
 
   // Get all MPs
   app.get("/api/mps", async (_req, res) => {
