@@ -163,7 +163,7 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
-                variant={location === "/activity" || location === "/attendance" || location === "/hansard-analysis" || location === "/hansard-questions" || location === "/allowances" || location === "/disclaimer" || location === "/analytics" ? "secondary" : "ghost"}
+                variant={location === "/activity" || location === "/unpassed-bills" || location === "/attendance" || location === "/hansard-analysis" || location === "/hansard-questions" || location === "/allowances" || location === "/disclaimer" || location === "/analytics" ? "secondary" : "ghost"}
                 size="sm"
                 data-testid="nav-analysis-dropdown"
                 className="gap-2"
@@ -180,6 +180,13 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
               >
                 <FileText className="w-4 h-4 mr-2" />
                 <span>{t('nav.activity')}</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={() => setLocation("/unpassed-bills")}
+                data-testid="nav-unpassed-bills"
+              >
+                <FileText className="w-4 h-4 mr-2" />
+                <span>Unpassed Bills</span>
               </DropdownMenuItem>
               <DropdownMenuItem
                 onSelect={() => setLocation("/attendance")}

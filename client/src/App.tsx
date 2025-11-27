@@ -26,6 +26,7 @@ import Analytics from "@/pages/analytics";
 import AdminLogin from "@/pages/AdminLogin";
 import Blog from "@/pages/Blog";
 import BlogAdmin from "@/pages/BlogAdmin";
+import UnpassedBills from "@/pages/UnpassedBills";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -34,6 +35,7 @@ function Router() {
       <Route path="/" component={Home} />
       <Route path="/mp/:id" component={MPProfile} />
       <Route path="/activity" component={ParliamentaryActivity} />
+      <Route path="/unpassed-bills" component={UnpassedBills} />
       <Route path="/hansard" component={Hansard} />
       <Route path="/parliament-guide" component={ParliamentGuide} />
       <Route path="/constitution" component={Constitution} />
