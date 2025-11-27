@@ -1552,6 +1552,96 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
+  // Get list of MPs who spoke in a specific Hansard session
+  app.get("/api/hansard-records/:id/speakers", async (req, res) => {
+    try {
+      const hansardRecordId = req.params.id;
+
+      // Fetch the Hansard record from database
+      const hansardRecord = await storage.getHansardRecord(hansardRecordId);
+      if (!hansardRecord) {
+        return res.status(404).json({ error: "Hansard record not found" });
+      }
+
+      console.log(`📊 Fetching speakers for Hansard session ${hansardRecord.sessionNumber}`);
+
+      // Get all MPs from database
+      const allMps = await db.select().from(mps);
+
+      // Get PDF data - first try from database, then fall back to downloading from URL
+      let pdfBuffer: Buffer;
+
+      try {
+        // Try to get PDF from database first (new approach)
+        const { eq, desc } = await import("drizzle-orm");
+        const [pdfFile] = await db.select().from(hansardPdfFiles)
+          .where(eq(hansardPdfFiles.hansardRecordId, hansardRecordId))
+          .orderBy(desc(hansardPdfFiles.isPrimary))
+          .limit(1);
+
+        if (pdfFile && pdfFile.pdfData) {
+          pdfBuffer = pdfFile.pdfData;
+          console.log(`✅ Using stored PDF from database: ${(pdfBuffer.length / 1024 / 1024).toFixed(2)} MB`);
+        } else if (hansardRecord.pdfLinks && hansardRecord.pdfLinks.length > 0) {
+          // Fall back to downloading from URL (old approach for backwards compatibility)
+          const pdfUrl = hansardRecord.pdfLinks[0];
+          const axios = await import('axios');
+          console.log(`📥 Downloading PDF from: ${pdfUrl}`);
+          const response = await axios.default.get(pdfUrl, {
+            responseType: 'arraybuffer',
+            timeout: 30000, // 30 second timeout
+          });
+          pdfBuffer = Buffer.from(response.data);
+          console.log(`✅ Downloaded PDF: ${(pdfBuffer.length / 1024 / 1024).toFixed(2)} MB`);
+        } else {
+          return res.status(400).json({
+            error: "No PDF available for this Hansard record",
+            details: "This session does not have any PDF files stored in the database or linked URLs"
+          });
+        }
+      } catch (pdfError) {
+        console.error("Error getting PDF:", pdfError);
+        return res.status(500).json({
+          error: "Failed to retrieve PDF data",
+          details: pdfError instanceof Error ? pdfError.message : 'Unknown error'
+        });
+      }
+
+      // Parse using HansardPdfParser - uses canonical speaker identification
+      const parser = new HansardPdfParser(allMps);
+      const parsed = await parser.parseHansardPdf(pdfBuffer, hansardRecord.sessionNumber);
+
+      // Extract unique MP IDs who spoke
+      const speakerMpIds = new Set(parsed.speakers.map(s => s.mpId));
+
+      // Get full MP details for speakers
+      const speakerMps = allMps
+        .filter(mp => speakerMpIds.has(mp.id))
+        .map(mp => ({
+          id: mp.id,
+          name: mp.name,
+          constituency: mp.constituency,
+          party: mp.party,
+          photoUrl: mp.photoUrl,
+        }))
+        .sort((a, b) => a.constituency.localeCompare(b.constituency));
+
+      console.log(`✅ Found ${speakerMps.length} MPs who spoke in session ${hansardRecord.sessionNumber}`);
+
+      res.json({
+        hansardRecordId,
+        sessionNumber: hansardRecord.sessionNumber,
+        speakers: speakerMps,
+      });
+    } catch (error) {
+      console.error("Error fetching Hansard speakers:", error);
+      res.status(500).json({
+        error: "Failed to fetch speakers",
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
   // Analyze Hansard PDF for specific MP speeches (transient analysis, no persistence)
   app.post("/api/hansard-analysis", mutationRateLimit, auditMiddleware('hansard-analysis'), async (req, res) => {
     try {
