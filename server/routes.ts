@@ -4705,6 +4705,13 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       const axios = (await import('axios')).default;
       const cheerio = await import('cheerio');
       const { ilike } = await import('drizzle-orm');
+      const https = await import('https');
+
+      // Create HTTPS agent that bypasses SSL verification for Parliament website
+      // (their certificate chain is sometimes incomplete)
+      const httpsAgent = new https.Agent({
+        rejectUnauthorized: false
+      });
 
       const MP_LIST_URL = 'https://www.parlimen.gov.my/ahli-dewan.html?uweb=dr&';
 
@@ -4720,6 +4727,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
             'Referer': 'https://www.parlimen.gov.my/',
           },
           timeout: 30000,
+          httpsAgent,
         });
         listHtml = response.data;
       } catch (fetchError: any) {
@@ -4915,6 +4923,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
               'Referer': MP_LIST_URL,
             },
             timeout: 15000,
+            httpsAgent,
           });
 
           const $profile = cheerio.load(profileResponse.data);
