@@ -1,0 +1,120 @@
+
+[CourtCaseScraper] Searching Benar News for: MP court Malaysia
+[CourtCaseScraper] Failed to scrape article: /malay/berita/ error: relation "court_case_news_articles" does not exist
+    at /app/node_modules/pg-pool/index.js:45:11
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async file:///app/node_modules/drizzle-orm/node-postgres/session.js:83:22
+    at async CourtCaseScraper.scrapeNewsSource (file:///app/dist/index.js:6162:34)
+    at async CourtCaseScraper.runScrape (file:///app/dist/index.js:6434:30)
+    at async triggerManualScrape (file:///app/dist/index.js:6564:20)
+    at async file:///app/dist/index.js:11984:22 {
+  length: 124,
+  severity: 'ERROR',
+  code: '42P01',
+  detail: undefined,
+  hint: undefined,
+  position: '198',
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'parse_relation.c',
+  line: '1449',
+  routine: 'parserOpenTable'
+}
+[CourtCaseScraper] Searching Benar News for: corruption charges
+  length: 124,
+  routine: 'parserOpenTable'
+  severity: 'ERROR',
+  code: '42P01',
+  detail: undefined,
+[CourtCaseScraper] Failed to scrape article: /malay/berita/ error: relation "court_case_news_articles" does not exist
+    at /app/node_modules/pg-pool/index.js:45:11
+  hint: undefined,
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+  position: '198',
+    at async file:///app/node_modules/drizzle-orm/node-postgres/session.js:83:22
+    at async CourtCaseScraper.runScrape (file:///app/dist/index.js:6434:30)
+  internalPosition: undefined,
+  internalQuery: undefined,
+    at async triggerManualScrape (file:///app/dist/index.js:6564:20)
+    at async CourtCaseScraper.scrapeNewsSource (file:///app/dist/index.js:6162:34)
+  file: 'parse_relation.c',
+  where: undefined,
+  schema: undefined,
+    at async file:///app/dist/index.js:11984:22 {
+  table: undefined,
+  column: undefined,
+  line: '1449',
+  dataType: undefined,
+  constraint: undefined,
+}
+  hint: undefined,
+[CourtCaseScraper] Searching Benar News for: trial politician
+  position: '198',
+[CourtCaseScraper] Failed to scrape article: /malay/berita/ error: relation "court_case_news_articles" does not exist
+  internalPosition: undefined,
+    at async CourtCaseScraper.runScrape (file:///app/dist/index.js:6434:30)
+  length: 124,
+    at async triggerManualScrape (file:///app/dist/index.js:6564:20)
+    at async file:///app/dist/index.js:11984:22 {
+  internalQuery: undefined,
+  severity: 'ERROR',
+  where: undefined,
+  code: '42P01',
+  schema: undefined,
+  detail: undefined,
+  table: undefined,
+  column: undefined,
+    at /app/node_modules/pg-pool/index.js:45:11
+  dataType: undefined,
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+  constraint: undefined,
+  file: 'parse_relation.c',
+    at async file:///app/node_modules/drizzle-orm/node-postgres/session.js:83:22
+    at async CourtCaseScraper.scrapeNewsSource (file:///app/dist/index.js:6162:34)
+  line: '1449',
+  routine: 'parserOpenTable'
+}
+    at async CourtCaseScraper.scrapeNewsSource (file:///app/dist/index.js:6162:34)
+    at async CourtCaseScraper.runScrape (file:///app/dist/index.js:6434:30)
+[CourtCaseScraper] Searching Benar News for: defamation MP
+    at async triggerManualScrape (file:///app/dist/index.js:6564:20)
+    at async file:///app/node_modules/drizzle-orm/node-postgres/session.js:83:22
+[CourtCaseScraper] Failed to scrape article: /malay/berita/ error: relation "court_case_news_articles" does not exist
+  table: undefined,
+  column: undefined,
+    at async file:///app/dist/index.js:11984:22 {
+    at /app/node_modules/pg-pool/index.js:45:11
+  code: '42P01',
+  length: 124,
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+  detail: undefined,
+  internalQuery: undefined,
+  hint: undefined,
+  severity: 'ERROR',
+  position: '198',
+  where: undefined,
+  internalPosition: undefined,
+  schema: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'parse_relation.c',
+  line: '1449',
+  routine: 'parserOpenTable'
+}
+[CourtCaseScraper] Searching Benar News for: lawsuit politician Malaysia
+[CourtCaseScraper] Failed to scrape article: /malay/berita/ error: relation "court_case_news_articles" does not exist
+    at /app/node_modules/pg-pool/index.js:45:11
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async file:///app/node_modules/drizzle-orm/node-postgres/session.js:83:22
+    at async CourtCaseScraper.scrapeNewsSource (file:///app/dist/index.js:6162:34)
+    at async CourtCaseScraper.runScrape (file:///app/dist/index.js:6434:30)
+    at async triggerManualScrape (file:///app/dist/index.js:6564:20)
+    at async file:///app/dist/index.js:11984:22 {
+  length: 124,
+  severity: 'ERROR',

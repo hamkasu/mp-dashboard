@@ -1,0 +1,196 @@
+
+
+
+Load more
+  file: 'parse_relation.c',
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+  line: '3716',
+    at async file:///app/node_modules/drizzle-orm/node-postgres/session.js:83:22
+  routine: 'errorMissingColumn'
+    at async DbStorage.getCourtCasesByMpId (file:///app/dist/index.js:2505:26)
+}
+    at async file:///app/dist/index.js:8089:27 {
+  length: 109,
+  severity: 'ERROR',
+  code: '42703',
+  detail: undefined,
+  hint: undefined,
+  position: '72',
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+📊 /api/mps/32de90ae-0aaa-40bb-b8b1-d1dd2a809254: Memory +44MB → 279MB
+📊 /api/mps: Memory +81MB → 359MB
+📊 Returning cached language analysis results
+📊 Returning cached language analysis results
+Error in getCourtCasesByMpId: error: column "case_type" does not exist
+    at /app/node_modules/pg-pool/index.js:45:11
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async file:///app/node_modules/drizzle-orm/node-postgres/session.js:83:22
+    at async DbStorage.getCourtCasesByMpId (file:///app/dist/index.js:2505:26)
+    at async file:///app/dist/index.js:8089:27 {
+  length: 109,
+  severity: 'ERROR',
+  code: '42703',
+  detail: undefined,
+  hint: undefined,
+  position: '72',
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'parse_relation.c',
+  line: '3716',
+  routine: 'errorMissingColumn'
+}
+📊 /api/mps/f0bccc53-b9b0-41b6-a0c5-2b0a6b8f9506: Memory +45MB → 186MB
+3:35:46 PM [express] 🤖 Serving pre-rendered page to bot: / -> index.html
+  routine: 'errorMissingColumn'
+}
+Error in getCourtCasesByMpId: error: column "case_type" does not exist
+    at /app/node_modules/pg-pool/index.js:45:11
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async file:///app/node_modules/drizzle-orm/node-postgres/session.js:83:22
+    at async DbStorage.getCourtCasesByMpId (file:///app/dist/index.js:2505:26)
+    at async file:///app/dist/index.js:8089:27 {
+  length: 109,
+  severity: 'ERROR',
+  code: '42703',
+  detail: undefined,
+  hint: undefined,
+  position: '72',
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'parse_relation.c',
+  line: '3716',
+📊 Returning cached language analysis results
+Error in getCourtCasesByMpId: error: column "case_type" does not exist
+    at /app/node_modules/pg-pool/index.js:45:11
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async file:///app/node_modules/drizzle-orm/node-postgres/session.js:83:22
+    at async DbStorage.getCourtCasesByMpId (file:///app/dist/index.js:2505:26)
+    at async file:///app/dist/index.js:8089:27 {
+  length: 109,
+  severity: 'ERROR',
+  code: '42703',
+  detail: undefined,
+  hint: undefined,
+  position: '72',
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'parse_relation.c',
+  line: '3716',
+  routine: 'errorMissingColumn'
+}
+    at async DbStorage.getCourtCasesByMpId (file:///app/dist/index.js:2505:26)
+    at async file:///app/dist/index.js:8089:27 {
+  length: 109,
+  severity: 'ERROR',
+Error in getCourtCasesByMpId: error: column "case_type" does not exist
+    at /app/node_modules/pg-pool/index.js:45:11
+  code: '42703',
+  detail: undefined,
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async file:///app/node_modules/drizzle-orm/node-postgres/session.js:83:22
+  hint: undefined,
+  position: '72',
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'parse_relation.c',
+  line: '3716',
+  routine: 'errorMissingColumn'
+}
+📊 Returning cached language analysis results
+📊 /api/mps: Memory +50MB → 100MB
+  position: '72',
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+Error in getCourtCasesByMpId: error: column "case_type" does not exist
+    at /app/node_modules/pg-pool/index.js:45:11
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async file:///app/node_modules/drizzle-orm/node-postgres/session.js:83:22
+    at async DbStorage.getCourtCasesByMpId (file:///app/dist/index.js:2505:26)
+    at async file:///app/dist/index.js:8089:27 {
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  length: 109,
+  severity: 'ERROR',
+  code: '42703',
+  detail: undefined,
+  hint: undefined,
+  file: 'parse_relation.c',
+  line: '3716',
+  routine: 'errorMissingColumn'
+}
+📊 Returning cached language analysis results
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'parse_relation.c',
+  line: '3716',
+  routine: 'errorMissingColumn'
+}
+Error in getCourtCasesByMpId: error: column "case_type" does not exist
+    at /app/node_modules/pg-pool/index.js:45:11
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async file:///app/node_modules/drizzle-orm/node-postgres/session.js:83:22
+    at async DbStorage.getCourtCasesByMpId (file:///app/dist/index.js:2505:26)
+    at async file:///app/dist/index.js:8089:27 {
+  length: 109,
+  severity: 'ERROR',
+  code: '42703',
+  detail: undefined,
+  hint: undefined,
+  position: '72',
+📊 /api/mps/72edfe15-c24f-4abc-b71e-47823623e8da: Memory +44MB → 194MB
+Error in getCourtCasesByMpId: error: column "case_type" does not exist
+    at /app/node_modules/pg-pool/index.js:45:11
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async file:///app/node_modules/drizzle-orm/node-postgres/session.js:83:22
+    at async DbStorage.getCourtCasesByMpId (file:///app/dist/index.js:2505:26)
+    at async file:///app/dist/index.js:8089:27 {
+  length: 109,
+  severity: 'ERROR',
+  code: '42703',
+  detail: undefined,
+  hint: undefined,
+  position: '72',
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: undefined,
