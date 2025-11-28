@@ -4901,7 +4901,9 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
 
           const $profile = cheerio.load(profileResponse.data);
 
-          // Extract contact information from profile page using clean regex approach
+          // Extract contact information from profile page using TABLE-BASED extraction
+          // The Parliament profile pages have a structured table with labeled rows:
+          // - Email, No. Telefon, No. Faks, Alamat Surat-menyurat
           const contactInfo: Record<string, string | null> = {
             email: null,
             telephone: null,
@@ -4919,74 +4921,78 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
             'parlimen@parlimen.gov.my',
           ];
 
-          // Strategy 1: Look for mailto: links (most reliable, but filter site-wide ones)
-          let foundEmail: string | null = null;
-          $profile('a[href^="mailto:"]').each((_, el) => {
-            if (foundEmail) return;
-            const mailtoLink = $profile(el).attr('href');
-            if (mailtoLink) {
-              const email = mailtoLink.replace('mailto:', '').trim().toLowerCase();
-              if (/^[\w.+-]+@[\w.-]+\.[a-z]{2,}$/i.test(email) && !SITE_WIDE_EMAILS.includes(email)) {
-                foundEmail = email;
-              }
-            }
-          });
-          
-          // Get body text for all extractions
-          const bodyText = $profile('body').text();
-          
-          if (!foundEmail) {
-            // Strategy 2: Extract all emails from page using regex
-            const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
-            const allEmails = bodyText.match(emailRegex) || [];
+          // Helper function to extract value from table row by label
+          const extractTableValue = (label: string): string | null => {
+            let value: string | null = null;
             
-            // Deduplicate and filter using Array.from for compatibility
-            const uniqueEmails = Array.from(new Set(allEmails));
-            const candidateEmails = uniqueEmails
-              .map((e: string) => e.toLowerCase().trim())
-              .filter((e: string) => !SITE_WIDE_EMAILS.includes(e) && e.length > 0);
-            
-            if (candidateEmails.length > 0) {
-              // Prioritize .gov.my emails (most common for MPs)
-              const govEmail = candidateEmails.find((e: string) => e.endsWith('.gov.my'));
-              if (govEmail) {
-                foundEmail = govEmail;
-              } else {
-                // Then try gmail.com emails
-                const gmailEmail = candidateEmails.find((e: string) => e.endsWith('@gmail.com'));
-                if (gmailEmail) {
-                  foundEmail = gmailEmail;
-                } else {
-                  // Return first valid candidate that's not a test/example email
-                  const validEmail = candidateEmails.find((e: string) => !e.includes('example') && !e.includes('test@'));
-                  if (validEmail) {
-                    foundEmail = validEmail;
+            // Strategy 1: Look for table rows where first cell contains the label
+            $profile('tr').each((_, row) => {
+              if (value) return; // Already found
+              const cells = $profile(row).find('td');
+              if (cells.length >= 2) {
+                const labelCell = $profile(cells[0]).text().trim();
+                if (labelCell.toLowerCase().includes(label.toLowerCase())) {
+                  const valueCell = $profile(cells[1]).text().trim();
+                  if (valueCell && valueCell !== '-' && valueCell.length > 0) {
+                    value = valueCell;
                   }
                 }
               }
+            });
+            
+            // Strategy 2: Look for div/span pairs or definition lists
+            if (!value) {
+              $profile('div, p, span').each((_, el) => {
+                if (value) return;
+                const text = $profile(el).text().trim();
+                // Check if this element starts with the label
+                const labelRegex = new RegExp(`^${label}[:\\s]+(.+)`, 'i');
+                const match = text.match(labelRegex);
+                if (match && match[1] && match[1] !== '-') {
+                  value = match[1].trim();
+                }
+              });
+            }
+            
+            return value;
+          };
+
+          // Extract Email from the "Email" row in the table
+          const emailValue = extractTableValue('Email');
+          if (emailValue) {
+            // Validate it's a proper email format
+            const emailMatch = emailValue.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
+            if (emailMatch) {
+              const email = emailMatch[0].toLowerCase().trim();
+              if (!SITE_WIDE_EMAILS.includes(email)) {
+                contactInfo.email = email;
+              }
             }
           }
-          contactInfo.email = foundEmail;
 
-          // Extract phone using regex - Malaysian landline pattern: 03-XXXX XXXX
-          const landlineMatch = bodyText.match(/0[23789]\s*-?\s*\d{3,4}\s*\d{4}/);
-          if (landlineMatch) {
-            contactInfo.telephone = landlineMatch[0].replace(/\s+/g, ' ').trim();
-          }
-
-          // Extract fax number
-          const faxMatch = bodyText.match(/(?:Fax|Faks)[:\s]*([0-9\-\s\(\)]+)/i);
-          if (faxMatch) {
-            const faxNum = faxMatch[1].trim();
-            if (faxNum && faxNum !== '-' && faxNum.length > 5) {
-              contactInfo.fax = faxNum;
+          // Extract No. Telefon (Phone) from table
+          const phoneValue = extractTableValue('No. Telefon') || extractTableValue('Telefon');
+          if (phoneValue) {
+            // Clean up phone number - remove extra spaces
+            const cleanPhone = phoneValue.replace(/\s+/g, ' ').trim();
+            if (cleanPhone.length >= 8) {
+              contactInfo.telephone = cleanPhone;
             }
           }
 
-          // Extract mobile number
-          const mobileMatch = bodyText.match(/(?:Mobile|Bimbit|H\/P)[:\s]*(01[0-9]\s*-?\s*\d{3,4}\s*\d{4})/i);
-          if (mobileMatch) {
-            contactInfo.mobileNumber = mobileMatch[1].replace(/\s+/g, ' ').trim();
+          // Extract No. Faks (Fax) from table
+          const faxValue = extractTableValue('No. Faks') || extractTableValue('Faks');
+          if (faxValue) {
+            const cleanFax = faxValue.replace(/\s+/g, ' ').trim();
+            if (cleanFax.length >= 8) {
+              contactInfo.fax = cleanFax;
+            }
+          }
+
+          // Extract Alamat Surat-menyurat (Mailing Address) from table
+          const addressValue = extractTableValue('Alamat Surat-menyurat') || extractTableValue('Alamat');
+          if (addressValue) {
+            contactInfo.contactAddress = addressValue;
           }
 
           // Check if we found any contact info
