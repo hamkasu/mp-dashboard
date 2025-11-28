@@ -455,6 +455,80 @@ ${article.content.substring(0, 8000)}`;
   }
 
   /**
+   * Manual search with custom keywords across all news sources
+   */
+  async manualSearch(searchText: string): Promise<{ articlesScraped: number; articlesWithData: number; articles: ScrapedArticle[] }> {
+    console.log(`[CourtCaseScraper] Starting manual search for: "${searchText}"`);
+    
+    await this.initialize();
+    
+    let articlesScraped = 0;
+    let articlesWithData = 0;
+    const allArticles: ScrapedArticle[] = [];
+    
+    for (const source of NEWS_SOURCES) {
+      try {
+        console.log(`[CourtCaseScraper] Manual search on ${source.name} for: "${searchText}"`);
+        
+        await this.delay(1000);
+        
+        const searchUrl = `${source.searchUrl}${encodeURIComponent(searchText)}`;
+        
+        try {
+          const response = await axios.get(searchUrl, {
+            headers: this.headers,
+            timeout: 30000,
+          });
+          
+          const $ = cheerio.load(response.data);
+          const articleLinks = this.extractArticleLinks($, source.name);
+          
+          console.log(`[CourtCaseScraper] Found ${articleLinks.length} links on ${source.name}`);
+          
+          for (const link of articleLinks.slice(0, 5)) {
+            try {
+              const articleUrl = link.startsWith('http') ? link : `${source.baseUrl}${link}`;
+              
+              const db = getDb();
+              const existing = await db.select()
+                .from(courtCaseNewsArticles)
+                .where(eq(courtCaseNewsArticles.sourceUrl, articleUrl))
+                .limit(1);
+              
+              if (existing.length > 0) {
+                console.log(`[CourtCaseScraper] Already scraped: ${articleUrl}`);
+                continue;
+              }
+              
+              await this.delay(500);
+              const article = await this.scrapeArticle(articleUrl, source.name);
+              
+              if (article && article.content.length > 100) {
+                const extractedData = await this.extractCourtCaseData(article);
+                await this.saveArticle(article, extractedData);
+                articlesScraped++;
+                allArticles.push(article);
+                if (extractedData?.mpName) {
+                  articlesWithData++;
+                }
+              }
+            } catch (err) {
+              console.error(`[CourtCaseScraper] Failed to scrape article: ${link}`, err);
+            }
+          }
+        } catch (error) {
+          console.error(`[CourtCaseScraper] Failed to search ${source.name}:`, error);
+        }
+      } catch (error) {
+        console.error(`[CourtCaseScraper] Error on ${source.name}:`, error);
+      }
+    }
+    
+    console.log(`[CourtCaseScraper] Manual search completed. Scraped: ${articlesScraped}, With data: ${articlesWithData}`);
+    return { articlesScraped, articlesWithData, articles: allArticles };
+  }
+
+  /**
    * Run the full scraping process
    */
   async runScrape(): Promise<{ articlesScraped: number; articlesWithData: number }> {

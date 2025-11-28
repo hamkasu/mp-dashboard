@@ -5750,6 +5750,36 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
   
+  // Manual search with custom keywords
+  app.post("/api/admin/court-case-scraper/manual-search", requireAdmin, async (req, res) => {
+    try {
+      const { searchText } = req.body;
+      
+      if (!searchText || typeof searchText !== 'string' || searchText.trim().length < 3) {
+        return res.status(400).json({ error: "Search text must be at least 3 characters" });
+      }
+      
+      console.log(`[Admin] Manual search triggered for: "${searchText}"`);
+      
+      const result = await courtCaseScraper.manualSearch(searchText.trim());
+      
+      res.json({ 
+        success: true, 
+        message: `Manual search completed for "${searchText}"`,
+        articlesScraped: result.articlesScraped,
+        articlesWithData: result.articlesWithData,
+        articles: result.articles.map(a => ({
+          headline: a.headline,
+          sourceName: a.sourceName,
+          sourceUrl: a.sourceUrl,
+        })),
+      });
+    } catch (error: any) {
+      console.error("Error running manual search:", error);
+      res.status(500).json({ error: error.message || "Failed to run manual search" });
+    }
+  });
+  
   // Get pending news articles for review
   app.get("/api/admin/court-case-news", requireAdmin, async (req, res) => {
     try {

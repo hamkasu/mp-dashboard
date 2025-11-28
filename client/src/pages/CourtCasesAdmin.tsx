@@ -28,7 +28,8 @@ import {
   Trash2,
   ExternalLink,
   Clock,
-  AlertTriangle
+  AlertTriangle,
+  Search
 } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -80,6 +81,7 @@ export default function CourtCasesAdmin() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingCase, setEditingCase] = useState<CourtCase | null>(null);
+  const [manualSearchText, setManualSearchText] = useState("");
   
   // Form state for court case
   const [formData, setFormData] = useState({
@@ -154,6 +156,36 @@ export default function CourtCasesAdmin() {
       });
     },
   });
+
+  // Manual search mutation
+  const manualSearchMutation = useMutation({
+    mutationFn: async (searchText: string) => {
+      const res = await apiRequest("POST", "/api/admin/court-case-scraper/manual-search", { searchText });
+      return res.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Manual Search Completed",
+        description: `Found ${data.articlesScraped} articles, ${data.articlesWithData} with extracted MP data`,
+      });
+      setManualSearchText("");
+      refetchArticles();
+      refetchStatus();
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Search Failed",
+        description: error.message || "Failed to run manual search",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleManualSearch = () => {
+    if (manualSearchText.trim().length >= 3) {
+      manualSearchMutation.mutate(manualSearchText.trim());
+    }
+  };
 
   // Approve article mutation
   const approveArticleMutation = useMutation({
@@ -423,7 +455,7 @@ export default function CourtCasesAdmin() {
               Scraper Status
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
             <div className="flex items-center gap-6 flex-wrap text-sm">
               <div className="flex items-center gap-2">
                 <span className="text-muted-foreground">Status:</span>
@@ -443,6 +475,41 @@ export default function CourtCasesAdmin() {
                   <span>{scraperStatus.lastRunResult.articlesScraped} articles, {scraperStatus.lastRunResult.articlesWithData} with data</span>
                 </div>
               )}
+            </div>
+            
+            {/* Manual Search */}
+            <div className="border-t pt-4">
+              <Label className="text-sm font-medium mb-2 block">Manual Search</Label>
+              <p className="text-xs text-muted-foreground mb-3">
+                Search for specific court cases by name, keywords, or phrases (e.g., "Anwar Ibrahim defamation", "Najib corruption trial")
+              </p>
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Enter search terms (min 3 characters)"
+                  value={manualSearchText}
+                  onChange={(e) => setManualSearchText(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      handleManualSearch();
+                    }
+                  }}
+                  disabled={manualSearchMutation.isPending || scraperStatus?.isRunning}
+                  className="flex-1"
+                  data-testid="input-manual-search"
+                />
+                <Button
+                  onClick={handleManualSearch}
+                  disabled={manualSearchMutation.isPending || scraperStatus?.isRunning || manualSearchText.trim().length < 3}
+                  data-testid="button-manual-search"
+                >
+                  {manualSearchMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Search className="h-4 w-4 mr-2" />
+                  )}
+                  Search News
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>
