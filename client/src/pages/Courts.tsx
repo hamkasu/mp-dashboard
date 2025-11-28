@@ -76,18 +76,16 @@ function getStatusBadgeVariant(status: string): "default" | "secondary" | "destr
 export default function Courts() {
   const { t } = useLanguage();
 
-  const { data: courtCasesData, isLoading: casesLoading } = useQuery<{ courtCases: CourtCase[], total: number }>({
+  const { data: courtCases = [], isLoading: casesLoading } = useQuery<CourtCase[]>({
     queryKey: ["/api/court-cases"],
   });
-  
-  const courtCases = courtCasesData?.courtCases || [];
 
-  const { data: mpsData } = useQuery<{ mps: Mp[] }>({
+  const { data: mps = [] } = useQuery<Mp[]>({
     queryKey: ["/api/mps"],
   });
 
   const getMpName = (mpId: string) => {
-    const mp = mpsData?.mps?.find((m) => m.id === mpId);
+    const mp = mps.find((m) => m.id === mpId);
     return mp ? `${mp.name} (${mp.constituency})` : t('courts.unknownMp');
   };
 
