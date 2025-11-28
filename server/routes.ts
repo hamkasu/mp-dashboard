@@ -4408,7 +4408,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     timestamp: number;
     recordCount: number;
   } | null = null;
-  const CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes
+  const CACHE_TTL_MS = 4 * 60 * 60 * 1000; // 4 hours (increased from 30 minutes)
 
   // Public endpoint to analyze Hansard transcripts for inappropriate language
   // Used by homepage to display MPs with unparliamentary language
@@ -4457,6 +4457,15 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
 
       const mpStats = new Map<string, { mpId: string; mpName: string; constituency: string; count: number; words: string[] }>();
 
+      // OPTIMIZATION: Fetch all MPs once before the loop instead of inside the loop
+      const allMps = await storage.getAllMps();
+      
+      // Create a lookup map for faster constituency matching
+      const mpByConstituency = new Map<string, typeof allMps[0]>();
+      for (const mp of allMps) {
+        mpByConstituency.set(mp.constituency.toLowerCase(), mp);
+      }
+
       for (const record of allRecords) {
         if (!record.transcript) continue;
 
@@ -4475,12 +4484,14 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
             const extractedName = speakerMatch[1].trim();
             const extractedConstituency = speakerMatch[2].trim();
 
-            // Try to find MP in database
-            const allMps = await storage.getAllMps();
-            const matchedMp = allMps.find(mp =>
-              mp.constituency.toLowerCase() === extractedConstituency.toLowerCase() ||
-              mp.name.toLowerCase().includes(extractedName.toLowerCase().split(' ').slice(-1)[0])
-            );
+            // OPTIMIZATION: Use pre-built lookup map instead of calling storage in loop
+            let matchedMp = mpByConstituency.get(extractedConstituency.toLowerCase());
+            
+            // Fallback: search by name if constituency match not found
+            if (!matchedMp) {
+              const lastName = extractedName.toLowerCase().split(' ').slice(-1)[0];
+              matchedMp = allMps.find(mp => mp.name.toLowerCase().includes(lastName));
+            }
 
             currentSpeaker = {
               mpId: matchedMp?.id,
@@ -4491,7 +4502,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
 
           // Check for inappropriate words
           for (const pattern of inappropriatePatterns) {
-            const matches = line.matchAll(pattern);
+            const matches = Array.from(line.matchAll(pattern));
             for (const match of matches) {
               const word = match[0].toLowerCase();
               const contextStart = Math.max(0, match.index! - 50);
