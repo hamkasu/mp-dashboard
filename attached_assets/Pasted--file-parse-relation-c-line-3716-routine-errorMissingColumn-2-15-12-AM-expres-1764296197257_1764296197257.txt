@@ -1,0 +1,117 @@
+  file: 'parse_relation.c',
+  line: '3716',
+  routine: 'errorMissingColumn'
+}
+2:15:12 AM [express] GET /api/mps 500 in 2ms
+  where: undefined,
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'parse_relation.c',
+  line: '3716',
+  routine: 'errorMissingColumn'
+Error fetching paginated MPs: error: column "is_deputy_minister" does not exist
+    at /app/node_modules/pg-pool/index.js:45:11
+}
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+2:15:12 AM [express] GET /api/mps/paginated 500 in 3ms
+    at async file:///app/node_modules/drizzle-orm/node-postgres/session.js:83:22
+    at async DbStorage.getAllMps (file:///app/dist/index.js:2435:24)
+    at async file:///app/dist/index.js:7175:22 {
+  length: 119,
+  severity: 'ERROR',
+  code: '42703',
+  detail: undefined,
+  hint: undefined,
+  position: '448',
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  length: 119,
+  schema: undefined,
+Error fetching MPs: error: column "is_deputy_minister" does not exist
+    at /app/node_modules/pg-pool/index.js:45:11
+  hint: undefined,
+  position: '448',
+  severity: 'ERROR',
+  internalPosition: undefined,
+  internalQuery: undefined,
+  code: '42703',
+  detail: undefined,
+  table: undefined,
+  column: undefined,
+    at async file:///app/dist/index.js:7175:22 {
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+  dataType: undefined,
+  length: 119,
+  constraint: undefined,
+  severity: 'ERROR',
+    at async file:///app/node_modules/drizzle-orm/node-postgres/session.js:83:22
+  file: 'parse_relation.c',
+    at async DbStorage.getAllMps (file:///app/dist/index.js:2435:24)
+  line: '3716',
+  code: '42703',
+    at async file:///app/dist/index.js:7255:20 {
+  routine: 'errorMissingColumn'
+  column: undefined,
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+  internalQuery: undefined,
+}
+2:15:13 AM [express] GET /api/mps/paginated 500 in 11ms
+  where: undefined,
+  detail: undefined,
+2:15:13 AM [express] GET /api/mps 500 in 4ms
+  dataType: undefined,
+  line: '3716',
+  schema: undefined,
+  hint: undefined,
+Error fetching paginated MPs: error: column "is_deputy_minister" does not exist
+  constraint: undefined,
+Error calculating stats: error: column "is_deputy_minister" does not exist
+  table: undefined,
+  position: '448',
+  routine: 'errorMissingColumn'
+    at /app/node_modules/pg-pool/index.js:45:11
+  file: 'parse_relation.c',
+  internalPosition: undefined,
+}
+    at /app/node_modules/pg-pool/index.js:45:11
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async file:///app/node_modules/drizzle-orm/node-postgres/session.js:83:22
+    at async DbStorage.getAllMps (file:///app/dist/index.js:2435:24)
+    at async file:///app/node_modules/drizzle-orm/node-postgres/session.js:83:22
+    at async DbStorage.getAllMps (file:///app/dist/index.js:2435:24)
+    at async file:///app/dist/index.js:7334:20 {
+  length: 119,
+  severity: 'ERROR',
+  code: '42703',
+  detail: undefined,
+  hint: undefined,
+  position: '448',
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'parse_relation.c',
+  line: '3716',
+  routine: 'errorMissingColumn'
+}
+2:15:13 AM [express] GET /api/stats 500 in 15ms
+🔍 Analyzing Hansard transcripts for inappropriate language...
+📊 Analyzing 222 Hansard records...
+  code: '42703',
+  detail: undefined,
+  hint: undefined,
+  position: '448',
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: undefined,
+  table: undefined,
+  column: undefin
