@@ -5,6 +5,15 @@ This web application provides a comprehensive dashboard for Malaysian Members of
 
 ## Recent Changes
 
+### November 28, 2025 - Automated Court Case News Scraper
+Added automated scraper to monitor Malaysian news sources for MP-related court cases:
+- Monitors 6 Malaysian news sources: The Star, New Straits Times, Malay Mail, Benar News, Malaysiakini, Free Malaysia Today
+- Uses Gemini AI to extract structured court case data (case number, charges, status, court level)
+- Scraped articles stored in review queue for admin approval before publishing
+- Cron jobs run twice daily at 8:00 AM and 6:00 PM Malaysia time
+- Admin interface at `/court-cases-admin` for managing court cases and reviewing scraped articles
+- Key files: `server/court-case-scraper.ts`, `server/court-case-cron.ts`, `client/src/pages/CourtCasesAdmin.tsx`
+
 ### November 28, 2025 - Senators Attending Dewan Rakyat Sessions
 Added tracking for senators (Dewan Negara members) who attend Dewan Rakyat sessions:
 - Added `senatorsAttending` JSONB field to hansard_records schema
