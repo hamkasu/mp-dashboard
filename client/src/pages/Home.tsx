@@ -522,57 +522,79 @@ export default function Home() {
                   </p>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid gap-4 sm:grid-cols-1 lg:grid-cols-2">
+                  <div className="space-y-4">
                     {mpsWithSprmInvestigations.map((mp) => {
                       const mpInvestigations = sprmInvestigations.filter(i => i.mpId === mp.id);
-                      const ongoingCount = mpInvestigations.filter(i => i.status === "Ongoing").length;
-                      const completedCount = mpInvestigations.filter(i => i.status === "Completed").length;
-                      const latestInvestigation = mpInvestigations[0];
+                      const ongoingInvestigations = mpInvestigations.filter(i => i.status === "Ongoing");
+                      const completedInvestigations = mpInvestigations.filter(i => i.status === "Completed");
 
                       return (
                         <Link key={mp.id} href={`/mp/${mp.id}`} data-testid={`sprm-investigation-mp-${mp.id}`}>
-                          <div className="group cursor-pointer rounded-lg border bg-card p-4 hover:bg-accent/50 transition-colors">
-                            <div className="flex items-start gap-4">
-                              <Avatar className="h-14 w-14 shrink-0 border-2 border-red-200 dark:border-red-800">
+                          <div className="group cursor-pointer rounded-lg border bg-card p-5 hover:bg-accent/50 transition-colors">
+                            <div className="flex flex-col sm:flex-row sm:items-start gap-4">
+                              <Avatar className="h-16 w-16 shrink-0 border-2 border-red-200 dark:border-red-800">
                                 <AvatarImage src={mp.photoUrl || undefined} alt={mp.name} />
-                                <AvatarFallback className="bg-red-100 dark:bg-red-900/50 text-red-900 dark:text-red-100 font-semibold">
+                                <AvatarFallback className="bg-red-100 dark:bg-red-900/50 text-red-900 dark:text-red-100 font-semibold text-lg">
                                   {mp.name.split(" ").map(n => n[0]).join("").slice(0, 2)}
                                 </AvatarFallback>
                               </Avatar>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-start justify-between gap-2">
-                                  <div className="min-w-0">
-                                    <h4 className="font-semibold text-base group-hover:text-primary transition-colors">
+                              <div className="flex-1">
+                                <div className="flex items-start justify-between gap-3">
+                                  <div>
+                                    <h4 className="font-semibold text-lg group-hover:text-primary transition-colors">
                                       {mp.name}
                                     </h4>
-                                    <div className="flex items-center gap-2 mt-0.5">
+                                    <div className="flex flex-wrap items-center gap-2 mt-1">
                                       <Badge variant="outline" className="text-xs font-medium">
                                         {mp.party}
                                       </Badge>
-                                      <span className="text-xs text-muted-foreground">{mp.constituency}</span>
+                                      <span className="text-sm text-muted-foreground">{mp.constituency}, {mp.state}</span>
                                     </div>
                                   </div>
-                                  <ExternalLink className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors shrink-0 mt-1" />
+                                  <ExternalLink className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors shrink-0" />
                                 </div>
-                                {latestInvestigation && (
-                                  <div className="mt-3 p-2.5 bg-red-100/50 dark:bg-red-900/20 rounded-md">
-                                    <p className="text-xs font-medium text-red-900 dark:text-red-100 mb-1">
-                                      {latestInvestigation.caseNumber}
+                                
+                                <div className="mt-4 space-y-2">
+                                  <p className="text-xs font-semibold uppercase tracking-wide text-red-900/70 dark:text-red-100/70">
+                                    Investigations ({mpInvestigations.length})
+                                  </p>
+                                  {mpInvestigations.slice(0, 3).map((investigation, idx) => (
+                                    <div key={idx} className="p-3 bg-red-100/50 dark:bg-red-900/20 rounded-md border border-red-200/50 dark:border-red-800/50">
+                                      <div className="flex items-start justify-between gap-2">
+                                        <div className="flex-1">
+                                          <p className="text-xs font-mono text-red-900/80 dark:text-red-100/80">
+                                            {investigation.caseNumber}
+                                          </p>
+                                          <p className="text-sm font-medium text-red-900 dark:text-red-100 mt-0.5">
+                                            {investigation.title}
+                                          </p>
+                                        </div>
+                                        <Badge 
+                                          variant={investigation.status === "Ongoing" ? "destructive" : "secondary"}
+                                          className="text-xs shrink-0"
+                                        >
+                                          {investigation.status}
+                                        </Badge>
+                                      </div>
+                                    </div>
+                                  ))}
+                                  {mpInvestigations.length > 3 && (
+                                    <p className="text-xs text-red-800/70 dark:text-red-200/70 italic">
+                                      +{mpInvestigations.length - 3} more investigation(s) - click to view all
                                     </p>
-                                    <p className="text-xs text-red-800 dark:text-red-200 line-clamp-2">
-                                      {latestInvestigation.title}
-                                    </p>
-                                  </div>
-                                )}
-                                <div className="flex flex-wrap gap-1.5 mt-3">
-                                  {ongoingCount > 0 && (
+                                  )}
+                                </div>
+                                
+                                <div className="flex flex-wrap gap-2 mt-4 pt-3 border-t border-red-200/50 dark:border-red-800/50">
+                                  <span className="text-xs text-muted-foreground">Status Summary:</span>
+                                  {ongoingInvestigations.length > 0 && (
                                     <Badge variant="destructive" className="text-xs" data-testid={`badge-sprm-ongoing-${mp.id}`}>
-                                      {ongoingCount} Ongoing
+                                      {ongoingInvestigations.length} Ongoing
                                     </Badge>
                                   )}
-                                  {completedCount > 0 && (
-                                    <Badge variant="secondary" className="text-xs" data-testid={`badge-sprm-completed-${mp.id}`}>
-                                      {completedCount} Completed
+                                  {completedInvestigations.length > 0 && (
+                                    <Badge variant="outline" className="text-xs bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-200 border-green-300 dark:border-green-700" data-testid={`badge-sprm-completed-${mp.id}`}>
+                                      {completedInvestigations.length} Completed
                                     </Badge>
                                   )}
                                 </div>
@@ -600,62 +622,85 @@ export default function Home() {
                   </p>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid gap-4 sm:grid-cols-1 lg:grid-cols-2">
+                  <div className="space-y-4">
                     {mpsWithCourtCases.map((mp) => {
                       const mpCases = courtCases.filter(c => c.mpId === mp.id);
-                      const ongoingCount = mpCases.filter(c => c.status === "Ongoing" || c.status === "Pending").length;
-                      const completedCount = mpCases.filter(c => c.status === "Completed" || c.status === "Concluded" || c.status === "Acquitted" || c.status === "Convicted").length;
-                      const latestCase = mpCases[0];
+                      const ongoingCases = mpCases.filter(c => c.status === "Ongoing" || c.status === "Pending");
+                      const completedCases = mpCases.filter(c => c.status === "Completed" || c.status === "Concluded" || c.status === "Acquitted" || c.status === "Convicted");
 
                       return (
                         <Link key={mp.id} href={`/mp/${mp.id}`} data-testid={`court-case-mp-${mp.id}`}>
-                          <div className="group cursor-pointer rounded-lg border bg-card p-4 hover:bg-accent/50 transition-colors">
-                            <div className="flex items-start gap-4">
-                              <Avatar className="h-14 w-14 shrink-0 border-2 border-amber-200 dark:border-amber-800">
+                          <div className="group cursor-pointer rounded-lg border bg-card p-5 hover:bg-accent/50 transition-colors">
+                            <div className="flex flex-col sm:flex-row sm:items-start gap-4">
+                              <Avatar className="h-16 w-16 shrink-0 border-2 border-amber-200 dark:border-amber-800">
                                 <AvatarImage src={mp.photoUrl || undefined} alt={mp.name} />
-                                <AvatarFallback className="bg-amber-100 dark:bg-amber-900/50 text-amber-900 dark:text-amber-100 font-semibold">
+                                <AvatarFallback className="bg-amber-100 dark:bg-amber-900/50 text-amber-900 dark:text-amber-100 font-semibold text-lg">
                                   {mp.name.split(" ").map(n => n[0]).join("").slice(0, 2)}
                                 </AvatarFallback>
                               </Avatar>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-start justify-between gap-2">
-                                  <div className="min-w-0">
-                                    <h4 className="font-semibold text-base group-hover:text-primary transition-colors">
+                              <div className="flex-1">
+                                <div className="flex items-start justify-between gap-3">
+                                  <div>
+                                    <h4 className="font-semibold text-lg group-hover:text-primary transition-colors">
                                       {mp.name}
                                     </h4>
-                                    <div className="flex items-center gap-2 mt-0.5">
+                                    <div className="flex flex-wrap items-center gap-2 mt-1">
                                       <Badge variant="outline" className="text-xs font-medium">
                                         {mp.party}
                                       </Badge>
-                                      <span className="text-xs text-muted-foreground">{mp.constituency}</span>
+                                      <span className="text-sm text-muted-foreground">{mp.constituency}, {mp.state}</span>
                                     </div>
                                   </div>
-                                  <ExternalLink className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors shrink-0 mt-1" />
+                                  <ExternalLink className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors shrink-0" />
                                 </div>
-                                {latestCase && (
-                                  <div className="mt-3 p-2.5 bg-amber-100/50 dark:bg-amber-900/20 rounded-md">
-                                    <p className="text-xs font-medium text-amber-900 dark:text-amber-100 mb-1">
-                                      {latestCase.caseNumber}
+                                
+                                <div className="mt-4 space-y-2">
+                                  <p className="text-xs font-semibold uppercase tracking-wide text-amber-900/70 dark:text-amber-100/70">
+                                    Court Cases ({mpCases.length})
+                                  </p>
+                                  {mpCases.slice(0, 3).map((courtCase, idx) => (
+                                    <div key={idx} className="p-3 bg-amber-100/50 dark:bg-amber-900/20 rounded-md border border-amber-200/50 dark:border-amber-800/50">
+                                      <div className="flex items-start justify-between gap-2">
+                                        <div className="flex-1">
+                                          <div className="flex items-center gap-2">
+                                            <p className="text-xs font-mono text-amber-900/80 dark:text-amber-100/80">
+                                              {courtCase.caseNumber}
+                                            </p>
+                                            <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                                              {courtCase.courtLevel}
+                                            </Badge>
+                                          </div>
+                                          <p className="text-sm font-medium text-amber-900 dark:text-amber-100 mt-0.5">
+                                            {courtCase.title}
+                                          </p>
+                                        </div>
+                                        <Badge 
+                                          variant={courtCase.status === "Ongoing" || courtCase.status === "Pending" ? "destructive" : 
+                                                   courtCase.status === "Acquitted" ? "outline" : "secondary"}
+                                          className={`text-xs shrink-0 ${courtCase.status === "Acquitted" ? "bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-200 border-green-300 dark:border-green-700" : ""}`}
+                                        >
+                                          {courtCase.status}
+                                        </Badge>
+                                      </div>
+                                    </div>
+                                  ))}
+                                  {mpCases.length > 3 && (
+                                    <p className="text-xs text-amber-800/70 dark:text-amber-200/70 italic">
+                                      +{mpCases.length - 3} more case(s) - click to view all
                                     </p>
-                                    <p className="text-xs text-amber-800 dark:text-amber-200 line-clamp-2">
-                                      {latestCase.title}
-                                    </p>
-                                  </div>
-                                )}
-                                <div className="flex flex-wrap gap-1.5 mt-3">
-                                  {ongoingCount > 0 && (
+                                  )}
+                                </div>
+                                
+                                <div className="flex flex-wrap gap-2 mt-4 pt-3 border-t border-amber-200/50 dark:border-amber-800/50">
+                                  <span className="text-xs text-muted-foreground">Status Summary:</span>
+                                  {ongoingCases.length > 0 && (
                                     <Badge variant="destructive" className="text-xs" data-testid={`badge-court-ongoing-${mp.id}`}>
-                                      {ongoingCount} Ongoing
+                                      {ongoingCases.length} Ongoing
                                     </Badge>
                                   )}
-                                  {completedCount > 0 && (
-                                    <Badge variant="secondary" className="text-xs" data-testid={`badge-court-completed-${mp.id}`}>
-                                      {completedCount} Completed
-                                    </Badge>
-                                  )}
-                                  {mpCases.length > 1 && (
-                                    <Badge variant="outline" className="text-xs text-muted-foreground">
-                                      +{mpCases.length - 1} more
+                                  {completedCases.length > 0 && (
+                                    <Badge variant="outline" className="text-xs bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-200 border-green-300 dark:border-green-700" data-testid={`badge-court-completed-${mp.id}`}>
+                                      {completedCases.length} Completed
                                     </Badge>
                                   )}
                                 </div>
