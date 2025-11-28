@@ -44,8 +44,9 @@ async function scrapeAndStoreHansard() {
       
       const attendedMpIds = nameMatcher.matchNames(attendance.attendedNames);
       const absentMpIds = nameMatcher.matchNames(attendance.absentNames);
+      const senatorsAttending = attendance.senatorsAttending || [];
       
-      console.log(`  Attendance: ${attendedMpIds.length} present, ${absentMpIds.length} absent`);
+      console.log(`  Attendance: ${attendedMpIds.length} present, ${absentMpIds.length} absent, ${senatorsAttending.length} senators`);
       
       await storage.createHansardRecord({
         sessionNumber: metadata.sessionNumber,
@@ -56,9 +57,11 @@ async function scrapeAndStoreHansard() {
         pdfLinks: [metadata.pdfUrl],
         topics: topics,
         speakers: [],
+        speakerStats: [],
         voteRecords: [],
         attendedMpIds,
-        absentMpIds
+        absentMpIds,
+        senatorsAttending
       });
       
       console.log(`  ✓ Saved (${Math.floor(transcript.length / 1000)}KB of text)`);

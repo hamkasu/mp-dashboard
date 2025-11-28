@@ -95,6 +95,7 @@ async function main() {
           voteRecords: [],
           attendedMpIds: [],
           absentMpIds: [],
+          senatorsAttending: attendanceData.senatorsAttending || [],
           constituenciesPresent: constituencyData.constituenciesPresent,
           constituenciesAbsent: constituencyData.constituenciesAbsent,
           constituenciesAbsentRule91: constituencyData.constituenciesAbsentRule91

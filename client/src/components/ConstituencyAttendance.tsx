@@ -5,7 +5,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { MapPin, Users, UserX } from "lucide-react";
+import { MapPin, Users, UserX, Landmark } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
@@ -35,6 +35,7 @@ interface ConstituencyAttendanceData {
   attended: ConstituencyData[];
   absent: ConstituencyData[];
   stateStats: StateStats[];
+  senatorsAttending: string[];
 }
 
 interface ConstituencyAttendanceProps {
@@ -102,12 +103,15 @@ export function ConstituencyAttendance({ hansardRecordId, enabled = true }: Cons
       </div>
 
       <Tabs defaultValue="attended" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="attended" data-testid="tab-attended">
             Attended ({data.attendedConstituencies})
           </TabsTrigger>
           <TabsTrigger value="absent" data-testid="tab-absent">
             Absent ({data.absentConstituencies})
+          </TabsTrigger>
+          <TabsTrigger value="senators" data-testid="tab-senators">
+            Senators ({data.senatorsAttending?.length || 0})
           </TabsTrigger>
           <TabsTrigger value="states" data-testid="tab-states">
             By State
@@ -190,6 +194,39 @@ export function ConstituencyAttendance({ hansardRecordId, enabled = true }: Cons
                   ))}
                 </div>
               </ScrollArea>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="senators" className="mt-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Landmark className="w-4 h-4" />
+                Senators Attending (Dewan Negara)
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {data.senatorsAttending && data.senatorsAttending.length > 0 ? (
+                <ScrollArea className="h-[400px] pr-4">
+                  <div className="space-y-3">
+                    {data.senatorsAttending.map((senator, idx) => (
+                      <div
+                        key={`senator-${idx}`}
+                        data-testid={`senator-attending-${idx}`}
+                        className="flex items-center gap-2 p-3 rounded-md bg-muted/50"
+                      >
+                        <Landmark className="w-3 h-3 text-muted-foreground" />
+                        <span className="font-medium">{senator}</span>
+                      </div>
+                    ))}
+                  </div>
+                </ScrollArea>
+              ) : (
+                <div className="py-8 text-center text-muted-foreground">
+                  No senators recorded for this session
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

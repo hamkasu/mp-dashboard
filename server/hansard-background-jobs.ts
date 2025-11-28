@@ -114,8 +114,9 @@ export async function runHansardDownloadJob(
         
         const attendedMpIds = nameMatcher.matchNames(attendance.attendedNames);
         const absentMpIds = nameMatcher.matchNames(attendance.absentNames);
+        const senatorsAttending = attendance.senatorsAttending || [];
         
-        console.log(`  Attendance: ${attendedMpIds.length} present, ${absentMpIds.length} absent`);
+        console.log(`  Attendance: ${attendedMpIds.length} present, ${absentMpIds.length} absent, ${senatorsAttending.length} senators`);
         console.log(`  Constituencies: ${constituencyCounts.constituenciesPresent} present, ${constituencyCounts.constituenciesAbsent} absent, ${constituencyCounts.constituenciesAbsentRule91} absent (Rule 91)`);
         
         // Create Hansard record first
@@ -132,6 +133,7 @@ export async function runHansardDownloadJob(
           voteRecords: [],
           attendedMpIds,
           absentMpIds,
+          senatorsAttending,
           constituenciesPresent: constituencyCounts.constituenciesPresent,
           constituenciesAbsent: constituencyCounts.constituenciesAbsent,
           constituenciesAbsentRule91: constituencyCounts.constituenciesAbsentRule91

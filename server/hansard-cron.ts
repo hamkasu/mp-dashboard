@@ -129,6 +129,7 @@ export async function runHansardSync(options: { triggeredBy: 'manual' | 'schedul
           voteRecords: [],
           attendedMpIds: [],
           absentMpIds: [],
+          senatorsAttending: attendanceData.senatorsAttending || [],
           constituenciesPresent: constituencyData.constituenciesPresent,
           constituenciesAbsent: constituencyData.constituenciesAbsent,
           constituenciesAbsentRule91: constituencyData.constituenciesAbsentRule91

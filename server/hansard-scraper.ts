@@ -42,6 +42,7 @@ interface TreeNode {
 export interface AttendanceData {
   attendedNames: string[];
   absentNames: string[];
+  senatorsAttending: string[];
 }
 
 export interface ConstituencyAttendanceData {
@@ -381,11 +382,13 @@ export class HansardScraper {
   extractAttendanceFromText(pdfText: string): AttendanceData {
     const attendedNames: string[] = [];
     const absentNames: string[] = [];
+    const senatorsAttending: string[] = [];
 
     const normalizedText = pdfText.replace(/[ \t]+/g, ' ');
     
     const attendancePattern = /KEHADIRAN\s+AHLI[-\s]AHLI\s+PARLIMEN/i;
     const absentPattern = /Ahli[-\s]Ahli\s+Yang\s+Tidak\s+Hadir\s*:?/gi;
+    const senatorPattern = /Senator\s+Yang\s+Turut\s+Hadir\s*:?/i;
     
     const attendanceMatch = normalizedText.match(attendancePattern);
 
@@ -394,7 +397,7 @@ export class HansardScraper {
       let endIdx = normalizedText.length;
       
       // Stop at senator section to avoid counting senators as MPs
-      const senatorMatch = normalizedText.substring(startIdx).match(/Senator\s+Yang\s+Turut\s+Hadir\s*:?/i);
+      const senatorMatch = normalizedText.substring(startIdx).match(senatorPattern);
       if (senatorMatch && senatorMatch.index !== undefined) {
         endIdx = startIdx + senatorMatch.index;
       } else {
@@ -415,6 +418,27 @@ export class HansardScraper {
       const attendanceSection = normalizedText.substring(startIdx, endIdx);
       const extractedAttended = this.extractNamesFromSection(attendanceSection);
       attendedNames.push(...extractedAttended);
+    }
+
+    // Extract senators attending
+    const senatorMatchGlobal = normalizedText.match(senatorPattern);
+    if (senatorMatchGlobal && senatorMatchGlobal.index !== undefined) {
+      const senatorStartIdx = senatorMatchGlobal.index + senatorMatchGlobal[0].length;
+      
+      // Senator section ends at "Ahli-Ahli Yang Tidak Hadir" or other major section
+      const remainingFromSenator = normalizedText.substring(senatorStartIdx);
+      const absentAfterSenator = remainingFromSenator.match(/Ahli[-\s]Ahli\s+Yang\s+Tidak\s+Hadir/i);
+      
+      let senatorEndIdx;
+      if (absentAfterSenator && absentAfterSenator.index !== undefined) {
+        senatorEndIdx = senatorStartIdx + absentAfterSenator.index;
+      } else {
+        senatorEndIdx = Math.min(senatorStartIdx + 5000, normalizedText.length);
+      }
+      
+      const senatorSection = normalizedText.substring(senatorStartIdx, senatorEndIdx);
+      const extractedSenators = this.extractSenatorNames(senatorSection);
+      senatorsAttending.push(...extractedSenators);
     }
 
     let match;
@@ -439,7 +463,34 @@ export class HansardScraper {
       absentNames.push(...extractedAbsent);
     }
 
-    return { attendedNames, absentNames };
+    return { attendedNames, absentNames, senatorsAttending };
+  }
+
+  private extractSenatorNames(sectionText: string): string[] {
+    const names: string[] = [];
+    
+    const normalizedSection = sectionText.replace(/\n/g, ' ').replace(/\s+/g, ' ');
+    // Senator entries are numbered like MPs, e.g., "1. Menteri Kewangan II, Senator Datuk Seri Amir Hamzah bin Azizan"
+    const numberedEntryPattern = /(\d+)\.\s+([^0-9]+?)(?=\s*\d+\.\s+|$)/g;
+    
+    let match;
+    while ((match = numberedEntryPattern.exec(normalizedSection)) !== null) {
+      const entryText = match[2].trim();
+      
+      // Extract the name after "Senator" keyword
+      const senatorMatch = entryText.match(/Senator\s+(.+)/i);
+      if (senatorMatch) {
+        const fullName = senatorMatch[1].trim();
+        if (fullName.length > 3) {
+          names.push(fullName);
+        }
+      } else if (entryText.length > 3) {
+        // If no "Senator" keyword, just use the entry text
+        names.push(entryText);
+      }
+    }
+    
+    return names;
   }
 
   private extractNamesFromSection(sectionText: string): string[] {

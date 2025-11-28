@@ -2620,7 +2620,8 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         attendanceRate: allMps.length > 0 ? (attendedConstituencies.length / allMps.length) * 100 : 0,
         attended: attendedConstituencies,
         absent: absentConstituencies,
-        stateStats
+        stateStats,
+        senatorsAttending: record.senatorsAttending || []
       });
     } catch (error) {
       console.error("Error fetching constituency attendance:", error);
