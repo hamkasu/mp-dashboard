@@ -488,7 +488,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
 
         // Base salary and allowances per month
         const DEWAN_RAKYAT_SALARY = 25700;
-        const MONTHLY_FIXED_ALLOWANCES = 2500 + 1500 + 1500 + 1500 + 300 + 1500 + 900 + 1500; // Entertainment, special non-admin, fixed travel, fuel, toll, driver, phone
+        const MONTHLY_FIXED_ALLOWANCES = 2500 + 1500 + 1500 + 1500 + 300 + 1500 + 900; // Entertainment, special non-admin, fixed travel, fuel, toll, driver, phone (= 9,700)
 
         // Ministerial salaries (after 20% voluntary paycut)
         // Prime Minister takes no ministerial salary
