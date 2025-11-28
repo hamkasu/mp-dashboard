@@ -45,6 +45,7 @@ export const mps = pgTable("mps", {
   parliamentSittingAllowance: integer("parliament_sitting_allowance").notNull().default(400),
   governmentMeetingDays: integer("government_meeting_days").notNull().default(0),
   isMinister: boolean("is_minister").notNull().default(false),
+  isDeputyMinister: boolean("is_deputy_minister").notNull().default(false),
   ministerialPosition: text("ministerial_position"),
   contactAddress: text("contact_address"),
   email: text("email"),
