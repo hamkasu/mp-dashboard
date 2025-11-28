@@ -91,6 +91,8 @@ export default function Courts() {
 
   const ongoingCases = courtCases.filter(c => c.status.toLowerCase() === "ongoing");
   const completedCases = courtCases.filter(c => c.status.toLowerCase() === "completed");
+  const criminalCases = courtCases.filter(c => !c.caseType || c.caseType === "criminal");
+  const civilCases = courtCases.filter(c => c.caseType === "civil");
 
   return (
     <div className="min-h-screen bg-background">
@@ -109,7 +111,7 @@ export default function Courts() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center gap-3">
@@ -157,6 +159,38 @@ export default function Courts() {
               </div>
             </CardContent>
           </Card>
+
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-red-500/10 rounded-md">
+                  <Gavel className="h-5 w-5 text-red-500" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold" data-testid="text-criminal-cases">
+                    {casesLoading ? "-" : criminalCases.length}
+                  </p>
+                  <p className="text-sm text-muted-foreground">{t('courts.criminalCases') || 'Criminal'}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-blue-500/10 rounded-md">
+                  <FileText className="h-5 w-5 text-blue-500" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold" data-testid="text-civil-cases">
+                    {casesLoading ? "-" : civilCases.length}
+                  </p>
+                  <p className="text-sm text-muted-foreground">{t('courts.civilCases') || 'Civil'}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         {casesLoading ? (
@@ -195,6 +229,15 @@ export default function Courts() {
                         <div className="flex flex-wrap items-center gap-2 mb-2">
                           <Badge variant={getStatusBadgeVariant(courtCase.status)}>
                             {courtCase.status}
+                          </Badge>
+                          <Badge 
+                            variant="outline" 
+                            className={courtCase.caseType === "civil" 
+                              ? "border-blue-500 text-blue-600 dark:text-blue-400" 
+                              : "border-red-500 text-red-600 dark:text-red-400"
+                            }
+                          >
+                            {courtCase.caseType === "civil" ? (t('courts.civil') || 'Civil') : (t('courts.criminal') || 'Criminal')}
                           </Badge>
                           <Badge variant="outline">
                             {courtCase.courtLevel}

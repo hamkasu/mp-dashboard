@@ -23,37 +23,56 @@ const NEWS_SOURCES = [
     name: "The Star",
     baseUrl: "https://www.thestar.com.my",
     searchUrl: "https://www.thestar.com.my/search?q=",
-    keywords: ["court case MP", "corruption MP", "trial MP Malaysia", "charged MP"],
+    keywords: [
+      "court case MP", "corruption MP", "trial MP Malaysia", "charged MP",
+      "defamation suit MP", "civil lawsuit MP", "libel suit politician", 
+      "sexual assault suit MP", "harassment suit politician"
+    ],
   },
   {
     name: "New Straits Times",
     baseUrl: "https://www.nst.com.my",
     searchUrl: "https://www.nst.com.my/search?keys=",
-    keywords: ["court case MP", "corruption charges", "MACC investigation"],
+    keywords: [
+      "court case MP", "corruption charges", "MACC investigation",
+      "defamation lawsuit Malaysia", "civil suit politician", "libel case MP"
+    ],
   },
   {
     name: "Malay Mail",
     baseUrl: "https://www.malaymail.com",
     searchUrl: "https://www.malaymail.com/search?q=",
-    keywords: ["MP court case", "corruption trial", "charged politician Malaysia", "MACC"],
+    keywords: [
+      "MP court case", "corruption trial", "charged politician Malaysia", "MACC",
+      "defamation suit", "civil lawsuit politician", "sexual assault civil suit"
+    ],
   },
   {
     name: "Benar News",
     baseUrl: "https://www.benarnews.org",
     searchUrl: "https://www.benarnews.org/malay/search?q=",
-    keywords: ["MP court Malaysia", "corruption charges", "trial politician"],
+    keywords: [
+      "MP court Malaysia", "corruption charges", "trial politician",
+      "defamation MP", "lawsuit politician Malaysia"
+    ],
   },
   {
     name: "Malaysiakini",
     baseUrl: "https://www.malaysiakini.com",
     searchUrl: "https://www.malaysiakini.com/en/search?q=",
-    keywords: ["MP court", "corruption trial", "SPRM investigation"],
+    keywords: [
+      "MP court", "corruption trial", "SPRM investigation",
+      "defamation suit", "civil lawsuit", "libel suit", "sexual assault lawsuit"
+    ],
   },
   {
     name: "Free Malaysia Today",
     baseUrl: "https://www.freemalaysiatoday.com",
     searchUrl: "https://www.freemalaysiatoday.com/?s=",
-    keywords: ["MP charged", "court case politician", "corruption Malaysia"],
+    keywords: [
+      "MP charged", "court case politician", "corruption Malaysia",
+      "defamation suit politician", "civil lawsuit MP", "libel Malaysia"
+    ],
   },
 ];
 
@@ -76,6 +95,7 @@ interface ExtractedCourtCaseData {
   title?: string;
   courtLevel?: string;
   status?: string;
+  caseType?: string;
   charges?: string;
   outcome?: string;
   filingDate?: string;
@@ -301,14 +321,19 @@ export class CourtCaseScraper {
   private isRelevantArticle(article: ScrapedArticle): boolean {
     const text = (article.headline + ' ' + article.content).toLowerCase();
     
-    // Must mention court-related terms
-    const courtTerms = ['court', 'trial', 'charged', 'corruption', 'macc', 'sprm', 'prosecution', 'acquit', 'convict', 'verdict', 'sentence'];
+    // Must mention court-related terms (both criminal and civil)
+    const courtTerms = [
+      'court', 'trial', 'charged', 'corruption', 'macc', 'sprm', 'prosecution', 
+      'acquit', 'convict', 'verdict', 'sentence',
+      'defamation', 'libel', 'lawsuit', 'civil suit', 'civil case',
+      'sexual assault', 'harassment', 'suing', 'sued', 'damages'
+    ];
     const hasCourtTerm = courtTerms.some(term => text.includes(term));
     
     if (!hasCourtTerm) return false;
     
     // Must mention an MP or MP-related terms
-    const mpTerms = ['mp', 'member of parliament', 'ahli parlimen', 'wakil rakyat', 'minister', 'menteri'];
+    const mpTerms = ['mp', 'member of parliament', 'ahli parlimen', 'wakil rakyat', 'minister', 'menteri', 'prime minister', 'perdana menteri'];
     const hasMpTerm = mpTerms.some(term => text.includes(term));
     
     // Or must mention a known MP name
@@ -342,7 +367,8 @@ Extract and return JSON with these fields:
 - title: A short descriptive title for the case
 - courtLevel: The court level (e.g., "High Court", "Sessions Court", "Court of Appeal", "Federal Court")
 - status: The case status ("Ongoing", "Completed", "Acquitted", "Convicted", "Appeal Pending")
-- charges: Summary of the charges
+- caseType: The type of case - "criminal" for corruption/criminal charges, or "civil" for defamation suits, libel suits, civil lawsuits, sexual harassment civil suits, etc.
+- charges: Summary of the charges or claims
 - outcome: The outcome if case is completed
 - filingDate: The date the case was filed (if mentioned), in ISO format
 
@@ -368,6 +394,7 @@ ${article.content.substring(0, 8000)}`;
               title: { type: "string" },
               courtLevel: { type: "string" },
               status: { type: "string" },
+              caseType: { type: "string" },
               charges: { type: "string" },
               outcome: { type: "string" },
               filingDate: { type: "string" },

@@ -75,6 +75,7 @@ export const courtCases = pgTable("court_cases", {
   title: text("title").notNull(),
   courtLevel: text("court_level").notNull(),
   status: text("status").notNull(),
+  caseType: text("case_type").notNull().default("criminal"),
   filingDate: timestamp("filing_date").notNull(),
   outcome: text("outcome"),
   charges: text("charges").notNull(),
