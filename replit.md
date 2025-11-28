@@ -5,6 +5,14 @@ This web application provides a comprehensive dashboard for Malaysian Members of
 
 ## Recent Changes
 
+### November 28, 2025 - Manual Court Case Search Feature
+Added manual search capability to the court case scraper:
+- Admins can enter custom search terms (e.g., "Anwar Ibrahim defamation", "Najib corruption trial")
+- Searches across all 6 Malaysian news sources simultaneously
+- Found articles are added to the review queue for the same approval workflow
+- Accessible via the admin interface at `/court-cases-admin` under "Scraper Status" section
+- Minimum 3 characters required for search, with loading state and feedback
+
 ### November 28, 2025 - Automated Court Case News Scraper
 Added automated scraper to monitor Malaysian news sources for MP-related court cases:
 - Monitors 6 Malaysian news sources: The Star, New Straits Times, Malay Mail, Benar News, Malaysiakini, Free Malaysia Today
