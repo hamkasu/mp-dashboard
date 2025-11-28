@@ -9,6 +9,7 @@ import { db } from '../db';
 import { mps } from '@db/schema';
 import { eq, or, ilike } from 'drizzle-orm';
 import { readFile } from 'fs/promises';
+import { cleanAddress, cleanEmail, cleanPhoneNumber } from './contact-validation';
 
 interface ScrapedMPContact {
   name: string;
@@ -21,105 +22,6 @@ interface ScrapedMPContact {
   contactAddress?: string | null;
   serviceAddress?: string | null;
   socialMedia?: string | null;
-}
-
-/**
- * List of invalid values that should be filtered out
- * These are section headers or placeholder values that got scraped incorrectly
- */
-const INVALID_ADDRESS_VALUES = [
-  'MAKLUMAT',
-  'maklumat',
-  'INFORMATION',
-  'Contact Information',
-  'Contact Address',
-  'Alamat',
-  '-',
-  'N/A',
-  'n/a',
-  'Tiada',
-  'tiada',
-  '',
-];
-
-/**
- * Clean and validate an address string
- */
-function cleanAddress(value: string | null | undefined): string | null {
-  if (!value) return null;
-  
-  const trimmed = value.trim();
-  
-  // Check against invalid values
-  if (INVALID_ADDRESS_VALUES.includes(trimmed)) {
-    console.log(`  ⚠ Skipping invalid address value: "${trimmed}"`);
-    return null;
-  }
-  
-  // Check if value is too short to be a valid address
-  if (trimmed.length < 10) {
-    console.log(`  ⚠ Skipping too-short address: "${trimmed}"`);
-    return null;
-  }
-  
-  // Check if value looks like a section header (all caps, no numbers, no commas)
-  if (trimmed === trimmed.toUpperCase() && !/\d/.test(trimmed) && !trimmed.includes(',')) {
-    console.log(`  ⚠ Skipping section header as address: "${trimmed}"`);
-    return null;
-  }
-  
-  return trimmed;
-}
-
-/**
- * Clean and validate an email address
- */
-function cleanEmail(value: string | null | undefined): string | null {
-  if (!value) return null;
-  
-  const trimmed = value.trim().toLowerCase();
-  
-  // Check against invalid values
-  if (['-', 'N/A', 'n/a', 'Tiada', 'tiada', ''].includes(trimmed)) {
-    return null;
-  }
-  
-  // Basic email validation
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (emailRegex.test(trimmed)) {
-    return trimmed;
-  }
-  
-  // Try to extract email from a string containing other text
-  const emailMatch = trimmed.match(/[\w.-]+@[\w.-]+\.\w+/);
-  if (emailMatch) {
-    return emailMatch[0];
-  }
-  
-  console.log(`  ⚠ Skipping invalid email: "${trimmed}"`);
-  return null;
-}
-
-/**
- * Clean and validate a phone number
- */
-function cleanPhoneNumber(value: string | null | undefined): string | null {
-  if (!value) return null;
-  
-  const trimmed = value.trim();
-  
-  // Check against invalid values
-  if (['-', 'N/A', 'n/a', 'Tiada', 'tiada', ''].includes(trimmed)) {
-    return null;
-  }
-  
-  // Must contain at least some digits
-  if (!/\d/.test(trimmed)) {
-    console.log(`  ⚠ Skipping invalid phone: "${trimmed}"`);
-    return null;
-  }
-  
-  return trimmed;
 }
 
 async function updateMPContacts() {

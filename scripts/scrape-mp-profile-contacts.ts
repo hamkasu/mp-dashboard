@@ -9,6 +9,7 @@
 
 import { readFile, writeFile } from 'fs/promises';
 import * as cheerio from 'cheerio';
+import { cleanAddress, cleanEmail, cleanPhoneNumber } from './contact-validation';
 
 interface ScrapedMP {
   name: string;
@@ -31,92 +32,6 @@ interface MPContactInfo {
   contactAddress: string | null;
   serviceAddress: string | null;
   ministerialPosition: string | null;
-}
-
-/**
- * Clean and validate an address string
- * Returns null if the value is a section header or invalid
- */
-function cleanAddress(value: string | null | undefined): string | null {
-  if (!value) return null;
-  
-  const trimmed = value.trim();
-  
-  // List of invalid values that should not be used as addresses
-  const invalidValues = [
-    'MAKLUMAT',
-    'maklumat',
-    '-',
-    'N/A',
-    'n/a',
-    'Tiada',
-    'tiada',
-    '',
-  ];
-  
-  // Check if value is a section header or invalid
-  if (invalidValues.includes(trimmed)) {
-    return null;
-  }
-  
-  // Check if value is too short to be a valid address (less than 10 chars)
-  if (trimmed.length < 10) {
-    return null;
-  }
-  
-  // Check if value looks like a section header (all caps, no numbers, no commas)
-  if (trimmed === trimmed.toUpperCase() && !/\d/.test(trimmed) && !trimmed.includes(',')) {
-    return null;
-  }
-  
-  return trimmed;
-}
-
-/**
- * Clean and validate an email address
- */
-function cleanEmail(value: string | null | undefined): string | null {
-  if (!value) return null;
-  
-  const trimmed = value.trim().toLowerCase();
-  
-  // Basic email validation
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (emailRegex.test(trimmed)) {
-    return trimmed;
-  }
-  
-  // Try to extract email from a string containing other text
-  const emailMatch = trimmed.match(/[\w.-]+@[\w.-]+\.\w+/);
-  if (emailMatch) {
-    return emailMatch[0];
-  }
-  
-  return null;
-}
-
-/**
- * Clean and validate a phone number
- */
-function cleanPhoneNumber(value: string | null | undefined): string | null {
-  if (!value) return null;
-  
-  const trimmed = value.trim();
-  
-  // Invalid values
-  if (['-', 'N/A', 'n/a', 'Tiada', 'tiada', ''].includes(trimmed)) {
-    return null;
-  }
-  
-  // Must contain at least some digits
-  if (!/\d/.test(trimmed)) {
-    return null;
-  }
-  
-  // Clean up the phone number format
-  const cleaned = trimmed.replace(/\s+/g, ' ').trim();
-  
-  return cleaned || null;
 }
 
 /**
