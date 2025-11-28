@@ -44,6 +44,7 @@ export const translations = {
       constitution: "Constitution",
       fundamentalRights: "Fundamental Rights",
       admin: "Admin",
+      courts: "Courts",
       blog: "Blog",
       analysis: "Analysis",
       activity: "Activity",
@@ -598,6 +599,19 @@ export const translations = {
       caseNumber: "Case",
     },
 
+    // Courts Page
+    courts: {
+      title: "MP Court Cases",
+      description: "Track court cases involving Malaysian Members of Parliament",
+      totalCases: "Total Cases",
+      ongoingCases: "Ongoing Cases",
+      completedCases: "Completed Cases",
+      noCases: "No court cases on record.",
+      filed: "Filed",
+      outcome: "Outcome",
+      unknownMp: "Unknown MP",
+    },
+
     // Parliament Guide Page
     guide: {
       title: "How the Malaysian Parliament Works",
@@ -662,6 +676,7 @@ export const translations = {
       constitution: "Perlembagaan",
       fundamentalRights: "Hak-Hak Asasi",
       admin: "Pentadbir",
+      courts: "Mahkamah",
       blog: "Blog",
       analysis: "Analisis",
       activity: "Aktiviti",
@@ -1214,6 +1229,19 @@ export const translations = {
       ended: "Berakhir",
       status: "Status",
       caseNumber: "Kes",
+    },
+
+    // Courts Page / Halaman Mahkamah
+    courts: {
+      title: "Kes Mahkamah Ahli Parlimen",
+      description: "Jejaki kes mahkamah yang melibatkan Ahli Parlimen Malaysia",
+      totalCases: "Jumlah Kes",
+      ongoingCases: "Kes Sedang Berjalan",
+      completedCases: "Kes Selesai",
+      noCases: "Tiada kes mahkamah dalam rekod.",
+      filed: "Difailkan",
+      outcome: "Keputusan",
+      unknownMp: "Ahli Parlimen Tidak Diketahui",
     },
 
     // Parliament Guide Page / Halaman Panduan Parlimen

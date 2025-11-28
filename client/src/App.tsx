@@ -34,6 +34,7 @@ const Blog = lazy(() => import("@/pages/Blog"));
 const BlogAdmin = lazy(() => import("@/pages/BlogAdmin"));
 const UnpassedBills = lazy(() => import("@/pages/UnpassedBills"));
 const CourtCasesAdmin = lazy(() => import("@/pages/CourtCasesAdmin"));
+const Courts = lazy(() => import("@/pages/Courts"));
 
 // Loading component
 function PageLoader() {
@@ -60,6 +61,7 @@ function Router() {
         <Route path="/constitution" component={Constitution} />
         <Route path="/fundamental-rights" component={FundamentalRights} />
         <Route path="/blog" component={Blog} />
+        <Route path="/courts" component={Courts} />
         <Route path="/blog-admin" component={BlogAdmin} />
         <Route path="/attendance" component={Attendance} />
         <Route path="/allowances" component={Allowances} />
