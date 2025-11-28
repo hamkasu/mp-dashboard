@@ -4937,25 +4937,32 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
           
           if (!foundEmail) {
             // Strategy 2: Extract all emails from page using regex
-            const allEmails = bodyText.match(/[\w.+-]+@[\w.-]+\.[a-z]{2,}/gi) || [];
-            const candidateEmails = [...new Set(
-              allEmails
-                .map(e => e.toLowerCase().trim())
-                .filter(e => !SITE_WIDE_EMAILS.includes(e))
-            )];
+            const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
+            const allEmails = bodyText.match(emailRegex) || [];
             
-            // Prioritize .gov.my emails (most common for MPs)
-            const govEmail = candidateEmails.find(e => e.endsWith('.gov.my'));
-            if (govEmail) {
-              foundEmail = govEmail;
-            } else {
-              // Then try gmail.com emails
-              const gmailEmail = candidateEmails.find(e => e.endsWith('@gmail.com'));
-              if (gmailEmail) {
-                foundEmail = gmailEmail;
+            // Deduplicate and filter using Array.from for compatibility
+            const uniqueEmails = Array.from(new Set(allEmails));
+            const candidateEmails = uniqueEmails
+              .map((e: string) => e.toLowerCase().trim())
+              .filter((e: string) => !SITE_WIDE_EMAILS.includes(e) && e.length > 0);
+            
+            if (candidateEmails.length > 0) {
+              // Prioritize .gov.my emails (most common for MPs)
+              const govEmail = candidateEmails.find((e: string) => e.endsWith('.gov.my'));
+              if (govEmail) {
+                foundEmail = govEmail;
               } else {
-                // Return first valid candidate
-                foundEmail = candidateEmails.find(e => !e.includes('example') && !e.includes('test@')) || null;
+                // Then try gmail.com emails
+                const gmailEmail = candidateEmails.find((e: string) => e.endsWith('@gmail.com'));
+                if (gmailEmail) {
+                  foundEmail = gmailEmail;
+                } else {
+                  // Return first valid candidate that's not a test/example email
+                  const validEmail = candidateEmails.find((e: string) => !e.includes('example') && !e.includes('test@'));
+                  if (validEmail) {
+                    foundEmail = validEmail;
+                  }
+                }
               }
             }
           }
