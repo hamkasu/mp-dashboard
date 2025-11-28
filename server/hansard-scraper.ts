@@ -469,24 +469,50 @@ export class HansardScraper {
   private extractSenatorNames(sectionText: string): string[] {
     const names: string[] = [];
     
-    const normalizedSection = sectionText.replace(/\n/g, ' ').replace(/\s+/g, ' ');
-    // Senator entries are numbered like MPs, e.g., "1. Menteri Kewangan II, Senator Datuk Seri Amir Hamzah bin Azizan"
-    const numberedEntryPattern = /(\d+)\.\s+([^0-9]+?)(?=\s*\d+\.\s+|$)/g;
+    const normalizedSection = sectionText.replace(/\n/g, ' ').replace(/\s+/g, ' ').trim();
+    
+    // Senator entries are numbered like MPs, e.g.:
+    // "1. Menteri Kewangan II, Senator Datuk Seri Amir Hamzah bin Azizan"
+    // "2. Timbalan Menteri di Jabatan Perdana Menteri (Hal Ehwal Agama), Senator Dr. Zulkifli bin Hasan"
+    
+    // Use greedy match to capture the full entry text up to the next number or end
+    const numberedEntryPattern = /(\d+)\.\s+(.+?)(?=\s+\d+\.\s+|$)/g;
     
     let match;
     while ((match = numberedEntryPattern.exec(normalizedSection)) !== null) {
       const entryText = match[2].trim();
       
-      // Extract the name after "Senator" keyword
+      // Skip if this looks like a page number or other numeric reference
+      if (/^\d+$/.test(entryText) || entryText.length < 5) continue;
+      
+      // Extract the full entry - keep the title and name together for context
+      // The entry format is typically: "Title, Senator Name" or just "Senator Name"
       const senatorMatch = entryText.match(/Senator\s+(.+)/i);
       if (senatorMatch) {
-        const fullName = senatorMatch[1].trim();
-        if (fullName.length > 3) {
-          names.push(fullName);
+        // Include the role/title prefix for full context
+        const fullEntry = entryText.trim();
+        if (fullEntry.length > 3) {
+          names.push(fullEntry);
         }
-      } else if (entryText.length > 3) {
-        // If no "Senator" keyword, just use the entry text
+      } else if (entryText.length > 3 && !entryText.match(/^\d/)) {
+        // If no "Senator" keyword but has valid text, include it
         names.push(entryText);
+      }
+    }
+    
+    // Fallback: Try line-by-line parsing if no numbered entries found
+    if (names.length === 0) {
+      const lines = sectionText.split(/\n/).filter(line => line.trim().length > 0);
+      for (const line of lines) {
+        const trimmedLine = line.trim();
+        // Check for numbered entries in line format
+        const lineMatch = trimmedLine.match(/^\d+\.\s+(.+)/);
+        if (lineMatch) {
+          const entryText = lineMatch[1].trim();
+          if (entryText.length > 5 && entryText.match(/Senator/i)) {
+            names.push(entryText);
+          }
+        }
       }
     }
     
