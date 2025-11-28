@@ -132,7 +132,7 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
-                  variant={location === "/hansard-admin" || location === "/blog-admin" ? "secondary" : "ghost"}
+                  variant={location === "/hansard-admin" || location === "/blog-admin" || location === "/court-cases-admin" ? "secondary" : "ghost"}
                   size="sm"
                   data-testid="nav-admin-dropdown"
                   className="gap-2"
@@ -156,6 +156,13 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
                 >
                   <Edit className="w-4 h-4 mr-2" />
                   <span>Blog Admin</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onSelect={() => setLocation("/court-cases-admin")}
+                  data-testid="nav-court-cases-admin"
+                >
+                  <Scale className="w-4 h-4 mr-2" />
+                  <span>Court Cases Admin</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

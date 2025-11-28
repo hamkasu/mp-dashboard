@@ -33,6 +33,7 @@ const AdminLogin = lazy(() => import("@/pages/AdminLogin"));
 const Blog = lazy(() => import("@/pages/Blog"));
 const BlogAdmin = lazy(() => import("@/pages/BlogAdmin"));
 const UnpassedBills = lazy(() => import("@/pages/UnpassedBills"));
+const CourtCasesAdmin = lazy(() => import("@/pages/CourtCasesAdmin"));
 
 // Loading component
 function PageLoader() {
@@ -69,6 +70,7 @@ function Router() {
         <Route path="/constituency-analysis" component={ConstituencyAnalysis} />
         <Route path="/analytics" component={Analytics} />
         <Route path="/admin-login" component={AdminLogin} />
+        <Route path="/court-cases-admin" component={CourtCasesAdmin} />
         <Route component={NotFound} />
       </Switch>
     </Suspense>

@@ -5715,5 +5715,113 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
+  // ============ COURT CASE SCRAPER ADMIN ENDPOINTS ============
+  
+  // Import the scraper and cron module
+  const { courtCaseScraper } = await import("./court-case-scraper");
+  const { triggerManualScrape, getScraperStatus, scheduleCourtCaseScraper } = await import("./court-case-cron");
+  
+  // Schedule the court case scraper cron job
+  scheduleCourtCaseScraper();
+  
+  // Get scraper status
+  app.get("/api/admin/court-case-scraper/status", requireAdmin, async (_req, res) => {
+    try {
+      const status = getScraperStatus();
+      res.json(status);
+    } catch (error) {
+      console.error("Error getting scraper status:", error);
+      res.status(500).json({ error: "Failed to get scraper status" });
+    }
+  });
+  
+  // Trigger manual scrape
+  app.post("/api/admin/court-case-scraper/run", requireAdmin, async (_req, res) => {
+    try {
+      const result = await triggerManualScrape();
+      res.json({ 
+        success: true, 
+        message: "Scrape completed",
+        ...result 
+      });
+    } catch (error: any) {
+      console.error("Error running scraper:", error);
+      res.status(500).json({ error: error.message || "Failed to run scraper" });
+    }
+  });
+  
+  // Get pending news articles for review
+  app.get("/api/admin/court-case-news", requireAdmin, async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 20;
+      const articles = await courtCaseScraper.getPendingArticles(limit);
+      res.json(articles);
+    } catch (error) {
+      console.error("Error fetching pending articles:", error);
+      res.status(500).json({ error: "Failed to fetch pending articles" });
+    }
+  });
+  
+  // Approve a news article and create/update court case
+  app.post("/api/admin/court-case-news/:id/approve", requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const courtCaseData = req.body;
+      const reviewedBy = getCurrentUsername(req) || "admin";
+      
+      // Validate required fields
+      if (!courtCaseData.mpId || !courtCaseData.caseNumber || !courtCaseData.title || 
+          !courtCaseData.courtLevel || !courtCaseData.status || !courtCaseData.charges || 
+          !courtCaseData.filingDate) {
+        return res.status(400).json({ error: "Missing required court case fields" });
+      }
+      
+      const result = await courtCaseScraper.approveArticle(id, {
+        ...courtCaseData,
+        filingDate: new Date(courtCaseData.filingDate),
+      }, reviewedBy);
+      
+      if (result.success) {
+        res.json(result);
+      } else {
+        res.status(400).json(result);
+      }
+    } catch (error: any) {
+      console.error("Error approving article:", error);
+      res.status(500).json({ error: error.message || "Failed to approve article" });
+    }
+  });
+  
+  // Reject a news article
+  app.post("/api/admin/court-case-news/:id/reject", requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const reviewedBy = getCurrentUsername(req) || "admin";
+      
+      await courtCaseScraper.rejectArticle(id, reviewedBy);
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error rejecting article:", error);
+      res.status(500).json({ error: error.message || "Failed to reject article" });
+    }
+  });
+  
+  // Get all MPs for dropdown selection in admin UI
+  app.get("/api/admin/mps-list", requireAdmin, async (_req, res) => {
+    try {
+      const allMps = await storage.getAllMps();
+      const mpsList = allMps.map(mp => ({
+        id: mp.id,
+        name: mp.name,
+        constituency: mp.constituency,
+        party: mp.party,
+      }));
+      res.json(mpsList);
+    } catch (error) {
+      console.error("Error fetching MPs list:", error);
+      res.status(500).json({ error: "Failed to fetch MPs list" });
+    }
+  });
+
   // Server is now passed in from index.ts, no need to create it here
 }

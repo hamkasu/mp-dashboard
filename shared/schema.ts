@@ -631,3 +631,62 @@ export const insertHansardQaCacheSchema = createInsertSchema(hansardQaCache).omi
 
 export type InsertHansardQaCache = z.infer<typeof insertHansardQaCacheSchema>;
 export type HansardQaCache = typeof hansardQaCache.$inferSelect;
+
+// Court Case News Articles table for scraped news review queue
+export const courtCaseNewsArticles = pgTable("court_case_news_articles", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  sourceUrl: text("source_url").notNull().unique(),
+  sourceName: text("source_name").notNull(),
+  headline: text("headline").notNull(),
+  content: text("content").notNull(),
+  publishedDate: timestamp("published_date"),
+  extractedData: jsonb("extracted_data").$type<{
+    mpName?: string;
+    mpId?: string;
+    caseNumber?: string;
+    title?: string;
+    courtLevel?: string;
+    status?: string;
+    charges?: string;
+    outcome?: string;
+    filingDate?: string;
+  }>(),
+  status: text("status").notNull().default("pending"),
+  reviewedBy: varchar("reviewed_by"),
+  reviewedAt: timestamp("reviewed_at"),
+  linkedCourtCaseId: varchar("linked_court_case_id").references(() => courtCases.id),
+  scrapedAt: timestamp("scraped_at").notNull().default(sql`NOW()`),
+  createdAt: timestamp("created_at").notNull().default(sql`NOW()`),
+});
+
+export const insertCourtCaseNewsArticleSchema = createInsertSchema(courtCaseNewsArticles).omit({
+  id: true,
+  scrapedAt: true,
+  createdAt: true,
+  reviewedAt: true,
+}).extend({
+  publishedDate: z.coerce.date().nullable().optional(),
+  extractedData: z.object({
+    mpName: z.string().optional(),
+    mpId: z.string().optional(),
+    caseNumber: z.string().optional(),
+    title: z.string().optional(),
+    courtLevel: z.string().optional(),
+    status: z.string().optional(),
+    charges: z.string().optional(),
+    outcome: z.string().optional(),
+    filingDate: z.string().optional(),
+  }).nullable().optional(),
+  status: z.enum(["pending", "approved", "rejected", "needs_review"]).optional().default("pending"),
+  reviewedBy: z.string().nullable().optional(),
+  linkedCourtCaseId: z.string().nullable().optional(),
+});
+
+export const updateCourtCaseNewsArticleSchema = insertCourtCaseNewsArticleSchema.partial();
+
+export type InsertCourtCaseNewsArticle = z.infer<typeof insertCourtCaseNewsArticleSchema>;
+export type UpdateCourtCaseNewsArticle = z.infer<typeof updateCourtCaseNewsArticleSchema>;
+export type CourtCaseNewsArticle = typeof courtCaseNewsArticles.$inferSelect;
+
+// Update schema for court cases
+export const updateCourtCaseSchema = insertCourtCaseSchema.partial();
