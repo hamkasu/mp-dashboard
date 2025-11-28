@@ -23,6 +23,105 @@ interface ScrapedMPContact {
   socialMedia?: string | null;
 }
 
+/**
+ * List of invalid values that should be filtered out
+ * These are section headers or placeholder values that got scraped incorrectly
+ */
+const INVALID_ADDRESS_VALUES = [
+  'MAKLUMAT',
+  'maklumat',
+  'INFORMATION',
+  'Contact Information',
+  'Contact Address',
+  'Alamat',
+  '-',
+  'N/A',
+  'n/a',
+  'Tiada',
+  'tiada',
+  '',
+];
+
+/**
+ * Clean and validate an address string
+ */
+function cleanAddress(value: string | null | undefined): string | null {
+  if (!value) return null;
+  
+  const trimmed = value.trim();
+  
+  // Check against invalid values
+  if (INVALID_ADDRESS_VALUES.includes(trimmed)) {
+    console.log(`  ⚠ Skipping invalid address value: "${trimmed}"`);
+    return null;
+  }
+  
+  // Check if value is too short to be a valid address
+  if (trimmed.length < 10) {
+    console.log(`  ⚠ Skipping too-short address: "${trimmed}"`);
+    return null;
+  }
+  
+  // Check if value looks like a section header (all caps, no numbers, no commas)
+  if (trimmed === trimmed.toUpperCase() && !/\d/.test(trimmed) && !trimmed.includes(',')) {
+    console.log(`  ⚠ Skipping section header as address: "${trimmed}"`);
+    return null;
+  }
+  
+  return trimmed;
+}
+
+/**
+ * Clean and validate an email address
+ */
+function cleanEmail(value: string | null | undefined): string | null {
+  if (!value) return null;
+  
+  const trimmed = value.trim().toLowerCase();
+  
+  // Check against invalid values
+  if (['-', 'N/A', 'n/a', 'Tiada', 'tiada', ''].includes(trimmed)) {
+    return null;
+  }
+  
+  // Basic email validation
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (emailRegex.test(trimmed)) {
+    return trimmed;
+  }
+  
+  // Try to extract email from a string containing other text
+  const emailMatch = trimmed.match(/[\w.-]+@[\w.-]+\.\w+/);
+  if (emailMatch) {
+    return emailMatch[0];
+  }
+  
+  console.log(`  ⚠ Skipping invalid email: "${trimmed}"`);
+  return null;
+}
+
+/**
+ * Clean and validate a phone number
+ */
+function cleanPhoneNumber(value: string | null | undefined): string | null {
+  if (!value) return null;
+  
+  const trimmed = value.trim();
+  
+  // Check against invalid values
+  if (['-', 'N/A', 'n/a', 'Tiada', 'tiada', ''].includes(trimmed)) {
+    return null;
+  }
+  
+  // Must contain at least some digits
+  if (!/\d/.test(trimmed)) {
+    console.log(`  ⚠ Skipping invalid phone: "${trimmed}"`);
+    return null;
+  }
+  
+  return trimmed;
+}
+
 async function updateMPContacts() {
   console.log('Loading scraped MP contact data...');
 
@@ -78,15 +177,22 @@ async function updateMPContacts() {
           }
         }
 
-        // Update the MP with contact information
+        // Update the MP with contact information - apply validation
         const updateData: any = {};
 
-        if (contact.email) updateData.email = contact.email;
-        if (contact.telephone) updateData.telephone = contact.telephone;
-        if (contact.fax) updateData.fax = contact.fax;
-        if (contact.mobileNumber) updateData.mobileNumber = contact.mobileNumber;
-        if (contact.contactAddress) updateData.contactAddress = contact.contactAddress;
-        if (contact.serviceAddress) updateData.serviceAddress = contact.serviceAddress;
+        const cleanedEmail = cleanEmail(contact.email);
+        const cleanedTelephone = cleanPhoneNumber(contact.telephone);
+        const cleanedFax = cleanPhoneNumber(contact.fax);
+        const cleanedMobile = cleanPhoneNumber(contact.mobileNumber);
+        const cleanedContactAddress = cleanAddress(contact.contactAddress);
+        const cleanedServiceAddress = cleanAddress(contact.serviceAddress);
+
+        if (cleanedEmail) updateData.email = cleanedEmail;
+        if (cleanedTelephone) updateData.telephone = cleanedTelephone;
+        if (cleanedFax) updateData.fax = cleanedFax;
+        if (cleanedMobile) updateData.mobileNumber = cleanedMobile;
+        if (cleanedContactAddress) updateData.contactAddress = cleanedContactAddress;
+        if (cleanedServiceAddress) updateData.serviceAddress = cleanedServiceAddress;
         if (contact.socialMedia) updateData.socialMedia = contact.socialMedia;
 
         // Only update if we have at least one contact field
