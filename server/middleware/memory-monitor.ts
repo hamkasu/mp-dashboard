@@ -114,18 +114,10 @@ export function memoryMonitor(req: Request, res: Response, next: NextFunction) {
   }
 
   // CONCURRENT REQUEST LIMITER for expensive endpoints
-  // Always enforce the limit to prevent memory buildup from concurrent requests
+  // Disabled - Railway deployment has sufficient resources
+  // Keeping tracking for monitoring purposes only
   if (isExpensive) {
-    if (currentExpensiveRequests >= MAX_CONCURRENT_EXPENSIVE_REQUESTS) {
-      console.warn(`⏳ Concurrent limit reached: Rejecting ${req.path} (${currentExpensiveRequests}/${MAX_CONCURRENT_EXPENSIVE_REQUESTS} concurrent, memory ${memory.heapUsed}MB)`);
-      return res.status(503).json({
-        error: 'Too many concurrent requests',
-        message: 'Server is processing other requests. Please try again shortly.',
-        retryAfter: 3
-      });
-    }
-    
-    // Track this expensive request
+    // Track this expensive request (for monitoring only, no limit enforced)
     currentExpensiveRequests++;
     
     // Use a flag to prevent double-decrement (both 'finish' and 'close' can fire)
