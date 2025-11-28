@@ -425,6 +425,34 @@ export default function HansardAdmin() {
     }
   };
 
+  // MP Contact Scrape mutation
+  const scrapeMpContactsMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/admin/scrape-mp-contacts");
+      return await res.json();
+    },
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/mps"] });
+      toast({
+        title: "Contact Scrape Complete",
+        description: `Updated ${data.results?.updated || 0} MPs. Found ${data.results?.contactsScraped || 0} contacts.`,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to scrape MP contacts",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleScrapeMpContacts = () => {
+    if (confirm("This will scrape MP contact information (emails, phone numbers) from the Parliament website. This may take several minutes. Continue?")) {
+      scrapeMpContactsMutation.mutate();
+    }
+  };
+
   const diagnosticsMutation = useMutation({
     mutationFn: async () => {
       const res = await apiRequest("GET", "/api/admin/hansard-diagnostics");
@@ -1229,6 +1257,49 @@ export default function HansardAdmin() {
                 <>
                   <Users className="mr-2 h-4 w-4" />
                   Update Cabinet Roles
+                </>
+              )}
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* Scrape MP Contacts Card */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Download className="h-5 w-5" />
+              Update MP Contacts
+            </CardTitle>
+            <CardDescription>
+              Scrape email addresses and phone numbers from Parliament website
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <p className="text-sm text-muted-foreground">
+                This will fetch MP contact information from the official Parliament website (parlimen.gov.my) and update the database with email addresses, phone numbers, and other contact details.
+              </p>
+              <Alert>
+                <AlertDescription>
+                  This process may take several minutes as it needs to fetch individual MP profile pages. The scraper will match MPs by name and update their contact fields.
+                </AlertDescription>
+              </Alert>
+            </div>
+            <Button
+              onClick={handleScrapeMpContacts}
+              disabled={scrapeMpContactsMutation.isPending}
+              className="w-full"
+              data-testid="button-scrape-mp-contacts"
+            >
+              {scrapeMpContactsMutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Scraping Contacts...
+                </>
+              ) : (
+                <>
+                  <Download className="mr-2 h-4 w-4" />
+                  Scrape MP Contacts
                 </>
               )}
             </Button>

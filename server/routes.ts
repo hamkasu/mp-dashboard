@@ -4697,6 +4697,345 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
+  // Admin endpoint to scrape MP contact information from Parliament website
+  app.post("/api/admin/scrape-mp-contacts", requireAdmin, async (req, res) => {
+    try {
+      console.log("🔄 Starting MP contact information scrape...");
+
+      const axios = (await import('axios')).default;
+      const cheerio = await import('cheerio');
+      const { ilike } = await import('drizzle-orm');
+
+      const MP_LIST_URL = 'https://www.parlimen.gov.my/ahli-dewan.html?uweb=dr&';
+
+      // Fetch the main MP list page
+      console.log("📥 Fetching MP list from Parliament website...");
+      let listHtml: string;
+      try {
+        const response = await axios.get(MP_LIST_URL, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.5,ms;q=0.3',
+            'Referer': 'https://www.parlimen.gov.my/',
+          },
+          timeout: 30000,
+        });
+        listHtml = response.data;
+      } catch (fetchError: any) {
+        console.error("Failed to fetch Parliament website:", fetchError.message);
+        return res.status(502).json({
+          error: "Failed to fetch Parliament website",
+          details: fetchError.message
+        });
+      }
+
+      const $ = cheerio.load(listHtml);
+      const mpLinks: Array<{ name: string; profileUrl: string }> = [];
+
+      // Find MP profile links - they typically have parliament code in the URL
+      $('a[href*="profil.html"], a[href*="uweb=dr"]').each((_, el) => {
+        const href = $(el).attr('href');
+        const name = $(el).text().trim();
+        if (href && name && name.length > 2) {
+          // Make absolute URL
+          const fullUrl = href.startsWith('http')
+            ? href
+            : `https://www.parlimen.gov.my/${href.replace(/^\//, '')}`;
+          mpLinks.push({ name, profileUrl: fullUrl });
+        }
+      });
+
+      // Also try table-based structure
+      $('table tr').each((_, row) => {
+        const $row = $(row);
+        const link = $row.find('a[href*="profil"], a[href*="uweb"]').first();
+        if (link.length) {
+          const href = link.attr('href');
+          const name = link.text().trim() || $row.find('td').first().text().trim();
+          if (href && name && name.length > 2) {
+            const fullUrl = href.startsWith('http')
+              ? href
+              : `https://www.parlimen.gov.my/${href.replace(/^\//, '')}`;
+            mpLinks.push({ name, profileUrl: fullUrl });
+          }
+        }
+      });
+
+      console.log(`📊 Found ${mpLinks.length} MP profile links to process`);
+
+      // OPTIMIZATION: Load all MPs once and build fast lookup indexes
+      const allMps = await storage.getAllMps();
+      console.log(`📊 Loaded ${allMps.length} MPs for matching`);
+      
+      // Build lookup maps for faster matching
+      const mpByConstituency = new Map<string, typeof allMps[0]>();
+      const mpByNormalizedName = new Map<string, typeof allMps[0]>();
+      const mpByParliamentCode = new Map<string, typeof allMps[0]>();
+      
+      // Helper function to normalize names (strip honorifics, titles, etc.)
+      const normalizeName = (name: string): string => {
+        return name
+          .toLowerCase()
+          .replace(/\b(y\.?b\.?|yb|datuk?|dato['']?|sri|seri|dr\.?|ir\.?|ts\.?|tun|tan|haji|hajjah|puan|tuan|encik|cik|prof\.?|professor|hon\.?|yang berhormat)\b/gi, '')
+          .replace(/[^a-z\s]/g, '')
+          .replace(/\s+/g, ' ')
+          .trim();
+      };
+      
+      for (const mp of allMps) {
+        // Index by constituency
+        mpByConstituency.set(mp.constituency.toLowerCase(), mp);
+        
+        // Index by normalized name
+        const normalizedName = normalizeName(mp.name);
+        mpByNormalizedName.set(normalizedName, mp);
+        
+        // Also index by last name for fallback
+        const lastName = normalizedName.split(' ').pop() || '';
+        if (lastName.length > 2 && !mpByNormalizedName.has(lastName)) {
+          mpByNormalizedName.set(lastName, mp);
+        }
+        
+        // Index by parliament code if available
+        if (mp.parliamentCode) {
+          mpByParliamentCode.set(mp.parliamentCode.toLowerCase(), mp);
+        }
+      }
+
+      // Helper function to find matching MP
+      const findMatchingMp = (name: string, constituency?: string): typeof allMps[0] | undefined => {
+        // Try constituency match first (most reliable)
+        if (constituency) {
+          const byConstituency = mpByConstituency.get(constituency.toLowerCase());
+          if (byConstituency) return byConstituency;
+        }
+        
+        // Try normalized name match
+        const normalizedSearch = normalizeName(name);
+        const byName = mpByNormalizedName.get(normalizedSearch);
+        if (byName) return byName;
+        
+        // Try matching by last name
+        const searchLastName = normalizedSearch.split(' ').pop() || '';
+        if (searchLastName.length > 2) {
+          const byLastName = mpByNormalizedName.get(searchLastName);
+          if (byLastName) return byLastName;
+        }
+        
+        // Fuzzy fallback: check if any normalized name contains the search or vice versa
+        for (const [normalizedMpName, mp] of mpByNormalizedName.entries()) {
+          if (normalizedMpName.includes(normalizedSearch) || normalizedSearch.includes(normalizedMpName)) {
+            return mp;
+          }
+        }
+        
+        return undefined;
+      };
+
+      if (mpLinks.length === 0) {
+        // Try extracting email directly from the list page if no profile links
+        const emails: Array<{ name: string; email: string }> = [];
+        $('a[href^="mailto:"]').each((_, el) => {
+          const email = $(el).attr('href')?.replace('mailto:', '').trim();
+          const name = $(el).closest('tr, .mp-item, .card').find('td:first-child, .name, h3, h4').first().text().trim()
+            || $(el).parent().text().replace(email || '', '').trim();
+          if (email && email.includes('@')) {
+            emails.push({ name, email });
+          }
+        });
+
+        if (emails.length > 0) {
+          console.log(`📧 Found ${emails.length} emails directly on the list page`);
+          
+          let updated = 0;
+          let notFound = 0;
+
+          for (const { name, email } of emails) {
+            // Use optimized matching
+            const matchedMp = findMatchingMp(name);
+
+            if (matchedMp) {
+              await storage.updateMp(matchedMp.id, { email });
+              updated++;
+              console.log(`✓ Updated ${matchedMp.name}: ${email}`);
+            } else {
+              notFound++;
+              console.log(`⚠ No match found for: ${name}`);
+            }
+          }
+
+          return res.json({
+            message: "Contact scrape completed (list page method)",
+            results: {
+              emailsFound: emails.length,
+              updated,
+              notFound
+            }
+          });
+        }
+
+        return res.status(404).json({
+          error: "Could not find MP links on the Parliament website",
+          details: "The website structure may have changed. Manual inspection required."
+        });
+      }
+
+      // Deduplicate links
+      const uniqueLinks = Array.from(new Map(mpLinks.map(l => [l.profileUrl, l])).values());
+      console.log(`📊 Processing ${uniqueLinks.length} unique MP profiles...`);
+
+      let updated = 0;
+      let notFound = 0;
+      let errors = 0;
+      const errorDetails: string[] = [];
+      const scrapedContacts: Array<{
+        name: string;
+        email?: string | null;
+        telephone?: string | null;
+        fax?: string | null;
+        mobileNumber?: string | null;
+        contactAddress?: string | null;
+        serviceAddress?: string | null;
+      }> = [];
+
+      // Process profiles with delays to avoid rate limiting
+      for (let i = 0; i < uniqueLinks.length; i++) {
+        const link = uniqueLinks[i];
+        try {
+          // Add delay between requests
+          if (i > 0) {
+            await new Promise(resolve => setTimeout(resolve, 500));
+          }
+
+          const profileResponse = await axios.get(link.profileUrl, {
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+              'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9',
+              'Referer': MP_LIST_URL,
+            },
+            timeout: 15000,
+          });
+
+          const $profile = cheerio.load(profileResponse.data);
+
+          // Extract contact information from profile page
+          const contactInfo: Record<string, string | null> = {
+            email: null,
+            telephone: null,
+            fax: null,
+            mobileNumber: null,
+            contactAddress: null,
+            serviceAddress: null,
+          };
+
+          // Try to find email
+          const emailLink = $profile('a[href^="mailto:"]').first();
+          if (emailLink.length) {
+            contactInfo.email = emailLink.attr('href')?.replace('mailto:', '').trim() || null;
+          }
+
+          // Try to find phone numbers by common patterns
+          const pageText = $profile('body').text();
+          
+          // Phone patterns
+          const phoneMatch = pageText.match(/(?:Tel|Telefon|Phone)[:\s]*([0-9\-\s\(\)]+)/i);
+          if (phoneMatch) contactInfo.telephone = phoneMatch[1].trim();
+
+          const faxMatch = pageText.match(/(?:Fax|Faks)[:\s]*([0-9\-\s\(\)]+)/i);
+          if (faxMatch) contactInfo.fax = faxMatch[1].trim();
+
+          const mobileMatch = pageText.match(/(?:Mobile|Bimbit|H\/P)[:\s]*([0-9\-\s\(\)]+)/i);
+          if (mobileMatch) contactInfo.mobileNumber = mobileMatch[1].trim();
+
+          // Try table-based extraction
+          $profile('table tr, .profile-detail, .contact-info').each((_, row) => {
+            const $row = $profile(row);
+            const label = $row.find('th, td:first-child, .label, dt').text().toLowerCase();
+            const value = $row.find('td:last-child, .value, dd').text().trim();
+
+            if (label.includes('emel') || label.includes('email')) {
+              contactInfo.email = contactInfo.email || value || null;
+            }
+            if (label.includes('telefon') || label.includes('phone') || label.includes('tel')) {
+              contactInfo.telephone = contactInfo.telephone || value || null;
+            }
+            if (label.includes('faks') || label.includes('fax')) {
+              contactInfo.fax = contactInfo.fax || value || null;
+            }
+            if (label.includes('bimbit') || label.includes('mobile') || label.includes('h/p')) {
+              contactInfo.mobileNumber = contactInfo.mobileNumber || value || null;
+            }
+            if (label.includes('alamat') && !label.includes('khidmat')) {
+              contactInfo.contactAddress = contactInfo.contactAddress || value || null;
+            }
+            if (label.includes('khidmat') || label.includes('service')) {
+              contactInfo.serviceAddress = contactInfo.serviceAddress || value || null;
+            }
+          });
+
+          // Check if we found any contact info
+          const hasData = Object.values(contactInfo).some(v => v && v.length > 0);
+
+          if (hasData) {
+            scrapedContacts.push({ name: link.name, ...contactInfo });
+
+            // Use optimized matching function (uses pre-built indexes)
+            const matchedMp = findMatchingMp(link.name);
+
+            if (matchedMp) {
+              // Only update non-null fields
+              const updateData: Record<string, string> = {};
+              if (contactInfo.email) updateData.email = contactInfo.email;
+              if (contactInfo.telephone) updateData.telephone = contactInfo.telephone;
+              if (contactInfo.fax) updateData.fax = contactInfo.fax;
+              if (contactInfo.mobileNumber) updateData.mobileNumber = contactInfo.mobileNumber;
+              if (contactInfo.contactAddress) updateData.contactAddress = contactInfo.contactAddress;
+              if (contactInfo.serviceAddress) updateData.serviceAddress = contactInfo.serviceAddress;
+
+              if (Object.keys(updateData).length > 0) {
+                await storage.updateMp(matchedMp.id, updateData);
+                updated++;
+                console.log(`✓ Updated ${matchedMp.name}: ${Object.keys(updateData).join(', ')}`);
+              }
+            } else {
+              notFound++;
+            }
+          }
+
+          // Log progress
+          if ((i + 1) % 10 === 0) {
+            console.log(`📊 Progress: ${i + 1}/${uniqueLinks.length} profiles processed`);
+          }
+
+        } catch (error: any) {
+          console.error(`✗ Error processing ${link.name}:`, error.message);
+          errorDetails.push(`${link.name}: ${error.message}`);
+          errors++;
+        }
+      }
+
+      console.log(`✅ MP contact scrape complete: ${updated} updated, ${notFound} not found, ${errors} errors`);
+
+      res.json({
+        message: "MP contact scrape completed",
+        results: {
+          totalProfilesFound: uniqueLinks.length,
+          contactsScraped: scrapedContacts.length,
+          updated,
+          notFound,
+          errors,
+          errorDetails: errorDetails.slice(0, 10),
+          sampleData: scrapedContacts.slice(0, 5)
+        }
+      });
+
+    } catch (error) {
+      console.error("Error scraping MP contacts:", error);
+      res.status(500).json({ error: "Failed to scrape contacts", details: String(error) });
+    }
+  });
+
   // Admin endpoint to start bulk AI analysis of Hansard records
   app.post("/api/admin/analyze-hansard-bulk", requireAdmin, async (req, res) => {
     try {
