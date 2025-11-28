@@ -2230,43 +2230,15 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         return res.status(404).json({ error: "Hansard record not found" });
       }
 
-      // If attendance was updated, recalculate MP stats
+      // If attendance was updated, recalculate MP attendance stats using the centralized aggregation function
+      // This ensures consistent calculation across all 222 MPs based on sworn-in dates
+      // Note: Only recalculate attendance (not speeches) for better performance
       if (validatedData.attendedMpIds !== undefined || validatedData.absentMpIds !== undefined) {
         try {
-          // Get all Hansard records to recalculate attendance
-          const allRecords = await storage.getAllHansardRecords();
-          const mpAttendanceMap = new Map<string, { attended: number; total: number }>();
-
-          // Count attendance for each MP across all sessions
-          for (const hansardRecord of allRecords) {
-            const attendedIds = hansardRecord.attendedMpIds || [];
-            const absentIds = hansardRecord.absentMpIds || [];
-
-            // Only count sessions where we have attendance data
-            if (attendedIds.length > 0 || absentIds.length > 0) {
-              // Mark MPs who attended
-              for (const mpId of attendedIds) {
-                const current = mpAttendanceMap.get(mpId) || { attended: 0, total: 0 };
-                mpAttendanceMap.set(mpId, { attended: current.attended + 1, total: current.total + 1 });
-              }
-
-              // Mark MPs who were absent
-              for (const mpId of absentIds) {
-                const current = mpAttendanceMap.get(mpId) || { attended: 0, total: 0 };
-                mpAttendanceMap.set(mpId, { attended: current.attended, total: current.total + 1 });
-              }
-            }
-          }
-
-          // Update each MP's attendance stats
-          for (const [mpId, stats] of mpAttendanceMap.entries()) {
-            await storage.updateMp(mpId, {
-              daysAttended: stats.attended,
-              totalParliamentDays: stats.total,
-            });
-          }
-
-          console.log(`✅ Recalculated attendance for ${mpAttendanceMap.size} MPs`);
+          console.log("🔄 Triggering MP attendance recalculation after update...");
+          const { aggregateAttendanceForAllMps } = await import('./aggregate-speeches');
+          const attendanceResult = await aggregateAttendanceForAllMps();
+          console.log(`✅ Attendance recalculated: ${attendanceResult.totalMpsUpdated} MPs updated from ${attendanceResult.totalRecordsProcessed} records`);
         } catch (recalcError) {
           console.error("Error recalculating MP attendance:", recalcError);
           // Don't fail the request if recalculation fails
