@@ -512,59 +512,77 @@ export default function Home() {
             {/* SPRM Investigations Section */}
             {!sprmInvestigationsLoading && mpsWithSprmInvestigations.length > 0 && (
               <Card className="border-red-200 dark:border-red-900 bg-red-50/50 dark:bg-red-950/20" data-testid="sprm-investigations-section">
-                <CardHeader>
+                <CardHeader className="pb-3">
                   <CardTitle className="flex items-center gap-2 text-red-900 dark:text-red-100">
                     <AlertTriangle className="h-5 w-5" />
-                    {t('nav.mps')} {t('profile.sprmInvestigations')}
+                    MACC/SPRM Investigations
                   </CardTitle>
+                  <p className="text-sm text-red-800/70 dark:text-red-200/70">
+                    Members of Parliament under investigation by the Malaysian Anti-Corruption Commission
+                  </p>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                  <div className="grid gap-4 sm:grid-cols-1 lg:grid-cols-2">
                     {mpsWithSprmInvestigations.map((mp) => {
                       const mpInvestigations = sprmInvestigations.filter(i => i.mpId === mp.id);
                       const ongoingCount = mpInvestigations.filter(i => i.status === "Ongoing").length;
                       const completedCount = mpInvestigations.filter(i => i.status === "Completed").length;
+                      const latestInvestigation = mpInvestigations[0];
 
                       return (
                         <Link key={mp.id} href={`/mp/${mp.id}`} data-testid={`sprm-investigation-mp-${mp.id}`}>
-                          <div className="group cursor-pointer rounded-lg border bg-card p-4 hover:bg-accent transition-colors">
-                            <div className="flex items-start gap-3">
-                              <Avatar className="h-12 w-12 shrink-0">
+                          <div className="group cursor-pointer rounded-lg border bg-card p-4 hover:bg-accent/50 transition-colors">
+                            <div className="flex items-start gap-4">
+                              <Avatar className="h-14 w-14 shrink-0 border-2 border-red-200 dark:border-red-800">
                                 <AvatarImage src={mp.photoUrl || undefined} alt={mp.name} />
-                                <AvatarFallback className="bg-primary/10 text-primary font-semibold">
+                                <AvatarFallback className="bg-red-100 dark:bg-red-900/50 text-red-900 dark:text-red-100 font-semibold">
                                   {mp.name.split(" ").map(n => n[0]).join("").slice(0, 2)}
                                 </AvatarFallback>
                               </Avatar>
                               <div className="flex-1 min-w-0">
-                                <h4 className="font-semibold text-sm mb-1 group-hover:text-primary transition-colors truncate">
-                                  {mp.name}
-                                </h4>
-                                <div className="flex items-center gap-2 mb-2">
-                                  <p className="text-xs text-muted-foreground">{mp.party}</p>
+                                <div className="flex items-start justify-between gap-2">
+                                  <div className="min-w-0">
+                                    <h4 className="font-semibold text-base group-hover:text-primary transition-colors">
+                                      {mp.name}
+                                    </h4>
+                                    <div className="flex items-center gap-2 mt-0.5">
+                                      <Badge variant="outline" className="text-xs font-medium">
+                                        {mp.party}
+                                      </Badge>
+                                      <span className="text-xs text-muted-foreground">{mp.constituency}</span>
+                                    </div>
+                                  </div>
+                                  <ExternalLink className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors shrink-0 mt-1" />
                                 </div>
-                                <div className="flex flex-wrap gap-1">
+                                {latestInvestigation && (
+                                  <div className="mt-3 p-2.5 bg-red-100/50 dark:bg-red-900/20 rounded-md">
+                                    <p className="text-xs font-medium text-red-900 dark:text-red-100 mb-1">
+                                      {latestInvestigation.caseNumber}
+                                    </p>
+                                    <p className="text-xs text-red-800 dark:text-red-200 line-clamp-2">
+                                      {latestInvestigation.title}
+                                    </p>
+                                  </div>
+                                )}
+                                <div className="flex flex-wrap gap-1.5 mt-3">
                                   {ongoingCount > 0 && (
                                     <Badge variant="destructive" className="text-xs" data-testid={`badge-sprm-ongoing-${mp.id}`}>
-                                      {ongoingCount} {t('profile.ongoing')}
+                                      {ongoingCount} Ongoing
                                     </Badge>
                                   )}
                                   {completedCount > 0 && (
                                     <Badge variant="secondary" className="text-xs" data-testid={`badge-sprm-completed-${mp.id}`}>
-                                      {completedCount} {t('profile.completed')}
+                                      {completedCount} Completed
                                     </Badge>
                                   )}
                                 </div>
                               </div>
-                              <ExternalLink className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors shrink-0" />
                             </div>
                           </div>
                         </Link>
                       );
                     })}
                   </div>
-                  <p className="text-xs text-muted-foreground mt-4">
-                    {t('profile.sprmInvestigations')}
-                  </p>
                 </CardContent>
               </Card>
             )}
@@ -572,59 +590,82 @@ export default function Home() {
             {/* Court Cases Section */}
             {!courtCasesLoading && mpsWithCourtCases.length > 0 && (
               <Card className="border-amber-200 dark:border-amber-900 bg-amber-50/50 dark:bg-amber-950/20" data-testid="court-cases-section">
-                <CardHeader>
+                <CardHeader className="pb-3">
                   <CardTitle className="flex items-center gap-2 text-amber-900 dark:text-amber-100">
                     <Scale className="h-5 w-5" />
-                    {t('nav.mps')} {t('profile.courtCases')}
+                    MPs Court Cases
                   </CardTitle>
+                  <p className="text-sm text-amber-800/70 dark:text-amber-200/70">
+                    Members of Parliament with ongoing or concluded court cases
+                  </p>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                  <div className="grid gap-4 sm:grid-cols-1 lg:grid-cols-2">
                     {mpsWithCourtCases.map((mp) => {
                       const mpCases = courtCases.filter(c => c.mpId === mp.id);
                       const ongoingCount = mpCases.filter(c => c.status === "Ongoing" || c.status === "Pending").length;
                       const completedCount = mpCases.filter(c => c.status === "Completed" || c.status === "Concluded" || c.status === "Acquitted" || c.status === "Convicted").length;
+                      const latestCase = mpCases[0];
 
                       return (
                         <Link key={mp.id} href={`/mp/${mp.id}`} data-testid={`court-case-mp-${mp.id}`}>
-                          <div className="group cursor-pointer rounded-lg border bg-card p-4 hover:bg-accent transition-colors">
-                            <div className="flex items-start gap-3">
-                              <Avatar className="h-12 w-12 shrink-0">
+                          <div className="group cursor-pointer rounded-lg border bg-card p-4 hover:bg-accent/50 transition-colors">
+                            <div className="flex items-start gap-4">
+                              <Avatar className="h-14 w-14 shrink-0 border-2 border-amber-200 dark:border-amber-800">
                                 <AvatarImage src={mp.photoUrl || undefined} alt={mp.name} />
-                                <AvatarFallback className="bg-primary/10 text-primary font-semibold">
+                                <AvatarFallback className="bg-amber-100 dark:bg-amber-900/50 text-amber-900 dark:text-amber-100 font-semibold">
                                   {mp.name.split(" ").map(n => n[0]).join("").slice(0, 2)}
                                 </AvatarFallback>
                               </Avatar>
                               <div className="flex-1 min-w-0">
-                                <h4 className="font-semibold text-sm mb-1 group-hover:text-primary transition-colors truncate">
-                                  {mp.name}
-                                </h4>
-                                <div className="flex items-center gap-2 mb-2">
-                                  <p className="text-xs text-muted-foreground">{mp.party}</p>
+                                <div className="flex items-start justify-between gap-2">
+                                  <div className="min-w-0">
+                                    <h4 className="font-semibold text-base group-hover:text-primary transition-colors">
+                                      {mp.name}
+                                    </h4>
+                                    <div className="flex items-center gap-2 mt-0.5">
+                                      <Badge variant="outline" className="text-xs font-medium">
+                                        {mp.party}
+                                      </Badge>
+                                      <span className="text-xs text-muted-foreground">{mp.constituency}</span>
+                                    </div>
+                                  </div>
+                                  <ExternalLink className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors shrink-0 mt-1" />
                                 </div>
-                                <div className="flex flex-wrap gap-1">
+                                {latestCase && (
+                                  <div className="mt-3 p-2.5 bg-amber-100/50 dark:bg-amber-900/20 rounded-md">
+                                    <p className="text-xs font-medium text-amber-900 dark:text-amber-100 mb-1">
+                                      {latestCase.caseNumber}
+                                    </p>
+                                    <p className="text-xs text-amber-800 dark:text-amber-200 line-clamp-2">
+                                      {latestCase.title}
+                                    </p>
+                                  </div>
+                                )}
+                                <div className="flex flex-wrap gap-1.5 mt-3">
                                   {ongoingCount > 0 && (
                                     <Badge variant="destructive" className="text-xs" data-testid={`badge-court-ongoing-${mp.id}`}>
-                                      {ongoingCount} {t('profile.ongoing')}
+                                      {ongoingCount} Ongoing
                                     </Badge>
                                   )}
                                   {completedCount > 0 && (
                                     <Badge variant="secondary" className="text-xs" data-testid={`badge-court-completed-${mp.id}`}>
-                                      {completedCount} {t('profile.completed')}
+                                      {completedCount} Completed
+                                    </Badge>
+                                  )}
+                                  {mpCases.length > 1 && (
+                                    <Badge variant="outline" className="text-xs text-muted-foreground">
+                                      +{mpCases.length - 1} more
                                     </Badge>
                                   )}
                                 </div>
                               </div>
-                              <ExternalLink className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors shrink-0" />
                             </div>
                           </div>
                         </Link>
                       );
                     })}
                   </div>
-                  <p className="text-xs text-muted-foreground mt-4">
-                    {t('profile.courtCases')}
-                  </p>
                 </CardContent>
               </Card>
             )}
