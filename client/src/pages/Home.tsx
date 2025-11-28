@@ -15,9 +15,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { ExternalLink, AlertTriangle, Eye, ChevronLeft, ChevronRight, Scale } from "lucide-react";
+import { ExternalLink, AlertTriangle, Eye, ChevronLeft, ChevronRight } from "lucide-react";
 import { Link } from "wouter";
-import type { Mp, CourtCase, SprmInvestigation, LegislativeProposal, ParliamentaryQuestion } from "@shared/schema";
+import type { Mp, SprmInvestigation, LegislativeProposal, ParliamentaryQuestion } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { useConstituencies } from "@/hooks/use-constituencies";
 
@@ -112,10 +112,6 @@ export default function Home() {
 
   const { data: sprmInvestigations = [], isLoading: sprmInvestigationsLoading } = useQuery<SprmInvestigation[]>({
     queryKey: ["/api/sprm-investigations"],
-  });
-
-  const { data: courtCases = [], isLoading: courtCasesLoading } = useQuery<CourtCase[]>({
-    queryKey: ["/api/court-cases"],
   });
 
   // Fetch visitor analytics summary for total visits
@@ -319,13 +315,6 @@ export default function Home() {
     const mpIdsWithInvestigations = new Set(sprmInvestigations.map(i => i.mpId));
     return mps.filter(mp => mpIdsWithInvestigations.has(mp.id));
   }, [mps, sprmInvestigations]);
-
-  const mpsWithCourtCases = useMemo(() => {
-    if (!courtCases.length || !mps.length) return [];
-    
-    const mpIdsWithCases = new Set(courtCases.map(c => c.mpId));
-    return mps.filter(mp => mpIdsWithCases.has(mp.id));
-  }, [mps, courtCases]);
 
   const defaultStats = {
     totalMps: 0,
@@ -595,112 +584,6 @@ export default function Home() {
                                   {completedInvestigations.length > 0 && (
                                     <Badge variant="outline" className="text-xs bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-200 border-green-300 dark:border-green-700" data-testid={`badge-sprm-completed-${mp.id}`}>
                                       {completedInvestigations.length} Completed
-                                    </Badge>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </Link>
-                      );
-                    })}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Court Cases Section */}
-            {!courtCasesLoading && mpsWithCourtCases.length > 0 && (
-              <Card className="border-amber-200 dark:border-amber-900 bg-amber-50/50 dark:bg-amber-950/20" data-testid="court-cases-section">
-                <CardHeader className="pb-3">
-                  <CardTitle className="flex items-center gap-2 text-amber-900 dark:text-amber-100">
-                    <Scale className="h-5 w-5" />
-                    MPs Court Cases
-                  </CardTitle>
-                  <p className="text-sm text-amber-800/70 dark:text-amber-200/70">
-                    Members of Parliament with ongoing or concluded court cases
-                  </p>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {mpsWithCourtCases.map((mp) => {
-                      const mpCases = courtCases.filter(c => c.mpId === mp.id);
-                      const ongoingCases = mpCases.filter(c => c.status === "Ongoing" || c.status === "Pending");
-                      const completedCases = mpCases.filter(c => c.status === "Completed" || c.status === "Concluded" || c.status === "Acquitted" || c.status === "Convicted");
-
-                      return (
-                        <Link key={mp.id} href={`/mp/${mp.id}`} data-testid={`court-case-mp-${mp.id}`}>
-                          <div className="group cursor-pointer rounded-lg border bg-card p-5 hover:bg-accent/50 transition-colors">
-                            <div className="flex flex-col sm:flex-row sm:items-start gap-4">
-                              <Avatar className="h-16 w-16 shrink-0 border-2 border-amber-200 dark:border-amber-800">
-                                <AvatarImage src={mp.photoUrl || undefined} alt={mp.name} />
-                                <AvatarFallback className="bg-amber-100 dark:bg-amber-900/50 text-amber-900 dark:text-amber-100 font-semibold text-lg">
-                                  {mp.name.split(" ").map(n => n[0]).join("").slice(0, 2)}
-                                </AvatarFallback>
-                              </Avatar>
-                              <div className="flex-1">
-                                <div className="flex items-start justify-between gap-3">
-                                  <div>
-                                    <h4 className="font-semibold text-lg group-hover:text-primary transition-colors">
-                                      {mp.name}
-                                    </h4>
-                                    <div className="flex flex-wrap items-center gap-2 mt-1">
-                                      <Badge variant="outline" className="text-xs font-medium">
-                                        {mp.party}
-                                      </Badge>
-                                      <span className="text-sm text-muted-foreground">{mp.constituency}, {mp.state}</span>
-                                    </div>
-                                  </div>
-                                  <ExternalLink className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors shrink-0" />
-                                </div>
-                                
-                                <div className="mt-4 space-y-2">
-                                  <p className="text-xs font-semibold uppercase tracking-wide text-amber-900/70 dark:text-amber-100/70">
-                                    Court Cases ({mpCases.length})
-                                  </p>
-                                  {mpCases.slice(0, 3).map((courtCase, idx) => (
-                                    <div key={idx} className="p-3 bg-amber-100/50 dark:bg-amber-900/20 rounded-md border border-amber-200/50 dark:border-amber-800/50">
-                                      <div className="flex items-start justify-between gap-2">
-                                        <div className="flex-1">
-                                          <div className="flex items-center gap-2">
-                                            <p className="text-xs font-mono text-amber-900/80 dark:text-amber-100/80">
-                                              {courtCase.caseNumber}
-                                            </p>
-                                            <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-                                              {courtCase.courtLevel}
-                                            </Badge>
-                                          </div>
-                                          <p className="text-sm font-medium text-amber-900 dark:text-amber-100 mt-0.5">
-                                            {courtCase.title}
-                                          </p>
-                                        </div>
-                                        <Badge 
-                                          variant={courtCase.status === "Ongoing" || courtCase.status === "Pending" ? "destructive" : 
-                                                   courtCase.status === "Acquitted" ? "outline" : "secondary"}
-                                          className={`text-xs shrink-0 ${courtCase.status === "Acquitted" ? "bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-200 border-green-300 dark:border-green-700" : ""}`}
-                                        >
-                                          {courtCase.status}
-                                        </Badge>
-                                      </div>
-                                    </div>
-                                  ))}
-                                  {mpCases.length > 3 && (
-                                    <p className="text-xs text-amber-800/70 dark:text-amber-200/70 italic">
-                                      +{mpCases.length - 3} more case(s) - click to view all
-                                    </p>
-                                  )}
-                                </div>
-                                
-                                <div className="flex flex-wrap gap-2 mt-4 pt-3 border-t border-amber-200/50 dark:border-amber-800/50">
-                                  <span className="text-xs text-muted-foreground">Status Summary:</span>
-                                  {ongoingCases.length > 0 && (
-                                    <Badge variant="destructive" className="text-xs" data-testid={`badge-court-ongoing-${mp.id}`}>
-                                      {ongoingCases.length} Ongoing
-                                    </Badge>
-                                  )}
-                                  {completedCases.length > 0 && (
-                                    <Badge variant="outline" className="text-xs bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-200 border-green-300 dark:border-green-700" data-testid={`badge-court-completed-${mp.id}`}>
-                                      {completedCases.length} Completed
                                     </Badge>
                                   )}
                                 </div>
