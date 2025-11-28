@@ -5,6 +5,15 @@ This web application provides a comprehensive dashboard for Malaysian Members of
 
 ## Recent Changes
 
+### November 28, 2025 - Senators Attending Dewan Rakyat Sessions
+Added tracking for senators (Dewan Negara members) who attend Dewan Rakyat sessions:
+- Added `senatorsAttending` JSONB field to hansard_records schema
+- Scraper now extracts names from "Senator Yang Turut Hadir" section in Hansard PDFs
+- Stops MP parsing before senator section to avoid counting senators as MPs
+- Added dedicated "Senators" tab in Constituency Attendance view (separate from MPs)
+- All Hansard import scripts updated to capture senator attendance data
+- Note: Existing Hansard records need re-import to backfill senator data
+
 ### November 28, 2025 - Mandarin and Tamil Translations for Fundamental Rights
 Added complete Mandarin (Chinese) and Tamil translations to the Fundamental Rights page:
 - Full translations for all 8 constitutional articles (Articles 5, 6, 8, 9, 10, 11, 12, 13)
