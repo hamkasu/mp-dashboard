@@ -4901,7 +4901,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
 
           const $profile = cheerio.load(profileResponse.data);
 
-          // Extract contact information from profile page
+          // Extract contact information from profile page using clean regex approach
           const contactInfo: Record<string, string | null> = {
             email: null,
             telephone: null,
@@ -4911,50 +4911,76 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
             serviceAddress: null,
           };
 
-          // Try to find email
-          const emailLink = $profile('a[href^="mailto:"]').first();
-          if (emailLink.length) {
-            contactInfo.email = emailLink.attr('href')?.replace('mailto:', '').trim() || null;
-          }
+          // Known site-wide emails to ignore
+          const SITE_WIDE_EMAILS = [
+            'info@parlimen.gov.my',
+            'webmaster@parlimen.gov.my',
+            'admin@parlimen.gov.my',
+            'parlimen@parlimen.gov.my',
+          ];
 
-          // Try to find phone numbers by common patterns
-          const pageText = $profile('body').text();
-          
-          // Phone patterns
-          const phoneMatch = pageText.match(/(?:Tel|Telefon|Phone)[:\s]*([0-9\-\s\(\)]+)/i);
-          if (phoneMatch) contactInfo.telephone = phoneMatch[1].trim();
-
-          const faxMatch = pageText.match(/(?:Fax|Faks)[:\s]*([0-9\-\s\(\)]+)/i);
-          if (faxMatch) contactInfo.fax = faxMatch[1].trim();
-
-          const mobileMatch = pageText.match(/(?:Mobile|Bimbit|H\/P)[:\s]*([0-9\-\s\(\)]+)/i);
-          if (mobileMatch) contactInfo.mobileNumber = mobileMatch[1].trim();
-
-          // Try table-based extraction
-          $profile('table tr, .profile-detail, .contact-info').each((_, row) => {
-            const $row = $profile(row);
-            const label = $row.find('th, td:first-child, .label, dt').text().toLowerCase();
-            const value = $row.find('td:last-child, .value, dd').text().trim();
-
-            if (label.includes('emel') || label.includes('email')) {
-              contactInfo.email = contactInfo.email || value || null;
-            }
-            if (label.includes('telefon') || label.includes('phone') || label.includes('tel')) {
-              contactInfo.telephone = contactInfo.telephone || value || null;
-            }
-            if (label.includes('faks') || label.includes('fax')) {
-              contactInfo.fax = contactInfo.fax || value || null;
-            }
-            if (label.includes('bimbit') || label.includes('mobile') || label.includes('h/p')) {
-              contactInfo.mobileNumber = contactInfo.mobileNumber || value || null;
-            }
-            if (label.includes('alamat') && !label.includes('khidmat')) {
-              contactInfo.contactAddress = contactInfo.contactAddress || value || null;
-            }
-            if (label.includes('khidmat') || label.includes('service')) {
-              contactInfo.serviceAddress = contactInfo.serviceAddress || value || null;
+          // Strategy 1: Look for mailto: links (most reliable, but filter site-wide ones)
+          let foundEmail: string | null = null;
+          $profile('a[href^="mailto:"]').each((_, el) => {
+            if (foundEmail) return;
+            const mailtoLink = $profile(el).attr('href');
+            if (mailtoLink) {
+              const email = mailtoLink.replace('mailto:', '').trim().toLowerCase();
+              if (/^[\w.+-]+@[\w.-]+\.[a-z]{2,}$/i.test(email) && !SITE_WIDE_EMAILS.includes(email)) {
+                foundEmail = email;
+              }
             }
           });
+          
+          // Get body text for all extractions
+          const bodyText = $profile('body').text();
+          
+          if (!foundEmail) {
+            // Strategy 2: Extract all emails from page using regex
+            const allEmails = bodyText.match(/[\w.+-]+@[\w.-]+\.[a-z]{2,}/gi) || [];
+            const candidateEmails = [...new Set(
+              allEmails
+                .map(e => e.toLowerCase().trim())
+                .filter(e => !SITE_WIDE_EMAILS.includes(e))
+            )];
+            
+            // Prioritize .gov.my emails (most common for MPs)
+            const govEmail = candidateEmails.find(e => e.endsWith('.gov.my'));
+            if (govEmail) {
+              foundEmail = govEmail;
+            } else {
+              // Then try gmail.com emails
+              const gmailEmail = candidateEmails.find(e => e.endsWith('@gmail.com'));
+              if (gmailEmail) {
+                foundEmail = gmailEmail;
+              } else {
+                // Return first valid candidate
+                foundEmail = candidateEmails.find(e => !e.includes('example') && !e.includes('test@')) || null;
+              }
+            }
+          }
+          contactInfo.email = foundEmail;
+
+          // Extract phone using regex - Malaysian landline pattern: 03-XXXX XXXX
+          const landlineMatch = bodyText.match(/0[23789]\s*-?\s*\d{3,4}\s*\d{4}/);
+          if (landlineMatch) {
+            contactInfo.telephone = landlineMatch[0].replace(/\s+/g, ' ').trim();
+          }
+
+          // Extract fax number
+          const faxMatch = bodyText.match(/(?:Fax|Faks)[:\s]*([0-9\-\s\(\)]+)/i);
+          if (faxMatch) {
+            const faxNum = faxMatch[1].trim();
+            if (faxNum && faxNum !== '-' && faxNum.length > 5) {
+              contactInfo.fax = faxNum;
+            }
+          }
+
+          // Extract mobile number
+          const mobileMatch = bodyText.match(/(?:Mobile|Bimbit|H\/P)[:\s]*(01[0-9]\s*-?\s*\d{3,4}\s*\d{4})/i);
+          if (mobileMatch) {
+            contactInfo.mobileNumber = mobileMatch[1].replace(/\s+/g, ' ').trim();
+          }
 
           // Check if we found any contact info
           const hasData = Object.values(contactInfo).some(v => v && v.length > 0);
