@@ -5,6 +5,14 @@ This web application provides a comprehensive dashboard for Malaysian Members of
 
 ## Recent Changes
 
+### November 28, 2025 - Mandarin and Tamil Translations for Fundamental Rights
+Added complete Mandarin (Chinese) and Tamil translations to the Fundamental Rights page:
+- Full translations for all 8 constitutional articles (Articles 5, 6, 8, 9, 10, 11, 12, 13)
+- Translated intro, limitations, and importance sections
+- Added language selector buttons for 中文 (Chinese) and தமிழ் (Tamil)
+- Localized Article labels and Print button text for all four languages
+- Page now supports English, Bahasa Malaysia, Mandarin, and Tamil
+
 ### November 27, 2025 - Pre-computed Hansard Speaker Data
 Moved speaker parsing from on-demand to pre-computed at scrape time for faster page loads:
 - Updated `/api/hansard-records/:id/speakers` endpoint to prioritize pre-computed data from database
