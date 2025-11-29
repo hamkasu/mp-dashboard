@@ -11,10 +11,12 @@ import { Newspaper, Calendar, Clock, ArrowRight, Eye } from "lucide-react";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
+import { useLocation } from "wouter";
 import type { BlogPost } from "@shared/schema";
 
 export default function Blog() {
   const { t, language } = useLanguage();
+  const [, setLocation] = useLocation();
 
   const { data: blogPosts, isLoading } = useQuery<BlogPost[]>({
     queryKey: ["/api/blog-posts"],
@@ -30,10 +32,8 @@ export default function Blog() {
     },
   });
 
-  const handleReadArticle = (postId: string) => {
-    incrementViewMutation.mutate(postId);
-    // In a real app, this would navigate to the full article page
-    // For now, we just increment the view count
+  const handleReadArticle = (post: BlogPost) => {
+    setLocation(`/blog/${post.slug}`);
   };
 
   const formatDate = (dateValue: string | Date) => {
@@ -140,7 +140,7 @@ export default function Blog() {
                       variant="ghost"
                       className="w-full justify-between group"
                       data-testid={`blog-post-read-${post.id}`}
-                      onClick={() => handleReadArticle(post.id)}
+                      onClick={() => handleReadArticle(post)}
                     >
                       <span>{language === 'ms' ? 'Baca Artikel' : 'Read Article'}</span>
                       <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />

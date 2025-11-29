@@ -31,6 +31,7 @@ const Disclaimer = lazy(() => import("@/pages/Disclaimer"));
 const Analytics = lazy(() => import("@/pages/analytics"));
 const AdminLogin = lazy(() => import("@/pages/AdminLogin"));
 const Blog = lazy(() => import("@/pages/Blog"));
+const BlogPost = lazy(() => import("@/pages/BlogPost"));
 const BlogAdmin = lazy(() => import("@/pages/BlogAdmin"));
 const UnpassedBills = lazy(() => import("@/pages/UnpassedBills"));
 const CourtCasesAdmin = lazy(() => import("@/pages/CourtCasesAdmin"));
@@ -61,6 +62,7 @@ function Router() {
         <Route path="/constitution" component={Constitution} />
         <Route path="/fundamental-rights" component={FundamentalRights} />
         <Route path="/blog" component={Blog} />
+        <Route path="/blog/:slug" component={BlogPost} />
         <Route path="/courts" component={Courts} />
         <Route path="/blog-admin" component={BlogAdmin} />
         <Route path="/attendance" component={Attendance} />
