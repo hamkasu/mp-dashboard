@@ -5,6 +5,14 @@ This web application provides a comprehensive dashboard for Malaysian Members of
 
 ## Recent Changes
 
+### November 29, 2025 - SPRM Investigations Tab on Courts Page
+Added SPRM Investigations as a tab within the Courts page:
+- Courts page now has two tabs: "Court Cases" and "SPRM Investigations"
+- SPRM tab displays investigation statistics (total, ongoing, completed)
+- Each investigation shows status, MP name, charges, and outcome
+- Full translations added for English and Bahasa Malaysia
+- Uses existing `/api/sprm-investigations` endpoint
+
 ### November 28, 2025 - Manual Court Case Search Feature
 Added manual search capability to the court case scraper:
 - Admins can enter custom search terms (e.g., "Anwar Ibrahim defamation", "Najib corruption trial")
