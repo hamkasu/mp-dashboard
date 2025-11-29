@@ -14,6 +14,7 @@ import { Link, useLocation } from "wouter";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { useQuery } from "@tanstack/react-query";
+import calmicLogo from "@assets/Screenshot 2025-06-09 105104_1764413157879.png";
 
 interface HeaderProps {
   onMenuClick?: () => void;
@@ -47,9 +48,12 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
         
         <Link href="/">
           <div className="flex items-center gap-3 cursor-pointer hover-elevate px-2 py-1 rounded-md">
-            <div className="h-12 w-12 md:h-14 md:w-14 rounded-md bg-primary flex items-center justify-center">
-              <span className="text-primary-foreground font-bold text-lg md:text-xl">MY</span>
-            </div>
+            <img 
+              src={calmicLogo} 
+              alt="Calmic Logo" 
+              className="h-12 w-12 md:h-14 md:w-14 rounded-full object-cover"
+              data-testid="img-calmic-logo"
+            />
             <div className="flex flex-col">
               <h1 className="text-base md:text-lg font-bold tracking-tight">
                 {t('nav.malayParliament')}
