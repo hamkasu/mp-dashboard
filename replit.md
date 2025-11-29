@@ -5,6 +5,14 @@ This web application provides a comprehensive dashboard for Malaysian Members of
 
 ## Recent Changes
 
+### November 29, 2025 - Party-Specific Statistics
+Added server-side filtered statistics when party filter is active:
+- New `/api/stats/filtered` endpoint calculates statistics for filtered MPs
+- Accepts party, state, and cabinet filter parameters
+- Returns gender breakdown, state coverage, and average attendance for filtered set
+- Frontend fetches filtered stats via React Query when filters are active
+- StatisticsCards component switches between global and filtered data appropriately
+
 ### November 29, 2025 - SPRM Investigations Tab on Courts Page
 Added SPRM Investigations as a tab within the Courts page:
 - Courts page now has two tabs: "Court Cases" and "SPRM Investigations"
