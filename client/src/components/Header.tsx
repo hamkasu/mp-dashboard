@@ -47,7 +47,7 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
         )}
         
         <Link href="/">
-          <div className="flex items-center gap-3 cursor-pointer hover-elevate px-2 py-1 rounded-md">
+          <div className="flex items-center gap-4 cursor-pointer hover-elevate px-2 py-1 rounded-md">
             <img 
               src={calmicLogo} 
               alt="Calmic Logo" 
