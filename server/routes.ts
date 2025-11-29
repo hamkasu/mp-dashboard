@@ -543,6 +543,70 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
+  // Get filtered statistics (for party/state filtering)
+  app.get("/api/stats/filtered", async (req, res) => {
+    try {
+      const allMps = await storage.getAllMps();
+      
+      // Parse filter parameters
+      const parties = req.query.parties ? (req.query.parties as string).split(',') : [];
+      const states = req.query.states ? (req.query.states as string).split(',') : [];
+      const cabinetFilter = req.query.cabinet as string | undefined;
+      
+      // Apply filters
+      let filteredMps = allMps;
+      
+      if (parties.length > 0) {
+        filteredMps = filteredMps.filter(mp => parties.includes(mp.party));
+      }
+      
+      if (states.length > 0) {
+        filteredMps = filteredMps.filter(mp => states.includes(mp.state));
+      }
+      
+      if (cabinetFilter) {
+        if (cabinetFilter === 'cabinet') {
+          filteredMps = filteredMps.filter(mp => mp.isMinister || mp.isDeputyMinister);
+        } else if (cabinetFilter === 'ministers') {
+          filteredMps = filteredMps.filter(mp => mp.isMinister);
+        } else if (cabinetFilter === 'deputy-ministers') {
+          filteredMps = filteredMps.filter(mp => mp.isDeputyMinister);
+        }
+      }
+
+      // Calculate gender breakdown
+      const genderBreakdown = filteredMps.reduce((acc, mp) => {
+        const existing = acc.find((g) => g.gender === mp.gender);
+        if (existing) {
+          existing.count++;
+        } else {
+          acc.push({ gender: mp.gender, count: 1 });
+        }
+        return acc;
+      }, [] as { gender: string; count: number }[]);
+
+      // Calculate unique states
+      const uniqueStates = new Set(filteredMps.map((mp) => mp.state));
+
+      // Calculate average attendance
+      const totalDaysAttended = filteredMps.reduce((sum, mp) => sum + mp.daysAttended, 0);
+      const totalPossibleDays = filteredMps.reduce((sum, mp) => sum + mp.totalParliamentDays, 0);
+      const averageAttendanceRate = totalPossibleDays > 0
+        ? (totalDaysAttended / totalPossibleDays) * 100
+        : 0;
+
+      res.json({
+        totalMps: filteredMps.length,
+        genderBreakdown,
+        stateCount: uniqueStates.size,
+        averageAttendanceRate: Math.round(averageAttendanceRate * 10) / 10,
+      });
+    } catch (error) {
+      console.error("Error calculating filtered stats:", error);
+      res.status(500).json({ error: "Failed to calculate filtered statistics" });
+    }
+  });
+
   // Get all court cases
   app.get("/api/court-cases", async (_req, res) => {
     try {

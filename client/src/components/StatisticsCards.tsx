@@ -14,13 +14,21 @@ interface Statistics {
   averageAttendanceRate?: number;
 }
 
+interface FilteredStatistics {
+  totalMps: number;
+  genderBreakdown: { gender: string; count: number }[];
+  stateCount: number;
+  averageAttendanceRate?: number;
+}
+
 interface StatisticsCardsProps {
   stats: Statistics;
+  filteredStats?: FilteredStatistics | null;
   isLoading?: boolean;
   hasPartyFilter?: boolean;
 }
 
-export function StatisticsCards({ stats, isLoading, hasPartyFilter = false }: StatisticsCardsProps) {
+export function StatisticsCards({ stats, filteredStats, isLoading, hasPartyFilter = false }: StatisticsCardsProps) {
   if (isLoading) {
     const skeletonCount = hasPartyFilter ? 3 : 5;
     const gridCols = hasPartyFilter ? "lg:grid-cols-3" : "lg:grid-cols-5";
@@ -46,10 +54,16 @@ export function StatisticsCards({ stats, isLoading, hasPartyFilter = false }: St
     .sort((a, b) => b.count - a.count)
     .slice(0, 2);
 
-  const femaleCount = stats.genderBreakdown.find((g) => g.gender === "Female")?.count || 0;
-  const femalePercentage = ((femaleCount / stats.totalMps) * 100).toFixed(1);
+  // Use filtered stats when available (party/state filter active), otherwise use global stats
+  const activeStats = hasPartyFilter && filteredStats ? filteredStats : stats;
   
-  const attendanceRate = stats.averageAttendanceRate || 0;
+  const femaleCount = activeStats.genderBreakdown.find((g) => g.gender === "Female")?.count ?? 0;
+  const totalForPercentage = activeStats.totalMps;
+  const femalePercentage = totalForPercentage > 0 ? ((femaleCount / totalForPercentage) * 100).toFixed(1) : "0.0";
+  
+  const stateCount = activeStats.stateCount;
+  
+  const attendanceRate = activeStats.averageAttendanceRate ?? 0;
   const getAttendanceColor = (rate: number) => {
     if (rate >= 85) return "text-green-600 dark:text-green-400";
     if (rate >= 70) return "text-yellow-600 dark:text-yellow-400";
@@ -113,7 +127,7 @@ export function StatisticsCards({ stats, isLoading, hasPartyFilter = false }: St
           <MapPin className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-3xl md:text-4xl font-bold">{stats.stateCount}</div>
+          <div className="text-3xl md:text-4xl font-bold">{stateCount}</div>
           <p className="text-xs text-muted-foreground mt-1">
             States & Territories
           </p>
@@ -132,7 +146,7 @@ export function StatisticsCards({ stats, isLoading, hasPartyFilter = false }: St
               </TooltipTrigger>
               <TooltipContent className="max-w-xs">
                 <p className="text-sm">
-                  Average attendance rate across all MPs, calculated from parliamentary sitting days attended vs. total sitting days.
+                  Average attendance rate across {hasPartyFilter ? "selected party" : "all"} MPs, calculated from parliamentary sitting days attended vs. total sitting days.
                 </p>
               </TooltipContent>
             </Tooltip>
@@ -140,7 +154,7 @@ export function StatisticsCards({ stats, isLoading, hasPartyFilter = false }: St
           <Calendar className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          {stats.averageAttendanceRate !== undefined ? (
+          {activeStats.averageAttendanceRate !== undefined ? (
             <>
               <div className={`text-3xl md:text-4xl font-bold ${getAttendanceColor(attendanceRate)}`} data-testid="text-avg-attendance">
                 {attendanceRate.toFixed(1)}%

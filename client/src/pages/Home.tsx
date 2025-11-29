@@ -110,6 +110,32 @@ export default function Home() {
     queryKey: ["/api/stats"],
   });
 
+  // Build query params for filtered stats
+  const hasActiveFilter = selectedParties.length > 0 || selectedStates.length > 0 || cabinetFilter !== 'all';
+  const filteredStatsParams = useMemo(() => {
+    const params = new URLSearchParams();
+    if (selectedParties.length > 0) params.set('parties', selectedParties.join(','));
+    if (selectedStates.length > 0) params.set('states', selectedStates.join(','));
+    if (cabinetFilter !== 'all') params.set('cabinet', cabinetFilter);
+    return params.toString();
+  }, [selectedParties, selectedStates, cabinetFilter]);
+
+  // Fetch filtered stats when party/state/cabinet filter is active
+  const { data: filteredStats, isLoading: filteredStatsLoading } = useQuery<{
+    totalMps: number;
+    genderBreakdown: { gender: string; count: number }[];
+    stateCount: number;
+    averageAttendanceRate?: number;
+  }>({
+    queryKey: ["/api/stats/filtered", filteredStatsParams],
+    queryFn: async () => {
+      const response = await fetch(`/api/stats/filtered?${filteredStatsParams}`);
+      if (!response.ok) throw new Error('Failed to fetch filtered stats');
+      return response.json();
+    },
+    enabled: hasActiveFilter,
+  });
+
   const { data: sprmInvestigations = [], isLoading: sprmInvestigationsLoading } = useQuery<SprmInvestigation[]>({
     queryKey: ["/api/sprm-investigations"],
   });
@@ -599,7 +625,12 @@ export default function Home() {
             )}
 
             {/* Statistics */}
-            <StatisticsCards stats={stats || defaultStats} isLoading={isLoading} hasPartyFilter={selectedParties.length > 0} />
+            <StatisticsCards 
+              stats={stats || defaultStats} 
+              filteredStats={hasActiveFilter ? filteredStats : null}
+              isLoading={statsLoading || (hasActiveFilter && filteredStatsLoading)} 
+              hasPartyFilter={selectedParties.length > 0} 
+            />
 
             {/* MP Grid */}
             {sortBy === "inappropriate-language" && languageAnalysisLoading ? (
