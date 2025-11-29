@@ -529,6 +529,7 @@ export const insertBlogPostSchema = createInsertSchema(blogPosts).omit({
   isPublished: z.boolean().optional().default(false),
   imageUrl: z.string().nullable().optional(),
   createdBy: z.string().nullable().optional(),
+  publishedAt: z.coerce.date(),
 });
 
 export const updateBlogPostSchema = insertBlogPostSchema.partial();
