@@ -36,7 +36,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Newspaper, Plus, Edit, Trash2, Loader2, Save } from "lucide-react";
-import type { BlogPost } from "@shared/schema";
+import type { BlogPost, InsertBlogPost, UpdateBlogPost } from "@shared/schema";
 
 interface BlogFormData {
   title: string;
@@ -49,6 +49,22 @@ interface BlogFormData {
   isPublished: boolean;
   slug: string;
   imageUrl?: string;
+}
+
+// Convert form data to API payload with proper Date type
+function toInsertBlogPost(form: BlogFormData): InsertBlogPost {
+  return {
+    title: form.title,
+    excerpt: form.excerpt,
+    content: form.content,
+    category: form.category,
+    author: form.author,
+    readTime: Number(form.readTime),
+    publishedAt: new Date(form.publishedAt),
+    isPublished: form.isPublished,
+    slug: form.slug || form.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''),
+    imageUrl: form.imageUrl || null,
+  };
 }
 
 export default function BlogAdmin() {
@@ -81,7 +97,7 @@ export default function BlogAdmin() {
   });
 
   const createMutation = useMutation({
-    mutationFn: async (data: BlogFormData) => {
+    mutationFn: async (data: InsertBlogPost) => {
       return await apiRequest("POST", "/api/blog-posts", data);
     },
     onSuccess: () => {
@@ -102,7 +118,7 @@ export default function BlogAdmin() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: Partial<BlogFormData> }) => {
+    mutationFn: async ({ id, data }: { id: string; data: UpdateBlogPost }) => {
       return await apiRequest("PATCH", `/api/blog-posts/${id}`, data);
     },
     onSuccess: () => {
@@ -179,18 +195,13 @@ export default function BlogAdmin() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Generate slug from title if empty
-    const finalData = {
-      ...formData,
-      readTime: Number(formData.readTime),
-      publishedAt: new Date(formData.publishedAt).toISOString(),
-      slug: formData.slug || formData.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''),
-    };
+    // Convert form data to API payload with proper types
+    const payload = toInsertBlogPost(formData);
 
     if (isEditing && editingId) {
-      updateMutation.mutate({ id: editingId, data: finalData });
+      updateMutation.mutate({ id: editingId, data: payload });
     } else {
-      createMutation.mutate(finalData);
+      createMutation.mutate(payload);
     }
   };
 
