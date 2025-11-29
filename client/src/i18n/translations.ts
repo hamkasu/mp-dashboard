@@ -601,8 +601,8 @@ export const translations = {
 
     // Courts Page
     courts: {
-      title: "MP Court Cases",
-      description: "Track court cases involving Malaysian Members of Parliament",
+      title: "MP Court Cases & SPRM Investigations",
+      description: "Track court cases and SPRM investigations involving Malaysian Members of Parliament",
       totalCases: "Total Cases",
       ongoingCases: "Ongoing Cases",
       completedCases: "Completed Cases",
@@ -614,6 +614,15 @@ export const translations = {
       filed: "Filed",
       outcome: "Outcome",
       unknownMp: "Unknown MP",
+      courtCases: "Court Cases",
+      sprmInvestigations: "SPRM Investigations",
+      totalInvestigations: "Total Investigations",
+      ongoingInvestigations: "Ongoing",
+      completedInvestigations: "Completed",
+      noInvestigations: "No SPRM investigations on record.",
+      started: "Started",
+      ended: "Ended",
+      allegations: "Allegations",
     },
 
     // Parliament Guide Page
@@ -1237,8 +1246,8 @@ export const translations = {
 
     // Courts Page / Halaman Mahkamah
     courts: {
-      title: "Kes Mahkamah Ahli Parlimen",
-      description: "Jejaki kes mahkamah yang melibatkan Ahli Parlimen Malaysia",
+      title: "Kes Mahkamah & Siasatan SPRM Ahli Parlimen",
+      description: "Jejaki kes mahkamah dan siasatan SPRM yang melibatkan Ahli Parlimen Malaysia",
       totalCases: "Jumlah Kes",
       ongoingCases: "Kes Sedang Berjalan",
       completedCases: "Kes Selesai",
@@ -1250,6 +1259,15 @@ export const translations = {
       filed: "Difailkan",
       outcome: "Keputusan",
       unknownMp: "Ahli Parlimen Tidak Diketahui",
+      courtCases: "Kes Mahkamah",
+      sprmInvestigations: "Siasatan SPRM",
+      totalInvestigations: "Jumlah Siasatan",
+      ongoingInvestigations: "Sedang Berjalan",
+      completedInvestigations: "Selesai",
+      noInvestigations: "Tiada siasatan SPRM dalam rekod.",
+      started: "Bermula",
+      ended: "Berakhir",
+      allegations: "Dakwaan",
     },
 
     // Parliament Guide Page / Halaman Panduan Parlimen
