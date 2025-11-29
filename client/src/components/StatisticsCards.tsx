@@ -17,13 +17,16 @@ interface Statistics {
 interface StatisticsCardsProps {
   stats: Statistics;
   isLoading?: boolean;
+  hasPartyFilter?: boolean;
 }
 
-export function StatisticsCards({ stats, isLoading }: StatisticsCardsProps) {
+export function StatisticsCards({ stats, isLoading, hasPartyFilter = false }: StatisticsCardsProps) {
   if (isLoading) {
+    const skeletonCount = hasPartyFilter ? 3 : 5;
+    const gridCols = hasPartyFilter ? "lg:grid-cols-3" : "lg:grid-cols-5";
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 md:gap-6">
-        {[1, 2, 3, 4, 5].map((i) => (
+      <div className={`grid grid-cols-1 md:grid-cols-2 ${gridCols} gap-4 md:gap-6`}>
+        {Array.from({ length: skeletonCount }, (_, i) => i + 1).map((i) => (
           <Card key={i} className="animate-pulse">
             <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
               <div className="h-4 w-20 bg-muted rounded" />
@@ -53,37 +56,43 @@ export function StatisticsCards({ stats, isLoading }: StatisticsCardsProps) {
     return "text-red-600 dark:text-red-400";
   };
 
-  return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 md:gap-6">
-      <Card data-testid="card-total-mps">
-        <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Total MPs</CardTitle>
-          <Users className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-3xl md:text-4xl font-bold" data-testid="text-total-mps">
-            {stats.totalMps}
-          </div>
-          <p className="text-xs text-muted-foreground mt-1">
-            Members of Parliament
-          </p>
-        </CardContent>
-      </Card>
+  const gridCols = hasPartyFilter ? "lg:grid-cols-3" : "lg:grid-cols-5";
 
-      <Card data-testid="card-party-breakdown">
-        <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Party Breakdown</CardTitle>
-          <Flag className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-3xl md:text-4xl font-bold">
-            {stats.partyBreakdown.length}
-          </div>
-          <p className="text-xs text-muted-foreground mt-1">
-            {topParties.map((p) => `${p.party} (${p.count})`).join(", ")}
-          </p>
-        </CardContent>
-      </Card>
+  return (
+    <div className={`grid grid-cols-1 md:grid-cols-2 ${gridCols} gap-4 md:gap-6`}>
+      {!hasPartyFilter && (
+        <Card data-testid="card-total-mps">
+          <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total MPs</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl md:text-4xl font-bold" data-testid="text-total-mps">
+              {stats.totalMps}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Members of Parliament
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
+      {!hasPartyFilter && (
+        <Card data-testid="card-party-breakdown">
+          <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Party Breakdown</CardTitle>
+            <Flag className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl md:text-4xl font-bold">
+              {stats.partyBreakdown.length}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              {topParties.map((p) => `${p.party} (${p.count})`).join(", ")}
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
       <Card data-testid="card-gender-stats">
         <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">

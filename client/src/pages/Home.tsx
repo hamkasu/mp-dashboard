@@ -599,7 +599,7 @@ export default function Home() {
             )}
 
             {/* Statistics */}
-            <StatisticsCards stats={stats || defaultStats} isLoading={isLoading} />
+            <StatisticsCards stats={stats || defaultStats} isLoading={isLoading} hasPartyFilter={selectedParties.length > 0} />
 
             {/* MP Grid */}
             {sortBy === "inappropriate-language" && languageAnalysisLoading ? (
