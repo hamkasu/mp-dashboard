@@ -503,12 +503,9 @@ export type Constituency = typeof constituencies.$inferSelect;
 // Blog Posts table for articles and news
 export const blogPosts = pgTable("blog_posts", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  titleEn: text("title_en").notNull(),
-  titleMs: text("title_ms").notNull(),
-  excerptEn: text("excerpt_en").notNull(),
-  excerptMs: text("excerpt_ms").notNull(),
-  contentEn: text("content_en").notNull(),
-  contentMs: text("content_ms").notNull(),
+  title: text("title").notNull(),
+  excerpt: text("excerpt").notNull(),
+  content: text("content").notNull(),
   category: text("category").notNull(),
   author: text("author").notNull(),
   readTime: integer("read_time").notNull(), // in minutes

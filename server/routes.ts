@@ -5419,7 +5419,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
 
       const [created] = await db.insert(blogPosts).values(newPost).returning();
 
-      console.log(`✅ Blog post created: ${created.titleEn} by ${username}`);
+      console.log(`✅ Blog post created: ${created.title} by ${username}`);
       res.status(201).json(created);
     } catch (error: any) {
       console.error("Error creating blog post:", error);
@@ -5459,7 +5459,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         return res.status(404).json({ error: "Blog post not found" });
       }
 
-      console.log(`✅ Blog post updated: ${updated.titleEn} by ${getCurrentUsername(req)}`);
+      console.log(`✅ Blog post updated: ${updated.title} by ${getCurrentUsername(req)}`);
       res.json(updated);
     } catch (error: any) {
       console.error("Error updating blog post:", error);
@@ -5485,7 +5485,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         return res.status(404).json({ error: "Blog post not found" });
       }
 
-      console.log(`✅ Blog post deleted: ${deleted.titleEn} by ${getCurrentUsername(req)}`);
+      console.log(`✅ Blog post deleted: ${deleted.title} by ${getCurrentUsername(req)}`);
       res.json({ message: "Blog post deleted successfully" });
     } catch (error) {
       console.error("Error deleting blog post:", error);

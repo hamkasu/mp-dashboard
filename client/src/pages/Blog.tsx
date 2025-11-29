@@ -36,8 +36,8 @@ export default function Blog() {
     // For now, we just increment the view count
   };
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
+  const formatDate = (dateValue: string | Date) => {
+    const date = typeof dateValue === 'string' ? new Date(dateValue) : dateValue;
     return date.toLocaleDateString(language === 'ms' ? 'ms-MY' : 'en-GB', {
       year: 'numeric',
       month: 'long',
@@ -110,10 +110,10 @@ export default function Blog() {
                         {post.category}
                       </Badge>
                       <CardTitle className="text-xl leading-tight" data-testid={`blog-post-title-${post.id}`}>
-                        {language === 'ms' ? post.titleMs : post.titleEn}
+                        {post.title}
                       </CardTitle>
                       <CardDescription className="line-clamp-3" data-testid={`blog-post-excerpt-${post.id}`}>
-                        {language === 'ms' ? post.excerptMs : post.excerptEn}
+                        {post.excerpt}
                       </CardDescription>
                     </div>
                   </CardHeader>

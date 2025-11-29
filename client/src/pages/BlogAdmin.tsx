@@ -39,12 +39,9 @@ import { Newspaper, Plus, Edit, Trash2, Loader2, Save } from "lucide-react";
 import type { BlogPost } from "@shared/schema";
 
 interface BlogFormData {
-  titleEn: string;
-  titleMs: string;
-  excerptEn: string;
-  excerptMs: string;
-  contentEn: string;
-  contentMs: string;
+  title: string;
+  excerpt: string;
+  content: string;
   category: string;
   author: string;
   readTime: number;
@@ -60,12 +57,9 @@ export default function BlogAdmin() {
   const [isEditing, setIsEditing] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState<BlogFormData>({
-    titleEn: "",
-    titleMs: "",
-    excerptEn: "",
-    excerptMs: "",
-    contentEn: "",
-    contentMs: "",
+    title: "",
+    excerpt: "",
+    content: "",
     category: "",
     author: "Editorial Team",
     readTime: 5,
@@ -150,12 +144,9 @@ export default function BlogAdmin() {
 
   const resetForm = () => {
     setFormData({
-      titleEn: "",
-      titleMs: "",
-      excerptEn: "",
-      excerptMs: "",
-      contentEn: "",
-      contentMs: "",
+      title: "",
+      excerpt: "",
+      content: "",
       category: "",
       author: "Editorial Team",
       readTime: 5,
@@ -170,12 +161,9 @@ export default function BlogAdmin() {
 
   const handleEdit = (post: BlogPost) => {
     setFormData({
-      titleEn: post.titleEn,
-      titleMs: post.titleMs,
-      excerptEn: post.excerptEn,
-      excerptMs: post.excerptMs,
-      contentEn: post.contentEn,
-      contentMs: post.contentMs,
+      title: post.title,
+      excerpt: post.excerpt,
+      content: post.content,
       category: post.category,
       author: post.author,
       readTime: post.readTime,
@@ -196,7 +184,7 @@ export default function BlogAdmin() {
       ...formData,
       readTime: Number(formData.readTime),
       publishedAt: new Date(formData.publishedAt).toISOString(),
-      slug: formData.slug || formData.titleEn.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''),
+      slug: formData.slug || formData.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''),
     };
 
     if (isEditing && editingId) {
@@ -249,71 +237,36 @@ export default function BlogAdmin() {
                 </CardHeader>
                 <CardContent>
                   <form onSubmit={handleSubmit} className="space-y-6">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="titleEn">Title (English)*</Label>
-                        <Input
-                          id="titleEn"
-                          value={formData.titleEn}
-                          onChange={(e) => setFormData({ ...formData, titleEn: e.target.value })}
-                          required
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="titleMs">Title (Malay)*</Label>
-                        <Input
-                          id="titleMs"
-                          value={formData.titleMs}
-                          onChange={(e) => setFormData({ ...formData, titleMs: e.target.value })}
-                          required
-                        />
-                      </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="title">Title*</Label>
+                      <Input
+                        id="title"
+                        value={formData.title}
+                        onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                        required
+                      />
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="excerptEn">Excerpt (English)*</Label>
-                        <Textarea
-                          id="excerptEn"
-                          rows={3}
-                          value={formData.excerptEn}
-                          onChange={(e) => setFormData({ ...formData, excerptEn: e.target.value })}
-                          required
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="excerptMs">Excerpt (Malay)*</Label>
-                        <Textarea
-                          id="excerptMs"
-                          rows={3}
-                          value={formData.excerptMs}
-                          onChange={(e) => setFormData({ ...formData, excerptMs: e.target.value })}
-                          required
-                        />
-                      </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="excerpt">Excerpt*</Label>
+                      <Textarea
+                        id="excerpt"
+                        rows={3}
+                        value={formData.excerpt}
+                        onChange={(e) => setFormData({ ...formData, excerpt: e.target.value })}
+                        required
+                      />
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="contentEn">Content (English)*</Label>
-                        <Textarea
-                          id="contentEn"
-                          rows={10}
-                          value={formData.contentEn}
-                          onChange={(e) => setFormData({ ...formData, contentEn: e.target.value })}
-                          required
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="contentMs">Content (Malay)*</Label>
-                        <Textarea
-                          id="contentMs"
-                          rows={10}
-                          value={formData.contentMs}
-                          onChange={(e) => setFormData({ ...formData, contentMs: e.target.value })}
-                          required
-                        />
-                      </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="content">Content*</Label>
+                      <Textarea
+                        id="content"
+                        rows={10}
+                        value={formData.content}
+                        onChange={(e) => setFormData({ ...formData, content: e.target.value })}
+                        required
+                      />
                     </div>
 
                     <div className="grid grid-cols-3 gap-4">
@@ -360,7 +313,7 @@ export default function BlogAdmin() {
                           placeholder="auto-generated from title if empty"
                         />
                         <p className="text-xs text-muted-foreground">
-                          Leave empty to auto-generate from English title
+                          Leave empty to auto-generate from title
                         </p>
                       </div>
                       <div className="space-y-2">
@@ -448,7 +401,7 @@ export default function BlogAdmin() {
                       <TableBody>
                         {blogPosts.map((post) => (
                           <TableRow key={post.id}>
-                            <TableCell className="font-medium">{post.titleEn}</TableCell>
+                            <TableCell className="font-medium">{post.title}</TableCell>
                             <TableCell>{post.category}</TableCell>
                             <TableCell>
                               <Badge variant={post.isPublished ? "default" : "secondary"}>
@@ -475,7 +428,7 @@ export default function BlogAdmin() {
                                     <AlertDialogHeader>
                                       <AlertDialogTitle>Delete Blog Post?</AlertDialogTitle>
                                       <AlertDialogDescription>
-                                        Are you sure you want to delete "{post.titleEn}"? This action cannot be undone.
+                                        Are you sure you want to delete "{post.title}"? This action cannot be undone.
                                       </AlertDialogDescription>
                                     </AlertDialogHeader>
                                     <AlertDialogFooter>
