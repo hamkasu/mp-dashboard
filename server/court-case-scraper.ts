@@ -17,6 +17,69 @@ import { eq, or, desc } from "drizzle-orm";
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
 
+// Configuration for scraper behavior
+const SCRAPER_CONFIG = {
+  articlesPerKeyword: 20,  // Increased from 5 to get more comprehensive results
+  enableRelevanceFilter: false,  // Set to false to return all results without filtering
+  monthsToSearch: 6,  // How far back to search (used where supported)
+};
+
+// High-profile Malaysian politicians to specifically search for
+const MP_SPECIFIC_SEARCHES = [
+  "Anwar Ibrahim court",
+  "Anwar Ibrahim lawsuit",
+  "Anwar Ibrahim civil suit",
+  "Najib Razak court",
+  "Najib Razak trial",
+  "Zahid Hamidi court",
+  "Zahid Hamidi trial",
+  "Muhyiddin court",
+  "Muhyiddin trial",
+  "Lim Guan Eng court",
+  "Lim Guan Eng trial",
+  "Mahathir lawsuit",
+  "Mahathir defamation",
+  "Tengku Zafrul court",
+  "Syed Saddiq court",
+  "Rosmah Mansor court",
+  "Ahmad Maslan court",
+];
+
+// Comprehensive keywords for both civil and criminal cases
+const COMPREHENSIVE_KEYWORDS = [
+  // Criminal case keywords
+  "MP charged Malaysia",
+  "member of parliament trial",
+  "ahli parlimen didakwa",
+  "corruption trial Malaysia",
+  "MACC charged",
+  "SPRM investigation MP",
+  "politician convicted Malaysia",
+  "minister charged court",
+  "criminal case politician Malaysia",
+  "abuse of power MP",
+  "money laundering politician",
+  "CBT politician Malaysia",
+  // Civil case keywords
+  "defamation suit MP",
+  "civil lawsuit politician Malaysia",
+  "libel case MP",
+  "sexual assault lawsuit politician",
+  "harassment suit MP",
+  "civil suit minister",
+  "sued politician Malaysia",
+  "damages claim MP",
+  "defamation PM",
+  "civil case parliament member",
+  // General court keywords
+  "court case MP Malaysia",
+  "High Court politician",
+  "Federal Court MP",
+  "Court of Appeal minister",
+  "acquitted politician Malaysia",
+  "verdict MP Malaysia",
+];
+
 // Malaysian news sources to monitor for court case news
 const NEWS_SOURCES = [
   {
@@ -24,9 +87,8 @@ const NEWS_SOURCES = [
     baseUrl: "https://www.thestar.com.my",
     searchUrl: "https://www.thestar.com.my/search?q=",
     keywords: [
-      "court case MP", "corruption MP", "trial MP Malaysia", "charged MP",
-      "defamation suit MP", "civil lawsuit MP", "libel suit politician", 
-      "sexual assault suit MP", "harassment suit politician"
+      ...COMPREHENSIVE_KEYWORDS,
+      ...MP_SPECIFIC_SEARCHES,
     ],
   },
   {
@@ -34,8 +96,8 @@ const NEWS_SOURCES = [
     baseUrl: "https://www.nst.com.my",
     searchUrl: "https://www.nst.com.my/search?keys=",
     keywords: [
-      "court case MP", "corruption charges", "MACC investigation",
-      "defamation lawsuit Malaysia", "civil suit politician", "libel case MP"
+      ...COMPREHENSIVE_KEYWORDS,
+      ...MP_SPECIFIC_SEARCHES,
     ],
   },
   {
@@ -43,17 +105,17 @@ const NEWS_SOURCES = [
     baseUrl: "https://www.malaymail.com",
     searchUrl: "https://www.malaymail.com/search?q=",
     keywords: [
-      "MP court case", "corruption trial", "charged politician Malaysia", "MACC",
-      "defamation suit", "civil lawsuit politician", "sexual assault civil suit"
+      ...COMPREHENSIVE_KEYWORDS,
+      ...MP_SPECIFIC_SEARCHES,
     ],
   },
   {
     name: "Benar News",
     baseUrl: "https://www.benarnews.org",
-    searchUrl: "https://www.benarnews.org/malay/search?q=",
+    searchUrl: "https://www.benarnews.org/english/search?q=",
     keywords: [
-      "MP court Malaysia", "corruption charges", "trial politician",
-      "defamation MP", "lawsuit politician Malaysia"
+      ...COMPREHENSIVE_KEYWORDS.slice(0, 15),
+      ...MP_SPECIFIC_SEARCHES,
     ],
   },
   {
@@ -61,8 +123,8 @@ const NEWS_SOURCES = [
     baseUrl: "https://www.malaysiakini.com",
     searchUrl: "https://www.malaysiakini.com/en/search?q=",
     keywords: [
-      "MP court", "corruption trial", "SPRM investigation",
-      "defamation suit", "civil lawsuit", "libel suit", "sexual assault lawsuit"
+      ...COMPREHENSIVE_KEYWORDS,
+      ...MP_SPECIFIC_SEARCHES,
     ],
   },
   {
@@ -70,8 +132,8 @@ const NEWS_SOURCES = [
     baseUrl: "https://www.freemalaysiatoday.com",
     searchUrl: "https://www.freemalaysiatoday.com/?s=",
     keywords: [
-      "MP charged", "court case politician", "corruption Malaysia",
-      "defamation suit politician", "civil lawsuit MP", "libel Malaysia"
+      ...COMPREHENSIVE_KEYWORDS,
+      ...MP_SPECIFIC_SEARCHES,
     ],
   },
 ];
@@ -151,8 +213,8 @@ export class CourtCaseScraper {
         // Extract article links (selectors vary by site)
         const articleLinks = this.extractArticleLinks($, source.name);
         
-        // Limit to first 5 articles per keyword
-        for (const link of articleLinks.slice(0, 5)) {
+        // Use configurable article limit (default 20)
+        for (const link of articleLinks.slice(0, SCRAPER_CONFIG.articlesPerKeyword)) {
           try {
             const articleUrl = link.startsWith('http') ? link : `${source.baseUrl}${link}`;
             
@@ -170,8 +232,27 @@ export class CourtCaseScraper {
             
             await this.delay(500);
             const article = await this.scrapeArticle(articleUrl, source.name);
-            if (article && this.isRelevantArticle(article)) {
-              articles.push(article);
+            
+            // Check date filter - only include articles from last 6 months
+            if (article) {
+              const sixMonthsAgo = new Date();
+              sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - SCRAPER_CONFIG.monthsToSearch);
+              
+              // If article has a date and it's older than 6 months, skip it
+              if (article.publishedDate && article.publishedDate < sixMonthsAgo) {
+                console.log(`[CourtCaseScraper] Skipping old article (${article.publishedDate.toISOString()}): ${articleUrl}`);
+                continue;
+              }
+              
+              // Apply relevance filter only if enabled (currently disabled to get all results)
+              if (SCRAPER_CONFIG.enableRelevanceFilter) {
+                if (this.isRelevantArticle(article)) {
+                  articles.push(article);
+                }
+              } else {
+                // No filtering - add all articles
+                articles.push(article);
+              }
             }
           } catch (err) {
             console.error(`[CourtCaseScraper] Failed to scrape article: ${link}`, err);
@@ -485,7 +566,8 @@ ${article.content.substring(0, 8000)}`;
           
           console.log(`[CourtCaseScraper] Found ${articleLinks.length} links on ${source.name}`);
           
-          for (const link of articleLinks.slice(0, 5)) {
+          // Use configurable article limit for manual search as well
+          for (const link of articleLinks.slice(0, SCRAPER_CONFIG.articlesPerKeyword)) {
             try {
               const articleUrl = link.startsWith('http') ? link : `${source.baseUrl}${link}`;
               
@@ -504,6 +586,15 @@ ${article.content.substring(0, 8000)}`;
               const article = await this.scrapeArticle(articleUrl, source.name);
               
               if (article && article.content.length > 100) {
+                // Check date filter - only include articles from last 6 months
+                const sixMonthsAgo = new Date();
+                sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - SCRAPER_CONFIG.monthsToSearch);
+                
+                if (article.publishedDate && article.publishedDate < sixMonthsAgo) {
+                  console.log(`[CourtCaseScraper] Skipping old article (${article.publishedDate.toISOString()}): ${articleUrl}`);
+                  continue;
+                }
+                
                 const extractedData = await this.extractCourtCaseData(article);
                 await this.saveArticle(article, extractedData);
                 articlesScraped++;
