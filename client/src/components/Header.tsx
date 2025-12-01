@@ -154,6 +154,17 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
               <span>{t('nav.bills')}</span>
             </Button>
           </a>
+          <a href="https://mydeclaration.sprm.gov.my/" target="_blank" rel="noopener noreferrer">
+            <Button
+              variant="ghost"
+              size="sm"
+              data-testid="nav-asset-declaration"
+              className="gap-2"
+            >
+              <FileText className="w-4 h-4" />
+              <span>{t('nav.assetDeclaration')}</span>
+            </Button>
+          </a>
           {authStatus?.isAdmin && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
