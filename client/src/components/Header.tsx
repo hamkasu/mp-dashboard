@@ -143,6 +143,17 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
               <span>{t('nav.blog')}</span>
             </Button>
           </Link>
+          <a href="https://www.parlimen.gov.my/bills-dewan-rakyat.html?uweb=dr#" target="_blank" rel="noopener noreferrer">
+            <Button
+              variant="ghost"
+              size="sm"
+              data-testid="nav-bills"
+              className="gap-2"
+            >
+              <FileText className="w-4 h-4" />
+              <span>{t('nav.bills')}</span>
+            </Button>
+          </a>
           {authStatus?.isAdmin && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
