@@ -744,3 +744,64 @@ export const insertBillPdfFileSchema = createInsertSchema(billPdfFiles).omit({
 
 export type InsertBillPdfFile = z.infer<typeof insertBillPdfFileSchema>;
 export type BillPdfFile = typeof billPdfFiles.$inferSelect;
+
+// ========== PARLIAMENTARY ORAL ANSWERS ==========
+// Parliamentary oral answers table for storing scraped jawapan lisan from Parliament website
+export const parliamentaryOralAnswers = pgTable("parliamentary_oral_answers", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  questionNumber: text("question_number"),
+  title: text("title").notNull(),
+  questionerName: text("questioner_name"),
+  questionerMpId: varchar("questioner_mp_id").references(() => mps.id),
+  answererName: text("answerer_name"),
+  answererMinistry: text("answerer_ministry"),
+  dateAsked: text("date_asked"),
+  status: text("status").notNull().default("Unknown"),
+  answerText: text("answer_text"),
+  questionText: text("question_text"),
+  fullTextUrl: text("full_text_url"),
+  sourceUrl: text("source_url"),
+  scrapedAt: timestamp("scraped_at").notNull().default(sql`NOW()`),
+  createdAt: timestamp("created_at").notNull().default(sql`NOW()`),
+  updatedAt: timestamp("updated_at").notNull().default(sql`NOW()`),
+});
+
+export const insertParliamentaryOralAnswerSchema = createInsertSchema(parliamentaryOralAnswers).omit({
+  id: true,
+  scrapedAt: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const updateParliamentaryOralAnswerSchema = insertParliamentaryOralAnswerSchema.partial();
+
+export type InsertParliamentaryOralAnswer = z.infer<typeof insertParliamentaryOralAnswerSchema>;
+export type UpdateParliamentaryOralAnswer = z.infer<typeof updateParliamentaryOralAnswerSchema>;
+export type ParliamentaryOralAnswer = typeof parliamentaryOralAnswers.$inferSelect;
+
+// Parliamentary answer PDF Files table for storing downloaded PDF files of answers
+export const parliamentaryAnswerPdfFiles = pgTable("parliamentary_answer_pdf_files", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  answerId: varchar("answer_id").notNull().references(() => parliamentaryOralAnswers.id, { onDelete: "cascade" }),
+  originalFilename: text("original_filename").notNull(),
+  fileSizeBytes: integer("file_size_bytes").notNull(),
+  contentType: text("content_type").notNull().default("application/pdf"),
+  pdfData: bytea("pdf_data").notNull(),
+  md5Hash: text("md5_hash"),
+  uploadedAt: timestamp("uploaded_at").notNull().default(sql`NOW()`),
+  uploadedBy: varchar("uploaded_by"),
+  downloadedFromUrl: text("downloaded_from_url"),
+});
+
+export const insertParliamentaryAnswerPdfFileSchema = createInsertSchema(parliamentaryAnswerPdfFiles).omit({
+  id: true,
+  uploadedAt: true,
+}).extend({
+  pdfData: z.any(), // Buffer type - validated on server only
+  md5Hash: z.string().optional(),
+  uploadedBy: z.string().optional(),
+  downloadedFromUrl: z.string().optional(),
+});
+
+export type InsertParliamentaryAnswerPdfFile = z.infer<typeof insertParliamentaryAnswerPdfFileSchema>;
+export type ParliamentaryAnswerPdfFile = typeof parliamentaryAnswerPdfFiles.$inferSelect;

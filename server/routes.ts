@@ -6009,8 +6009,257 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
+  // ============ PARLIAMENTARY ORAL ANSWERS API ENDPOINTS ============
+
+  // Import parliamentary answers module
+  const {
+    scrapeParliamentaryAnswers,
+    getAnswersFromDatabase,
+    saveAnswerToDatabase,
+    updateAnswerInDatabase,
+    downloadAndSaveAnswerPdf,
+    getAnswerPdf,
+    deleteAnswer,
+    scrapeAndSaveAnswers
+  } = await import("./parliamentary-answers-scraper");
+
+  // Get parliamentary oral answers - try database first, then scrape
+  app.get("/api/parliamentary-answers", async (_req, res) => {
+    try {
+      // First try to get answers from database
+      const dbAnswers = await getAnswersFromDatabase();
+
+      if (dbAnswers.length > 0) {
+        return res.json({
+          answers: dbAnswers,
+          scrapedAt: dbAnswers[0]?.scrapedAt?.toISOString() || new Date().toISOString(),
+          sourceUrl: 'https://www.parlimen.gov.my/jawapan-lisan-dr.html?uweb=dr&',
+          fromDatabase: true,
+        });
+      }
+
+      // If no answers in database, scrape live
+      const result = await scrapeParliamentaryAnswers();
+
+      if (result.error) {
+        console.warn("[Parliamentary Answers API] Scraping failed:", result.error);
+        return res.status(503).json(result);
+      }
+
+      res.json(result);
+    } catch (error: any) {
+      console.error("Error fetching parliamentary answers:", error);
+      res.status(500).json({
+        error: "Failed to fetch parliamentary oral answers",
+        details: error.message,
+        answers: [],
+        scrapedAt: new Date().toISOString(),
+        sourceUrl: 'https://www.parlimen.gov.my/jawapan-lisan-dr.html?uweb=dr&'
+      });
+    }
+  });
+
+  // Get parliamentary answers from database only
+  app.get("/api/parliamentary-answers/stored", async (_req, res) => {
+    try {
+      const dbAnswers = await getAnswersFromDatabase();
+      res.json({
+        answers: dbAnswers,
+        count: dbAnswers.length,
+      });
+    } catch (error: any) {
+      console.error("Error fetching stored parliamentary answers:", error);
+      res.status(500).json({ error: "Failed to fetch stored parliamentary answers", details: error.message });
+    }
+  });
+
+  // Scrape and save parliamentary answers to database (admin only)
+  app.post("/api/admin/parliamentary-answers/scrape", requireAdmin, async (_req, res) => {
+    try {
+      const stats = await scrapeAndSaveAnswers();
+      res.json({
+        message: "Parliamentary answers scrape completed",
+        ...stats,
+      });
+    } catch (error: any) {
+      console.error("Error scraping and saving parliamentary answers:", error);
+      res.status(500).json({ error: "Failed to scrape and save parliamentary answers", details: error.message });
+    }
+  });
+
+  // Save a new parliamentary answer manually (admin only)
+  app.post("/api/admin/parliamentary-answers", requireAdmin, async (req, res) => {
+    try {
+      const {
+        questionNumber,
+        title,
+        questionerName,
+        questionerMpId,
+        answererName,
+        answererMinistry,
+        dateAsked,
+        status,
+        questionText,
+        answerText,
+        fullTextUrl,
+        sourceUrl
+      } = req.body;
+
+      if (!title) {
+        return res.status(400).json({ error: "Title is required" });
+      }
+
+      const answer = await saveAnswerToDatabase({
+        questionNumber,
+        title,
+        questionerName,
+        questionerMpId,
+        answererName,
+        answererMinistry,
+        dateAsked,
+        status: status || 'Unknown',
+        questionText,
+        answerText,
+        fullTextUrl,
+        sourceUrl,
+      });
+
+      if (!answer) {
+        return res.status(500).json({ error: "Failed to save parliamentary answer" });
+      }
+
+      res.status(201).json(answer);
+    } catch (error: any) {
+      console.error("Error saving parliamentary answer:", error);
+      res.status(500).json({ error: "Failed to save parliamentary answer", details: error.message });
+    }
+  });
+
+  // Update a parliamentary answer (admin only)
+  app.patch("/api/admin/parliamentary-answers/:id", requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const updates = req.body;
+
+      const answer = await updateAnswerInDatabase(id, updates);
+
+      if (!answer) {
+        return res.status(404).json({ error: "Parliamentary answer not found" });
+      }
+
+      res.json(answer);
+    } catch (error: any) {
+      console.error("Error updating parliamentary answer:", error);
+      res.status(500).json({ error: "Failed to update parliamentary answer", details: error.message });
+    }
+  });
+
+  // Delete a parliamentary answer (admin only)
+  app.delete("/api/admin/parliamentary-answers/:id", requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+
+      const success = await deleteAnswer(id);
+
+      if (!success) {
+        return res.status(404).json({ error: "Parliamentary answer not found or could not be deleted" });
+      }
+
+      res.status(204).send();
+    } catch (error: any) {
+      console.error("Error deleting parliamentary answer:", error);
+      res.status(500).json({ error: "Failed to delete parliamentary answer", details: error.message });
+    }
+  });
+
+  // Download and save PDF for a parliamentary answer (admin only)
+  app.post("/api/admin/parliamentary-answers/:id/download-pdf", requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { pdfUrl } = req.body;
+      const username = getCurrentUsername(req);
+
+      if (!pdfUrl) {
+        return res.status(400).json({ error: "PDF URL is required" });
+      }
+
+      const pdfFile = await downloadAndSaveAnswerPdf(id, pdfUrl, username || undefined);
+
+      if (!pdfFile) {
+        return res.status(500).json({ error: "Failed to download and save PDF" });
+      }
+
+      res.json({
+        message: "PDF downloaded and saved successfully",
+        filename: pdfFile.originalFilename,
+        sizeBytes: pdfFile.fileSizeBytes,
+      });
+    } catch (error: any) {
+      console.error("Error downloading PDF:", error);
+      res.status(500).json({ error: "Failed to download PDF", details: error.message });
+    }
+  });
+
+  // Upload PDF for a parliamentary answer (admin only)
+  app.post("/api/admin/parliamentary-answers/:id/upload-pdf", requireAdmin, upload.single('pdf'), handleMulterError, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const file = req.file;
+      const username = getCurrentUsername(req);
+
+      if (!file) {
+        return res.status(400).json({ error: "PDF file is required" });
+      }
+
+      const { parliamentaryAnswerPdfFiles } = await import("@shared/schema");
+      const crypto = await import("crypto");
+      const md5Hash = crypto.createHash('md5').update(file.buffer).digest('hex');
+
+      const [savedPdf] = await db.insert(parliamentaryAnswerPdfFiles).values({
+        answerId: id,
+        originalFilename: file.originalname,
+        fileSizeBytes: file.size,
+        contentType: file.mimetype,
+        pdfData: file.buffer,
+        md5Hash,
+        uploadedBy: username || undefined,
+      }).returning();
+
+      res.json({
+        message: "PDF uploaded successfully",
+        id: savedPdf.id,
+        filename: savedPdf.originalFilename,
+        sizeBytes: savedPdf.fileSizeBytes,
+      });
+    } catch (error: any) {
+      console.error("Error uploading PDF:", error);
+      res.status(500).json({ error: "Failed to upload PDF", details: error.message });
+    }
+  });
+
+  // Get PDF for a parliamentary answer
+  app.get("/api/parliamentary-answers/:id/pdf", async (req, res) => {
+    try {
+      const { id } = req.params;
+
+      const pdfFile = await getAnswerPdf(id);
+
+      if (!pdfFile) {
+        return res.status(404).json({ error: "PDF not found for this parliamentary answer" });
+      }
+
+      res.setHeader('Content-Type', pdfFile.contentType);
+      res.setHeader('Content-Disposition', `inline; filename="${pdfFile.originalFilename}"`);
+      res.setHeader('Content-Length', pdfFile.fileSizeBytes);
+      res.send(pdfFile.pdfData);
+    } catch (error: any) {
+      console.error("Error getting PDF:", error);
+      res.status(500).json({ error: "Failed to get PDF", details: error.message });
+    }
+  });
+
   // ============ COURT CASE SCRAPER ADMIN ENDPOINTS ============
-  
+
   // Import the scraper and cron module
   const { courtCaseScraper } = await import("./court-case-scraper");
   const { triggerManualScrape, getScraperStatus, scheduleCourtCaseScraper } = await import("./court-case-cron");
