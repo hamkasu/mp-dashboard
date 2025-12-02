@@ -5779,6 +5779,236 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
+  // ============ BILLS API ENDPOINTS ============
+  
+  // Import bills module
+  const { 
+    scrapeBills, 
+    getBillsFromDatabase, 
+    saveBillToDatabase,
+    updateBillInDatabase,
+    downloadAndSavePdf,
+    getBillPdf,
+    deleteBill,
+    scrapeAndSaveBills 
+  } = await import("./bills-scraper");
+  
+  // Get bills - try database first, then scrape
+  app.get("/api/bills", async (_req, res) => {
+    try {
+      // First try to get bills from database
+      const dbBills = await getBillsFromDatabase();
+      
+      if (dbBills.length > 0) {
+        return res.json({
+          bills: dbBills,
+          scrapedAt: dbBills[0]?.scrapedAt?.toISOString() || new Date().toISOString(),
+          sourceUrl: 'https://www.parlimen.gov.my/bills-dewan-rakyat.html?uweb=dr&',
+          fromDatabase: true,
+        });
+      }
+      
+      // If no bills in database, scrape live
+      const result = await scrapeBills();
+      
+      if (result.error) {
+        console.warn("[Bills API] Scraping failed:", result.error);
+        return res.status(503).json(result);
+      }
+      
+      res.json(result);
+    } catch (error: any) {
+      console.error("Error fetching bills:", error);
+      res.status(500).json({ 
+        error: "Failed to fetch bills", 
+        details: error.message,
+        bills: [],
+        scrapedAt: new Date().toISOString(),
+        sourceUrl: 'https://www.parlimen.gov.my/bills-dewan-rakyat.html?uweb=dr&'
+      });
+    }
+  });
+  
+  // Get bills from database only
+  app.get("/api/bills/stored", async (_req, res) => {
+    try {
+      const dbBills = await getBillsFromDatabase();
+      res.json({
+        bills: dbBills,
+        count: dbBills.length,
+      });
+    } catch (error: any) {
+      console.error("Error fetching stored bills:", error);
+      res.status(500).json({ error: "Failed to fetch stored bills", details: error.message });
+    }
+  });
+  
+  // Scrape and save bills to database (admin only)
+  app.post("/api/admin/bills/scrape", requireAdmin, async (_req, res) => {
+    try {
+      const stats = await scrapeAndSaveBills();
+      res.json({
+        message: "Bills scrape completed",
+        ...stats,
+      });
+    } catch (error: any) {
+      console.error("Error scraping and saving bills:", error);
+      res.status(500).json({ error: "Failed to scrape and save bills", details: error.message });
+    }
+  });
+  
+  // Save a new bill manually (admin only)
+  app.post("/api/admin/bills", requireAdmin, async (req, res) => {
+    try {
+      const { title, billNumber, introductionDate, status, fullTextUrl, sourceUrl } = req.body;
+      
+      if (!title) {
+        return res.status(400).json({ error: "Title is required" });
+      }
+      
+      const bill = await saveBillToDatabase({
+        title,
+        billNumber,
+        introductionDate,
+        status: status || 'Unknown',
+        fullTextUrl,
+        sourceUrl,
+      });
+      
+      if (!bill) {
+        return res.status(500).json({ error: "Failed to save bill" });
+      }
+      
+      res.status(201).json(bill);
+    } catch (error: any) {
+      console.error("Error saving bill:", error);
+      res.status(500).json({ error: "Failed to save bill", details: error.message });
+    }
+  });
+  
+  // Update a bill (admin only)
+  app.patch("/api/admin/bills/:id", requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const updates = req.body;
+      
+      const bill = await updateBillInDatabase(id, updates);
+      
+      if (!bill) {
+        return res.status(404).json({ error: "Bill not found" });
+      }
+      
+      res.json(bill);
+    } catch (error: any) {
+      console.error("Error updating bill:", error);
+      res.status(500).json({ error: "Failed to update bill", details: error.message });
+    }
+  });
+  
+  // Delete a bill (admin only)
+  app.delete("/api/admin/bills/:id", requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      const success = await deleteBill(id);
+      
+      if (!success) {
+        return res.status(404).json({ error: "Bill not found or could not be deleted" });
+      }
+      
+      res.status(204).send();
+    } catch (error: any) {
+      console.error("Error deleting bill:", error);
+      res.status(500).json({ error: "Failed to delete bill", details: error.message });
+    }
+  });
+  
+  // Download and save PDF for a bill (admin only)
+  app.post("/api/admin/bills/:id/download-pdf", requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { pdfUrl } = req.body;
+      const username = getCurrentUsername(req);
+      
+      if (!pdfUrl) {
+        return res.status(400).json({ error: "PDF URL is required" });
+      }
+      
+      const pdfFile = await downloadAndSavePdf(id, pdfUrl, username || undefined);
+      
+      if (!pdfFile) {
+        return res.status(500).json({ error: "Failed to download and save PDF" });
+      }
+      
+      res.json({
+        message: "PDF downloaded and saved successfully",
+        filename: pdfFile.originalFilename,
+        sizeBytes: pdfFile.fileSizeBytes,
+      });
+    } catch (error: any) {
+      console.error("Error downloading PDF:", error);
+      res.status(500).json({ error: "Failed to download PDF", details: error.message });
+    }
+  });
+  
+  // Upload PDF for a bill (admin only)
+  app.post("/api/admin/bills/:id/upload-pdf", requireAdmin, upload.single('pdf'), handleMulterError, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const file = req.file;
+      const username = getCurrentUsername(req);
+      
+      if (!file) {
+        return res.status(400).json({ error: "PDF file is required" });
+      }
+      
+      const { billPdfFiles } = await import("@shared/schema");
+      const crypto = await import("crypto");
+      const md5Hash = crypto.createHash('md5').update(file.buffer).digest('hex');
+      
+      const [savedPdf] = await db.insert(billPdfFiles).values({
+        billId: id,
+        originalFilename: file.originalname,
+        fileSizeBytes: file.size,
+        contentType: file.mimetype,
+        pdfData: file.buffer,
+        md5Hash,
+        uploadedBy: username || undefined,
+      }).returning();
+      
+      res.json({
+        message: "PDF uploaded successfully",
+        id: savedPdf.id,
+        filename: savedPdf.originalFilename,
+        sizeBytes: savedPdf.fileSizeBytes,
+      });
+    } catch (error: any) {
+      console.error("Error uploading PDF:", error);
+      res.status(500).json({ error: "Failed to upload PDF", details: error.message });
+    }
+  });
+  
+  // Get PDF for a bill
+  app.get("/api/bills/:id/pdf", async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      const pdfFile = await getBillPdf(id);
+      
+      if (!pdfFile) {
+        return res.status(404).json({ error: "PDF not found for this bill" });
+      }
+      
+      res.setHeader('Content-Type', pdfFile.contentType);
+      res.setHeader('Content-Disposition', `inline; filename="${pdfFile.originalFilename}"`);
+      res.setHeader('Content-Length', pdfFile.fileSizeBytes);
+      res.send(pdfFile.pdfData);
+    } catch (error: any) {
+      console.error("Error getting PDF:", error);
+      res.status(500).json({ error: "Failed to get PDF", details: error.message });
+    }
+  });
+
   // ============ COURT CASE SCRAPER ADMIN ENDPOINTS ============
   
   // Import the scraper and cron module

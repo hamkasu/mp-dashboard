@@ -143,9 +143,9 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
               <span>{t('nav.blog')}</span>
             </Button>
           </Link>
-          <a href="https://www.parlimen.gov.my/bills-dewan-rakyat.html?uweb=dr#" target="_blank" rel="noopener noreferrer">
+          <Link href="/bills">
             <Button
-              variant="ghost"
+              variant={location === "/bills" ? "secondary" : "ghost"}
               size="sm"
               data-testid="nav-bills"
               className="gap-2"
@@ -153,7 +153,7 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
               <FileText className="w-4 h-4" />
               <span>{t('nav.bills')}</span>
             </Button>
-          </a>
+          </Link>
           <a href="https://mydeclaration.sprm.gov.my/" target="_blank" rel="noopener noreferrer">
             <Button
               variant="ghost"
