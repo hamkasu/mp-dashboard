@@ -27,7 +27,7 @@ export class ParliamentaryAnswersPdfParser {
     this.allMps = allMps;
   }
 
-  async parsePdf(pdfBuffer: Buffer, filename?: string): Promise<ParsedOralAnswer> {
+  async parsePdf(pdfBuffer: Buffer, filename?: string): Promise<ParsedOralAnswer | null> {
     console.log('📄 Starting Parliamentary Oral Answer PDF parsing...');
     if (filename) {
       console.log(`📄 Filename: ${filename}`);
@@ -42,12 +42,22 @@ export class ParliamentaryAnswersPdfParser {
 
       console.log(`📄 Extracted ${fullText.length} characters from PDF`);
 
+      // Extract session info first to validate it's Parlimen 15
+      const sessionInfo = this.extractSessionInfo(fullText);
+
+      // Validate it's from Parlimen 15
+      if (!this.isParlimen15(sessionInfo, fullText)) {
+        console.log('⚠️  Skipping - Not from Parlimen 15');
+        console.log(`   - Session Info: ${sessionInfo || 'N/A'}`);
+        return null;
+      }
+
       // Parse the components
       const parsed: ParsedOralAnswer = {
         questionNumber: this.extractQuestionNumber(fullText),
         questionText: this.extractQuestionText(fullText),
         answerText: this.extractAnswerText(fullText),
-        sessionInfo: this.extractSessionInfo(fullText),
+        sessionInfo,
         dateAsked: this.extractDate(fullText),
       };
 
@@ -62,7 +72,8 @@ export class ParliamentaryAnswersPdfParser {
       parsed.answererName = answerer.name;
       parsed.answererMinistry = answerer.ministry;
 
-      console.log('✅ Parliamentary Oral Answer parsing complete');
+      console.log('✅ Parliamentary Oral Answer parsing complete (Parlimen 15)');
+      console.log(`   - Session: ${parsed.sessionInfo || 'N/A'}`);
       console.log(`   - Question Number: ${parsed.questionNumber || 'N/A'}`);
       console.log(`   - Questioner: ${parsed.questionerName || 'N/A'} (${parsed.questionerConstituency || 'N/A'})`);
       console.log(`   - Answerer: ${parsed.answererName || 'N/A'} (${parsed.answererMinistry || 'N/A'})`);
@@ -224,6 +235,51 @@ export class ParliamentaryAnswersPdfParser {
     }
 
     return undefined;
+  }
+
+  /**
+   * Check if the document is from Parlimen 15 (15th Parliament)
+   */
+  private isParlimen15(sessionInfo: string | undefined, fullText: string): boolean {
+    // Check session info first
+    if (sessionInfo) {
+      if (sessionInfo.match(/parlimen\s+15/i) || sessionInfo.match(/parliament\s+15/i)) {
+        return true;
+      }
+      // If it explicitly mentions a different parliament number, reject it
+      if (sessionInfo.match(/parlimen\s+(?!15)\d+/i) || sessionInfo.match(/parliament\s+(?!15)\d+/i)) {
+        return false;
+      }
+    }
+
+    // Check full text for Parlimen 15 mentions
+    const parlimen15Patterns = [
+      /parlimen\s+(?:ke[\s-]?)?15/i,
+      /parliament\s+(?:ke[\s-]?)?15/i,
+      /15th\s+parliament/i,
+      /p\.?15/i, // Common abbreviation
+    ];
+
+    for (const pattern of parlimen15Patterns) {
+      if (fullText.match(pattern)) {
+        return true;
+      }
+    }
+
+    // Check for other parliament numbers that would exclude this
+    const otherParlimenPatterns = [
+      /parlimen\s+(?:ke[\s-]?)?(1[0-4]|16|17|18|19|20)/i,
+      /parliament\s+(?:ke[\s-]?)?(1[0-4]|16|17|18|19|20)/i,
+    ];
+
+    for (const pattern of otherParlimenPatterns) {
+      if (fullText.match(pattern)) {
+        return false;
+      }
+    }
+
+    // If we can't determine, assume it's not Parlimen 15 (safer to exclude)
+    return false;
   }
 
   /**

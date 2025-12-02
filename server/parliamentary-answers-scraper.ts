@@ -253,6 +253,40 @@ export async function deleteAnswer(answerId: string): Promise<boolean> {
 }
 
 /**
+ * Helper function to check if text contains Parlimen 15 references
+ */
+function checkIfParlimen15Page(text: string): boolean {
+  const parlimen15Patterns = [
+    /parlimen\s+(?:ke[\s-]?)?15/i,
+    /parliament\s+(?:ke[\s-]?)?15/i,
+    /15th\s+parliament/i,
+    /p\.?15/i,
+  ];
+
+  for (const pattern of parlimen15Patterns) {
+    if (text.match(pattern)) {
+      return true;
+    }
+  }
+
+  // Check for other parliament numbers that would indicate it's NOT Parlimen 15
+  const otherParlimenPatterns = [
+    /parlimen\s+(?:ke[\s-]?)?(1[0-4]|16|17|18|19|20)/i,
+    /parliament\s+(?:ke[\s-]?)?(1[0-4]|16|17|18|19|20)/i,
+  ];
+
+  for (const pattern of otherParlimenPatterns) {
+    if (text.match(pattern)) {
+      return false;
+    }
+  }
+
+  // If we can't determine definitively, assume it's Parlimen 15
+  // (since the URL is specifically for Dewan Rakyat which is current)
+  return true;
+}
+
+/**
  * Scrapes parliamentary oral answers from the Malaysian Parliament website
  */
 export async function scrapeParliamentaryAnswers(): Promise<AnswersResponse> {
@@ -275,6 +309,17 @@ export async function scrapeParliamentaryAnswers(): Promise<AnswersResponse> {
 
     const $ = cheerio.load(response.data);
     const scrapedAnswers: ScrapedAnswer[] = [];
+
+    // Check if the page contains Parlimen 15 data
+    const pageText = $('body').text();
+    const isParlimen15Page = checkIfParlimen15Page(pageText);
+
+    if (!isParlimen15Page) {
+      console.log('[Parliamentary Answers Scraper] ⚠️  Warning: Page may not be Parlimen 15');
+      console.log('[Parliamentary Answers Scraper] Proceeding with caution - filtering will be applied');
+    } else {
+      console.log('[Parliamentary Answers Scraper] ✓ Confirmed: Page is from Parlimen 15');
+    }
 
     // Try to find answer data in table structures
     // The Parliament website typically uses tables to display oral answer information
@@ -366,10 +411,37 @@ export async function scrapeParliamentaryAnswers(): Promise<AnswersResponse> {
       !answer.title.toLowerCase().match(/^no\.?\s*$/i)
     );
 
-    console.log(`[Parliamentary Answers Scraper] Successfully scraped ${filteredAnswers.length} oral answers`);
+    // Further filter to only include Parlimen 15 data
+    // Check title and full text URL for non-Parlimen 15 indicators
+    const parlimen15Answers = filteredAnswers.filter(answer => {
+      const textToCheck = `${answer.title} ${answer.fullTextUrl || ''}`;
+
+      // Reject if it explicitly mentions a different parliament number
+      const otherParlimenPatterns = [
+        /parlimen\s+(?:ke[\s-]?)?(1[0-4]|16|17|18|19|20)/i,
+        /parliament\s+(?:ke[\s-]?)?(1[0-4]|16|17|18|19|20)/i,
+        /p[\s.-]?(1[0-4]|16|17|18|19|20)[^\d]/i,
+      ];
+
+      for (const pattern of otherParlimenPatterns) {
+        if (textToCheck.match(pattern)) {
+          console.log(`[Parliamentary Answers Scraper] Filtered out (not Parlimen 15): ${answer.title.substring(0, 60)}...`);
+          return false;
+        }
+      }
+
+      return true;
+    });
+
+    const totalScraped = scrapedAnswers.length;
+    const afterBasicFilter = filteredAnswers.length;
+    const finalCount = parlimen15Answers.length;
+
+    console.log(`[Parliamentary Answers Scraper] Successfully scraped ${finalCount} oral answers (Parlimen 15 only)`);
+    console.log(`[Parliamentary Answers Scraper] Filtered: ${totalScraped} scraped → ${afterBasicFilter} after basic filter → ${finalCount} Parlimen 15 only`);
 
     // Convert to AnswerWithPdf format using helper function
-    const answersWithPdfStatus = filteredAnswers.map(answer => scrapedAnswerToAnswerWithPdf(answer, sourceUrl));
+    const answersWithPdfStatus = parlimen15Answers.map(answer => scrapedAnswerToAnswerWithPdf(answer, sourceUrl));
 
     return {
       answers: answersWithPdfStatus,
@@ -494,6 +566,12 @@ export async function downloadAndParseAnswerPdf(answerId: string, pdfUrl: string
 
     // Parse the PDF
     const parsed = await parser.parsePdf(pdfBuffer, pdfUrl.split('/').pop());
+
+    // If the PDF is not from Parlimen 15, skip it
+    if (!parsed) {
+      console.log(`[Parliamentary Answers PDF Analysis] ⚠️  Skipping - PDF is not from Parlimen 15`);
+      return { success: false, error: 'PDF is not from Parlimen 15' };
+    }
 
     // Update the answer with parsed data
     const updateData: any = {};
