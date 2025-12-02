@@ -16,9 +16,12 @@ import {
   parliamentaryAnswerPdfFiles,
   type ParliamentaryOralAnswer,
   type InsertParliamentaryOralAnswer,
-  type ParliamentaryAnswerPdfFile
+  type ParliamentaryAnswerPdfFile,
+  type Mp,
+  mps
 } from '@shared/schema';
 import { eq } from 'drizzle-orm';
+import { ParliamentaryAnswersPdfParser } from './parliamentary-answers-pdf-parser';
 
 // SECURITY NOTE: The Malaysian Parliament website (parlimen.gov.my) has SSL certificate
 // validation issues in some environments. Since we are ONLY READING public government data
@@ -452,4 +455,158 @@ export async function scrapeAndSaveAnswers(): Promise<{ saved: number; updated: 
 
   console.log(`[Parliamentary Answers] Saved: ${stats.saved}, Updated: ${stats.updated}, Errors: ${stats.errors}`);
   return stats;
+}
+
+/**
+ * Download and parse a PDF for a parliamentary oral answer
+ */
+export async function downloadAndParseAnswerPdf(answerId: string, pdfUrl: string): Promise<{
+  success: boolean;
+  parsed?: any;
+  error?: string;
+}> {
+  const db = getDb();
+  if (!db) {
+    return { success: false, error: 'Database not available' };
+  }
+
+  try {
+    console.log(`[Parliamentary Answers PDF Analysis] Downloading and analyzing PDF for answer ${answerId}`);
+    console.log(`[Parliamentary Answers PDF Analysis] URL: ${pdfUrl}`);
+
+    // Download the PDF
+    const response = await axios.get(pdfUrl, {
+      responseType: 'arraybuffer',
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'Accept': 'application/pdf,*/*',
+      },
+      timeout: 60000,
+      httpsAgent,
+    });
+
+    const pdfBuffer = Buffer.from(response.data);
+    console.log(`[Parliamentary Answers PDF Analysis] Downloaded ${pdfBuffer.length} bytes`);
+
+    // Get all MPs for parsing
+    const allMps = await db.select().from(mps);
+    const parser = new ParliamentaryAnswersPdfParser(allMps);
+
+    // Parse the PDF
+    const parsed = await parser.parsePdf(pdfBuffer, pdfUrl.split('/').pop());
+
+    // Update the answer with parsed data
+    const updateData: any = {};
+
+    if (parsed.questionNumber) updateData.questionNumber = parsed.questionNumber;
+    if (parsed.questionText) updateData.questionText = parsed.questionText;
+    if (parsed.answerText) updateData.answerText = parsed.answerText;
+    if (parsed.questionerName) updateData.questionerName = parsed.questionerName;
+    if (parsed.questionerConstituency) {
+      // Store constituency in the questioner name field for now
+      updateData.questionerName = `${parsed.questionerName || ''} [${parsed.questionerConstituency}]`.trim();
+    }
+    if (parsed.questionerMpId) updateData.questionerMpId = parsed.questionerMpId;
+    if (parsed.answererName) updateData.answererName = parsed.answererName;
+    if (parsed.answererMinistry) updateData.answererMinistry = parsed.answererMinistry;
+    if (parsed.dateAsked) updateData.dateAsked = parsed.dateAsked;
+
+    if (Object.keys(updateData).length > 0) {
+      updateData.updatedAt = new Date();
+      await db.update(parliamentaryOralAnswers)
+        .set(updateData)
+        .where(eq(parliamentaryOralAnswers.id, answerId));
+    }
+
+    // Save the PDF file
+    const md5Hash = crypto.createHash('md5').update(pdfBuffer).digest('hex');
+    const originalFilename = pdfUrl.split('/').pop() || `answer-${answerId}.pdf`;
+
+    await db.insert(parliamentaryAnswerPdfFiles).values({
+      answerId,
+      originalFilename,
+      fileSizeBytes: pdfBuffer.length,
+      contentType: 'application/pdf',
+      pdfData: pdfBuffer,
+      md5Hash,
+      downloadedFromUrl: pdfUrl,
+    });
+
+    console.log(`[Parliamentary Answers PDF Analysis] ✅ Successfully parsed and saved PDF`);
+
+    return { success: true, parsed };
+  } catch (error: any) {
+    console.error(`[Parliamentary Answers PDF Analysis] ❌ Error:`, error.message);
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Batch process all answers with PDF URLs to download and analyze them
+ */
+export async function batchProcessAnswerPdfs(): Promise<{
+  total: number;
+  processed: number;
+  failed: number;
+  skipped: number;
+}> {
+  const db = getDb();
+  if (!db) {
+    console.log('[Parliamentary Answers PDF Batch] Database not available');
+    return { total: 0, processed: 0, failed: 0, skipped: 0 };
+  }
+
+  try {
+    console.log('[Parliamentary Answers PDF Batch] Starting batch PDF processing...');
+
+    // Get all answers with PDF URLs but no PDF data
+    const answers = await db.select().from(parliamentaryOralAnswers);
+
+    const answersWithPdfs = answers.filter(a => a.fullTextUrl && a.fullTextUrl.includes('.pdf'));
+
+    console.log(`[Parliamentary Answers PDF Batch] Found ${answersWithPdfs.length} answers with PDF URLs`);
+
+    const stats = {
+      total: answersWithPdfs.length,
+      processed: 0,
+      failed: 0,
+      skipped: 0,
+    };
+
+    for (const answer of answersWithPdfs) {
+      if (!answer.fullTextUrl) continue;
+
+      // Check if PDF already downloaded
+      const existingPdf = await db.select({ id: parliamentaryAnswerPdfFiles.id })
+        .from(parliamentaryAnswerPdfFiles)
+        .where(eq(parliamentaryAnswerPdfFiles.answerId, answer.id))
+        .limit(1);
+
+      if (existingPdf.length > 0) {
+        console.log(`[Parliamentary Answers PDF Batch] Skipping ${answer.id} - PDF already exists`);
+        stats.skipped++;
+        continue;
+      }
+
+      // Download and parse
+      const result = await downloadAndParseAnswerPdf(answer.id, answer.fullTextUrl);
+
+      if (result.success) {
+        stats.processed++;
+      } else {
+        stats.failed++;
+      }
+
+      // Add a small delay to avoid overwhelming the server
+      await new Promise(resolve => setTimeout(resolve, 2000));
+    }
+
+    console.log('[Parliamentary Answers PDF Batch] Batch processing complete');
+    console.log(`  Total: ${stats.total}, Processed: ${stats.processed}, Failed: ${stats.failed}, Skipped: ${stats.skipped}`);
+
+    return stats;
+  } catch (error: any) {
+    console.error('[Parliamentary Answers PDF Batch] Error:', error.message);
+    throw error;
+  }
 }
