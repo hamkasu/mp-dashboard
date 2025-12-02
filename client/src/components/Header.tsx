@@ -1,8 +1,9 @@
 /**
  * Copyright by Calmic Sdn Bhd
+ * Updated: Parliamentary Answers Navigation (2025-12-02)
  */
 
-import { Search, Menu, Home, FileText, BookOpen, UserCheck, Calculator, BarChart3, ExternalLink, ChevronDown, AlertCircle, GraduationCap, TrendingUp, Scale, Shield, MessageSquare, Newspaper, Edit, Gavel } from "lucide-react";
+import { Search, Menu, Home, FileText, BookOpen, UserCheck, Calculator, BarChart3, ExternalLink, ChevronDown, AlertCircle, GraduationCap, TrendingUp, Scale, Shield, MessageSquare, Edit, Gavel } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
