@@ -21,16 +21,17 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { FileText, Search, ExternalLink, RefreshCw, AlertCircle } from "lucide-react";
+import { FileText, Search, ExternalLink, RefreshCw, AlertCircle, Download, File } from "lucide-react";
 import { format } from "date-fns";
 
 interface Bill {
   id: string;
   title: string;
-  billNumber?: string;
-  introductionDate?: string;
+  billNumber?: string | null;
+  introductionDate?: string | null;
   status: string;
-  fullTextUrl?: string;
+  fullTextUrl?: string | null;
+  hasPdf?: boolean;
 }
 
 interface BillsResponse {
@@ -38,6 +39,7 @@ interface BillsResponse {
   scrapedAt: string;
   sourceUrl: string;
   error?: string;
+  fromDatabase?: boolean;
 }
 
 export default function Bills() {
@@ -57,6 +59,7 @@ export default function Bills() {
   const scrapedAt = billsData?.scrapedAt;
   const sourceUrl = billsData?.sourceUrl;
   const scrapeError = billsData?.error;
+  const fromDatabase = billsData?.fromDatabase;
 
   // Filter bills based on search query
   const filteredBills = bills.filter((bill) => {
@@ -237,7 +240,7 @@ export default function Bills() {
                       <TableHead className="min-w-[300px]">Title</TableHead>
                       <TableHead className="w-[150px]">Introduction Date</TableHead>
                       <TableHead className="w-[120px]">Status</TableHead>
-                      <TableHead className="text-right w-[100px]">Full Text</TableHead>
+                      <TableHead className="text-center w-[150px]">Documents</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -257,25 +260,44 @@ export default function Bills() {
                             {bill.status}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-right">
-                          {bill.fullTextUrl ? (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              asChild
-                            >
-                              <a
-                                href={bill.fullTextUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                title="View full text"
+                        <TableCell className="text-center">
+                          <div className="flex justify-center gap-1">
+                            {bill.hasPdf && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                asChild
+                                title="View stored PDF"
                               >
-                                <ExternalLink className="w-4 h-4" />
-                              </a>
-                            </Button>
-                          ) : (
-                            <span className="text-muted-foreground">-</span>
-                          )}
+                                <a
+                                  href={`/api/bills/${bill.id}/pdf`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                >
+                                  <File className="w-4 h-4 text-green-600" />
+                                </a>
+                              </Button>
+                            )}
+                            {bill.fullTextUrl && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                asChild
+                                title="View on Parliament website"
+                              >
+                                <a
+                                  href={bill.fullTextUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                >
+                                  <ExternalLink className="w-4 h-4" />
+                                </a>
+                              </Button>
+                            )}
+                            {!bill.hasPdf && !bill.fullTextUrl && (
+                              <span className="text-muted-foreground">-</span>
+                            )}
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -298,6 +320,7 @@ export default function Bills() {
             >
               parlimen.gov.my
             </a>
+            {fromDatabase && ' (stored in database)'}
           </p>
         </div>
       </main>

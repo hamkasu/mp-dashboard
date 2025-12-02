@@ -689,3 +689,58 @@ export type CourtCaseNewsArticle = typeof courtCaseNewsArticles.$inferSelect;
 
 // Update schema for court cases
 export const updateCourtCaseSchema = insertCourtCaseSchema.partial();
+
+// ========== PARLIAMENT BILLS ==========
+// Bills table for storing scraped bills from Parliament website
+export const bills = pgTable("bills", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  title: text("title").notNull(),
+  billNumber: text("bill_number"),
+  introductionDate: text("introduction_date"),
+  status: text("status").notNull().default("Unknown"),
+  fullTextUrl: text("full_text_url"),
+  sourceUrl: text("source_url"),
+  scrapedAt: timestamp("scraped_at").notNull().default(sql`NOW()`),
+  createdAt: timestamp("created_at").notNull().default(sql`NOW()`),
+  updatedAt: timestamp("updated_at").notNull().default(sql`NOW()`),
+});
+
+export const insertBillSchema = createInsertSchema(bills).omit({
+  id: true,
+  scrapedAt: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const updateBillSchema = insertBillSchema.partial();
+
+export type InsertBill = z.infer<typeof insertBillSchema>;
+export type UpdateBill = z.infer<typeof updateBillSchema>;
+export type Bill = typeof bills.$inferSelect;
+
+// Bill PDF Files table for storing downloaded PDF files of bills
+export const billPdfFiles = pgTable("bill_pdf_files", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  billId: varchar("bill_id").notNull().references(() => bills.id, { onDelete: "cascade" }),
+  originalFilename: text("original_filename").notNull(),
+  fileSizeBytes: integer("file_size_bytes").notNull(),
+  contentType: text("content_type").notNull().default("application/pdf"),
+  pdfData: bytea("pdf_data").notNull(),
+  md5Hash: text("md5_hash"),
+  uploadedAt: timestamp("uploaded_at").notNull().default(sql`NOW()`),
+  uploadedBy: varchar("uploaded_by"),
+  downloadedFromUrl: text("downloaded_from_url"),
+});
+
+export const insertBillPdfFileSchema = createInsertSchema(billPdfFiles).omit({
+  id: true,
+  uploadedAt: true,
+}).extend({
+  pdfData: z.any(), // Buffer type - validated on server only
+  md5Hash: z.string().optional(),
+  uploadedBy: z.string().optional(),
+  downloadedFromUrl: z.string().optional(),
+});
+
+export type InsertBillPdfFile = z.infer<typeof insertBillPdfFileSchema>;
+export type BillPdfFile = typeof billPdfFiles.$inferSelect;
