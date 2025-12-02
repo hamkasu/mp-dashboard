@@ -132,15 +132,15 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
               <span>{t('nav.courts')}</span>
             </Button>
           </Link>
-          <Link href="/blog">
+          <Link href="/parliamentary-answers">
             <Button
-              variant={location === "/blog" ? "secondary" : "ghost"}
+              variant={location === "/parliamentary-answers" ? "secondary" : "ghost"}
               size="sm"
-              data-testid="nav-blog"
+              data-testid="nav-parliamentary-answers"
               className="gap-2"
             >
-              <Newspaper className="w-4 h-4" />
-              <span>{t('nav.blog')}</span>
+              <MessageSquare className="w-4 h-4" />
+              <span>{t('nav.parliamentaryAnswers')}</span>
             </Button>
           </Link>
           <Link href="/bills">
