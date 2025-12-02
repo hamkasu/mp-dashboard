@@ -5779,6 +5779,33 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
+  // ============ BILLS API ENDPOINT ============
+  
+  // Get bills from Parliament website (live scrape)
+  app.get("/api/bills", async (_req, res) => {
+    try {
+      const { scrapeBills } = await import("./bills-scraper");
+      const result = await scrapeBills();
+      
+      if (result.error) {
+        console.warn("[Bills API] Scraping failed:", result.error);
+        // Return partial response with error info
+        return res.status(503).json(result);
+      }
+      
+      res.json(result);
+    } catch (error: any) {
+      console.error("Error fetching bills:", error);
+      res.status(500).json({ 
+        error: "Failed to fetch bills", 
+        details: error.message,
+        bills: [],
+        scrapedAt: new Date().toISOString(),
+        sourceUrl: 'https://www.parlimen.gov.my/bills-dewan-rakyat.html?uweb=dr&'
+      });
+    }
+  });
+
   // ============ COURT CASE SCRAPER ADMIN ENDPOINTS ============
   
   // Import the scraper and cron module
