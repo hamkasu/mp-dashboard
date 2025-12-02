@@ -49,6 +49,8 @@ export default function Bills() {
     queryKey: ["/api/bills"],
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes
     refetchOnWindowFocus: false,
+    retry: 2, // Retry failed requests twice before giving up
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000), // Exponential backoff
   });
 
   const bills = billsData?.bills || [];

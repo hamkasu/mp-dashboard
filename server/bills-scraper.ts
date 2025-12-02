@@ -9,6 +9,7 @@
 import axios from 'axios';
 import * as cheerio from 'cheerio';
 import https from 'https';
+import crypto from 'crypto';
 
 // SECURITY NOTE: The Malaysian Parliament website (parlimen.gov.my) has SSL certificate
 // validation issues in some environments. Since we are ONLY READING public government data
@@ -17,6 +18,7 @@ import https from 'https';
 // 1. We're only downloading publicly available HTML
 // 2. No user data or credentials are being transmitted
 // 3. The data is already public on the parliament website
+// This pattern is also used consistently by other scrapers in this codebase (hansard-scraper.ts)
 const httpsAgent = new https.Agent({
   rejectUnauthorized: false
 });
@@ -89,7 +91,7 @@ export async function scrapeBills(): Promise<BillsResponse> {
         // Only add if we have a meaningful title
         if (titleCell && titleCell.length > 3 && !titleCell.toLowerCase().includes('bil') && !titleCell.match(/^\d+$/)) {
           bills.push({
-            id: `bill-${index}-${Date.now()}`,
+            id: crypto.randomUUID(),
             title: titleCell,
             billNumber,
             introductionDate: dateCell || undefined,
@@ -119,7 +121,7 @@ export async function scrapeBills(): Promise<BillsResponse> {
         const exists = bills.some(b => b.title === title);
         if (!exists) {
           bills.push({
-            id: `bill-div-${index}-${Date.now()}`,
+            id: crypto.randomUUID(),
             title,
             introductionDate: date || undefined,
             status: status || 'Unknown',
