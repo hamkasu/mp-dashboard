@@ -6020,7 +6020,9 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     downloadAndSaveAnswerPdf,
     getAnswerPdf,
     deleteAnswer,
-    scrapeAndSaveAnswers
+    scrapeAndSaveAnswers,
+    downloadAndParseAnswerPdf,
+    batchProcessAnswerPdfs
   } = await import("./parliamentary-answers-scraper");
 
   // Get parliamentary oral answers - try database first, then scrape
@@ -6255,6 +6257,46 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     } catch (error: any) {
       console.error("Error getting PDF:", error);
       res.status(500).json({ error: "Failed to get PDF", details: error.message });
+    }
+  });
+
+  // Download and analyze PDF for a parliamentary answer (admin only)
+  app.post("/api/admin/parliamentary-answers/:id/analyze-pdf", requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { pdfUrl } = req.body;
+
+      if (!pdfUrl) {
+        return res.status(400).json({ error: "PDF URL is required" });
+      }
+
+      const result = await downloadAndParseAnswerPdf(id, pdfUrl);
+
+      if (!result.success) {
+        return res.status(500).json({ error: "Failed to analyze PDF", details: result.error });
+      }
+
+      res.json({
+        message: "PDF analyzed and answer updated successfully",
+        parsed: result.parsed,
+      });
+    } catch (error: any) {
+      console.error("Error analyzing PDF:", error);
+      res.status(500).json({ error: "Failed to analyze PDF", details: error.message });
+    }
+  });
+
+  // Batch process all PDFs for parliamentary answers (admin only)
+  app.post("/api/admin/parliamentary-answers/batch-analyze-pdfs", requireAdmin, async (_req, res) => {
+    try {
+      const stats = await batchProcessAnswerPdfs();
+      res.json({
+        message: "Batch PDF processing completed",
+        ...stats,
+      });
+    } catch (error: any) {
+      console.error("Error batch processing PDFs:", error);
+      res.status(500).json({ error: "Failed to batch process PDFs", details: error.message });
     }
   });
 
