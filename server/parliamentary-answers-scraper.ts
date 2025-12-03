@@ -271,8 +271,8 @@ function checkIfParlimen15Page(text: string): boolean {
 
   // Check for other parliament numbers that would indicate it's NOT Parlimen 15
   const otherParlimenPatterns = [
-    /parlimen\s+(?:ke[\s-]?)?(1[0-4]|16|17|18|19|20)/i,
-    /parliament\s+(?:ke[\s-]?)?(1[0-4]|16|17|18|19|20)/i,
+    /parlimen\s+(?:ke[\s-]?)?([1-9]|1[0-4]|1[6-9]|20)/i,
+    /parliament\s+(?:ke[\s-]?)?([1-9]|1[0-4]|1[6-9]|20)/i,
   ];
 
   for (const pattern of otherParlimenPatterns) {
@@ -416,11 +416,11 @@ export async function scrapeParliamentaryAnswers(): Promise<AnswersResponse> {
     const parlimen15Answers = filteredAnswers.filter(answer => {
       const textToCheck = `${answer.title} ${answer.fullTextUrl || ''}`;
 
-      // Reject if it explicitly mentions a different parliament number
+      // Reject if it explicitly mentions a different parliament number (1-14, 16-20)
       const otherParlimenPatterns = [
-        /parlimen\s+(?:ke[\s-]?)?(1[0-4]|16|17|18|19|20)/i,
-        /parliament\s+(?:ke[\s-]?)?(1[0-4]|16|17|18|19|20)/i,
-        /p[\s.-]?(1[0-4]|16|17|18|19|20)[^\d]/i,
+        /parlimen\s+(?:ke[\s-]?)?([1-9]|1[0-4]|1[6-9]|20)/i,
+        /parliament\s+(?:ke[\s-]?)?([1-9]|1[0-4]|1[6-9]|20)/i,
+        /p[\s.-]?([1-9]|1[0-4]|1[6-9]|20)[^\d]/i,
       ];
 
       for (const pattern of otherParlimenPatterns) {

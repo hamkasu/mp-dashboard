@@ -266,10 +266,10 @@ export class ParliamentaryAnswersPdfParser {
       }
     }
 
-    // Check for other parliament numbers that would exclude this
+    // Check for other parliament numbers that would exclude this (1-14, 16-20)
     const otherParlimenPatterns = [
-      /parlimen\s+(?:ke[\s-]?)?(1[0-4]|16|17|18|19|20)/i,
-      /parliament\s+(?:ke[\s-]?)?(1[0-4]|16|17|18|19|20)/i,
+      /parlimen\s+(?:ke[\s-]?)?([1-9]|1[0-4]|1[6-9]|20)/i,
+      /parliament\s+(?:ke[\s-]?)?([1-9]|1[0-4]|1[6-9]|20)/i,
     ];
 
     for (const pattern of otherParlimenPatterns) {
