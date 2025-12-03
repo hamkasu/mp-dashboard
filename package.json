@@ -13,7 +13,7 @@
     "db:migrate": "tsx scripts/run-migrations.ts",
     "db:update-social-media": "tsx scripts/update-mp-social-media.ts",
     "db:update-cabinet": "tsx scripts/update-cabinet-roles.ts",
-    "db:post-deploy": "npm run db:migrate && npm run db:update-social-media && npm run import-parliamentary-answers",
+    "db:post-deploy": "npm run db:migrate && npm run db:update-social-media && npm run import-parliamentary-answers && npm run download-parliamentary-pdfs",
     "create-admin-user": "tsx scripts/create-admin-user.ts",
     "backfill-speakers": "tsx scripts/backfill-hansard-speakers.ts",
     "reprocess-hansard-pdfs": "tsx scripts/reprocess-all-hansard-pdfs.ts",

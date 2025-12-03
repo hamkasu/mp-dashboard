@@ -8,6 +8,7 @@ import compression from "compression";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { startHansardCron } from "./hansard-cron";
+import { scheduleParliamentaryAnswersSync } from "./parliamentary-answers-cron";
 import { trackVisitorAnalytics } from "./analytics-middleware";
 import { helmetConfig, readRateLimit } from "./middleware/security";
 import { corsConfig } from "./middleware/cors";
@@ -198,6 +199,9 @@ server.listen({
 
   // Start the daily Hansard sync cron job
   startHansardCron();
+
+  // Start the daily Parliamentary Answers sync cron job
+  scheduleParliamentaryAnswersSync();
 
   // Start memory monitoring (log every 10 minutes in production)
   if (process.env.NODE_ENV === "production") {
