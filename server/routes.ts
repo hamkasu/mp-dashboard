@@ -6022,10 +6022,12 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     deleteAnswer,
     scrapeAndSaveAnswers,
     downloadAndParseAnswerPdf,
-    batchProcessAnswerPdfs
+    batchProcessAnswerPdfs,
+    fullSyncParlimen15OralAnswers,
+    scrapeParlimen15Archive
   } = await import("./parliamentary-answers-scraper");
 
-  // Get parliamentary oral answers - try database first, then scrape
+  // Get parliamentary oral answers - try database first, then scrape and auto-save
   app.get("/api/parliamentary-answers", async (_req, res) => {
     try {
       // First try to get answers from database
@@ -6040,7 +6042,25 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         });
       }
 
-      // If no answers in database, scrape live
+      // If no answers in database, scrape live and auto-save
+      console.log("[Parliamentary Answers API] No data in database, scraping and saving...");
+      const stats = await scrapeAndSaveAnswers();
+      console.log(`[Parliamentary Answers API] Auto-saved: ${stats.saved} new, ${stats.updated} updated`);
+
+      // Get the saved answers from database
+      const savedAnswers = await getAnswersFromDatabase();
+
+      if (savedAnswers.length > 0) {
+        return res.json({
+          answers: savedAnswers,
+          scrapedAt: new Date().toISOString(),
+          sourceUrl: 'https://www.parlimen.gov.my/jawapan-lisan-dr.html?uweb=dr&',
+          fromDatabase: true,
+          autoSaved: true,
+        });
+      }
+
+      // If still no answers, return scraped result
       const result = await scrapeParliamentaryAnswers();
 
       if (result.error) {
@@ -6086,6 +6106,32 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     } catch (error: any) {
       console.error("Error scraping and saving parliamentary answers:", error);
       res.status(500).json({ error: "Failed to scrape and save parliamentary answers", details: error.message });
+    }
+  });
+
+  // Full sync of all Parlimen 15 oral answers - downloads all PDFs (admin only)
+  app.post("/api/admin/parliamentary-answers/full-sync", requireAdmin, async (_req, res) => {
+    try {
+      console.log("[API] Starting full sync of Parlimen 15 oral answers...");
+      const stats = await fullSyncParlimen15OralAnswers();
+      res.json({
+        message: "Full sync of Parlimen 15 oral answers completed",
+        ...stats,
+      });
+    } catch (error: any) {
+      console.error("Error in full sync:", error);
+      res.status(500).json({ error: "Failed to complete full sync", details: error.message });
+    }
+  });
+
+  // Get Parlimen 15 archive sessions (admin only)
+  app.get("/api/admin/parliamentary-answers/archive", requireAdmin, async (_req, res) => {
+    try {
+      const result = await scrapeParlimen15Archive();
+      res.json(result);
+    } catch (error: any) {
+      console.error("Error fetching archive:", error);
+      res.status(500).json({ error: "Failed to fetch archive", details: error.message });
     }
   });
 
