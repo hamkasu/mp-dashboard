@@ -38,6 +38,7 @@ const CourtCasesAdmin = lazy(() => import("@/pages/CourtCasesAdmin"));
 const Courts = lazy(() => import("@/pages/Courts"));
 const Bills = lazy(() => import("@/pages/Bills"));
 const ParliamentaryAnswers = lazy(() => import("@/pages/ParliamentaryAnswers"));
+const ParliamentaryAnswersAdmin = lazy(() => import("@/pages/ParliamentaryAnswersAdmin"));
 
 // Loading component
 function PageLoader() {
@@ -68,6 +69,7 @@ function Router() {
         <Route path="/courts" component={Courts} />
         <Route path="/bills" component={Bills} />
         <Route path="/parliamentary-answers" component={ParliamentaryAnswers} />
+        <Route path="/parliamentary-answers-admin" component={ParliamentaryAnswersAdmin} />
         <Route path="/blog-admin" component={BlogAdmin} />
         <Route path="/attendance" component={Attendance} />
         <Route path="/allowances" component={Allowances} />
