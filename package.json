@@ -28,7 +28,8 @@
     "analyze-stored-pdfs": "tsx scripts/analyze-stored-pdfs.ts",
     "check-oral-answers": "tsx scripts/check-oral-answers-data.ts",
     "analyze-pdf-structure": "tsx scripts/analyze-pdf-structure.ts",
-    "list-all-questioners": "tsx scripts/list-all-questioners.ts"
+    "list-all-questioners": "tsx scripts/list-all-questioners.ts",
+    "extract-all-questions": "tsx scripts/extract-all-questions.ts"
   },
   "dependencies": {
     "@google/genai": "^1.30.0",
