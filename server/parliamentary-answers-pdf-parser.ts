@@ -259,6 +259,8 @@ export class ParliamentaryAnswersPdfParser {
       /parliament\s+(?:ke[\s-]?)?15/i,
       /15th\s+parliament/i,
       /p\.?15/i, // Common abbreviation
+      /parlimen\s+kelima\s+belas/i, // "Parlimen Kelima Belas" (15th Parliament in Malay)
+      /parliament\s+fifteenth/i, // "Parliament Fifteenth"
     ];
 
     for (const pattern of parlimen15Patterns) {
