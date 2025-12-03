@@ -22,7 +22,9 @@
     "aggregate-constituency": "tsx scripts/aggregate-constituency-speeches.ts",
     "fix-hansard-ids": "tsx scripts/fix-hansard-speaker-ids.ts",
     "import-parliamentary-answers": "tsx scripts/import-parliamentary-answers.ts",
-    "download-parliamentary-pdfs": "tsx scripts/download-parliamentary-pdfs.ts"
+    "download-parliamentary-pdfs": "tsx scripts/download-parliamentary-pdfs.ts",
+    "parse-oral-answers": "tsx scripts/parse-oral-answers-by-constituency.ts",
+    "parse-pdf": "tsx scripts/parse-oral-answers-pdf-standalone.ts"
   },
   "dependencies": {
     "@google/genai": "^1.30.0",
