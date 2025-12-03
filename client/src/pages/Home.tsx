@@ -32,7 +32,7 @@ interface PaginatedMpsResponse {
   };
 }
 
-type SortOption = "name" | "attendance-best" | "attendance-worst" | "speeches-most" | "speeches-fewest" | "poverty-highest" | "poverty-lowest" | "bills-raised" | "oral-questions" | "inappropriate-language";
+type SortOption = "name" | "attendance-best" | "attendance-worst" | "speeches-most" | "speeches-fewest" | "poverty-highest" | "poverty-lowest" | "bills-raised" | "oral-questions" | "most-questions" | "no-questions" | "inappropriate-language";
 type CabinetFilter = "all" | "ministers" | "deputy-ministers" | "cabinet";
 
 interface LanguageAnalysisMpStat {
@@ -56,7 +56,7 @@ export default function Home() {
   const ITEMS_PER_PAGE = 20;
 
   // Special sort modes require all MPs for client-side filtering/sorting
-  const SPECIAL_SORT_MODES: SortOption[] = ["bills-raised", "oral-questions", "inappropriate-language", "poverty-highest", "poverty-lowest"];
+  const SPECIAL_SORT_MODES: SortOption[] = ["bills-raised", "oral-questions", "most-questions", "no-questions", "inappropriate-language", "poverty-highest", "poverty-lowest"];
   const isSpecialSortMode = SPECIAL_SORT_MODES.includes(sortBy);
 
   // Build query string for paginated API
@@ -169,6 +169,12 @@ export default function Home() {
     queryKey: ["/api/parliamentary-questions"],
   });
 
+  // Fetch oral answers counts (from parliamentary PDFs) for question sorting
+  const { data: oralAnswersCountsData = {} } = useQuery<Record<string, number>>({
+    queryKey: ["/api/oral-answers/counts-by-mp"],
+    enabled: sortBy === "most-questions" || sortBy === "no-questions" || isSpecialSortMode,
+  });
+
   // Create a lookup map for oral questions count by MP ID
   const oralQuestionsCountByMpId = useMemo(() => {
     const map = new Map<string, number>();
@@ -180,6 +186,15 @@ export default function Home() {
       });
     return map;
   }, [parliamentaryQuestions]);
+
+  // Create a lookup map for oral answers count by MP ID (from PDFs)
+  const oralAnswersCountByMpId = useMemo(() => {
+    const map = new Map<string, number>();
+    Object.entries(oralAnswersCountsData).forEach(([mpId, count]) => {
+      map.set(mpId, count);
+    });
+    return map;
+  }, [oralAnswersCountsData]);
 
   // Create a lookup map for inappropriate language count by MP ID
   const inappropriateLanguageByMpId = useMemo(() => {
@@ -317,6 +332,17 @@ export default function Home() {
         const countB = oralQuestionsCountByMpId.get(b.id) ?? 0;
         return countB - countA;
       });
+    } else if (sortBy === "most-questions") {
+      filtered = filtered.filter(mp => (oralAnswersCountByMpId.get(mp.id) ?? 0) > 0);
+      filtered = [...filtered].sort((a, b) => {
+        const countA = oralAnswersCountByMpId.get(a.id) ?? 0;
+        const countB = oralAnswersCountByMpId.get(b.id) ?? 0;
+        return countB - countA;
+      });
+    } else if (sortBy === "no-questions") {
+      filtered = filtered.filter(mp => (oralAnswersCountByMpId.get(mp.id) ?? 0) === 0);
+      // Sort alphabetically by name for MPs with no questions
+      filtered = [...filtered].sort((a, b) => a.name.localeCompare(b.name));
     } else if (sortBy === "inappropriate-language") {
       filtered = filtered.filter(mp => (inappropriateLanguageByMpId.get(mp.id)?.count ?? 0) > 0);
       filtered = [...filtered].sort((a, b) => {
@@ -328,7 +354,7 @@ export default function Home() {
     // For name, attendance, and speeches sorts, the server already sorted the data
 
     return filtered;
-  }, [mps, sortBy, povertyByCode, billsCountByMpId, oralQuestionsCountByMpId, inappropriateLanguageByMpId, isSpecialSortMode, searchQuery, selectedParties, selectedStates, cabinetFilter]);
+  }, [mps, sortBy, povertyByCode, billsCountByMpId, oralQuestionsCountByMpId, oralAnswersCountByMpId, inappropriateLanguageByMpId, isSpecialSortMode, searchQuery, selectedParties, selectedStates, cabinetFilter]);
 
   const availableStates = useMemo(() => {
     const states = Array.from(new Set(mps.map((mp) => mp.state)));

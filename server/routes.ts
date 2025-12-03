@@ -1072,6 +1072,37 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
+  // Get oral answers counts for all MPs (grouped by MP ID)
+  app.get("/api/oral-answers/counts-by-mp", async (_req, res) => {
+    try {
+      const { parliamentaryOralAnswers } = await import("@shared/schema");
+      const { sql } = await import("drizzle-orm");
+
+      // Get all oral answers grouped by questioner MP ID
+      const results = await db
+        .select({
+          mpId: parliamentaryOralAnswers.questionerMpId,
+          count: sql<number>`count(*)::int`,
+        })
+        .from(parliamentaryOralAnswers)
+        .where(sql`${parliamentaryOralAnswers.questionerMpId} IS NOT NULL`)
+        .groupBy(parliamentaryOralAnswers.questionerMpId);
+
+      // Convert to map format: { mpId: count }
+      const countsMap: Record<string, number> = {};
+      results.forEach((result) => {
+        if (result.mpId) {
+          countsMap[result.mpId] = result.count;
+        }
+      });
+
+      res.json(countsMap);
+    } catch (error) {
+      console.error("Error fetching oral answers counts:", error);
+      res.status(500).json({ error: "Failed to fetch oral answers counts" });
+    }
+  });
+
   // Get Hansard speaking participation by MP ID
   app.get("/api/mps/:id/hansard-participation", async (req, res) => {
     try {
