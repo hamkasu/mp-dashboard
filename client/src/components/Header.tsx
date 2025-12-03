@@ -170,7 +170,7 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
-                  variant={location === "/hansard-admin" || location === "/blog-admin" || location === "/court-cases-admin" ? "secondary" : "ghost"}
+                  variant={location === "/hansard-admin" || location === "/blog-admin" || location === "/court-cases-admin" || location === "/parliamentary-answers-admin" ? "secondary" : "ghost"}
                   size="sm"
                   data-testid="nav-admin-dropdown"
                   className="gap-2"
@@ -187,6 +187,13 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
                 >
                   <BookOpen className="w-4 h-4 mr-2" />
                   <span>Hansard Admin</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onSelect={() => setLocation("/parliamentary-answers-admin")}
+                  data-testid="nav-parliamentary-answers-admin"
+                >
+                  <MessageSquare className="w-4 h-4 mr-2" />
+                  <span>Parliamentary Answers Admin</span>
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onSelect={() => setLocation("/blog-admin")}
