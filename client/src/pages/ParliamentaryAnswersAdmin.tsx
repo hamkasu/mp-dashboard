@@ -147,20 +147,26 @@ export default function ParliamentaryAnswersAdmin() {
   // Analyze stored PDFs mutation
   const analyzeStoredPdfsMutation = useMutation({
     mutationFn: async () => {
+      console.log('[Admin] Starting analyze stored PDFs request...');
       const res = await apiRequest("POST", "/api/admin/parliamentary-answers/analyze-stored-pdfs");
-      return await res.json();
+      console.log('[Admin] Response status:', res.status);
+      const data = await res.json();
+      console.log('[Admin] Response data:', data);
+      return data;
     },
     onSuccess: (data: any) => {
+      console.log('[Admin] Success callback:', data);
       queryClient.invalidateQueries({ queryKey: ["/api/parliamentary-answers/stored"] });
       toast({
-        title: "Analysis Complete",
+        title: "Analysis Complete ✅",
         description: `Updated: ${data.updated} | Processed: ${data.processed} | Skipped: ${data.skipped} | Failed: ${data.failed}`,
       });
       refetchAnswers();
     },
     onError: (error: any) => {
+      console.error('[Admin] Error callback:', error);
       toast({
-        title: "Error",
+        title: "Error ❌",
         description: error.message || "Failed to analyze stored PDFs",
         variant: "destructive",
       });
