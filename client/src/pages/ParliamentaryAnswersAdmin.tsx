@@ -188,7 +188,7 @@ export default function ParliamentaryAnswersAdmin() {
       setUploadingFor(answerId);
 
       const res = await apiRequest("POST", `/api/admin/parliamentary-answers/${answerId}/download-pdf`, {
-        body: JSON.stringify({ pdfUrl }),
+        pdfUrl,
       });
 
       const result = await res.json();
