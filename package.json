@@ -25,7 +25,8 @@
     "download-parliamentary-pdfs": "tsx scripts/download-parliamentary-pdfs.ts",
     "parse-oral-answers": "tsx scripts/parse-oral-answers-by-constituency.ts",
     "parse-pdf": "tsx scripts/parse-oral-answers-pdf-standalone.ts",
-    "analyze-stored-pdfs": "tsx scripts/analyze-stored-pdfs.ts"
+    "analyze-stored-pdfs": "tsx scripts/analyze-stored-pdfs.ts",
+    "check-oral-answers": "tsx scripts/check-oral-answers-data.ts"
   },
   "dependencies": {
     "@google/genai": "^1.30.0",
