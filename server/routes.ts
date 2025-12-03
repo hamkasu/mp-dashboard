@@ -6346,6 +6346,56 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
+  // ============ PARLIAMENTARY ANSWERS CRON ENDPOINTS ============
+
+  // Import parliamentary answers cron functions
+  const {
+    triggerManualSync: triggerParliamentarySync,
+    getSyncStatus: getParliamentarySyncStatus,
+    getSyncLogs: getParliamentarySyncLogs,
+  } = await import("./parliamentary-answers-cron");
+
+  // Get parliamentary answers sync status
+  app.get("/api/admin/parliamentary-answers/sync-status", requireAdmin, async (_req, res) => {
+    try {
+      const status = getParliamentarySyncStatus();
+      res.json(status);
+    } catch (error: any) {
+      console.error("Error getting parliamentary answers sync status:", error);
+      res.status(500).json({ error: "Failed to get sync status" });
+    }
+  });
+
+  // Get parliamentary answers sync logs
+  app.get("/api/admin/parliamentary-answers/sync-logs", requireAdmin, async (_req, res) => {
+    try {
+      const logs = getParliamentarySyncLogs();
+      res.json({
+        totalLogs: logs.length,
+        latestSync: logs[0] || null,
+        logs,
+      });
+    } catch (error: any) {
+      console.error("Error getting parliamentary answers sync logs:", error);
+      res.status(500).json({ error: "Failed to get sync logs" });
+    }
+  });
+
+  // Trigger manual parliamentary answers sync (scrape + download PDFs)
+  app.post("/api/admin/parliamentary-answers/sync", requireAdmin, async (_req, res) => {
+    try {
+      const result = await triggerParliamentarySync();
+      res.json({
+        success: true,
+        message: "Parliamentary answers sync completed",
+        ...result,
+      });
+    } catch (error: any) {
+      console.error("Error running parliamentary answers sync:", error);
+      res.status(500).json({ error: error.message || "Failed to run sync" });
+    }
+  });
+
   // ============ COURT CASE SCRAPER ADMIN ENDPOINTS ============
 
   // Import the scraper and cron module
