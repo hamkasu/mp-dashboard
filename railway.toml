@@ -15,3 +15,5 @@ healthcheckInterval = 20000  # Check every 20s
 # Sleep detection to reduce costs during low traffic
 # Railway will scale down if no requests
 sleepAfterInactivitySec = 3600  # Sleep after 1 hour of inactivity
+
+# Last updated: 2025-12-03 - Updated scraper to fetch all Parlimen 15 sessions from 2022
