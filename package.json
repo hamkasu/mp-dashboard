@@ -5,7 +5,7 @@
   "license": "MIT",
   "scripts": {
     "dev": "NODE_ENV=development node --max-old-space-size=24576 --expose-gc --import=tsx server/index.ts",
-    "build": "vite build && esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist && esbuild scripts/import-poverty-data.ts --platform=node --packages=external --bundle --format=esm --outdir=dist/scripts && esbuild scripts/fix-hansard-speaker-ids.ts --platform=node --packages=external --bundle --format=esm --outdir=dist/scripts && esbuild scripts/aggregate-all-speeches.ts --platform=node --packages=external --bundle --format=esm --outdir=dist/scripts && esbuild scripts/aggregate-constituency-speeches.ts --platform=node --packages=external --bundle --format=esm --outdir=dist/scripts && esbuild scripts/run-migrations.ts --platform=node --packages=external --bundle --format=esm --outdir=dist/scripts && esbuild scripts/update-mp-social-media.ts --platform=node --packages=external --bundle --format=esm --outdir=dist/scripts && esbuild scripts/update-cabinet-roles.ts --platform=node --packages=external --bundle --format=esm --outdir=dist/scripts && cp scripts/mp-social-media-scraped.json dist/scripts/ && npm run prerender",
+    "build": "vite build && esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist && esbuild scripts/import-poverty-data.ts --platform=node --packages=external --bundle --format=esm --outdir=dist/scripts && esbuild scripts/fix-hansard-speaker-ids.ts --platform=node --packages=external --bundle --format=esm --outdir=dist/scripts && esbuild scripts/aggregate-all-speeches.ts --platform=node --packages=external --bundle --format=esm --outdir=dist/scripts && esbuild scripts/aggregate-constituency-speeches.ts --platform=node --packages=external --bundle --format=esm --outdir=dist/scripts && esbuild scripts/run-migrations.ts --platform=node --packages=external --bundle --format=esm --outdir=dist/scripts && esbuild scripts/update-mp-social-media.ts --platform=node --packages=external --bundle --format=esm --outdir=dist/scripts && esbuild scripts/update-cabinet-roles.ts --platform=node --packages=external --bundle --format=esm --outdir=dist/scripts && esbuild scripts/import-parliamentary-answers.ts --platform=node --packages=external --bundle --format=esm --outdir=dist/scripts && cp scripts/mp-social-media-scraped.json dist/scripts/ && npm run prerender",
     "prerender": "tsx server/prerender.ts",
     "start": "NODE_ENV=production node --max-old-space-size=24576 --expose-gc dist/index.js",
     "check": "tsc",
@@ -13,14 +13,15 @@
     "db:migrate": "tsx scripts/run-migrations.ts",
     "db:update-social-media": "tsx scripts/update-mp-social-media.ts",
     "db:update-cabinet": "tsx scripts/update-cabinet-roles.ts",
-    "db:post-deploy": "npm run db:migrate && npm run db:update-social-media",
+    "db:post-deploy": "npm run db:migrate && npm run db:update-social-media && npm run import-parliamentary-answers",
     "create-admin-user": "tsx scripts/create-admin-user.ts",
     "backfill-speakers": "tsx scripts/backfill-hansard-speakers.ts",
     "reprocess-hansard-pdfs": "tsx scripts/reprocess-all-hansard-pdfs.ts",
     "batch-process-pdfs": "tsx scripts/batch-process-hansard-pdfs.ts",
     "aggregate-speeches": "tsx scripts/aggregate-all-speeches.ts",
     "aggregate-constituency": "tsx scripts/aggregate-constituency-speeches.ts",
-    "fix-hansard-ids": "tsx scripts/fix-hansard-speaker-ids.ts"
+    "fix-hansard-ids": "tsx scripts/fix-hansard-speaker-ids.ts",
+    "import-parliamentary-answers": "tsx scripts/import-parliamentary-answers.ts"
   },
   "dependencies": {
     "@google/genai": "^1.30.0",

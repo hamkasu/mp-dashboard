@@ -43,6 +43,7 @@ async function main() {
   const migrations = [
     "0003_create_admin_users_table.sql",
     "0004_add_missing_columns.sql",
+    "0011_create_parliamentary_answers_tables.sql",
   ];
 
   let successCount = 0;
