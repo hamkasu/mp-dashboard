@@ -758,19 +758,23 @@ export async function batchProcessAnswerPdfs(): Promise<{
 
 /**
  * Scrape Parlimen 15 archive to get all historical oral answer sessions
- * This scrapes the archive page which has all past sessions
+ * This scrapes the archive page which has all past sessions, AND queries the search
+ * endpoint for all Parlimen 15 sessions (Penggal 1-5) to ensure we get everything
  */
 export async function scrapeParlimen15Archive(): Promise<{
   sessions: Array<{ date: string; pdfUrl: string; title: string }>;
   error?: string;
 }> {
   const archiveUrl = 'https://www.parlimen.gov.my/jawapan-lisan-dr.html?uweb=dr&arkib=yes';
+  const searchUrl = 'https://www.parlimen.gov.my/carian.html';
   const baseUrl = 'https://www.parlimen.gov.my';
   const sessions: Array<{ date: string; pdfUrl: string; title: string }> = [];
+  const seenUrls = new Set<string>();
 
   try {
     console.log('[Parlimen 15 Archive] Fetching archive page...');
 
+    // First, get the current archive page
     const response = await axios.get(archiveUrl, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
@@ -782,20 +786,110 @@ export async function scrapeParlimen15Archive(): Promise<{
     });
 
     const html = response.data;
-    
+
     // Extract PDF links using the loadResult pattern
     const pdfLinks = extractPdfLinksFromPage(html, baseUrl);
-    
-    console.log(`[Parlimen 15 Archive] Found ${pdfLinks.length} PDF links in archive`);
+
+    console.log(`[Parlimen 15 Archive] Found ${pdfLinks.length} PDF links in current archive`);
 
     for (const link of pdfLinks) {
-      const dateFormatted = parseMalaysianDate(link.dateText) || link.dateText;
-      sessions.push({
-        date: dateFormatted,
-        pdfUrl: link.fullUrl,
-        title: `Jawapan Lisan Dewan Rakyat - ${link.dateText}`,
-      });
+      if (!seenUrls.has(link.fullUrl)) {
+        seenUrls.add(link.fullUrl);
+        const dateFormatted = parseMalaysianDate(link.dateText) || link.dateText;
+        sessions.push({
+          date: dateFormatted,
+          pdfUrl: link.fullUrl,
+          title: `Jawapan Lisan Dewan Rakyat - ${link.dateText}`,
+        });
+      }
     }
+
+    // Now search for all Parlimen 15 sessions using the search form
+    // Parlimen 15 has multiple Penggal (sessions), each with multiple Mesyuarat (meetings)
+    // Format: 15|Penggal|Mesyuarat
+    console.log('[Parlimen 15 Archive] Searching for all Parlimen 15 sessions via search form...');
+
+    // Define all known Parlimen 15 sessions based on the form structure
+    // Penggal 1: First session (late 2022)
+    // Penggal 2: Second session (2023)
+    // Penggal 3: Third session (2024)
+    // Penggal 4: Fourth session (2024-2025)
+    // Penggal 5: Fifth session (2025)
+    const parlimen15Sessions = [
+      '15|1|1',   // Penggal 1, Mesyuarat 1
+      '15|2|-1',  // Penggal 2, All
+      '15|2|1',   // Penggal 2, Mesyuarat 1
+      '15|2|2',   // Penggal 2, Mesyuarat 2
+      '15|2|3',   // Penggal 2, Mesyuarat 3
+      '15|3|1',   // Penggal 3, Mesyuarat 1
+      '15|3|2',   // Penggal 3, Mesyuarat 2
+      '15|3|3',   // Penggal 3, Mesyuarat 3
+      '15|4|-1',  // Penggal 4, All
+      '15|4|1',   // Penggal 4, Mesyuarat 1
+      '15|4|2',   // Penggal 4, Mesyuarat 2
+      '15|4|3',   // Penggal 4, Mesyuarat 3
+      '15|5|1',   // Penggal 5, Mesyuarat 1
+      '15|5|2',   // Penggal 5, Mesyuarat 2
+      '15|5|3',   // Penggal 5, Mesyuarat 3
+    ];
+
+    // Query each session via the search endpoint
+    for (const sessionCode of parlimen15Sessions) {
+      try {
+        console.log(`[Parlimen 15 Archive] Searching session ${sessionCode}...`);
+
+        // Build form data
+        const formData = new URLSearchParams();
+        formData.append('takwimnum[]', sessionCode);
+        formData.append('doctype[]', 'DR-jw');
+        formData.append('dokumen[]', 'perbahasan');
+        formData.append('searchref', 'jawapan-lisan-dr');
+        formData.append('searchrefcode', 'dr');
+        formData.append('DATETYPE', '0'); // All dates
+        formData.append('str', ''); // Empty search string to get all results
+
+        const searchResponse = await axios.post(searchUrl, formData, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.5,ms;q=0.3',
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'Referer': archiveUrl,
+          },
+          timeout: 30000,
+          httpsAgent,
+        });
+
+        const searchHtml = searchResponse.data;
+        const searchLinks = extractPdfLinksFromPage(searchHtml, baseUrl);
+
+        let newLinksCount = 0;
+        for (const link of searchLinks) {
+          if (!seenUrls.has(link.fullUrl)) {
+            seenUrls.add(link.fullUrl);
+            newLinksCount++;
+            const dateFormatted = parseMalaysianDate(link.dateText) || link.dateText;
+            sessions.push({
+              date: dateFormatted,
+              pdfUrl: link.fullUrl,
+              title: `Jawapan Lisan Dewan Rakyat - ${link.dateText}`,
+            });
+          }
+        }
+
+        if (newLinksCount > 0) {
+          console.log(`[Parlimen 15 Archive]   ✓ Found ${newLinksCount} new PDFs in session ${sessionCode}`);
+        }
+
+        // Add delay between requests to avoid overwhelming the server
+        await new Promise(resolve => setTimeout(resolve, 1000));
+
+      } catch (error: any) {
+        console.log(`[Parlimen 15 Archive]   ✗ Error searching session ${sessionCode}: ${error.message}`);
+      }
+    }
+
+    console.log(`[Parlimen 15 Archive] Total unique sessions found: ${sessions.length}`);
 
     return { sessions };
   } catch (error: any) {
