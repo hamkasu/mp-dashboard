@@ -20,7 +20,8 @@
     "batch-process-pdfs": "tsx scripts/batch-process-hansard-pdfs.ts",
     "aggregate-speeches": "tsx scripts/aggregate-all-speeches.ts",
     "aggregate-constituency": "tsx scripts/aggregate-constituency-speeches.ts",
-    "fix-hansard-ids": "tsx scripts/fix-hansard-speaker-ids.ts"
+    "fix-hansard-ids": "tsx scripts/fix-hansard-speaker-ids.ts",
+    "import-parliamentary-answers": "tsx scripts/import-parliamentary-answers.ts"
   },
   "dependencies": {
     "@google/genai": "^1.30.0",
