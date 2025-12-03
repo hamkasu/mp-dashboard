@@ -6351,11 +6351,13 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     try {
       console.log('[Admin API] Starting analysis of stored PDFs...');
 
+      // Import schema tables
+      const { parliamentaryOralAnswers, parliamentaryAnswerPdfFiles, mps } = await import("@shared/schema");
+
       // Get all answers
       const answers = await db.select().from(parliamentaryOralAnswers);
 
       // Get all MPs for matching
-      const { mps } = await import("@shared/schema");
       const allMps = await db.select().from(mps);
 
       const stats = {
