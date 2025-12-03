@@ -144,6 +144,29 @@ export default function ParliamentaryAnswersAdmin() {
     },
   });
 
+  // Analyze stored PDFs mutation
+  const analyzeStoredPdfsMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/admin/parliamentary-answers/analyze-stored-pdfs");
+      return await res.json();
+    },
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/parliamentary-answers/stored"] });
+      toast({
+        title: "Analysis Complete",
+        description: `Updated: ${data.updated} | Processed: ${data.processed} | Skipped: ${data.skipped} | Failed: ${data.failed}`,
+      });
+      refetchAnswers();
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to analyze stored PDFs",
+        variant: "destructive",
+      });
+    },
+  });
+
   // Upload PDF for a specific answer
   const handleFileUpload = async (answerId: string, file: File) => {
     try {
@@ -283,7 +306,7 @@ export default function ParliamentaryAnswersAdmin() {
         </div>
 
         {/* Action Buttons */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           <Card>
             <CardHeader>
               <CardTitle className="text-lg">Scrape New Answers</CardTitle>
@@ -334,6 +357,35 @@ export default function ParliamentaryAnswersAdmin() {
                   <>
                     <Download className="w-4 h-4 mr-2" />
                     Download All PDFs
+                  </>
+                )}
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Analyze Stored PDFs</CardTitle>
+              <CardDescription>
+                Extract questioner & ministry from stored PDFs
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button
+                onClick={() => analyzeStoredPdfsMutation.mutate()}
+                disabled={analyzeStoredPdfsMutation.isPending}
+                variant="secondary"
+                className="w-full"
+              >
+                {analyzeStoredPdfsMutation.isPending ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Analyzing...
+                  </>
+                ) : (
+                  <>
+                    <FileText className="w-4 h-4 mr-2" />
+                    Analyze PDFs
                   </>
                 )}
               </Button>

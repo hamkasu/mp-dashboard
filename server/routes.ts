@@ -6346,6 +6346,95 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
+  // Analyze stored PDFs to extract questioner/ministry info (admin only)
+  app.post("/api/admin/parliamentary-answers/analyze-stored-pdfs", requireAdmin, async (_req, res) => {
+    try {
+      console.log('[Admin API] Starting analysis of stored PDFs...');
+
+      // Get all answers
+      const answers = await db.select().from(parliamentaryOralAnswers);
+
+      // Get all MPs for matching
+      const { mps } = await import("@shared/schema");
+      const allMps = await db.select().from(mps);
+
+      const stats = {
+        total: answers.length,
+        processed: 0,
+        updated: 0,
+        skipped: 0,
+        failed: 0,
+      };
+
+      // Import parser
+      const { ParliamentaryAnswersPdfParser } = await import("./parliamentary-answers-pdf-parser");
+
+      for (const answer of answers) {
+        // Check if PDF exists
+        const pdfFiles = await db.select()
+          .from(parliamentaryAnswerPdfFiles)
+          .where(eq(parliamentaryAnswerPdfFiles.answerId, answer.id));
+
+        if (pdfFiles.length === 0 || !pdfFiles[0].pdfData) {
+          stats.skipped++;
+          continue;
+        }
+
+        // Skip if already has questioner and ministry data
+        if (answer.questionerName && answer.answererMinistry) {
+          stats.skipped++;
+          continue;
+        }
+
+        try {
+          // Parse the PDF
+          const parser = new ParliamentaryAnswersPdfParser(allMps);
+          const parsed = await parser.parsePdf(pdfFiles[0].pdfData);
+
+          if (!parsed) {
+            stats.skipped++;
+            continue;
+          }
+
+          // Update the answer with parsed data
+          const updateData: any = {};
+          if (parsed.questionNumber) updateData.questionNo = parsed.questionNumber;
+          if (parsed.questionerName) updateData.questionerName = parsed.questionerName;
+          if (parsed.questionerConstituency) updateData.questionerConstituency = parsed.questionerConstituency;
+          if (parsed.questionerMpId) updateData.questionerMpId = parsed.questionerMpId;
+          if (parsed.answererMinistry) updateData.answererMinistry = parsed.answererMinistry;
+          if (parsed.answererName) updateData.answererName = parsed.answererName;
+          if (parsed.questionText) updateData.questionText = parsed.questionText;
+          if (parsed.answerText) updateData.answerText = parsed.answerText;
+          if (parsed.sessionInfo) updateData.sessionInfo = parsed.sessionInfo;
+
+          if (Object.keys(updateData).length > 0) {
+            await db.update(parliamentaryOralAnswers)
+              .set(updateData)
+              .where(eq(parliamentaryOralAnswers.id, answer.id));
+
+            stats.updated++;
+          }
+
+          stats.processed++;
+        } catch (error: any) {
+          console.error(`Error analyzing PDF for answer ${answer.id}:`, error.message);
+          stats.failed++;
+        }
+      }
+
+      console.log('[Admin API] Analysis complete:', stats);
+
+      res.json({
+        message: "Stored PDF analysis completed",
+        ...stats,
+      });
+    } catch (error: any) {
+      console.error("Error analyzing stored PDFs:", error);
+      res.status(500).json({ error: "Failed to analyze stored PDFs", details: error.message });
+    }
+  });
+
   // ============ PARLIAMENTARY ANSWERS CRON ENDPOINTS ============
 
   // Import parliamentary answers cron functions
