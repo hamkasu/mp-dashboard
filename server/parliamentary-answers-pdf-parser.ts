@@ -239,6 +239,7 @@ export class ParliamentaryAnswersPdfParser {
 
   /**
    * Check if the document is from Parlimen 15 (15th Parliament)
+   * Parlimen 15 started in November 2022 and is ongoing
    */
   private isParlimen15(sessionInfo: string | undefined, fullText: string): boolean {
     // Check session info first
@@ -278,7 +279,19 @@ export class ParliamentaryAnswersPdfParser {
       }
     }
 
-    // If we can't determine, assume it's not Parlimen 15 (safer to exclude)
+    // NEW: Check date - Parlimen 15 started in November 2022
+    // If the document has a date from 2022-2025, assume it's Parlimen 15
+    const dateMatch = fullText.match(/(\d{1,2})\s+(?:Jan(?:uari)?|Feb(?:ruari)?|Mac|Apr(?:il)?|Mei|Jun|Jul(?:ai)?|Og(?:os)?|Sep(?:tember)?|Okt(?:ober)?|Nov(?:ember)?|Dis(?:ember)?)\s+(202[2-5])/i);
+    if (dateMatch) {
+      const year = parseInt(dateMatch[2]);
+      if (year >= 2022 && year <= 2025) {
+        console.log(`   ℹ️  Accepting as Parlimen 15 based on date: ${dateMatch[0]}`);
+        return true;
+      }
+    }
+
+    // If we can't determine, reject (safer to exclude)
+    console.log('   ⚠️  Cannot determine parliament session, rejecting');
     return false;
   }
 
