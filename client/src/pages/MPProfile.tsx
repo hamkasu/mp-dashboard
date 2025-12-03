@@ -84,6 +84,11 @@ export default function MPProfile() {
     enabled: !!mpId,
   });
 
+  const { data: oralAnswersData, isLoading: isLoadingOralAnswers } = useQuery<{ count: number }>({
+    queryKey: [`/api/mps/${mpId}/oral-answers-count`],
+    enabled: !!mpId,
+  });
+
   const { data: hansardParticipation, isLoading: isLoadingHansard } = useQuery<{ count: number; sessions: HansardRecord[] }>({
     queryKey: [`/api/mps/${mpId}/hansard-participation`],
     enabled: !!mpId,
@@ -908,7 +913,7 @@ export default function MPProfile() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  {isLoadingQuestions ? (
+                  {isLoadingQuestions || isLoadingOralAnswers ? (
                     <div className="animate-pulse space-y-2">
                       <div className="h-10 bg-muted rounded" />
                       <div className="h-6 bg-muted rounded" />
@@ -917,14 +922,22 @@ export default function MPProfile() {
                     <>
                       <div>
                         <p className="text-4xl font-bold text-blue-600 dark:text-blue-400" data-testid="text-total-questions">
-                          {parliamentaryQuestions.length}
+                          {parliamentaryQuestions.length + (oralAnswersData?.count || 0)}
                         </p>
                         <p className="text-sm text-muted-foreground mt-1">{t('profile.totalQuestions')}</p>
                       </div>
-                      {parliamentaryQuestions.length > 0 && (
+                      {(parliamentaryQuestions.length > 0 || (oralAnswersData?.count || 0) > 0) && (
                         <>
                           <Separator />
                           <div className="space-y-2">
+                            {oralAnswersData && oralAnswersData.count > 0 && (
+                              <div className="flex items-center justify-between text-sm">
+                                <span className="text-muted-foreground">Oral Answers (Parliament)</span>
+                                <Badge variant="default" className="bg-blue-600" data-testid="badge-oral-answers-count">
+                                  {oralAnswersData.count}
+                                </Badge>
+                              </div>
+                            )}
                             <div className="flex items-center justify-between text-sm">
                               <span className="text-muted-foreground">{t('profile.oralQuestions')}</span>
                               <Badge variant="outline" data-testid="badge-oral-count">
