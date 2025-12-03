@@ -304,31 +304,55 @@ export class ParliamentaryAnswersPdfParser {
   }
 
   /**
-   * Find MP by name and constituency
+   * Find MP by constituency (primary) and name (fallback)
+   * Prioritizes constituency matching as it's more reliable
    */
   private findMpByNameAndConstituency(name: string, constituency: string): Mp | undefined {
-    const normalizedName = this.normalizeName(name);
     const normalizedConstituency = this.normalizeConstituency(constituency);
 
-    // First try exact constituency match
+    // Strategy 1: Exact constituency match (most reliable)
     const mpsByConstituency = this.allMps.filter(mp =>
       this.normalizeConstituency(mp.constituency) === normalizedConstituency
     );
 
     if (mpsByConstituency.length === 1) {
+      // Perfect match - one MP per constituency
       return mpsByConstituency[0];
     }
 
-    // If multiple MPs in same constituency, try name match
     if (mpsByConstituency.length > 1) {
+      // Multiple MPs in same constituency (rare) - use name as tiebreaker
+      console.log(`   ⚠️  Multiple MPs found for constituency: ${constituency}`);
+      const normalizedName = this.normalizeName(name);
       const mpByName = mpsByConstituency.find(mp =>
         this.normalizeName(mp.name).includes(normalizedName) ||
         normalizedName.includes(this.normalizeName(mp.name))
       );
       if (mpByName) return mpByName;
+      // Return first match if name matching fails
+      return mpsByConstituency[0];
     }
 
-    // Try fuzzy name match across all MPs
+    // Strategy 2: Fuzzy constituency match (handle slight variations)
+    const fuzzyConstituencyMatch = this.allMps.find(mp => {
+      const mpNormalizedConstituency = this.normalizeConstituency(mp.constituency);
+      // Check if constituencies are similar (allowing for minor differences)
+      return (
+        mpNormalizedConstituency.includes(normalizedConstituency) ||
+        normalizedConstituency.includes(mpNormalizedConstituency) ||
+        this.calculateSimilarity(mpNormalizedConstituency, normalizedConstituency) > 0.8
+      );
+    });
+
+    if (fuzzyConstituencyMatch) {
+      console.log(`   ℹ️  Fuzzy constituency match: "${constituency}" → "${fuzzyConstituencyMatch.constituency}"`);
+      return fuzzyConstituencyMatch;
+    }
+
+    // Strategy 3: Name matching as last resort (least reliable)
+    // Only use this if constituency matching completely failed
+    console.log(`   ⚠️  No constituency match for: ${constituency}, trying name match as fallback`);
+    const normalizedName = this.normalizeName(name);
     const mpByName = this.allMps.find(mp => {
       const mpNormalizedName = this.normalizeName(mp.name);
       return (
@@ -337,21 +361,73 @@ export class ParliamentaryAnswersPdfParser {
       );
     });
 
+    if (mpByName) {
+      console.log(`   ℹ️  Matched by name: "${name}" → ${mpByName.name} [${mpByName.constituency}]`);
+    }
+
     return mpByName;
+  }
+
+  /**
+   * Calculate string similarity using Levenshtein distance (normalized)
+   */
+  private calculateSimilarity(str1: string, str2: string): number {
+    const longer = str1.length > str2.length ? str1 : str2;
+    const shorter = str1.length > str2.length ? str2 : str1;
+
+    if (longer.length === 0) return 1.0;
+
+    const editDistance = this.levenshteinDistance(longer, shorter);
+    return (longer.length - editDistance) / longer.length;
+  }
+
+  /**
+   * Calculate Levenshtein distance between two strings
+   */
+  private levenshteinDistance(str1: string, str2: string): number {
+    const matrix: number[][] = [];
+
+    for (let i = 0; i <= str2.length; i++) {
+      matrix[i] = [i];
+    }
+
+    for (let j = 0; j <= str1.length; j++) {
+      matrix[0][j] = j;
+    }
+
+    for (let i = 1; i <= str2.length; i++) {
+      for (let j = 1; j <= str1.length; j++) {
+        if (str2.charAt(i - 1) === str1.charAt(j - 1)) {
+          matrix[i][j] = matrix[i - 1][j - 1];
+        } else {
+          matrix[i][j] = Math.min(
+            matrix[i - 1][j - 1] + 1, // substitution
+            matrix[i][j - 1] + 1,     // insertion
+            matrix[i - 1][j] + 1      // deletion
+          );
+        }
+      }
+    }
+
+    return matrix[str2.length][str1.length];
   }
 
   private normalizeName(name: string): string {
     return name
       .toLowerCase()
-      .replace(/dato'?|datuk|tan sri|tun|dr\.?|ir\.?|prof\.?|tuan|puan/gi, '')
-      .replace(/[^\w\s]/g, '')
+      .replace(/dato'?|datuk|tan sri|tun|dr\.?|ir\.?|prof\.?|tuan|puan|y\.?b\.?/gi, '')
+      .replace(/[^\w\s]/g, ' ')
+      .replace(/\s+/g, ' ')
       .trim();
   }
 
   private normalizeConstituency(constituency: string): string {
     return constituency
       .toLowerCase()
-      .replace(/[^\w\s]/g, '')
+      .replace(/\bp\.?\s*p\.?\s*/gi, '') // Remove "P.P." (Parlimen)
+      .replace(/\bp\.\s*(\d+)/gi, '') // Remove "P.123" patterns
+      .replace(/[^\w\s]/g, ' ')
+      .replace(/\s+/g, ' ')
       .trim();
   }
 }
