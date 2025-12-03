@@ -11,7 +11,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { useLanguage } from "@/i18n/LanguageContext";
 
-type SortOption = "name" | "attendance-best" | "attendance-worst" | "speeches-most" | "speeches-fewest" | "poverty-highest" | "poverty-lowest" | "bills-raised" | "oral-questions" | "inappropriate-language";
+type SortOption = "name" | "attendance-best" | "attendance-worst" | "speeches-most" | "speeches-fewest" | "poverty-highest" | "poverty-lowest" | "bills-raised" | "oral-questions" | "most-questions" | "no-questions" | "inappropriate-language";
 
 type CabinetFilter = "all" | "ministers" | "deputy-ministers" | "cabinet";
 
@@ -123,6 +123,18 @@ export function FilterSidebar({
                 <RadioGroupItem value="oral-questions" id="sort-oral-questions" data-testid="radio-sort-oral-questions" />
                 <Label htmlFor="sort-oral-questions" className="text-sm font-normal cursor-pointer">
                   {t('filters.sortOralQuestions')}
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="most-questions" id="sort-most-questions" data-testid="radio-sort-most-questions" />
+                <Label htmlFor="sort-most-questions" className="text-sm font-normal cursor-pointer">
+                  {t('filters.sortMostQuestions')}
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="no-questions" id="sort-no-questions" data-testid="radio-sort-no-questions" />
+                <Label htmlFor="sort-no-questions" className="text-sm font-normal cursor-pointer">
+                  {t('filters.sortNoQuestions')}
                 </Label>
               </div>
               <div className="flex items-center space-x-2">
