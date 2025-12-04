@@ -323,6 +323,26 @@ export class ParliamentaryAnswersPdfParser {
    * Prioritizes constituency matching as it's more reliable
    */
   private findMpByNameAndConstituency(name: string, constituency: string): Mp | undefined {
+    // If no constituency provided, use name matching directly
+    if (!constituency || constituency.trim() === '') {
+      console.log(`   ℹ️  No constituency provided, using name-only matching for: ${name}`);
+      const normalizedName = this.normalizeName(name);
+      const mpByName = this.allMps.find(mp => {
+        const mpNormalizedName = this.normalizeName(mp.name);
+        return (
+          mpNormalizedName.includes(normalizedName) ||
+          normalizedName.includes(mpNormalizedName)
+        );
+      });
+
+      if (mpByName) {
+        console.log(`   ✓ Matched by name only: "${name}" → ${mpByName.name} [${mpByName.constituency}]`);
+      } else {
+        console.log(`   ✗ No MP found for name: ${name}`);
+      }
+      return mpByName;
+    }
+
     const normalizedConstituency = this.normalizeConstituency(constituency);
 
     // Strategy 1: Exact constituency match (most reliable)
