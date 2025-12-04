@@ -417,18 +417,15 @@ function generatePdfUrls(dateStr: string, baseUrl: string): { url: string; forma
 }
 
 /**
- * Extract all sitting dates from the archive page HTML structure
- * The archive page has a tree structure with dates listed as clickable items
+ * Extract all sitting dates from the archive page HTML and known session date ranges
+ * UPDATED: Use hardcoded Parlimen 15 session dates since archive HTML doesn't include collapsed nodes
  */
 function extractDatesFromArchivePage(html: string): string[] {
   const dates: string[] = [];
   const $ = cheerio.load(html);
 
-  // Look for date patterns in the archive sidebar/tree structure
-  // Dates appear as "14 Februari 2023", "22 Mei 2023", etc.
+  // Method 1: Extract individual dates from the visible tree
   const datePattern = /(\d{1,2})\s+(januari|februari|mac|april|mei|jun|julai|ogos|september|oktober|november|disember)\s+(\d{4})/gi;
-
-  // Extract from the entire body text
   const bodyText = $('body').text();
   let match;
   while ((match = datePattern.exec(bodyText)) !== null) {
@@ -439,14 +436,41 @@ function extractDatesFromArchivePage(html: string): string[] {
     }
   }
 
-  // Also check for onclick/loadResult patterns in the HTML
-  const loadResultPattern = /loadResult\s*\([^)]+\)\s*[;>]\s*(\d{1,2}\s+\w+\s+\d{4})/gi;
-  while ((match = loadResultPattern.exec(html)) !== null) {
-    const dateText = match[1];
-    const parsed = parseMalaysianDate(dateText);
-    if (parsed && !dates.includes(parsed)) {
-      dates.push(parsed);
+  console.log(`[Archive] Found ${dates.length} dates from current visible tree`);
+
+  // Method 2: Use known Parlimen 15 session date ranges
+  // These are the historical sessions that aren't in the HTML because they're in collapsed tree nodes
+  const knownSessionRanges = [
+    { start: '2023-02-13', end: '2023-04-04', name: 'Penggal 1 Mesyuarat 1' },
+    { start: '2023-05-22', end: '2023-06-15', name: 'Penggal 2 Mesyuarat 1' },
+    { start: '2023-10-09', end: '2023-11-30', name: 'Penggal 2 Mesyuarat 2' },
+    { start: '2024-02-26', end: '2024-03-27', name: 'Penggal 3 Mesyuarat 1' },
+    { start: '2024-06-24', end: '2024-07-18', name: 'Penggal 3 Mesyuarat 2' },
+    { start: '2024-10-14', end: '2024-12-12', name: 'Penggal 3 Mesyuarat 3' },
+  ];
+
+  console.log(`[Archive] Generating dates from ${knownSessionRanges.length} known historical session ranges...`);
+
+  for (const range of knownSessionRanges) {
+    const startDate = new Date(range.start);
+    const endDate = new Date(range.end);
+    let rangeCount = 0;
+
+    const currentDate = new Date(startDate);
+    while (currentDate <= endDate) {
+      const dayOfWeek = currentDate.getDay();
+      // Only include weekdays (1-5 = Monday-Friday)
+      if (dayOfWeek >= 1 && dayOfWeek <= 5) {
+        const dateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(currentDate.getDate()).padStart(2, '0')}`;
+        if (!dates.includes(dateStr)) {
+          dates.push(dateStr);
+          rangeCount++;
+        }
+      }
+      currentDate.setDate(currentDate.getDate() + 1);
     }
+
+    console.log(`[Archive]   ${range.name}: ${range.start} to ${range.end} (${rangeCount} weekdays)`);
   }
 
   return dates.sort();
@@ -904,75 +928,44 @@ export async function scrapeParlimen15Archive(): Promise<{
     const extractedDates = extractDatesFromArchivePage(html);
     console.log(`[Parlimen 15 Archive] Extracted ${extractedDates.length} dates from archive`);
 
-    // For each extracted date, try to find the working PDF URL
-    let checkedCount = 0;
-    let foundCount = 0;
+    // For each extracted date, generate PDF URLs and save them
+    // We skip validation here because the Parliament website blocks HEAD/GET requests
+    // The actual download process will determine which URLs work
+    let generatedCount = 0;
 
     for (const dateStr of extractedDates) {
-      checkedCount++;
-
       // Generate both possible URL formats
       const pdfUrls = generatePdfUrls(dateStr, baseUrl);
 
-      // Try each URL format to see which one exists
-      let workingUrl: string | null = null;
-
+      // Try JDR format first (more common), then plain format
       for (const { url, format } of pdfUrls) {
-        // Skip if we already found this URL
+        // Skip if we already have this URL
         if (seenUrls.has(url)) {
-          workingUrl = url;
-          break;
-        }
-
-        try {
-          // Try a HEAD request first to check if the PDF exists (faster than GET)
-          const headResponse = await retryWithBackoff(
-            () => axios.head(url, {
-              headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-                'Accept': 'application/pdf,*/*',
-              },
-              timeout: 15000,
-              httpsAgent,
-            }),
-            2, // Only 2 retries for HEAD requests
-            1000,
-            `[Parlimen 15 Archive] HEAD ${format}`
-          );
-
-          if (headResponse.status === 200) {
-            workingUrl = url;
-            foundCount++;
-            console.log(`[Parlimen 15 Archive]   ✓ Found PDF (${format}): ${dateStr}`);
-            break;
-          }
-        } catch (error: any) {
-          // If HEAD request fails, try the next format
           continue;
         }
-      }
 
-      // If we found a working URL, add it to sessions
-      if (workingUrl && !seenUrls.has(workingUrl)) {
-        seenUrls.add(workingUrl);
+        // Add the URL to our sessions list
+        seenUrls.add(url);
+        generatedCount++;
+
         const date = new Date(dateStr);
         const monthNames = ['Januari', 'Februari', 'Mac', 'April', 'Mei', 'Jun', 'Julai', 'Ogos', 'September', 'Oktober', 'November', 'Disember'];
         const dateText = `${date.getDate()} ${monthNames[date.getMonth()]} ${date.getFullYear()}`;
 
         sessions.push({
           date: dateStr,
-          pdfUrl: workingUrl,
+          pdfUrl: url,
           title: `Jawapan Lisan Dewan Rakyat - ${dateText}`,
         });
-      }
 
-      // Add delay every 5 URLs to avoid overwhelming the server
-      if (checkedCount % 5 === 0) {
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        console.log(`[Parlimen 15 Archive]   + Generated (${format}): ${url.split('/').pop()}`);
+
+        // Only add the JDR format (first one) per date
+        break;
       }
     }
 
-    console.log(`[Parlimen 15 Archive] Checked ${checkedCount} dates, found ${foundCount} new PDFs`);
+    console.log(`[Parlimen 15 Archive] Generated ${generatedCount} PDF URLs from extracted dates`);
     console.log(`[Parlimen 15 Archive] Total unique sessions: ${sessions.length}`);
 
     return { sessions };
