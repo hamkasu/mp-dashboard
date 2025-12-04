@@ -50,19 +50,25 @@ export function StatisticsCards({ stats, filteredStats, isLoading, hasPartyFilte
     );
   }
 
-  const topParties = [...stats.partyBreakdown]
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 2);
+  // Define government coalition parties (Unity Government)
+  const governmentParties = ['PH', 'BN', 'GPS', 'GRS', 'WARISAN', 'UPKO', 'PBRS', 'STAR'];
+
+  // Calculate government vs opposition MPs
+  const governmentMps = stats.partyBreakdown
+    .filter(p => governmentParties.includes(p.party.toUpperCase()))
+    .reduce((sum, p) => sum + p.count, 0);
+
+  const oppositionMps = stats.totalMps - governmentMps;
 
   // Use filtered stats when available (party/state filter active), otherwise use global stats
   const activeStats = hasPartyFilter && filteredStats ? filteredStats : stats;
-  
+
   const femaleCount = activeStats.genderBreakdown.find((g) => g.gender === "Female")?.count ?? 0;
   const totalForPercentage = activeStats.totalMps;
   const femalePercentage = totalForPercentage > 0 ? ((femaleCount / totalForPercentage) * 100).toFixed(1) : "0.0";
-  
+
   const stateCount = activeStats.stateCount;
-  
+
   const attendanceRate = activeStats.averageAttendanceRate ?? 0;
   const getAttendanceColor = (rate: number) => {
     if (rate >= 85) return "text-green-600 dark:text-green-400";
@@ -94,15 +100,15 @@ export function StatisticsCards({ stats, filteredStats, isLoading, hasPartyFilte
       {!hasPartyFilter && (
         <Card data-testid="card-party-breakdown">
           <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Party Breakdown</CardTitle>
+            <CardTitle className="text-sm font-medium">Coalition Breakdown</CardTitle>
             <Flag className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-3xl md:text-4xl font-bold">
-              {stats.partyBreakdown.length}
+              {governmentMps}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              {topParties.map((p) => `${p.party} (${p.count})`).join(", ")}
+              Government {governmentMps} MPs, Opposition {oppositionMps} MPs
             </p>
           </CardContent>
         </Card>
