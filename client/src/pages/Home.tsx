@@ -169,17 +169,32 @@ export default function Home() {
     queryKey: ["/api/parliamentary-questions"],
   });
 
-  // Create a lookup map for oral questions count by MP ID
+  // Fetch oral answers counts from PDF scraper (Parlimen 15 complete data)
+  const { data: oralAnswersCountsData = {} } = useQuery<Record<string, number>>({
+    queryKey: ["/api/oral-answers/counts-by-mp"],
+    enabled: sortBy === "oral-questions" || isSpecialSortMode,
+  });
+
+  // Create a lookup map for oral questions count by MP ID (combining both sources)
   const oralQuestionsCountByMpId = useMemo(() => {
     const map = new Map<string, number>();
+
+    // Add counts from Hansard records
     parliamentaryQuestions
       .filter(q => q.questionType?.toLowerCase() === 'oral' || q.questionType?.toLowerCase() === 'lisan')
       .forEach((q) => {
         const current = map.get(q.mpId) || 0;
         map.set(q.mpId, current + 1);
       });
+
+    // Add counts from Jawapan Lisan PDFs (all Parlimen 15)
+    Object.entries(oralAnswersCountsData).forEach(([mpId, count]) => {
+      const current = map.get(mpId) || 0;
+      map.set(mpId, current + count);
+    });
+
     return map;
-  }, [parliamentaryQuestions]);
+  }, [parliamentaryQuestions, oralAnswersCountsData]);
 
   // Create a lookup map for inappropriate language count by MP ID
   const inappropriateLanguageByMpId = useMemo(() => {

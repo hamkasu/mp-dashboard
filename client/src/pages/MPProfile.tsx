@@ -930,20 +930,29 @@ export default function MPProfile() {
                         <>
                           <Separator />
                           <div className="space-y-2">
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-muted-foreground font-semibold">Oral Questions (Parlimen 15)</span>
+                              <Badge variant="default" className="bg-blue-600" data-testid="badge-total-oral-count">
+                                {parliamentaryQuestions.filter(q => q.questionType?.toLowerCase() === 'oral' || q.questionType?.toLowerCase() === 'lisan').length + (oralAnswersData?.count || 0)}
+                              </Badge>
+                            </div>
                             {oralAnswersData && oralAnswersData.count > 0 && (
-                              <div className="flex items-center justify-between text-sm">
-                                <span className="text-muted-foreground">Oral Answers (Parlimen 15)</span>
-                                <Badge variant="default" className="bg-blue-600" data-testid="badge-oral-answers-count">
+                              <div className="flex items-center justify-between text-sm pl-4">
+                                <span className="text-muted-foreground text-xs">└─ From Jawapan Lisan PDFs</span>
+                                <Badge variant="outline" className="text-xs" data-testid="badge-oral-answers-pdf-count">
                                   {oralAnswersData.count}
                                 </Badge>
                               </div>
                             )}
-                            <div className="flex items-center justify-between text-sm">
-                              <span className="text-muted-foreground">{t('profile.oralQuestions')}</span>
-                              <Badge variant="outline" data-testid="badge-oral-count">
-                                {parliamentaryQuestions.filter(q => q.questionType?.toLowerCase() === 'oral').length}
-                              </Badge>
-                            </div>
+                            {parliamentaryQuestions.filter(q => q.questionType?.toLowerCase() === 'oral' || q.questionType?.toLowerCase() === 'lisan').length > 0 && (
+                              <div className="flex items-center justify-between text-sm pl-4">
+                                <span className="text-muted-foreground text-xs">└─ From Hansard Records</span>
+                                <Badge variant="outline" className="text-xs" data-testid="badge-oral-hansard-count">
+                                  {parliamentaryQuestions.filter(q => q.questionType?.toLowerCase() === 'oral' || q.questionType?.toLowerCase() === 'lisan').length}
+                                </Badge>
+                              </div>
+                            )}
+                            <Separator className="my-2" />
                             <div className="flex items-center justify-between text-sm">
                               <span className="text-muted-foreground">{t('profile.writtenQuestions')}</span>
                               <Badge variant="outline" data-testid="badge-written-count">
