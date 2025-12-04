@@ -904,75 +904,44 @@ export async function scrapeParlimen15Archive(): Promise<{
     const extractedDates = extractDatesFromArchivePage(html);
     console.log(`[Parlimen 15 Archive] Extracted ${extractedDates.length} dates from archive`);
 
-    // For each extracted date, try to find the working PDF URL
-    let checkedCount = 0;
-    let foundCount = 0;
+    // For each extracted date, generate PDF URLs and save them
+    // We skip validation here because the Parliament website blocks HEAD/GET requests
+    // The actual download process will determine which URLs work
+    let generatedCount = 0;
 
     for (const dateStr of extractedDates) {
-      checkedCount++;
-
       // Generate both possible URL formats
       const pdfUrls = generatePdfUrls(dateStr, baseUrl);
 
-      // Try each URL format to see which one exists
-      let workingUrl: string | null = null;
-
+      // Try JDR format first (more common), then plain format
       for (const { url, format } of pdfUrls) {
-        // Skip if we already found this URL
+        // Skip if we already have this URL
         if (seenUrls.has(url)) {
-          workingUrl = url;
-          break;
-        }
-
-        try {
-          // Try a HEAD request first to check if the PDF exists (faster than GET)
-          const headResponse = await retryWithBackoff(
-            () => axios.head(url, {
-              headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-                'Accept': 'application/pdf,*/*',
-              },
-              timeout: 15000,
-              httpsAgent,
-            }),
-            2, // Only 2 retries for HEAD requests
-            1000,
-            `[Parlimen 15 Archive] HEAD ${format}`
-          );
-
-          if (headResponse.status === 200) {
-            workingUrl = url;
-            foundCount++;
-            console.log(`[Parlimen 15 Archive]   ✓ Found PDF (${format}): ${dateStr}`);
-            break;
-          }
-        } catch (error: any) {
-          // If HEAD request fails, try the next format
           continue;
         }
-      }
 
-      // If we found a working URL, add it to sessions
-      if (workingUrl && !seenUrls.has(workingUrl)) {
-        seenUrls.add(workingUrl);
+        // Add the URL to our sessions list
+        seenUrls.add(url);
+        generatedCount++;
+
         const date = new Date(dateStr);
         const monthNames = ['Januari', 'Februari', 'Mac', 'April', 'Mei', 'Jun', 'Julai', 'Ogos', 'September', 'Oktober', 'November', 'Disember'];
         const dateText = `${date.getDate()} ${monthNames[date.getMonth()]} ${date.getFullYear()}`;
 
         sessions.push({
           date: dateStr,
-          pdfUrl: workingUrl,
+          pdfUrl: url,
           title: `Jawapan Lisan Dewan Rakyat - ${dateText}`,
         });
-      }
 
-      // Add delay every 5 URLs to avoid overwhelming the server
-      if (checkedCount % 5 === 0) {
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        console.log(`[Parlimen 15 Archive]   + Generated (${format}): ${url.split('/').pop()}`);
+
+        // Only add the JDR format (first one) per date
+        break;
       }
     }
 
-    console.log(`[Parlimen 15 Archive] Checked ${checkedCount} dates, found ${foundCount} new PDFs`);
+    console.log(`[Parlimen 15 Archive] Generated ${generatedCount} PDF URLs from extracted dates`);
     console.log(`[Parlimen 15 Archive] Total unique sessions: ${sessions.length}`);
 
     return { sessions };
