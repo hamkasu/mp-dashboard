@@ -108,7 +108,10 @@ export function StatisticsCards({ stats, filteredStats, isLoading, hasPartyFilte
               {governmentMps}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              Government {governmentMps} MPs, Opposition {oppositionMps} MPs
+              Government: {governmentMps} MPs
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Opposition: {oppositionMps} MPs
             </p>
           </CardContent>
         </Card>
