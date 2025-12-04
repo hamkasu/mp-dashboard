@@ -932,7 +932,7 @@ export default function MPProfile() {
                           <div className="space-y-2">
                             {oralAnswersData && oralAnswersData.count > 0 && (
                               <div className="flex items-center justify-between text-sm">
-                                <span className="text-muted-foreground">Oral Answers (Parliament)</span>
+                                <span className="text-muted-foreground">Oral Answers (Parlimen 15)</span>
                                 <Badge variant="default" className="bg-blue-600" data-testid="badge-oral-answers-count">
                                   {oralAnswersData.count}
                                 </Badge>
