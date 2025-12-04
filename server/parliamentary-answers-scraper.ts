@@ -384,21 +384,72 @@ function parseMalaysianDate(dateText: string): string | undefined {
     'november': '11',
     'disember': '12', 'december': '12',
   };
-  
+
   // Pattern: "2 Disember 2025" or "02 December 2025"
   const match = dateText.toLowerCase().match(/(\d{1,2})\s+(\w+)\s+(\d{4})/);
-  if (match) {
-    const day = match[1].padStart(2, '0');
-    const monthName = match[2];
-    const year = match[3];
-    const month = months[monthName];
-    
-    if (month) {
-      return `${year}-${month}-${day}`;
+  if (!match) return undefined;
+
+  const day = match[1].padStart(2, '0');
+  const monthName = match[2].toLowerCase();
+  const year = match[3];
+
+  const month = months[monthName];
+  if (!month) return undefined;
+
+  return `${year}-${month}-${day}`;
+}
+
+/**
+ * Generate potential PDF URLs for a given date
+ * The Parliament website uses inconsistent naming: sometimes DDMMYYYY.pdf, sometimes JDR{DDMMYYYY}.pdf
+ */
+function generatePdfUrls(dateStr: string, baseUrl: string): { url: string; format: string }[] {
+  const date = new Date(dateStr);
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const year = date.getFullYear();
+  const dateCode = `${day}${month}${year}`;
+
+  return [
+    { url: `${baseUrl}/files/jindex/pdf/JDR${dateCode}.pdf`, format: 'JDR' },
+    { url: `${baseUrl}/files/jindex/pdf/${dateCode}.pdf`, format: 'plain' },
+  ];
+}
+
+/**
+ * Extract all sitting dates from the archive page HTML structure
+ * The archive page has a tree structure with dates listed as clickable items
+ */
+function extractDatesFromArchivePage(html: string): string[] {
+  const dates: string[] = [];
+  const $ = cheerio.load(html);
+
+  // Look for date patterns in the archive sidebar/tree structure
+  // Dates appear as "14 Februari 2023", "22 Mei 2023", etc.
+  const datePattern = /(\d{1,2})\s+(januari|februari|mac|april|mei|jun|julai|ogos|september|oktober|november|disember)\s+(\d{4})/gi;
+
+  // Extract from the entire body text
+  const bodyText = $('body').text();
+  let match;
+  while ((match = datePattern.exec(bodyText)) !== null) {
+    const dateText = match[0];
+    const parsed = parseMalaysianDate(dateText);
+    if (parsed && !dates.includes(parsed)) {
+      dates.push(parsed);
     }
   }
-  
-  return undefined;
+
+  // Also check for onclick/loadResult patterns in the HTML
+  const loadResultPattern = /loadResult\s*\([^)]+\)\s*[;>]\s*(\d{1,2}\s+\w+\s+\d{4})/gi;
+  while ((match = loadResultPattern.exec(html)) !== null) {
+    const dateText = match[1];
+    const parsed = parseMalaysianDate(dateText);
+    if (parsed && !dates.includes(parsed)) {
+      dates.push(parsed);
+    }
+  }
+
+  return dates.sort();
 }
 
 /**
@@ -799,15 +850,14 @@ export async function batchProcessAnswerPdfs(): Promise<{
 
 /**
  * Scrape Parlimen 15 archive to get all historical oral answer sessions
- * This scrapes the archive page which has all past sessions, AND queries the search
- * endpoint for all Parlimen 15 sessions (Penggal 1-5) to ensure we get everything
+ * NEW APPROACH: Extract dates from archive HTML and generate direct PDF URLs
+ * This avoids the search endpoint which returns 500/503 errors
  */
 export async function scrapeParlimen15Archive(): Promise<{
   sessions: Array<{ date: string; pdfUrl: string; title: string }>;
   error?: string;
 }> {
   const archiveUrl = 'https://www.parlimen.gov.my/jawapan-lisan-dr.html?uweb=dr&arkib=yes';
-  const searchUrl = 'https://www.parlimen.gov.my/carian.html';
   const baseUrl = 'https://www.parlimen.gov.my';
   const sessions: Array<{ date: string; pdfUrl: string; title: string }> = [];
   const seenUrls = new Set<string>();
@@ -815,7 +865,7 @@ export async function scrapeParlimen15Archive(): Promise<{
   try {
     console.log('[Parlimen 15 Archive] Fetching archive page...');
 
-    // First, get the current archive page with retry logic
+    // Get the archive page with retry logic
     const response = await retryWithBackoff(
       () => axios.get(archiveUrl, {
         headers: {
@@ -833,10 +883,9 @@ export async function scrapeParlimen15Archive(): Promise<{
 
     const html = response.data;
 
-    // Extract PDF links using the loadResult pattern
+    // Method 1: Extract PDF links from loadResult() JavaScript calls
     const pdfLinks = extractPdfLinksFromPage(html, baseUrl);
-
-    console.log(`[Parlimen 15 Archive] Found ${pdfLinks.length} PDF links in current archive`);
+    console.log(`[Parlimen 15 Archive] Found ${pdfLinks.length} PDF links from loadResult() calls`);
 
     for (const link of pdfLinks) {
       if (!seenUrls.has(link.fullUrl)) {
@@ -850,99 +899,81 @@ export async function scrapeParlimen15Archive(): Promise<{
       }
     }
 
-    // Now search for all Parlimen 15 sessions using the search form
-    // Parlimen 15 has multiple Penggal (sessions), each with multiple Mesyuarat (meetings)
-    // Format: 15|Penggal|Mesyuarat
-    console.log('[Parlimen 15 Archive] Searching for all Parlimen 15 sessions via search form...');
+    // Method 2: Extract all dates from the HTML and generate PDF URLs
+    console.log('[Parlimen 15 Archive] Extracting dates from archive page structure...');
+    const extractedDates = extractDatesFromArchivePage(html);
+    console.log(`[Parlimen 15 Archive] Extracted ${extractedDates.length} dates from archive`);
 
-    // Define all known Parlimen 15 sessions based on the form structure
-    // Penggal 1: First session (late 2022)
-    // Penggal 2: Second session (2023)
-    // Penggal 3: Third session (2024)
-    // Penggal 4: Fourth session (2024-2025)
-    // Penggal 5: Fifth session (2025)
-    const parlimen15Sessions = [
-      '15|1|1',   // Penggal 1, Mesyuarat 1
-      '15|2|-1',  // Penggal 2, All
-      '15|2|1',   // Penggal 2, Mesyuarat 1
-      '15|2|2',   // Penggal 2, Mesyuarat 2
-      '15|2|3',   // Penggal 2, Mesyuarat 3
-      '15|3|1',   // Penggal 3, Mesyuarat 1
-      '15|3|2',   // Penggal 3, Mesyuarat 2
-      '15|3|3',   // Penggal 3, Mesyuarat 3
-      '15|4|-1',  // Penggal 4, All
-      '15|4|1',   // Penggal 4, Mesyuarat 1
-      '15|4|2',   // Penggal 4, Mesyuarat 2
-      '15|4|3',   // Penggal 4, Mesyuarat 3
-      '15|5|1',   // Penggal 5, Mesyuarat 1
-      '15|5|2',   // Penggal 5, Mesyuarat 2
-      '15|5|3',   // Penggal 5, Mesyuarat 3
-    ];
+    // For each extracted date, try to find the working PDF URL
+    let checkedCount = 0;
+    let foundCount = 0;
 
-    // Query each session via the search endpoint
-    for (const sessionCode of parlimen15Sessions) {
-      try {
-        console.log(`[Parlimen 15 Archive] Searching session ${sessionCode}...`);
+    for (const dateStr of extractedDates) {
+      checkedCount++;
 
-        // Build form data
-        const formData = new URLSearchParams();
-        formData.append('takwimnum[]', sessionCode);
-        formData.append('doctype[]', 'DR-jw');
-        formData.append('dokumen[]', 'perbahasan');
-        formData.append('searchref', 'jawapan-lisan-dr');
-        formData.append('searchrefcode', 'dr');
-        formData.append('DATETYPE', '0'); // All dates
-        formData.append('str', ''); // Empty search string to get all results
+      // Generate both possible URL formats
+      const pdfUrls = generatePdfUrls(dateStr, baseUrl);
 
-        // Use retry logic for search requests
-        const searchResponse = await retryWithBackoff(
-          () => axios.post(searchUrl, formData, {
-            headers: {
-              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-              'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-              'Accept-Language': 'en-US,en;q=0.5,ms;q=0.3',
-              'Content-Type': 'application/x-www-form-urlencoded',
-              'Referer': archiveUrl,
-            },
-            timeout: 30000,
-            httpsAgent,
-          }),
-          4,
-          2000,
-          `[Parlimen 15 Archive] Session ${sessionCode}:`
-        );
+      // Try each URL format to see which one exists
+      let workingUrl: string | null = null;
 
-        const searchHtml = searchResponse.data;
-        const searchLinks = extractPdfLinksFromPage(searchHtml, baseUrl);
+      for (const { url, format } of pdfUrls) {
+        // Skip if we already found this URL
+        if (seenUrls.has(url)) {
+          workingUrl = url;
+          break;
+        }
 
-        let newLinksCount = 0;
-        for (const link of searchLinks) {
-          if (!seenUrls.has(link.fullUrl)) {
-            seenUrls.add(link.fullUrl);
-            newLinksCount++;
-            const dateFormatted = parseMalaysianDate(link.dateText) || link.dateText;
-            sessions.push({
-              date: dateFormatted,
-              pdfUrl: link.fullUrl,
-              title: `Jawapan Lisan Dewan Rakyat - ${link.dateText}`,
-            });
+        try {
+          // Try a HEAD request first to check if the PDF exists (faster than GET)
+          const headResponse = await retryWithBackoff(
+            () => axios.head(url, {
+              headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                'Accept': 'application/pdf,*/*',
+              },
+              timeout: 15000,
+              httpsAgent,
+            }),
+            2, // Only 2 retries for HEAD requests
+            1000,
+            `[Parlimen 15 Archive] HEAD ${format}`
+          );
+
+          if (headResponse.status === 200) {
+            workingUrl = url;
+            foundCount++;
+            console.log(`[Parlimen 15 Archive]   ✓ Found PDF (${format}): ${dateStr}`);
+            break;
           }
+        } catch (error: any) {
+          // If HEAD request fails, try the next format
+          continue;
         }
+      }
 
-        if (newLinksCount > 0) {
-          console.log(`[Parlimen 15 Archive]   ✓ Found ${newLinksCount} new PDFs in session ${sessionCode}`);
-        }
+      // If we found a working URL, add it to sessions
+      if (workingUrl && !seenUrls.has(workingUrl)) {
+        seenUrls.add(workingUrl);
+        const date = new Date(dateStr);
+        const monthNames = ['Januari', 'Februari', 'Mac', 'April', 'Mei', 'Jun', 'Julai', 'Ogos', 'September', 'Oktober', 'November', 'Disember'];
+        const dateText = `${date.getDate()} ${monthNames[date.getMonth()]} ${date.getFullYear()}`;
 
-        // Add delay between requests to avoid overwhelming the server
-        // Increased to 3 seconds to be more respectful to the Parliament server
-        await new Promise(resolve => setTimeout(resolve, 3000));
+        sessions.push({
+          date: dateStr,
+          pdfUrl: workingUrl,
+          title: `Jawapan Lisan Dewan Rakyat - ${dateText}`,
+        });
+      }
 
-      } catch (error: any) {
-        console.log(`[Parlimen 15 Archive]   ✗ Error searching session ${sessionCode}: ${error.message}`);
+      // Add delay every 5 URLs to avoid overwhelming the server
+      if (checkedCount % 5 === 0) {
+        await new Promise(resolve => setTimeout(resolve, 2000));
       }
     }
 
-    console.log(`[Parlimen 15 Archive] Total unique sessions found: ${sessions.length}`);
+    console.log(`[Parlimen 15 Archive] Checked ${checkedCount} dates, found ${foundCount} new PDFs`);
+    console.log(`[Parlimen 15 Archive] Total unique sessions: ${sessions.length}`);
 
     return { sessions };
   } catch (error: any) {
