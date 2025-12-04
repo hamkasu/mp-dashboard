@@ -85,15 +85,19 @@ export default function MPProfile() {
   });
 
   // Fetch oral answers from PDF scraper (full list, not just count)
-  const { data: oralAnswersList = [], isLoading: isLoadingOralAnswersList } = useQuery<ParliamentaryOralAnswer[]>({
+  const { data: oralAnswersList = [], isLoading: isLoadingOralAnswersList, error: oralAnswersError } = useQuery<ParliamentaryOralAnswer[]>({
     queryKey: [`/api/mps/${mpId}/oral-answers`],
     enabled: !!mpId,
+    retry: false,
+    throwOnError: false,
   });
 
   // Also fetch count for the summary card
   const { data: oralAnswersData, isLoading: isLoadingOralAnswers } = useQuery<{ count: number }>({
     queryKey: [`/api/mps/${mpId}/oral-answers-count`],
     enabled: !!mpId,
+    retry: false,
+    throwOnError: false,
   });
 
   const { data: hansardParticipation, isLoading: isLoadingHansard } = useQuery<{ count: number; sessions: HansardRecord[] }>({
@@ -109,6 +113,7 @@ export default function MPProfile() {
     const combined: Array<{
       id: string;
       questionText: string;
+      topic: string;
       dateAsked: string;
       ministry: string;
       answerStatus: string;
@@ -116,6 +121,8 @@ export default function MPProfile() {
       source: 'Hansard' | 'Jawapan Lisan PDF';
       hansardReference?: string;
       fullTextUrl?: string;
+      questionNumber?: string;
+      answerText?: string;
     }> = [];
 
     // Add Hansard oral questions (with safety check)
@@ -126,12 +133,15 @@ export default function MPProfile() {
           combined.push({
             id: q.id,
             questionText: q.questionText,
+            topic: q.topic,
             dateAsked: q.dateAsked.toString(),
             ministry: q.ministry,
             answerStatus: q.answerStatus,
             questionType: 'Oral',
             source: 'Hansard',
             hansardReference: q.hansardReference || undefined,
+            questionNumber: q.questionNumber || undefined,
+            answerText: q.answerText || undefined,
           });
         });
     }
@@ -142,12 +152,15 @@ export default function MPProfile() {
         combined.push({
           id: answer.id,
           questionText: answer.questionText || answer.title,
+          topic: answer.title || answer.questionText || 'Oral Question',
           dateAsked: answer.dateAsked || '',
           ministry: answer.answererMinistry || 'Unknown Ministry',
           answerStatus: answer.status,
           questionType: 'Oral',
           source: 'Jawapan Lisan PDF',
           fullTextUrl: answer.fullTextUrl || undefined,
+          questionNumber: undefined,
+          answerText: undefined,
         });
       });
     }
