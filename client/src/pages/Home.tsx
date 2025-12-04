@@ -32,7 +32,7 @@ interface PaginatedMpsResponse {
   };
 }
 
-type SortOption = "name" | "attendance-best" | "attendance-worst" | "speeches-most" | "speeches-fewest" | "poverty-highest" | "poverty-lowest" | "bills-raised" | "oral-questions" | "most-questions" | "no-questions" | "inappropriate-language";
+type SortOption = "name" | "attendance-best" | "attendance-worst" | "speeches-most" | "speeches-fewest" | "poverty-highest" | "poverty-lowest" | "bills-raised" | "oral-questions" | "inappropriate-language";
 type CabinetFilter = "all" | "ministers" | "deputy-ministers" | "cabinet";
 
 interface LanguageAnalysisMpStat {
@@ -56,7 +56,7 @@ export default function Home() {
   const ITEMS_PER_PAGE = 20;
 
   // Special sort modes require all MPs for client-side filtering/sorting
-  const SPECIAL_SORT_MODES: SortOption[] = ["bills-raised", "oral-questions", "most-questions", "no-questions", "inappropriate-language", "poverty-highest", "poverty-lowest"];
+  const SPECIAL_SORT_MODES: SortOption[] = ["bills-raised", "oral-questions", "inappropriate-language", "poverty-highest", "poverty-lowest"];
   const isSpecialSortMode = SPECIAL_SORT_MODES.includes(sortBy);
 
   // Build query string for paginated API
@@ -169,12 +169,6 @@ export default function Home() {
     queryKey: ["/api/parliamentary-questions"],
   });
 
-  // Fetch oral answers counts (from parliamentary PDFs) for question sorting
-  const { data: oralAnswersCountsData = {} } = useQuery<Record<string, number>>({
-    queryKey: ["/api/oral-answers/counts-by-mp"],
-    enabled: sortBy === "most-questions" || sortBy === "no-questions" || isSpecialSortMode,
-  });
-
   // Create a lookup map for oral questions count by MP ID
   const oralQuestionsCountByMpId = useMemo(() => {
     const map = new Map<string, number>();
@@ -186,15 +180,6 @@ export default function Home() {
       });
     return map;
   }, [parliamentaryQuestions]);
-
-  // Create a lookup map for oral answers count by MP ID (from PDFs)
-  const oralAnswersCountByMpId = useMemo(() => {
-    const map = new Map<string, number>();
-    Object.entries(oralAnswersCountsData).forEach(([mpId, count]) => {
-      map.set(mpId, count);
-    });
-    return map;
-  }, [oralAnswersCountsData]);
 
   // Create a lookup map for inappropriate language count by MP ID
   const inappropriateLanguageByMpId = useMemo(() => {
@@ -332,17 +317,6 @@ export default function Home() {
         const countB = oralQuestionsCountByMpId.get(b.id) ?? 0;
         return countB - countA;
       });
-    } else if (sortBy === "most-questions") {
-      filtered = filtered.filter(mp => (oralAnswersCountByMpId.get(mp.id) ?? 0) > 0);
-      filtered = [...filtered].sort((a, b) => {
-        const countA = oralAnswersCountByMpId.get(a.id) ?? 0;
-        const countB = oralAnswersCountByMpId.get(b.id) ?? 0;
-        return countB - countA;
-      });
-    } else if (sortBy === "no-questions") {
-      filtered = filtered.filter(mp => (oralAnswersCountByMpId.get(mp.id) ?? 0) === 0);
-      // Sort alphabetically by name for MPs with no questions
-      filtered = [...filtered].sort((a, b) => a.name.localeCompare(b.name));
     } else if (sortBy === "inappropriate-language") {
       filtered = filtered.filter(mp => (inappropriateLanguageByMpId.get(mp.id)?.count ?? 0) > 0);
       filtered = [...filtered].sort((a, b) => {
@@ -354,7 +328,7 @@ export default function Home() {
     // For name, attendance, and speeches sorts, the server already sorted the data
 
     return filtered;
-  }, [mps, sortBy, povertyByCode, billsCountByMpId, oralQuestionsCountByMpId, oralAnswersCountByMpId, inappropriateLanguageByMpId, isSpecialSortMode, searchQuery, selectedParties, selectedStates, cabinetFilter]);
+  }, [mps, sortBy, povertyByCode, billsCountByMpId, oralQuestionsCountByMpId, inappropriateLanguageByMpId, isSpecialSortMode, searchQuery, selectedParties, selectedStates, cabinetFilter]);
 
   const availableStates = useMemo(() => {
     const states = Array.from(new Set(mps.map((mp) => mp.state)));
@@ -549,107 +523,6 @@ export default function Home() {
                 </CardContent>
               </Card>
             )}
-
-            {/* SPRM Investigations Section */}
-            {!sprmInvestigationsLoading && mpsWithSprmInvestigations.length > 0 && (
-              <Card className="border-red-200 dark:border-red-900 bg-red-50/50 dark:bg-red-950/20" data-testid="sprm-investigations-section">
-                <CardHeader className="pb-3">
-                  <CardTitle className="flex items-center gap-2 text-red-900 dark:text-red-100">
-                    <AlertTriangle className="h-5 w-5" />
-                    MACC/SPRM Investigations
-                  </CardTitle>
-                  <p className="text-sm text-red-800/70 dark:text-red-200/70">
-                    Members of Parliament under investigation by the Malaysian Anti-Corruption Commission
-                  </p>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {mpsWithSprmInvestigations.map((mp) => {
-                      const mpInvestigations = sprmInvestigations.filter(i => i.mpId === mp.id);
-                      const ongoingInvestigations = mpInvestigations.filter(i => i.status === "Ongoing");
-                      const completedInvestigations = mpInvestigations.filter(i => i.status === "Completed");
-
-                      return (
-                        <Link key={mp.id} href={`/mp/${mp.id}`} data-testid={`sprm-investigation-mp-${mp.id}`}>
-                          <div className="group cursor-pointer rounded-lg border bg-card p-5 hover:bg-accent/50 transition-colors">
-                            <div className="flex flex-col sm:flex-row sm:items-start gap-4">
-                              <Avatar className="h-16 w-16 shrink-0 border-2 border-red-200 dark:border-red-800">
-                                <AvatarImage src={mp.photoUrl || undefined} alt={mp.name} />
-                                <AvatarFallback className="bg-red-100 dark:bg-red-900/50 text-red-900 dark:text-red-100 font-semibold text-lg">
-                                  {mp.name.split(" ").map(n => n[0]).join("").slice(0, 2)}
-                                </AvatarFallback>
-                              </Avatar>
-                              <div className="flex-1">
-                                <div className="flex items-start justify-between gap-3">
-                                  <div>
-                                    <h4 className="font-semibold text-lg group-hover:text-primary transition-colors">
-                                      {mp.name}
-                                    </h4>
-                                    <div className="flex flex-wrap items-center gap-2 mt-1">
-                                      <Badge variant="outline" className="text-xs font-medium">
-                                        {mp.party}
-                                      </Badge>
-                                      <span className="text-sm text-muted-foreground">{mp.constituency}, {mp.state}</span>
-                                    </div>
-                                  </div>
-                                  <ExternalLink className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors shrink-0" />
-                                </div>
-                                
-                                <div className="mt-4 space-y-2">
-                                  <p className="text-xs font-semibold uppercase tracking-wide text-red-900/70 dark:text-red-100/70">
-                                    Investigations ({mpInvestigations.length})
-                                  </p>
-                                  {mpInvestigations.slice(0, 3).map((investigation, idx) => (
-                                    <div key={idx} className="p-3 bg-red-100/50 dark:bg-red-900/20 rounded-md border border-red-200/50 dark:border-red-800/50">
-                                      <div className="flex items-start justify-between gap-2">
-                                        <div className="flex-1">
-                                          <p className="text-xs font-mono text-red-900/80 dark:text-red-100/80">
-                                            {investigation.caseNumber}
-                                          </p>
-                                          <p className="text-sm font-medium text-red-900 dark:text-red-100 mt-0.5">
-                                            {investigation.title}
-                                          </p>
-                                        </div>
-                                        <Badge 
-                                          variant={investigation.status === "Ongoing" ? "destructive" : "secondary"}
-                                          className="text-xs shrink-0"
-                                        >
-                                          {investigation.status}
-                                        </Badge>
-                                      </div>
-                                    </div>
-                                  ))}
-                                  {mpInvestigations.length > 3 && (
-                                    <p className="text-xs text-red-800/70 dark:text-red-200/70 italic">
-                                      +{mpInvestigations.length - 3} more investigation(s) - click to view all
-                                    </p>
-                                  )}
-                                </div>
-                                
-                                <div className="flex flex-wrap gap-2 mt-4 pt-3 border-t border-red-200/50 dark:border-red-800/50">
-                                  <span className="text-xs text-muted-foreground">Status Summary:</span>
-                                  {ongoingInvestigations.length > 0 && (
-                                    <Badge variant="destructive" className="text-xs" data-testid={`badge-sprm-ongoing-${mp.id}`}>
-                                      {ongoingInvestigations.length} Ongoing
-                                    </Badge>
-                                  )}
-                                  {completedInvestigations.length > 0 && (
-                                    <Badge variant="outline" className="text-xs bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-200 border-green-300 dark:border-green-700" data-testid={`badge-sprm-completed-${mp.id}`}>
-                                      {completedInvestigations.length} Completed
-                                    </Badge>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </Link>
-                      );
-                    })}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
             {/* Statistics */}
             <StatisticsCards 
               stats={stats || defaultStats} 
