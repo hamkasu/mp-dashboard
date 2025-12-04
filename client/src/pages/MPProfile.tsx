@@ -18,7 +18,7 @@ import { Summarizer } from "@/components/Summarizer";
 import { HansardParticipation15th } from "@/components/HansardParticipation15th";
 import { HansardSpeakingRecord } from "@/components/HansardSpeakingRecord";
 import { ContactMPDialog } from "@/components/ContactMPDialog";
-import type { Mp, CourtCase, SprmInvestigation, LegislativeProposal, DebateParticipation, ParliamentaryQuestion, HansardRecord } from "@shared/schema";
+import type { Mp, CourtCase, SprmInvestigation, LegislativeProposal, DebateParticipation, ParliamentaryQuestion, ParliamentaryOralAnswer, HansardRecord } from "@shared/schema";
 import { calculateTotalSalary, calculateYearlyBreakdown, formatCurrency, getPublicationName } from "@/lib/utils";
 import { getMinisterialSalary, getCabinetRoleType, ALLOWANCE_RATES } from "@/lib/allowanceCalculator";
 import { useConstituencyByCode } from "@/hooks/use-constituencies";
@@ -84,6 +84,13 @@ export default function MPProfile() {
     enabled: !!mpId,
   });
 
+  // Fetch oral answers from PDF scraper (full list, not just count)
+  const { data: oralAnswersList = [], isLoading: isLoadingOralAnswersList } = useQuery<ParliamentaryOralAnswer[]>({
+    queryKey: [`/api/mps/${mpId}/oral-answers`],
+    enabled: !!mpId,
+  });
+
+  // Also fetch count for the summary card
   const { data: oralAnswersData, isLoading: isLoadingOralAnswers } = useQuery<{ count: number }>({
     queryKey: [`/api/mps/${mpId}/oral-answers-count`],
     enabled: !!mpId,
@@ -96,6 +103,58 @@ export default function MPProfile() {
 
   // Fetch constituency data for poverty incidence
   const { data: constituency } = useConstituencyByCode(mp?.parliamentCode);
+
+  // Combine oral questions from both Hansard and PDF sources
+  const allOralQuestions = useMemo(() => {
+    const combined: Array<{
+      id: string;
+      questionText: string;
+      dateAsked: string;
+      ministry: string;
+      answerStatus: string;
+      questionType: string;
+      source: 'Hansard' | 'Jawapan Lisan PDF';
+      hansardReference?: string;
+      fullTextUrl?: string;
+    }> = [];
+
+    // Add Hansard oral questions
+    parliamentaryQuestions
+      .filter(q => q.questionType?.toLowerCase() === 'oral' || q.questionType?.toLowerCase() === 'lisan')
+      .forEach(q => {
+        combined.push({
+          id: q.id,
+          questionText: q.questionText,
+          dateAsked: q.dateAsked.toString(),
+          ministry: q.ministry,
+          answerStatus: q.answerStatus,
+          questionType: 'Oral',
+          source: 'Hansard',
+          hansardReference: q.hansardReference || undefined,
+        });
+      });
+
+    // Add oral answers from PDFs
+    oralAnswersList.forEach(answer => {
+      combined.push({
+        id: answer.id,
+        questionText: answer.questionText || answer.title,
+        dateAsked: answer.dateAsked || '',
+        ministry: answer.answererMinistry || 'Unknown Ministry',
+        answerStatus: answer.status,
+        questionType: 'Oral',
+        source: 'Jawapan Lisan PDF',
+        fullTextUrl: answer.fullTextUrl || undefined,
+      });
+    });
+
+    // Sort by date (newest first)
+    return combined.sort((a, b) => {
+      const dateA = new Date(a.dateAsked);
+      const dateB = new Date(b.dateAsked);
+      return dateB.getTime() - dateA.getTime();
+    });
+  }, [parliamentaryQuestions, oralAnswersList]);
 
   const [activityTab, setActivityTab] = useState("bills");
 
@@ -1831,7 +1890,7 @@ export default function MPProfile() {
                       </TabsContent>
 
                       <TabsContent value="questions" className="mt-4 space-y-4">
-                        {parliamentaryQuestions.length === 0 ? (
+                        {allOralQuestions.length === 0 ? (
                           <div className="text-center py-8 text-muted-foreground">
                             <HelpCircle className="h-12 w-12 mx-auto mb-3 opacity-50" />
                             <p>{t('profile.noQuestions')}</p>
@@ -1842,15 +1901,15 @@ export default function MPProfile() {
                             <div className="bg-muted/30 rounded-lg p-4">
                               <h4 className="font-semibold text-sm mb-3">Questions by Ministry</h4>
                               <div className="flex flex-wrap gap-2">
-                                {Array.from(new Set(parliamentaryQuestions.map(q => q.ministry)))
+                                {Array.from(new Set(allOralQuestions.map(q => q.ministry)))
                                   .sort()
                                   .map(ministry => (
-                                    <Badge 
-                                      key={ministry} 
+                                    <Badge
+                                      key={ministry}
                                       variant="secondary"
                                       data-testid={`badge-ministry-${ministry.toLowerCase().replace(/\s+/g, '-')}`}
                                     >
-                                      {ministry} ({parliamentaryQuestions.filter(q => q.ministry === ministry).length})
+                                      {ministry} ({allOralQuestions.filter(q => q.ministry === ministry).length})
                                     </Badge>
                                   ))}
                               </div>
@@ -1858,73 +1917,74 @@ export default function MPProfile() {
 
                             {/* Questions List */}
                             <div className="space-y-3">
-                              {parliamentaryQuestions
-                                .sort((a, b) => new Date(b.dateAsked).getTime() - new Date(a.dateAsked).getTime())
-                                .map((question) => (
-                                  <div
-                                    key={question.id}
-                                    data-testid={`activity-question-${question.id}`}
-                                    className="border rounded-lg p-4 hover:bg-muted/30 transition-colors"
-                                  >
-                                    <div className="flex items-center gap-2 mb-2 flex-wrap">
-                                      {question.questionType && (
-                                        <Badge 
-                                          variant={
-                                            question.questionType?.toLowerCase() === 'oral' ? 'default' : 
-                                            question.questionType?.toLowerCase() === 'written' ? 'outline' : 
-                                            'secondary'
-                                          }
-                                          className={
-                                            question.questionType?.toLowerCase() === 'oral' ? 'bg-blue-600 text-white dark:bg-blue-500' : 
-                                            question.questionType?.toLowerCase() === 'minister' ? 'bg-purple-600 text-white dark:bg-purple-500' : 
-                                            ''
-                                          }
-                                          data-testid={`badge-question-type-${question.id}`}
-                                        >
-                                          {question.questionType.charAt(0).toUpperCase() + question.questionType.slice(1)}
-                                        </Badge>
-                                      )}
-                                      <Badge 
-                                        variant={question.answerStatus === 'Answered' ? 'default' : 'outline'}
-                                        data-testid={`badge-answer-status-${question.id}`}
+                              {allOralQuestions.map((question) => (
+                                <div
+                                  key={question.id}
+                                  data-testid={`activity-question-${question.id}`}
+                                  className="border rounded-lg p-4 hover:bg-muted/30 transition-colors"
+                                >
+                                  <div className="flex items-center gap-2 mb-2 flex-wrap">
+                                    {question.questionType && (
+                                      <Badge
+                                        variant={
+                                          question.questionType?.toLowerCase() === 'oral' ? 'default' :
+                                          question.questionType?.toLowerCase() === 'written' ? 'outline' :
+                                          'secondary'
+                                        }
+                                        className={
+                                          question.questionType?.toLowerCase() === 'oral' ? 'bg-blue-600 text-white dark:bg-blue-500' :
+                                          question.questionType?.toLowerCase() === 'minister' ? 'bg-purple-600 text-white dark:bg-purple-500' :
+                                          ''
+                                        }
+                                        data-testid={`badge-question-type-${question.id}`}
                                       >
-                                        {question.answerStatus}
+                                        {question.questionType.charAt(0).toUpperCase() + question.questionType.slice(1)}
                                       </Badge>
-                                      <Badge variant="secondary" data-testid={`badge-ministry-${question.id}`}>
-                                        {question.ministry}
-                                      </Badge>
-                                      {question.questionNumber && (
-                                        <Badge variant="outline" className="font-mono" data-testid={`badge-question-number-${question.id}`}>
-                                          #{question.questionNumber}
-                                        </Badge>
-                                      )}
-                                    </div>
-                                    <h5 className="font-semibold mb-1" data-testid={`text-question-topic-${question.id}`}>
-                                      {question.topic}
-                                    </h5>
-                                    <div className="text-xs text-muted-foreground mb-2">
-                                      <span>Asked: {format(new Date(question.dateAsked), "MMM d, yyyy")}</span>
-                                    </div>
-                                    <p className="text-sm mb-2">
-                                      <span className="font-medium">Question: </span>
-                                      {question.questionText}
-                                    </p>
-                                    {question.answerText && (
-                                      <div className="bg-muted p-3 rounded-md mb-2">
-                                        <p className="text-sm">
-                                          <span className="font-medium">Answer: </span>
-                                          {question.answerText}
-                                        </p>
-                                      </div>
                                     )}
-                                    {question.hansardReference && (
-                                      <p className="text-xs text-muted-foreground">
-                                        <span className="font-medium">Hansard: </span>
-                                        {question.hansardReference}
-                                      </p>
-                                    )}
+                                    <Badge
+                                      variant={question.source === 'Hansard' ? 'outline' : 'secondary'}
+                                      data-testid={`badge-source-${question.id}`}
+                                      className="text-xs"
+                                    >
+                                      {question.source}
+                                    </Badge>
+                                    <Badge
+                                      variant={question.answerStatus === 'Answered' ? 'default' : 'outline'}
+                                      data-testid={`badge-answer-status-${question.id}`}
+                                    >
+                                      {question.answerStatus}
+                                    </Badge>
+                                    <Badge variant="secondary" data-testid={`badge-ministry-${question.id}`}>
+                                      {question.ministry}
+                                    </Badge>
                                   </div>
-                                ))}
+                                  <h5 className="font-semibold mb-1" data-testid={`text-question-topic-${question.id}`}>
+                                    {question.questionText}
+                                  </h5>
+                                  <div className="text-xs text-muted-foreground mb-2">
+                                    <span>Asked: {format(new Date(question.dateAsked), "MMM d, yyyy")}</span>
+                                  </div>
+                                  {question.fullTextUrl && (
+                                    <a
+                                      href={question.fullTextUrl}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="text-xs text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center gap-1"
+                                    >
+                                      View PDF Document
+                                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                      </svg>
+                                    </a>
+                                  )}
+                                  {question.hansardReference && (
+                                    <p className="text-xs text-muted-foreground mt-2">
+                                      <span className="font-medium">Hansard: </span>
+                                      {question.hansardReference}
+                                    </p>
+                                  )}
+                                </div>
+                              ))}
                             </div>
                           </>
                         )}

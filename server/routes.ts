@@ -1072,6 +1072,26 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
+  // Get oral answers list by MP ID (full details)
+  app.get("/api/mps/:id/oral-answers", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { parliamentaryOralAnswers } = await import("@shared/schema");
+      const { eq, desc } = await import("drizzle-orm");
+
+      // Get all oral answers where this MP is the questioner
+      const answers = await db.select()
+        .from(parliamentaryOralAnswers)
+        .where(eq(parliamentaryOralAnswers.questionerMpId, id))
+        .orderBy(desc(parliamentaryOralAnswers.dateAsked));
+
+      res.json(answers);
+    } catch (error) {
+      console.error("Error fetching oral answers:", error);
+      res.status(500).json({ error: "Failed to fetch oral answers" });
+    }
+  });
+
   // Get oral answers counts for all MPs (grouped by MP ID)
   app.get("/api/oral-answers/counts-by-mp", async (_req, res) => {
     try {
