@@ -35,6 +35,42 @@ const httpsAgent = new https.Agent({
   rejectUnauthorized: false
 });
 
+/**
+ * Retry helper function with exponential backoff
+ * Retries a function up to maxRetries times with exponential backoff on 503 errors
+ */
+async function retryWithBackoff<T>(
+  fn: () => Promise<T>,
+  maxRetries: number = 4,
+  baseDelay: number = 2000,
+  context: string = ''
+): Promise<T> {
+  let lastError: any;
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (error: any) {
+      lastError = error;
+
+      // Check if it's a 503 error (or network error)
+      const is503 = error.response?.status === 503;
+      const isNetworkError = !error.response && error.code;
+
+      if ((is503 || isNetworkError) && attempt < maxRetries) {
+        const delay = baseDelay * Math.pow(2, attempt);
+        console.log(`${context} Attempt ${attempt + 1}/${maxRetries + 1} failed (${is503 ? '503 Service Unavailable' : error.message}), retrying in ${delay}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      } else {
+        // Not a retryable error or max retries reached
+        break;
+      }
+    }
+  }
+
+  throw lastError;
+}
+
 export interface ScrapedAnswer {
   id: string;
   questionNumber?: string;
@@ -376,16 +412,21 @@ export async function scrapeParliamentaryAnswers(): Promise<AnswersResponse> {
   try {
     console.log('[Parliamentary Answers Scraper] Fetching oral answers from Parliament website...');
 
-    const response = await axios.get(sourceUrl, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-        'Accept-Language': 'en-US,en;q=0.5,ms;q=0.3',
-        'Referer': 'https://www.parlimen.gov.my/',
-      },
-      timeout: 30000,
-      httpsAgent,
-    });
+    const response = await retryWithBackoff(
+      () => axios.get(sourceUrl, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+          'Accept-Language': 'en-US,en;q=0.5,ms;q=0.3',
+          'Referer': 'https://www.parlimen.gov.my/',
+        },
+        timeout: 30000,
+        httpsAgent,
+      }),
+      4,
+      2000,
+      '[Parliamentary Answers Scraper]'
+    );
 
     const html = response.data;
     const $ = cheerio.load(html);
@@ -774,16 +815,21 @@ export async function scrapeParlimen15Archive(): Promise<{
   try {
     console.log('[Parlimen 15 Archive] Fetching archive page...');
 
-    // First, get the current archive page
-    const response = await axios.get(archiveUrl, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-        'Accept-Language': 'en-US,en;q=0.5,ms;q=0.3',
-      },
-      timeout: 30000,
-      httpsAgent,
-    });
+    // First, get the current archive page with retry logic
+    const response = await retryWithBackoff(
+      () => axios.get(archiveUrl, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+          'Accept-Language': 'en-US,en;q=0.5,ms;q=0.3',
+        },
+        timeout: 30000,
+        httpsAgent,
+      }),
+      4,
+      2000,
+      '[Parlimen 15 Archive]'
+    );
 
     const html = response.data;
 
@@ -848,17 +894,23 @@ export async function scrapeParlimen15Archive(): Promise<{
         formData.append('DATETYPE', '0'); // All dates
         formData.append('str', ''); // Empty search string to get all results
 
-        const searchResponse = await axios.post(searchUrl, formData, {
-          headers: {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-            'Accept-Language': 'en-US,en;q=0.5,ms;q=0.3',
-            'Content-Type': 'application/x-www-form-urlencoded',
-            'Referer': archiveUrl,
-          },
-          timeout: 30000,
-          httpsAgent,
-        });
+        // Use retry logic for search requests
+        const searchResponse = await retryWithBackoff(
+          () => axios.post(searchUrl, formData, {
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+              'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+              'Accept-Language': 'en-US,en;q=0.5,ms;q=0.3',
+              'Content-Type': 'application/x-www-form-urlencoded',
+              'Referer': archiveUrl,
+            },
+            timeout: 30000,
+            httpsAgent,
+          }),
+          4,
+          2000,
+          `[Parlimen 15 Archive] Session ${sessionCode}:`
+        );
 
         const searchHtml = searchResponse.data;
         const searchLinks = extractPdfLinksFromPage(searchHtml, baseUrl);
@@ -882,7 +934,8 @@ export async function scrapeParlimen15Archive(): Promise<{
         }
 
         // Add delay between requests to avoid overwhelming the server
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        // Increased to 3 seconds to be more respectful to the Parliament server
+        await new Promise(resolve => setTimeout(resolve, 3000));
 
       } catch (error: any) {
         console.log(`[Parlimen 15 Archive]   ✗ Error searching session ${sessionCode}: ${error.message}`);
