@@ -118,35 +118,39 @@ export default function MPProfile() {
       fullTextUrl?: string;
     }> = [];
 
-    // Add Hansard oral questions
-    parliamentaryQuestions
-      .filter(q => q.questionType?.toLowerCase() === 'oral' || q.questionType?.toLowerCase() === 'lisan')
-      .forEach(q => {
+    // Add Hansard oral questions (with safety check)
+    if (parliamentaryQuestions && Array.isArray(parliamentaryQuestions)) {
+      parliamentaryQuestions
+        .filter(q => q.questionType?.toLowerCase() === 'oral' || q.questionType?.toLowerCase() === 'lisan')
+        .forEach(q => {
+          combined.push({
+            id: q.id,
+            questionText: q.questionText,
+            dateAsked: q.dateAsked.toString(),
+            ministry: q.ministry,
+            answerStatus: q.answerStatus,
+            questionType: 'Oral',
+            source: 'Hansard',
+            hansardReference: q.hansardReference || undefined,
+          });
+        });
+    }
+
+    // Add oral answers from PDFs (with safety check)
+    if (oralAnswersList && Array.isArray(oralAnswersList)) {
+      oralAnswersList.forEach(answer => {
         combined.push({
-          id: q.id,
-          questionText: q.questionText,
-          dateAsked: q.dateAsked.toString(),
-          ministry: q.ministry,
-          answerStatus: q.answerStatus,
+          id: answer.id,
+          questionText: answer.questionText || answer.title,
+          dateAsked: answer.dateAsked || '',
+          ministry: answer.answererMinistry || 'Unknown Ministry',
+          answerStatus: answer.status,
           questionType: 'Oral',
-          source: 'Hansard',
-          hansardReference: q.hansardReference || undefined,
+          source: 'Jawapan Lisan PDF',
+          fullTextUrl: answer.fullTextUrl || undefined,
         });
       });
-
-    // Add oral answers from PDFs
-    oralAnswersList.forEach(answer => {
-      combined.push({
-        id: answer.id,
-        questionText: answer.questionText || answer.title,
-        dateAsked: answer.dateAsked || '',
-        ministry: answer.answererMinistry || 'Unknown Ministry',
-        answerStatus: answer.status,
-        questionType: 'Oral',
-        source: 'Jawapan Lisan PDF',
-        fullTextUrl: answer.fullTextUrl || undefined,
-      });
-    });
+    }
 
     // Sort by date (newest first)
     return combined.sort((a, b) => {
