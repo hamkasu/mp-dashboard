@@ -209,13 +209,6 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
                   <Scale className="w-4 h-4 mr-2" />
                   <span>Court Cases Admin</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem
-                  onSelect={() => setLocation("/mp-status-admin")}
-                  data-testid="nav-mp-status-admin"
-                >
-                  <UserX className="w-4 h-4 mr-2" />
-                  <span>MP Status Admin</span>
-                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           )}
