@@ -91,9 +91,12 @@ export function MPCard({ mp, bills, oralQuestions, languageStats }: MPCardProps)
     : 0;
   const speakingColor = getSpeakingColor(speakingRate);
 
+  // Check if MP has passed away
+  const isDeceased = mp.termEndDate && new Date(mp.termEndDate) <= new Date();
+
   return (
     <Link href={`/mp/${mp.id}`}>
-      <Card 
+      <Card
         className="hover-elevate overflow-hidden transition-shadow duration-200 cursor-pointer h-full"
         data-testid={`card-mp-${mp.id}`}
       >
@@ -102,7 +105,7 @@ export function MPCard({ mp, bills, oralQuestions, languageStats }: MPCardProps)
             <img
               src={mp.photoUrl}
               alt={mp.name}
-              className="object-cover w-full h-full"
+              className={`object-cover w-full h-full ${isDeceased ? 'opacity-60 grayscale' : ''}`}
               loading="lazy"
               decoding="async"
               fetchPriority="low"
@@ -110,6 +113,11 @@ export function MPCard({ mp, bills, oralQuestions, languageStats }: MPCardProps)
           ) : (
             <div className="w-full h-full flex items-center justify-center bg-muted">
               <UserCircle className="w-24 h-24 text-muted-foreground/50" />
+            </div>
+          )}
+          {isDeceased && (
+            <div className="absolute top-0 left-0 right-0 bg-black/80 text-white px-3 py-1.5 text-xs font-medium text-center">
+              Former MP (Deceased)
             </div>
           )}
         </div>
