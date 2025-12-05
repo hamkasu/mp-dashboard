@@ -81,6 +81,7 @@ function Router() {
         <Route path="/constituency-analysis" component={ConstituencyAnalysis} />
         <Route path="/analytics" component={Analytics} />
         <Route path="/admin-login" component={AdminLogin} />
+        <Route path="/admin/login" component={AdminLogin} />
         <Route path="/court-cases-admin" component={CourtCasesAdmin} />
         <Route path="/mp-status-admin" component={MPStatusAdmin} />
         <Route component={NotFound} />
