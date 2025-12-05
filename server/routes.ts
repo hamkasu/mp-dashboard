@@ -451,7 +451,14 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   // Get statistics
   app.get("/api/stats", async (_req, res) => {
     try {
-      const mps = await storage.getAllMps();
+      const allMps = await storage.getAllMps();
+
+      // Filter to only include active MPs (not deceased or resigned)
+      const now = new Date();
+      const mps = allMps.filter(mp => {
+        if (!mp.termEndDate) return true;
+        return new Date(mp.termEndDate) > now;
+      });
 
       // Calculate party breakdown
       const partyBreakdown = mps.reduce((acc, mp) => {
