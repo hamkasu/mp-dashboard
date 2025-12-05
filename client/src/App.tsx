@@ -39,6 +39,7 @@ const Courts = lazy(() => import("@/pages/Courts"));
 const Bills = lazy(() => import("@/pages/Bills"));
 const ParliamentaryAnswers = lazy(() => import("@/pages/ParliamentaryAnswers"));
 const ParliamentaryAnswersAdmin = lazy(() => import("@/pages/ParliamentaryAnswersAdmin"));
+const MPStatusAdmin = lazy(() => import("@/pages/MPStatusAdmin"));
 
 // Loading component
 function PageLoader() {
@@ -81,6 +82,7 @@ function Router() {
         <Route path="/analytics" component={Analytics} />
         <Route path="/admin-login" component={AdminLogin} />
         <Route path="/court-cases-admin" component={CourtCasesAdmin} />
+        <Route path="/mp-status-admin" component={MPStatusAdmin} />
         <Route component={NotFound} />
       </Switch>
     </Suspense>
