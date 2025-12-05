@@ -1,7 +1,9 @@
-# Use Node 20 (canvas has prebuilt binaries for this version)
-FROM node:20-bullseye-slim
+# Multi-stage build for faster builds and smaller images
 
-# Install native dependencies required for pdf-parse/canvas
+# Stage 1: Builder - Install dependencies and build
+FROM node:20-bullseye-slim AS builder
+
+# Install build dependencies
 RUN apt-get update && apt-get install -y \
     build-essential \
     libcairo2-dev \
@@ -14,24 +16,53 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /app
 
-# Copy package files
+# Copy package files first (better caching)
 COPY package*.json ./
 
 # Install ALL dependencies (including dev) needed for building
-RUN npm ci
+RUN npm ci --prefer-offline --no-audit
 
-# Copy application files
-COPY . .
+# Copy source files (separate layer for better caching)
+COPY shared ./shared
+COPY client ./client
+COPY server ./server
+COPY *.ts *.js *.json ./
 
-# Build TypeScript - fail if build fails
+# Build the application
 RUN npm run build
 
-# Remove dev dependencies after build to reduce image size
-RUN npm prune --production
+# Remove dev dependencies
+RUN npm prune --production --no-audit
+
+# Stage 2: Production - Copy only necessary files
+FROM node:20-bullseye-slim AS production
+
+# Install only runtime dependencies (no build tools)
+RUN apt-get update && apt-get install -y \
+    libcairo2 \
+    libpango-1.0-0 \
+    libjpeg62-turbo \
+    libgif7 \
+    librsvg2-2 \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+
+# Copy production node_modules from builder
+COPY --from=builder /app/node_modules ./node_modules
+
+# Copy built application from builder
+COPY --from=builder /app/dist ./dist
+
+# Copy database schema
+COPY --from=builder /app/shared ./shared
 
 # Railway injects PORT environment variable automatically
-# Default to 5000 for local testing
 ENV PORT=5000
+ENV NODE_ENV=production
 
 EXPOSE 5000
 
