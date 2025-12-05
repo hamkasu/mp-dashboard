@@ -105,12 +105,12 @@ export function StatisticsCards({ stats, filteredStats, isLoading, hasPartyFilte
           </CardHeader>
           <CardContent>
             <div className="text-3xl md:text-4xl font-bold">
-              {governmentMps}
+              {stats.partyBreakdown.length}
             </div>
-            <p className="text-xs text-muted-foreground mt-1">
+            <p className="text-sm font-medium mt-1">
               Government {governmentMps} MPs
             </p>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-sm font-medium">
               Opposition {oppositionMps} MPs
             </p>
           </CardContent>
