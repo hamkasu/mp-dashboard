@@ -830,3 +830,46 @@ export const insertParliamentaryAnswerPdfFileSchema = createInsertSchema(parliam
 
 export type InsertParliamentaryAnswerPdfFile = z.infer<typeof insertParliamentaryAnswerPdfFileSchema>;
 export type ParliamentaryAnswerPdfFile = typeof parliamentaryAnswerPdfFiles.$inferSelect;
+
+export const dunMembers = pgTable("dun_members", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  state: text("state").notNull(),
+  constituencyCode: text("constituency_code").notNull(),
+  constituencyName: text("constituency_name").notNull(),
+  name: text("name").notNull(),
+  title: text("title"),
+  party: text("party"),
+  photoUrl: text("photo_url"),
+  detailUrl: text("detail_url"),
+  // Sarawak DUN salary and allowance fields (RM per month unless specified)
+  baseSalary: integer("base_salary").default(11130),
+  serviceAllowance: integer("service_allowance").default(3870),
+  constituencyAllowance: integer("constituency_allowance").default(10500), // 6,000-15,000 average
+  sittingAllowance: integer("sitting_allowance").default(450), // per day from Nov 2024
+  travelAllowance: integer("travel_allowance").default(2000),
+  entertainmentAllowance: integer("entertainment_allowance").default(1500),
+  housingAllowance: integer("housing_allowance").default(3000),
+  totalMonthlyAllowance: integer("total_monthly_allowance").default(40000), // 25,000-40,000 for ordinary ADUN
+  // Poverty and economic data from DOSM Kawasanku
+  povertyRate: integer("poverty_rate"), // percentage * 10 (e.g. 125 = 12.5%)
+  householdIncome: integer("household_income"), // median household income in RM
+  giniCoefficient: integer("gini_coefficient"), // * 1000 (e.g. 350 = 0.350)
+  unemploymentRate: integer("unemployment_rate"), // percentage * 10
+  population: integer("population"),
+  scrapedAt: timestamp("scraped_at").notNull().default(sql`NOW()`),
+  createdAt: timestamp("created_at").notNull().default(sql`NOW()`),
+  updatedAt: timestamp("updated_at").notNull().default(sql`NOW()`),
+});
+
+export const insertDunMemberSchema = createInsertSchema(dunMembers).omit({
+  id: true,
+  scrapedAt: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const updateDunMemberSchema = insertDunMemberSchema.partial();
+
+export type InsertDunMember = z.infer<typeof insertDunMemberSchema>;
+export type UpdateDunMember = z.infer<typeof updateDunMemberSchema>;
+export type DunMember = typeof dunMembers.$inferSelect;

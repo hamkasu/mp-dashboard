@@ -2,10 +2,10 @@
  * Copyright by Calmic Sdn Bhd
  */
 
-import { type Mp, type InsertMp, type CourtCase, type InsertCourtCase, type SprmInvestigation, type InsertSprmInvestigation, type LegislativeProposal, type InsertLegislativeProposal, type DebateParticipation, type InsertDebateParticipation, type ParliamentaryQuestion, type InsertParliamentaryQuestion, type HansardRecord, type InsertHansardRecord, type UpdateHansardRecord, type PageView, type UserActivityLog, type InsertUserActivityLog, type Constituency, type InsertConstituency, type SarawakDunMember, type InsertSarawakDunMember } from "@shared/schema";
+import { type Mp, type InsertMp, type CourtCase, type InsertCourtCase, type SprmInvestigation, type InsertSprmInvestigation, type LegislativeProposal, type InsertLegislativeProposal, type DebateParticipation, type InsertDebateParticipation, type ParliamentaryQuestion, type InsertParliamentaryQuestion, type HansardRecord, type InsertHansardRecord, type UpdateHansardRecord, type PageView, type UserActivityLog, type InsertUserActivityLog, type Constituency, type InsertConstituency, type DunMember, type InsertDunMember } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db, pool } from "./db";
-import { mps, courtCases, sprmInvestigations, legislativeProposals, debateParticipations, parliamentaryQuestions, hansardRecords, pageViews, userActivityLog, constituencies, sarawakDunMembers } from "@shared/schema";
+import { mps, courtCases, sprmInvestigations, legislativeProposals, debateParticipations, parliamentaryQuestions, hansardRecords, pageViews, userActivityLog, constituencies, dunMembers } from "@shared/schema";
 import { eq, sql, desc } from "drizzle-orm";
 import { MPNameMatcher } from "./mp-name-matcher";
 import { HansardScraper } from "./hansard-scraper";
@@ -147,12 +147,14 @@ export interface IStorage {
   saveQaCache(data: any): Promise<any>;
   getHansardById(id: string): Promise<HansardRecord | undefined>;
 
-  // Sarawak DUN methods
-  getAllSarawakDunMembers(): Promise<SarawakDunMember[]>;
-  createSarawakDunMember(member: InsertSarawakDunMember): Promise<SarawakDunMember>;
-  deleteAllSarawakDunMembers(): Promise<number>;
-  getSarawakDunScraperStatus(): Promise<any>;
-  setSarawakDunScraperStatus(status: any): Promise<void>;
+  // DUN Member methods
+  getDunMember(id: string): Promise<DunMember | undefined>;
+  getDunMembersByState(state: string): Promise<DunMember[]>;
+  getAllDunMembers(): Promise<DunMember[]>;
+  createDunMember(member: InsertDunMember): Promise<DunMember>;
+  updateDunMember(id: string, member: Partial<InsertDunMember>): Promise<DunMember | undefined>;
+  deleteDunMember(id: string): Promise<boolean>;
+  deleteAllDunMembersByState(state: string): Promise<number>;
 }
 
 export class MemStorage implements IStorage {
@@ -1672,31 +1674,44 @@ export class MemStorage implements IStorage {
     return data;
   }
 
-  // Sarawak DUN methods
-  async getAllSarawakDunMembers(): Promise<SarawakDunMember[]> {
+  // DUN Member methods (stub implementations for MemStorage)
+  async getDunMember(id: string): Promise<DunMember | undefined> {
+    return undefined;
+  }
+
+  async getDunMembersByState(state: string): Promise<DunMember[]> {
     return [];
   }
 
-  async createSarawakDunMember(member: InsertSarawakDunMember): Promise<SarawakDunMember> {
-    const newMember = {
+  async getAllDunMembers(): Promise<DunMember[]> {
+    return [];
+  }
+
+  async createDunMember(member: InsertDunMember): Promise<DunMember> {
+    const id = randomUUID();
+    return {
       ...member,
-      id: randomUUID(),
+      id,
+      title: member.title ?? null,
+      party: member.party ?? null,
+      photoUrl: member.photoUrl ?? null,
+      detailUrl: member.detailUrl ?? null,
+      scrapedAt: new Date(),
       createdAt: new Date(),
       updatedAt: new Date(),
-    } as SarawakDunMember;
-    return newMember;
+    };
   }
 
-  async deleteAllSarawakDunMembers(): Promise<number> {
+  async updateDunMember(id: string, member: Partial<InsertDunMember>): Promise<DunMember | undefined> {
+    return undefined;
+  }
+
+  async deleteDunMember(id: string): Promise<boolean> {
+    return false;
+  }
+
+  async deleteAllDunMembersByState(state: string): Promise<number> {
     return 0;
-  }
-
-  async getSarawakDunScraperStatus(): Promise<any> {
-    return null;
-  }
-
-  async setSarawakDunScraperStatus(status: any): Promise<void> {
-    // MemStorage doesn't persist scraper status
   }
 }
 
@@ -2837,35 +2852,42 @@ export class DbStorage implements IStorage {
     return result[0];
   }
 
-  // Sarawak DUN methods
-  async getAllSarawakDunMembers(): Promise<SarawakDunMember[]> {
-    try {
-      const result = await db.select().from(sarawakDunMembers);
-      return result ?? [];
-    } catch (error) {
-      console.error("Error in getAllSarawakDunMembers:", error);
-      return [];
-    }
-  }
-
-  async createSarawakDunMember(member: InsertSarawakDunMember): Promise<SarawakDunMember> {
-    const result = await db.insert(sarawakDunMembers).values(member).returning();
+  // DUN Member methods
+  async getDunMember(id: string): Promise<DunMember | undefined> {
+    const result = await db.select().from(dunMembers).where(eq(dunMembers.id, id));
     return result[0];
   }
 
-  async deleteAllSarawakDunMembers(): Promise<number> {
-    const result = await db.delete(sarawakDunMembers);
-    return result.rowCount ?? 0;
+  async getDunMembersByState(state: string): Promise<DunMember[]> {
+    return await db.select().from(dunMembers).where(eq(dunMembers.state, state)).orderBy(dunMembers.constituencyCode);
   }
 
-  async getSarawakDunScraperStatus(): Promise<any> {
-    // For now, store in memory or use a separate table
-    // This is a simple in-memory implementation
-    return (global as any).sarawakDunScraperStatus || null;
+  async getAllDunMembers(): Promise<DunMember[]> {
+    return await db.select().from(dunMembers).orderBy(dunMembers.state, dunMembers.constituencyCode);
   }
 
-  async setSarawakDunScraperStatus(status: any): Promise<void> {
-    (global as any).sarawakDunScraperStatus = status;
+  async createDunMember(member: InsertDunMember): Promise<DunMember> {
+    const result = await db.insert(dunMembers).values(member).returning();
+    return result[0];
+  }
+
+  async updateDunMember(id: string, member: Partial<InsertDunMember>): Promise<DunMember | undefined> {
+    const result = await db
+      .update(dunMembers)
+      .set({ ...member, updatedAt: new Date() })
+      .where(eq(dunMembers.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async deleteDunMember(id: string): Promise<boolean> {
+    const result = await db.delete(dunMembers).where(eq(dunMembers.id, id)).returning();
+    return result.length > 0;
+  }
+
+  async deleteAllDunMembersByState(state: string): Promise<number> {
+    const result = await db.delete(dunMembers).where(eq(dunMembers.state, state)).returning();
+    return result.length;
   }
 }
 

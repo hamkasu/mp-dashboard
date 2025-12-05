@@ -155,37 +155,110 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
               <span>{t('nav.bills')}</span>
             </Button>
           </Link>
-          <a href="https://mydeclaration.sprm.gov.my/" target="_blank" rel="noopener noreferrer">
-            <Button
-              variant="ghost"
-              size="sm"
-              data-testid="nav-asset-declaration"
-              className="gap-2"
-            >
-              <FileText className="w-4 h-4" />
-              <span>{t('nav.assetDeclaration')}</span>
-            </Button>
-          </a>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
-                variant={location === "/sarawak-dun" ? "secondary" : "ghost"}
+                variant={location.startsWith("/dun") ? "secondary" : "ghost"}
                 size="sm"
                 data-testid="nav-dun-dropdown"
                 className="gap-2"
               >
                 <Building2 className="w-4 h-4" />
-                <span>DUN</span>
+                <span>{t('nav.dun')}</span>
                 <ChevronDown className="w-3 h-3 ml-1" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="start">
+            <DropdownMenuContent align="start" className="max-h-80 overflow-y-auto">
               <DropdownMenuItem
-                onSelect={() => setLocation("/sarawak-dun")}
-                data-testid="nav-sarawak-dun"
+                onSelect={() => setLocation("/dun/johor")}
+                data-testid="nav-dun-johor"
               >
                 <Building2 className="w-4 h-4 mr-2" />
-                <span>Sarawak DUN</span>
+                <span>Johor</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={() => setLocation("/dun/kedah")}
+                data-testid="nav-dun-kedah"
+              >
+                <Building2 className="w-4 h-4 mr-2" />
+                <span>Kedah</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={() => setLocation("/dun/kelantan")}
+                data-testid="nav-dun-kelantan"
+              >
+                <Building2 className="w-4 h-4 mr-2" />
+                <span>Kelantan</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={() => setLocation("/dun/melaka")}
+                data-testid="nav-dun-melaka"
+              >
+                <Building2 className="w-4 h-4 mr-2" />
+                <span>Melaka</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={() => setLocation("/dun/negeri-sembilan")}
+                data-testid="nav-dun-negeri-sembilan"
+              >
+                <Building2 className="w-4 h-4 mr-2" />
+                <span>Negeri Sembilan</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={() => setLocation("/dun/pahang")}
+                data-testid="nav-dun-pahang"
+              >
+                <Building2 className="w-4 h-4 mr-2" />
+                <span>Pahang</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={() => setLocation("/dun/perak")}
+                data-testid="nav-dun-perak"
+              >
+                <Building2 className="w-4 h-4 mr-2" />
+                <span>Perak</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={() => setLocation("/dun/perlis")}
+                data-testid="nav-dun-perlis"
+              >
+                <Building2 className="w-4 h-4 mr-2" />
+                <span>Perlis</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={() => setLocation("/dun/pulau-pinang")}
+                data-testid="nav-dun-pulau-pinang"
+              >
+                <Building2 className="w-4 h-4 mr-2" />
+                <span>Pulau Pinang</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={() => setLocation("/dun/sabah")}
+                data-testid="nav-dun-sabah"
+              >
+                <Building2 className="w-4 h-4 mr-2" />
+                <span>Sabah</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={() => setLocation("/dun/sarawak")}
+                data-testid="nav-dun-sarawak"
+              >
+                <Building2 className="w-4 h-4 mr-2" />
+                <span>Sarawak</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={() => setLocation("/dun/selangor")}
+                data-testid="nav-dun-selangor"
+              >
+                <Building2 className="w-4 h-4 mr-2" />
+                <span>Selangor</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={() => setLocation("/dun/terengganu")}
+                data-testid="nav-dun-terengganu"
+              >
+                <Building2 className="w-4 h-4 mr-2" />
+                <span>Terengganu</span>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
