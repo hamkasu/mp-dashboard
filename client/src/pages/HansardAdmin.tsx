@@ -728,6 +728,7 @@ export default function HansardAdmin() {
                 <SelectContent>
                   {allMps
                     .filter((mp) => !mp.termEndDate || new Date(mp.termEndDate) > new Date())
+                    .sort((a, b) => a.constituency.localeCompare(b.constituency) || a.name.localeCompare(b.name))
                     .map((mp) => (
                       <SelectItem key={mp.id} value={mp.id}>
                         {mp.name} - {mp.constituency}
