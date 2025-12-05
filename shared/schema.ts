@@ -71,6 +71,28 @@ export const insertMpSchema = createInsertSchema(mps).omit({
 export type InsertMp = z.infer<typeof insertMpSchema>;
 export type Mp = typeof mps.$inferSelect;
 
+// Sarawak State Legislative Assembly (DUN) Members
+export const sarawakDunMembers = pgTable("sarawak_dun_members", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  constituency: text("constituency").notNull(),
+  constituencyNumber: text("constituency_number").notNull(),
+  party: text("party").notNull(),
+  photoUrl: text("photo_url"),
+  profileUrl: text("profile_url"),
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+  updatedAt: timestamp("updated_at").notNull().default(sql`now()`),
+});
+
+export const insertSarawakDunMemberSchema = createInsertSchema(sarawakDunMembers).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertSarawakDunMember = z.infer<typeof insertSarawakDunMemberSchema>;
+export type SarawakDunMember = typeof sarawakDunMembers.$inferSelect;
+
 export const courtCases = pgTable("court_cases", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   mpId: varchar("mp_id").notNull().references(() => mps.id),

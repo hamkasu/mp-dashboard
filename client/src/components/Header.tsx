@@ -3,7 +3,7 @@
  * Updated: Parliamentary Answers Navigation (2025-12-02)
  */
 
-import { Search, Menu, Home, FileText, BookOpen, UserCheck, Calculator, BarChart3, ExternalLink, ChevronDown, AlertCircle, GraduationCap, TrendingUp, Scale, Shield, MessageSquare, Edit, Gavel, UserX } from "lucide-react";
+import { Search, Menu, Home, FileText, BookOpen, UserCheck, Calculator, BarChart3, ExternalLink, ChevronDown, AlertCircle, GraduationCap, TrendingUp, Scale, Shield, MessageSquare, Edit, Gavel, UserX, Building2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -166,6 +166,29 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
               <span>{t('nav.assetDeclaration')}</span>
             </Button>
           </a>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant={location === "/sarawak-dun" ? "secondary" : "ghost"}
+                size="sm"
+                data-testid="nav-dun-dropdown"
+                className="gap-2"
+              >
+                <Building2 className="w-4 h-4" />
+                <span>DUN</span>
+                <ChevronDown className="w-3 h-3 ml-1" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start">
+              <DropdownMenuItem
+                onSelect={() => setLocation("/sarawak-dun")}
+                data-testid="nav-sarawak-dun"
+              >
+                <Building2 className="w-4 h-4 mr-2" />
+                <span>Sarawak DUN</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           {authStatus?.isAdmin && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>

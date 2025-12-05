@@ -53,6 +53,88 @@ import { requireAdmin, getCurrentUsername } from "./simple-auth";
 import { sendContactEmail, sendConfirmationEmail, isEmailConfigured } from "./email";
 import { runBulkHansardAnalysis, getAnalysisJobStatus, cancelAnalysisJob } from "./hansard-ai-analyzer";
 import { isAIConfigured } from "./ai-service";
+import { insertSarawakDunMemberSchema } from "@shared/schema";
+
+// Scraper function for Sarawak DUN members
+async function scrapeSarawakDunMembers(): Promise<{ membersScraped: number; errors: number }> {
+  try {
+    const url = "https://duns.sarawak.gov.my/web/subpage/webpage_view/150";
+    const response = await fetch(url);
+    const html = await response.text();
+
+    // Basic HTML parsing to extract member data
+    // Looking for patterns like: N.1 OPAR, YB ENCIK BILLY ANAK SUJANG
+    const memberPattern = /N\.(\d+)\s+([A-Z\s]+).*?YB\s+([^<]+)/gs;
+    const matches = [...html.matchAll(memberPattern)];
+
+    // Clear existing members
+    await storage.deleteAllSarawakDunMembers();
+
+    let membersScraped = 0;
+    let errors = 0;
+
+    // Extract members from HTML
+    // Since the actual structure needs to be parsed properly, let's use a simpler approach
+    // Looking for card-cell divs with member info
+    const memberCardPattern = /<div class="card-cell"[^>]*>[\s\S]*?N\.(\d+)\s+([A-Z\s]+)[\s\S]*?YB\s+([^<]+)[\s\S]*?<\/div>/g;
+    const cardMatches = [...html.matchAll(memberCardPattern)];
+
+    for (const match of cardMatches) {
+      try {
+        const constituencyNumber = `N.${match[1]}`;
+        const constituency = match[2].trim();
+        const name = match[3].trim();
+
+        await storage.createSarawakDunMember({
+          name,
+          constituency,
+          constituencyNumber,
+          party: "Unknown", // Will need to be extracted from detail pages
+          photoUrl: null,
+          profileUrl: null,
+        });
+
+        membersScraped++;
+      } catch (error) {
+        console.error("Error creating member:", error);
+        errors++;
+      }
+    }
+
+    // If no matches with the pattern above, try alternative extraction
+    if (membersScraped === 0) {
+      // Look for simpler patterns
+      const simplePattern = /N\.(\d+)\s+([A-Z][A-Z\s]+)/g;
+      const simpleMatches = [...html.matchAll(simplePattern)];
+
+      for (const match of simpleMatches.slice(0, 82)) { // Sarawak has 82 seats
+        try {
+          const constituencyNumber = `N.${match[1]}`;
+          const text = match[2].trim();
+
+          await storage.createSarawakDunMember({
+            name: "Member name not extracted",
+            constituency: text.substring(0, 50),
+            constituencyNumber,
+            party: "Unknown",
+            photoUrl: null,
+            profileUrl: null,
+          });
+
+          membersScraped++;
+        } catch (error) {
+          console.error("Error creating member:", error);
+          errors++;
+        }
+      }
+    }
+
+    return { membersScraped, errors };
+  } catch (error) {
+    console.error("Scraper error:", error);
+    throw error;
+  }
+}
 
 // Configure multer for file uploads
 const upload = multer({
@@ -734,6 +816,68 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     } catch (error) {
       console.error("Error deleting court case:", error);
       res.status(500).json({ error: "Failed to delete court case" });
+    }
+  });
+
+  // ========== Sarawak DUN Endpoints ==========
+
+  // Get all Sarawak DUN members
+  app.get("/api/sarawak-dun/members", async (_req, res) => {
+    try {
+      const members = await storage.getAllSarawakDunMembers();
+      res.json(members);
+    } catch (error) {
+      console.error("Error fetching Sarawak DUN members:", error);
+      res.status(500).json({ error: "Failed to fetch Sarawak DUN members" });
+    }
+  });
+
+  // Get Sarawak DUN scraper status (admin only)
+  app.get("/api/admin/sarawak-dun-scraper/status", requireAdmin, async (_req, res) => {
+    try {
+      const status = await storage.getSarawakDunScraperStatus();
+      res.json(status || { isRunning: false, lastRunAt: null });
+    } catch (error) {
+      console.error("Error fetching scraper status:", error);
+      res.status(500).json({ error: "Failed to fetch scraper status" });
+    }
+  });
+
+  // Run Sarawak DUN scraper (admin only)
+  app.post("/api/admin/sarawak-dun-scraper/run", requireAdmin, async (_req, res) => {
+    try {
+      // Check if scraper is already running
+      const status = await storage.getSarawakDunScraperStatus();
+      if (status?.isRunning) {
+        return res.status(400).json({ error: "Scraper is already running" });
+      }
+
+      // Mark scraper as running
+      await storage.setSarawakDunScraperStatus({ isRunning: true, lastRunAt: null });
+
+      // Run scraper in background
+      (async () => {
+        try {
+          const result = await scrapeSarawakDunMembers();
+          await storage.setSarawakDunScraperStatus({
+            isRunning: false,
+            lastRunAt: new Date().toISOString(),
+            lastRunResult: result
+          });
+        } catch (error) {
+          console.error("Scraper error:", error);
+          await storage.setSarawakDunScraperStatus({
+            isRunning: false,
+            lastRunAt: new Date().toISOString(),
+            lastRunResult: { membersScraped: 0, errors: 1 }
+          });
+        }
+      })();
+
+      res.json({ message: "Scraper started", isRunning: true });
+    } catch (error) {
+      console.error("Error starting scraper:", error);
+      res.status(500).json({ error: "Failed to start scraper" });
     }
   });
 

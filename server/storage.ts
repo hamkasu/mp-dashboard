@@ -2,10 +2,10 @@
  * Copyright by Calmic Sdn Bhd
  */
 
-import { type Mp, type InsertMp, type CourtCase, type InsertCourtCase, type SprmInvestigation, type InsertSprmInvestigation, type LegislativeProposal, type InsertLegislativeProposal, type DebateParticipation, type InsertDebateParticipation, type ParliamentaryQuestion, type InsertParliamentaryQuestion, type HansardRecord, type InsertHansardRecord, type UpdateHansardRecord, type PageView, type UserActivityLog, type InsertUserActivityLog, type Constituency, type InsertConstituency } from "@shared/schema";
+import { type Mp, type InsertMp, type CourtCase, type InsertCourtCase, type SprmInvestigation, type InsertSprmInvestigation, type LegislativeProposal, type InsertLegislativeProposal, type DebateParticipation, type InsertDebateParticipation, type ParliamentaryQuestion, type InsertParliamentaryQuestion, type HansardRecord, type InsertHansardRecord, type UpdateHansardRecord, type PageView, type UserActivityLog, type InsertUserActivityLog, type Constituency, type InsertConstituency, type SarawakDunMember, type InsertSarawakDunMember } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db, pool } from "./db";
-import { mps, courtCases, sprmInvestigations, legislativeProposals, debateParticipations, parliamentaryQuestions, hansardRecords, pageViews, userActivityLog, constituencies } from "@shared/schema";
+import { mps, courtCases, sprmInvestigations, legislativeProposals, debateParticipations, parliamentaryQuestions, hansardRecords, pageViews, userActivityLog, constituencies, sarawakDunMembers } from "@shared/schema";
 import { eq, sql, desc } from "drizzle-orm";
 import { MPNameMatcher } from "./mp-name-matcher";
 import { HansardScraper } from "./hansard-scraper";
@@ -146,6 +146,13 @@ export interface IStorage {
   getQaCache(hansardRecordId: string, question: string): Promise<any | undefined>;
   saveQaCache(data: any): Promise<any>;
   getHansardById(id: string): Promise<HansardRecord | undefined>;
+
+  // Sarawak DUN methods
+  getAllSarawakDunMembers(): Promise<SarawakDunMember[]>;
+  createSarawakDunMember(member: InsertSarawakDunMember): Promise<SarawakDunMember>;
+  deleteAllSarawakDunMembers(): Promise<number>;
+  getSarawakDunScraperStatus(): Promise<any>;
+  setSarawakDunScraperStatus(status: any): Promise<void>;
 }
 
 export class MemStorage implements IStorage {
@@ -1664,6 +1671,33 @@ export class MemStorage implements IStorage {
   async saveQaCache(data: any): Promise<any> {
     return data;
   }
+
+  // Sarawak DUN methods
+  async getAllSarawakDunMembers(): Promise<SarawakDunMember[]> {
+    return [];
+  }
+
+  async createSarawakDunMember(member: InsertSarawakDunMember): Promise<SarawakDunMember> {
+    const newMember = {
+      ...member,
+      id: randomUUID(),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    } as SarawakDunMember;
+    return newMember;
+  }
+
+  async deleteAllSarawakDunMembers(): Promise<number> {
+    return 0;
+  }
+
+  async getSarawakDunScraperStatus(): Promise<any> {
+    return null;
+  }
+
+  async setSarawakDunScraperStatus(status: any): Promise<void> {
+    // MemStorage doesn't persist scraper status
+  }
 }
 
 // Database storage implementation using Drizzle ORM
@@ -2801,6 +2835,37 @@ export class DbStorage implements IStorage {
     const { hansardQaCache } = await import("@shared/schema");
     const result = await db.insert(hansardQaCache).values(data).returning();
     return result[0];
+  }
+
+  // Sarawak DUN methods
+  async getAllSarawakDunMembers(): Promise<SarawakDunMember[]> {
+    try {
+      const result = await db.select().from(sarawakDunMembers);
+      return result ?? [];
+    } catch (error) {
+      console.error("Error in getAllSarawakDunMembers:", error);
+      return [];
+    }
+  }
+
+  async createSarawakDunMember(member: InsertSarawakDunMember): Promise<SarawakDunMember> {
+    const result = await db.insert(sarawakDunMembers).values(member).returning();
+    return result[0];
+  }
+
+  async deleteAllSarawakDunMembers(): Promise<number> {
+    const result = await db.delete(sarawakDunMembers);
+    return result.rowCount ?? 0;
+  }
+
+  async getSarawakDunScraperStatus(): Promise<any> {
+    // For now, store in memory or use a separate table
+    // This is a simple in-memory implementation
+    return (global as any).sarawakDunScraperStatus || null;
+  }
+
+  async setSarawakDunScraperStatus(status: any): Promise<void> {
+    (global as any).sarawakDunScraperStatus = status;
   }
 }
 
