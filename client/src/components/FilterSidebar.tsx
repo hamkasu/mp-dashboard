@@ -15,6 +15,8 @@ type SortOption = "name" | "attendance-best" | "attendance-worst" | "speeches-mo
 
 type CabinetFilter = "all" | "ministers" | "deputy-ministers" | "cabinet";
 
+type StatusFilter = "all" | "active" | "former";
+
 interface FilterSidebarProps {
   parties: { party: string; count: number }[];
   states: string[];
@@ -22,10 +24,12 @@ interface FilterSidebarProps {
   selectedStates: string[];
   sortBy: SortOption;
   cabinetFilter: CabinetFilter;
+  statusFilter: StatusFilter;
   onPartyToggle: (party: string) => void;
   onStateToggle: (state: string) => void;
   onSortChange: (sort: SortOption) => void;
   onCabinetFilterChange: (filter: CabinetFilter) => void;
+  onStatusFilterChange: (filter: StatusFilter) => void;
   onClearFilters: () => void;
   isMobile?: boolean;
   onClose?: () => void;
@@ -38,16 +42,18 @@ export function FilterSidebar({
   selectedStates,
   sortBy,
   cabinetFilter,
+  statusFilter,
   onPartyToggle,
   onStateToggle,
   onSortChange,
   onCabinetFilterChange,
+  onStatusFilterChange,
   onClearFilters,
   isMobile,
   onClose,
 }: FilterSidebarProps) {
   const { t } = useLanguage();
-  const hasActiveFilters = selectedParties.length > 0 || selectedStates.length > 0 || cabinetFilter !== "all";
+  const hasActiveFilters = selectedParties.length > 0 || selectedStates.length > 0 || cabinetFilter !== "all" || statusFilter !== "active";
 
   return (
     <div className="flex flex-col h-full">
@@ -164,6 +170,35 @@ export function FilterSidebar({
                 <RadioGroupItem value="deputy-ministers" id="cabinet-deputy" data-testid="radio-cabinet-deputy" />
                 <Label htmlFor="cabinet-deputy" className="text-sm font-normal cursor-pointer">
                   {t('filters.deputyMinistersOnly')}
+                </Label>
+              </div>
+            </RadioGroup>
+          </div>
+
+          <Separator />
+
+          {/* MP Status Filter */}
+          <div className="space-y-3">
+            <h3 className="text-sm font-medium uppercase tracking-wide">
+              {t('filters.mpStatus')}
+            </h3>
+            <RadioGroup value={statusFilter} onValueChange={(value) => onStatusFilterChange(value as StatusFilter)}>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="active" id="status-active" data-testid="radio-status-active" />
+                <Label htmlFor="status-active" className="text-sm font-normal cursor-pointer">
+                  {t('filters.activeMPs')}
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="all" id="status-all" data-testid="radio-status-all" />
+                <Label htmlFor="status-all" className="text-sm font-normal cursor-pointer">
+                  {t('filters.allMPs')}
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="former" id="status-former" data-testid="radio-status-former" />
+                <Label htmlFor="status-former" className="text-sm font-normal cursor-pointer">
+                  {t('filters.formerMPs')}
                 </Label>
               </div>
             </RadioGroup>

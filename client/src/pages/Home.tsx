@@ -34,6 +34,7 @@ interface PaginatedMpsResponse {
 
 type SortOption = "name" | "attendance-best" | "attendance-worst" | "speeches-most" | "speeches-fewest" | "poverty-highest" | "poverty-lowest" | "bills-raised" | "oral-questions" | "inappropriate-language";
 type CabinetFilter = "all" | "ministers" | "deputy-ministers" | "cabinet";
+type StatusFilter = "all" | "active" | "former";
 
 interface LanguageAnalysisMpStat {
   mpId: string;
@@ -50,6 +51,7 @@ export default function Home() {
   const [selectedStates, setSelectedStates] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState<SortOption>("name");
   const [cabinetFilter, setCabinetFilter] = useState<CabinetFilter>("all");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("active");
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [searchDialogOpen, setSearchDialogOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
@@ -69,8 +71,9 @@ export default function Home() {
     if (selectedParties.length > 0) params.set('parties', selectedParties.join(','));
     if (selectedStates.length > 0) params.set('states', selectedStates.join(','));
     if (cabinetFilter !== 'all') params.set('cabinet', cabinetFilter);
+    if (statusFilter !== 'all') params.set('status', statusFilter);
     return params.toString();
-  }, [currentPage, sortBy, searchQuery, selectedParties, selectedStates, cabinetFilter]);
+  }, [currentPage, sortBy, searchQuery, selectedParties, selectedStates, cabinetFilter, statusFilter]);
 
   // Use paginated API for standard sorts, non-paginated for special sorts
   const { data: paginatedData, isLoading: paginatedLoading } = useQuery<PaginatedMpsResponse>({
@@ -97,7 +100,7 @@ export default function Home() {
   // Reset to page 1 when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [sortBy, searchQuery, selectedParties, selectedStates, cabinetFilter]);
+  }, [sortBy, searchQuery, selectedParties, selectedStates, cabinetFilter, statusFilter]);
 
   const { data: stats, isLoading: statsLoading } = useQuery<{
     totalMps: number;
@@ -384,10 +387,15 @@ export default function Home() {
     setSelectedParties([]);
     setSelectedStates([]);
     setCabinetFilter("all");
+    setStatusFilter("active");
   };
 
   const handleCabinetFilterChange = (filter: CabinetFilter) => {
     setCabinetFilter(filter);
+  };
+
+  const handleStatusFilterChange = (filter: StatusFilter) => {
+    setStatusFilter(filter);
   };
 
   return (
@@ -412,10 +420,12 @@ export default function Home() {
             selectedStates={selectedStates}
             sortBy={sortBy}
             cabinetFilter={cabinetFilter}
+            statusFilter={statusFilter}
             onPartyToggle={handlePartyToggle}
             onStateToggle={handleStateToggle}
             onSortChange={setSortBy}
             onCabinetFilterChange={handleCabinetFilterChange}
+            onStatusFilterChange={handleStatusFilterChange}
             onClearFilters={handleClearFilters}
           />
         </aside>
@@ -430,10 +440,12 @@ export default function Home() {
               selectedStates={selectedStates}
               sortBy={sortBy}
               cabinetFilter={cabinetFilter}
+              statusFilter={statusFilter}
               onPartyToggle={handlePartyToggle}
               onStateToggle={handleStateToggle}
               onSortChange={setSortBy}
               onCabinetFilterChange={handleCabinetFilterChange}
+              onStatusFilterChange={handleStatusFilterChange}
               onClearFilters={handleClearFilters}
               isMobile
               onClose={() => setMobileFiltersOpen(false)}
