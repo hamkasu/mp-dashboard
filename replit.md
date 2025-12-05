@@ -5,6 +5,15 @@ This web application provides a comprehensive dashboard for Malaysian Members of
 
 ## Recent Changes
 
+### December 5, 2025 - Sarawak DUN (State Legislative Assembly) Members Page
+Added state-level tracking for Sarawak Dewan Undangan Negeri (DUN) members:
+- New `dunMembers` database table to store state assembly members with state, constituency, party, photo
+- Scraper fetches 82 members from official Sarawak DUN website (https://duns.sarawak.gov.my)
+- Accessible at `/dun/sarawak` route with navigation link in header DUN dropdown
+- Features: member cards with photos, party badges, constituency info, search functionality
+- Admin-only data refresh button (requires authentication to trigger scrape)
+- Key files: `server/sarawak-dun-scraper.ts`, `client/src/pages/DunSarawak.tsx`, `shared/schema.ts`
+
 ### November 29, 2025 - Party-Specific Statistics
 Added server-side filtered statistics when party filter is active:
 - New `/api/stats/filtered` endpoint calculates statistics for filtered MPs
