@@ -19,3 +19,24 @@ coverage
 *.swp
 *.swo
 *~
+# Exclude large PDF assets (154MB) - these should be in cloud storage
+attached_assets
+# Exclude test files
+*.test.ts
+*.test.tsx
+*.spec.ts
+*.spec.tsx
+# Exclude documentation
+README.md
+CONTRIBUTING.md
+docs/
+# Exclude development files
+.prettierrc
+.eslintrc*
+tsconfig.json
+vite.config.ts
+postcss.config.js
+tailwind.config.js
+# Exclude scripts not needed in production
+scripts/
+replit.md
