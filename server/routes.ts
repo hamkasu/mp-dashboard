@@ -212,7 +212,8 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       const parties = req.query.parties ? (req.query.parties as string).split(',') : [];
       const states = req.query.states ? (req.query.states as string).split(',') : [];
       const cabinetFilter = (req.query.cabinet as string) || 'all';
-      
+      const statusFilter = (req.query.status as string) || 'active';
+
       // Get all MPs (this is fast, just DB read)
       const allMps = await storage.getAllMps();
       
@@ -249,7 +250,15 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
             if (!role.includes('minister')) return false;
           }
         }
-        
+
+        // Status filter (active vs former/deceased MPs)
+        if (statusFilter !== 'all') {
+          const now = new Date();
+          const isFormer = mp.termEndDate && new Date(mp.termEndDate) <= now;
+          if (statusFilter === 'active' && isFormer) return false;
+          if (statusFilter === 'former' && !isFormer) return false;
+        }
+
         return true;
       });
       

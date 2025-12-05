@@ -387,10 +387,15 @@ export default function Home() {
     setSelectedParties([]);
     setSelectedStates([]);
     setCabinetFilter("all");
+    setStatusFilter("active");
   };
 
   const handleCabinetFilterChange = (filter: CabinetFilter) => {
     setCabinetFilter(filter);
+  };
+
+  const handleStatusFilterChange = (filter: StatusFilter) => {
+    setStatusFilter(filter);
   };
 
   return (
@@ -415,10 +420,12 @@ export default function Home() {
             selectedStates={selectedStates}
             sortBy={sortBy}
             cabinetFilter={cabinetFilter}
+            statusFilter={statusFilter}
             onPartyToggle={handlePartyToggle}
             onStateToggle={handleStateToggle}
             onSortChange={setSortBy}
             onCabinetFilterChange={handleCabinetFilterChange}
+            onStatusFilterChange={handleStatusFilterChange}
             onClearFilters={handleClearFilters}
           />
         </aside>
@@ -433,10 +440,12 @@ export default function Home() {
               selectedStates={selectedStates}
               sortBy={sortBy}
               cabinetFilter={cabinetFilter}
+              statusFilter={statusFilter}
               onPartyToggle={handlePartyToggle}
               onStateToggle={handleStateToggle}
               onSortChange={setSortBy}
               onCabinetFilterChange={handleCabinetFilterChange}
+              onStatusFilterChange={handleStatusFilterChange}
               onClearFilters={handleClearFilters}
               isMobile
               onClose={() => setMobileFiltersOpen(false)}
