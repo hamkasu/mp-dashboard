@@ -5,6 +5,17 @@ This web application provides a comprehensive dashboard for Malaysian Members of
 
 ## Recent Changes
 
+### December 5, 2025 - Sarawak DUN Salary and Poverty Data
+Added salary (RM40,000/month) and DOSM Kawasanku poverty rate tracking for Sarawak DUN members:
+- Extended `dunMembers` schema with salary fields: baseSalary, serviceAllowance, constituencyAllowance, sittingAllowance, otherBenefits
+- Added economic data fields: povertyRate, householdIncome, giniCoefficient, unemploymentRate, population
+- Created DOSM Kawasanku web scraper to fetch poverty data from open.dosm.gov.my for each DUN constituency
+- New admin endpoint `/api/admin/dun/sarawak/scrape-poverty` with hardened matching logic and null-value protection
+- DunSarawak.tsx now displays: monthly allowance (RM40,000) with detailed tooltip breakdown, color-coded poverty rate indicators
+- Poverty rate stored as tenths of percent (52 = 5.2%) for precision, displayed with proper formatting
+- Color coding: green (<5%), yellow (5-10%), orange (10-20%), red (>20%)
+- Key files: `server/dosm-kawasanku-scraper.ts`, `client/src/pages/DunSarawak.tsx`, `shared/schema.ts`
+
 ### December 5, 2025 - Sarawak DUN (State Legislative Assembly) Members Page
 Added state-level tracking for Sarawak Dewan Undangan Negeri (DUN) members:
 - New `dunMembers` database table to store state assembly members with state, constituency, party, photo
