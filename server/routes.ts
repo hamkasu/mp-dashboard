@@ -803,7 +803,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   });
 
   // Delete a court case
-  app.delete("/api/court-cases/:id", mutationRateLimit, auditMiddleware('court-case'), async (req, res) => {
+  app.delete("/api/court-cases/:id", requireAdmin, mutationRateLimit, auditMiddleware('court-case'), async (req, res) => {
     try {
       const { id } = req.params;
       const deleted = await storage.deleteCourtCase(id);
