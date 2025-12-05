@@ -6785,5 +6785,92 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
+  // =====================================
+  // DUN (State Legislative Assembly) Routes
+  // =====================================
+  
+  // Get all DUN members for a specific state
+  app.get("/api/dun/:state/members", async (req, res) => {
+    try {
+      const { state } = req.params;
+      const members = await storage.getDunMembersByState(state);
+      res.json(members);
+    } catch (error) {
+      console.error("Error fetching DUN members:", error);
+      res.status(500).json({ error: "Failed to fetch DUN members" });
+    }
+  });
+
+  // Get a single DUN member by ID
+  app.get("/api/dun/member/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const member = await storage.getDunMember(id);
+      if (!member) {
+        return res.status(404).json({ error: "DUN member not found" });
+      }
+      res.json(member);
+    } catch (error) {
+      console.error("Error fetching DUN member:", error);
+      res.status(500).json({ error: "Failed to fetch DUN member" });
+    }
+  });
+
+  // Scrape DUN members for Sarawak (admin only)
+  app.post("/api/admin/dun/sarawak/scrape", requireAdmin, async (_req, res) => {
+    try {
+      const { sarawakDunScraper } = await import("./sarawak-dun-scraper");
+      
+      console.log("[DUN Scraper] Starting Sarawak DUN scrape...");
+      
+      // First, delete existing Sarawak members
+      const deletedCount = await storage.deleteAllDunMembersByState("Sarawak");
+      console.log(`[DUN Scraper] Deleted ${deletedCount} existing Sarawak members`);
+      
+      // Scrape new data
+      const scrapedMembers = await sarawakDunScraper.scrapeAllMembers();
+      console.log(`[DUN Scraper] Scraped ${scrapedMembers.length} members`);
+      
+      // Insert new members
+      let insertedCount = 0;
+      for (const member of scrapedMembers) {
+        try {
+          await storage.createDunMember(member);
+          insertedCount++;
+        } catch (err) {
+          console.error(`[DUN Scraper] Error inserting member ${member.constituencyCode}:`, err);
+        }
+      }
+      
+      console.log(`[DUN Scraper] Successfully inserted ${insertedCount} members`);
+      
+      res.json({
+        success: true,
+        message: `Successfully scraped and stored ${insertedCount} DUN members for Sarawak`,
+        deletedCount,
+        scrapedCount: scrapedMembers.length,
+        insertedCount,
+      });
+    } catch (error: any) {
+      console.error("[DUN Scraper] Error:", error);
+      res.status(500).json({ 
+        error: error.message || "Failed to scrape Sarawak DUN data",
+        details: error.stack
+      });
+    }
+  });
+
+  // Get DUN member count by state
+  app.get("/api/dun/:state/count", async (req, res) => {
+    try {
+      const { state } = req.params;
+      const members = await storage.getDunMembersByState(state);
+      res.json({ count: members.length, state });
+    } catch (error) {
+      console.error("Error fetching DUN member count:", error);
+      res.status(500).json({ error: "Failed to fetch DUN member count" });
+    }
+  });
+
   // Server is now passed in from index.ts, no need to create it here
 }
