@@ -6872,5 +6872,99 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
+  // Scrape DOSM Kawasanku poverty data for Sarawak DUN constituencies (admin only)
+  app.post("/api/admin/dun/sarawak/scrape-poverty", requireAdmin, async (_req, res) => {
+    try {
+      const { dosmKawasankuScraper } = await import("./dosm-kawasanku-scraper");
+      
+      console.log("[DOSM Scraper] Starting poverty data scrape for Sarawak DUN...");
+      
+      // Get existing DUN members
+      const existingMembers = await storage.getDunMembersByState("Sarawak");
+      console.log(`[DOSM Scraper] Found ${existingMembers.length} existing Sarawak DUN members`);
+      
+      if (existingMembers.length === 0) {
+        return res.status(400).json({ 
+          error: "No existing DUN members found. Please scrape member data first." 
+        });
+      }
+      
+      // Scrape poverty data
+      const povertyData = await dosmKawasankuScraper.fetchAllSarawakDunData();
+      console.log(`[DOSM Scraper] Scraped poverty data for ${povertyData.length} constituencies`);
+      
+      // Helper function to normalize constituency code for matching
+      const normalizeCode = (code: string): string => {
+        // Remove all non-alphanumeric characters and convert to uppercase
+        return code.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+      };
+      
+      // Update DUN members with poverty data
+      let updatedCount = 0;
+      let skippedCount = 0;
+      for (const data of povertyData) {
+        // Skip if all scraped values are null (no valid data)
+        if (data.povertyRate === null && 
+            data.householdIncome === null && 
+            data.giniCoefficient === null && 
+            data.unemploymentRate === null && 
+            data.population === null) {
+          console.log(`[DOSM Scraper] Skipping ${data.constituencyCode} - no valid data`);
+          skippedCount++;
+          continue;
+        }
+        
+        // Find matching member by normalized constituency code
+        const normalizedDataCode = normalizeCode(data.constituencyCode);
+        const member = existingMembers.find(m => 
+          normalizeCode(m.constituencyCode) === normalizedDataCode
+        );
+        
+        if (!member) {
+          console.log(`[DOSM Scraper] No matching member found for ${data.constituencyCode} (normalized: ${normalizedDataCode})`);
+          skippedCount++;
+          continue;
+        }
+        
+        try {
+          // Only update fields that have non-null values
+          const updateFields: Record<string, number | null> = {};
+          if (data.povertyRate !== null) updateFields.povertyRate = data.povertyRate;
+          if (data.householdIncome !== null) updateFields.householdIncome = data.householdIncome;
+          if (data.giniCoefficient !== null) updateFields.giniCoefficient = data.giniCoefficient;
+          if (data.unemploymentRate !== null) updateFields.unemploymentRate = data.unemploymentRate;
+          if (data.population !== null) updateFields.population = data.population;
+          
+          // Only update if there are fields to update
+          if (Object.keys(updateFields).length > 0) {
+            await storage.updateDunMember(member.id, updateFields);
+            updatedCount++;
+            console.log(`[DOSM Scraper] Updated ${data.constituencyCode} with ${Object.keys(updateFields).length} fields`);
+          } else {
+            console.log(`[DOSM Scraper] No fields to update for ${data.constituencyCode}`);
+          }
+        } catch (err) {
+          console.error(`[DOSM Scraper] Error updating ${data.constituencyCode}:`, err);
+        }
+      }
+      
+      console.log(`[DOSM Scraper] Successfully updated ${updatedCount} members with poverty data, skipped ${skippedCount}`);
+      
+      res.json({
+        success: true,
+        message: `Successfully updated ${updatedCount} DUN members with poverty data`,
+        scrapedCount: povertyData.length,
+        updatedCount,
+        skippedCount,
+      });
+    } catch (error: any) {
+      console.error("[DOSM Scraper] Error:", error);
+      res.status(500).json({ 
+        error: error.message || "Failed to scrape DOSM poverty data",
+        details: error.stack
+      });
+    }
+  });
+
   // Server is now passed in from index.ts, no need to create it here
 }

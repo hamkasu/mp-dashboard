@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Users, MapPin, RefreshCw, Search, Building2 } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Users, MapPin, RefreshCw, Search, Building2, DollarSign, TrendingDown, Home, AlertTriangle } from "lucide-react";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { useState } from "react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -44,6 +45,31 @@ function getPartyColor(party: string | null): string {
   return "bg-muted text-muted-foreground";
 }
 
+function formatCurrency(amount: number): string {
+  return new Intl.NumberFormat('en-MY', {
+    style: 'currency',
+    currency: 'MYR',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(amount).replace('MYR', 'RM');
+}
+
+function getPovertyColor(povertyRate: number | null): string {
+  if (povertyRate === null) return "text-muted-foreground";
+  // povertyRate is stored as percentage * 10 (e.g., 52 = 5.2%)
+  const rate = povertyRate / 10; // Convert to actual percentage
+  if (rate < 5) return "text-green-600 dark:text-green-400";
+  if (rate < 10) return "text-yellow-600 dark:text-yellow-400";
+  if (rate < 20) return "text-orange-600 dark:text-orange-400";
+  return "text-red-600 dark:text-red-400";
+}
+
+function formatPovertyRate(povertyRate: number | null): string {
+  if (povertyRate === null) return "N/A";
+  // povertyRate is stored as percentage * 10 (e.g., 52 = 5.2%)
+  return (povertyRate / 10).toFixed(1) + "%";
+}
+
 export default function DunSarawak() {
   const { t, language } = useLanguage();
   const { toast } = useToast();
@@ -75,6 +101,29 @@ export default function DunSarawak() {
       toast({
         title: language === 'ms' ? "Ralat" : "Error",
         description: error.message || "Failed to scrape DUN data",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const scrapePovertyMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/admin/dun/sarawak/scrape-poverty");
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: language === 'ms' ? "Berjaya" : "Success",
+        description: language === 'ms' 
+          ? `Data kemiskinan untuk ${data.updatedCount} kawasan telah dikemas kini`
+          : `Poverty data for ${data.updatedCount} constituencies has been updated`,
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/dun/sarawak/members"] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: language === 'ms' ? "Ralat" : "Error",
+        description: error.message || "Failed to scrape poverty data",
         variant: "destructive",
       });
     },
@@ -128,21 +177,34 @@ export default function DunSarawak() {
             />
           </div>
           {authStatus?.isAdmin && (
-            <Button 
-              onClick={() => scrapeMutation.mutate()} 
-              disabled={scrapeMutation.isPending}
-              variant="outline"
-              data-testid="button-refresh-dun-data"
-            >
-              <RefreshCw className={`h-4 w-4 mr-2 ${scrapeMutation.isPending ? 'animate-spin' : ''}`} />
-              {scrapeMutation.isPending 
-                ? (language === 'ms' ? 'Mengemas kini...' : 'Updating...') 
-                : (language === 'ms' ? 'Kemas Kini Data' : 'Refresh Data')}
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button 
+                onClick={() => scrapeMutation.mutate()} 
+                disabled={scrapeMutation.isPending || scrapePovertyMutation.isPending}
+                variant="outline"
+                data-testid="button-refresh-dun-data"
+              >
+                <RefreshCw className={`h-4 w-4 mr-2 ${scrapeMutation.isPending ? 'animate-spin' : ''}`} />
+                {scrapeMutation.isPending 
+                  ? (language === 'ms' ? 'Mengemas kini...' : 'Updating...') 
+                  : (language === 'ms' ? 'Kemas Kini Ahli' : 'Refresh Members')}
+              </Button>
+              <Button 
+                onClick={() => scrapePovertyMutation.mutate()} 
+                disabled={scrapePovertyMutation.isPending || scrapeMutation.isPending || members.length === 0}
+                variant="outline"
+                data-testid="button-refresh-poverty-data"
+              >
+                <TrendingDown className={`h-4 w-4 mr-2 ${scrapePovertyMutation.isPending ? 'animate-spin' : ''}`} />
+                {scrapePovertyMutation.isPending 
+                  ? (language === 'ms' ? 'Mengemas kini...' : 'Updating...') 
+                  : (language === 'ms' ? 'Kemas Kini Data Kemiskinan' : 'Refresh Poverty Data')}
+              </Button>
+            </div>
           )}
         </div>
 
-        <div className="flex items-center gap-4 mb-6">
+        <div className="flex flex-wrap items-center gap-4 mb-6">
           <Badge variant="secondary" className="text-sm">
             <Users className="h-3 w-3 mr-1" />
             {isLoading ? '...' : `${members.length} ${language === 'ms' ? 'Ahli' : 'Members'}`}
@@ -153,6 +215,45 @@ export default function DunSarawak() {
             </Badge>
           )}
         </div>
+
+        {!isLoading && members.length > 0 && (
+          <Card className="mb-6 border-primary/20">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <DollarSign className="h-5 w-5 text-primary" />
+                {language === 'ms' ? 'Jumlah Gaji & Elaun ADUN' : 'Total ADUN Salaries & Allowances'}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-primary" data-testid="text-total-dun-salary">
+                {formatCurrency(members.length * 40000)}/{language === 'ms' ? 'bulan' : 'month'}
+              </div>
+              <p className="text-sm text-muted-foreground mt-1">
+                {language === 'ms' 
+                  ? `Kos kumulatif untuk ${members.length} ahli DUN pada RM40,000/bulan setiap seorang`
+                  : `Cumulative cost for ${members.length} DUN members at RM40,000/month each`}
+              </p>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4 pt-4 border-t">
+                <div>
+                  <p className="text-xs text-muted-foreground">{language === 'ms' ? 'Gaji Asas' : 'Basic Salary'}</p>
+                  <p className="font-semibold">RM 11,130</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">{language === 'ms' ? 'Elaun Kawasan' : 'Constituency'}</p>
+                  <p className="font-semibold">RM 6,000-15,000</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">{language === 'ms' ? 'Elaun Duduk' : 'Sitting Allowance'}</p>
+                  <p className="font-semibold">RM 450/day</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">{language === 'ms' ? 'Jumlah Bulanan' : 'Total Monthly'}</p>
+                  <p className="font-semibold">RM 25,000-40,000</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {isLoading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -196,8 +297,8 @@ export default function DunSarawak() {
             {sortedMembers.map((member) => (
               <Card key={member.id} className="hover-elevate transition-all duration-200" data-testid={`card-dun-member-${member.id}`}>
                 <CardContent className="p-4">
-                  <div className="flex items-start gap-4">
-                    <Avatar className="h-16 w-16 border-2 border-border">
+                  <div className="flex items-start gap-3">
+                    <Avatar className="h-14 w-14 border-2 border-border flex-shrink-0">
                       <AvatarImage 
                         src={member.photoUrl || undefined} 
                         alt={member.name}
@@ -228,6 +329,103 @@ export default function DunSarawak() {
                         </Badge>
                       )}
                     </div>
+                  </div>
+                  
+                  <div className="mt-3 pt-3 border-t border-border space-y-2">
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="flex items-center gap-1 text-muted-foreground">
+                            <DollarSign className="h-3 w-3" />
+                            {language === 'ms' ? 'Elaun Bulanan' : 'Monthly Allowance'}
+                          </span>
+                          <span className="font-semibold text-green-600 dark:text-green-400" data-testid={`text-salary-${member.id}`}>
+                            {formatCurrency(member.totalMonthlyAllowance || 40000)}
+                          </span>
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="max-w-xs">
+                        <div className="space-y-1 text-xs">
+                          <p className="font-semibold mb-2">{language === 'ms' ? 'Pecahan Elaun:' : 'Allowance Breakdown:'}</p>
+                          <div className="flex justify-between gap-4">
+                            <span>{language === 'ms' ? 'Gaji Asas' : 'Basic Salary'}:</span>
+                            <span>{formatCurrency(member.baseSalary || 11130)}</span>
+                          </div>
+                          <div className="flex justify-between gap-4">
+                            <span>{language === 'ms' ? 'Elaun Perkhidmatan' : 'Service Allowance'}:</span>
+                            <span>{formatCurrency(member.serviceAllowance || 3870)}</span>
+                          </div>
+                          <div className="flex justify-between gap-4">
+                            <span>{language === 'ms' ? 'Elaun Kawasan' : 'Constituency Allowance'}:</span>
+                            <span>{formatCurrency(member.constituencyAllowance || 10500)}</span>
+                          </div>
+                          <div className="flex justify-between gap-4">
+                            <span>{language === 'ms' ? 'Elaun Perjalanan' : 'Travel Allowance'}:</span>
+                            <span>{formatCurrency(member.travelAllowance || 2000)}</span>
+                          </div>
+                          <div className="flex justify-between gap-4">
+                            <span>{language === 'ms' ? 'Elaun Hiburan' : 'Entertainment'}:</span>
+                            <span>{formatCurrency(member.entertainmentAllowance || 1500)}</span>
+                          </div>
+                          <div className="flex justify-between gap-4">
+                            <span>{language === 'ms' ? 'Elaun Penginapan' : 'Housing Allowance'}:</span>
+                            <span>{formatCurrency(member.housingAllowance || 3000)}</span>
+                          </div>
+                          <div className="flex justify-between gap-4 pt-1 border-t">
+                            <span>{language === 'ms' ? 'Elaun Duduk' : 'Sitting Allowance'}:</span>
+                            <span>{formatCurrency(member.sittingAllowance || 450)}/day</span>
+                          </div>
+                        </div>
+                      </TooltipContent>
+                    </Tooltip>
+
+                    {member.povertyRate !== null && member.povertyRate !== undefined && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="flex items-center gap-1 text-muted-foreground">
+                              <AlertTriangle className="h-3 w-3" />
+                              {language === 'ms' ? 'Kadar Kemiskinan' : 'Poverty Rate'}
+                            </span>
+                            <span className={`font-semibold ${getPovertyColor(member.povertyRate)}`} data-testid={`text-poverty-${member.id}`}>
+                              {formatPovertyRate(member.povertyRate)}
+                            </span>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="max-w-xs">
+                          <div className="space-y-1 text-xs">
+                            <p className="font-semibold mb-2">{language === 'ms' ? 'Data Ekonomi Kawasan:' : 'Constituency Economic Data:'}</p>
+                            {member.population && (
+                              <div className="flex justify-between gap-4">
+                                <span>{language === 'ms' ? 'Populasi' : 'Population'}:</span>
+                                <span>{member.population.toLocaleString()}</span>
+                              </div>
+                            )}
+                            {member.householdIncome && (
+                              <div className="flex justify-between gap-4">
+                                <span>{language === 'ms' ? 'Pendapatan Isi Rumah' : 'Household Income'}:</span>
+                                <span>{formatCurrency(member.householdIncome)}</span>
+                              </div>
+                            )}
+                            {member.unemploymentRate && (
+                              <div className="flex justify-between gap-4">
+                                <span>{language === 'ms' ? 'Kadar Pengangguran' : 'Unemployment'}:</span>
+                                <span>{(member.unemploymentRate / 10).toFixed(1)}%</span>
+                              </div>
+                            )}
+                            {member.giniCoefficient && (
+                              <div className="flex justify-between gap-4">
+                                <span>{language === 'ms' ? 'Pekali Gini' : 'Gini Coefficient'}:</span>
+                                <span>{(member.giniCoefficient / 1000).toFixed(3)}</span>
+                              </div>
+                            )}
+                            <p className="text-muted-foreground pt-1 text-[10px]">
+                              {language === 'ms' ? 'Sumber: DOSM Kawasanku' : 'Source: DOSM Kawasanku'}
+                            </p>
+                          </div>
+                        </TooltipContent>
+                      </Tooltip>
+                    )}
                   </div>
                 </CardContent>
               </Card>
