@@ -5410,6 +5410,80 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
+  // Admin endpoint to update MP status (deceased/resigned)
+  app.post("/api/admin/update-mp-status", requireAdmin, async (req, res) => {
+    try {
+      const { mpId, termEndDate, byElectionDate, byElectionNotes } = req.body;
+
+      if (!mpId || !termEndDate) {
+        return res.status(400).json({ error: "mpId and termEndDate are required" });
+      }
+
+      // Validate date format
+      const endDate = new Date(termEndDate);
+      if (isNaN(endDate.getTime())) {
+        return res.status(400).json({ error: "Invalid termEndDate format" });
+      }
+
+      // Find the MP
+      const [mp] = await db.select().from(mps).where(eq(mps.id, mpId)).limit(1);
+
+      if (!mp) {
+        return res.status(404).json({ error: "MP not found" });
+      }
+
+      console.log(`📝 Updating MP status for ${mp.name} (${mp.constituency})`);
+
+      // Update MP record
+      const updateData: any = {
+        termEndDate: endDate,
+        role: "Former Member of Parliament (Deceased)",
+      };
+
+      // Add optional fields if provided
+      if (byElectionDate) {
+        const electionDate = new Date(byElectionDate);
+        if (!isNaN(electionDate.getTime())) {
+          updateData.byElectionDate = electionDate;
+        }
+      }
+
+      if (byElectionNotes) {
+        updateData.byElectionNotes = byElectionNotes;
+      }
+
+      await db.update(mps)
+        .set(updateData)
+        .where(eq(mps.id, mpId));
+
+      console.log(`✅ MP status updated successfully: ${mp.name}`);
+
+      // Log the action
+      await logAudit(
+        getCurrentUsername(req),
+        'UPDATE_MP_STATUS',
+        `Updated MP status for ${mp.name} (${mp.constituency})`,
+        { mpId, termEndDate, byElectionDate, byElectionNotes }
+      );
+
+      res.json({
+        message: "MP status updated successfully",
+        mp: {
+          id: mp.id,
+          name: mp.name,
+          constituency: mp.constituency,
+          termEndDate: endDate.toISOString(),
+          byElectionDate: updateData.byElectionDate?.toISOString(),
+          byElectionNotes: updateData.byElectionNotes,
+        }
+      });
+
+    } catch (error) {
+      console.error("Error updating MP status:", error);
+      res.status(500).json({ error: "Failed to update MP status", details: String(error) });
+    }
+  });
+
   // ======================
   // Blog Posts API
   // ======================
