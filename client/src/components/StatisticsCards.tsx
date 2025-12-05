@@ -100,7 +100,7 @@ export function StatisticsCards({ stats, filteredStats, isLoading, hasPartyFilte
       {!hasPartyFilter && (
         <Card data-testid="card-party-breakdown">
           <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Coalition Breakdown</CardTitle>
+            <CardTitle className="text-sm font-medium">Coalition Numbers</CardTitle>
             <Flag className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -108,7 +108,10 @@ export function StatisticsCards({ stats, filteredStats, isLoading, hasPartyFilte
               {governmentMps}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              Government {governmentMps} MPs, Opposition {oppositionMps} MPs
+              Government {governmentMps} MPs
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Opposition {oppositionMps} MPs
             </p>
           </CardContent>
         </Card>
