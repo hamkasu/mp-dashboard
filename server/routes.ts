@@ -493,7 +493,6 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         : 0;
 
       // Calculate cumulative costs for all MPs since sworn in
-      const now = new Date();
       const totalCumulativeCosts = mps.reduce((sum, mp) => {
         const swornInDate = new Date(mp.swornInDate);
         const monthsSinceSwornIn = Math.max(
