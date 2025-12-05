@@ -22,11 +22,8 @@ COPY package*.json ./
 # Install ALL dependencies (including dev) needed for building
 RUN npm ci --prefer-offline --no-audit
 
-# Copy source files (separate layer for better caching)
-COPY shared ./shared
-COPY client ./client
-COPY server ./server
-COPY *.ts *.js *.json ./
+# Copy all source files (dockerignore will exclude unnecessary files)
+COPY . .
 
 # Build the application
 RUN npm run build
