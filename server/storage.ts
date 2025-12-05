@@ -2,10 +2,10 @@
  * Copyright by Calmic Sdn Bhd
  */
 
-import { type Mp, type InsertMp, type CourtCase, type InsertCourtCase, type SprmInvestigation, type InsertSprmInvestigation, type LegislativeProposal, type InsertLegislativeProposal, type DebateParticipation, type InsertDebateParticipation, type ParliamentaryQuestion, type InsertParliamentaryQuestion, type HansardRecord, type InsertHansardRecord, type UpdateHansardRecord, type PageView, type UserActivityLog, type InsertUserActivityLog, type Constituency, type InsertConstituency } from "@shared/schema";
+import { type Mp, type InsertMp, type CourtCase, type InsertCourtCase, type SprmInvestigation, type InsertSprmInvestigation, type LegislativeProposal, type InsertLegislativeProposal, type DebateParticipation, type InsertDebateParticipation, type ParliamentaryQuestion, type InsertParliamentaryQuestion, type HansardRecord, type InsertHansardRecord, type UpdateHansardRecord, type PageView, type UserActivityLog, type InsertUserActivityLog, type Constituency, type InsertConstituency, type DunMember, type InsertDunMember } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db, pool } from "./db";
-import { mps, courtCases, sprmInvestigations, legislativeProposals, debateParticipations, parliamentaryQuestions, hansardRecords, pageViews, userActivityLog, constituencies } from "@shared/schema";
+import { mps, courtCases, sprmInvestigations, legislativeProposals, debateParticipations, parliamentaryQuestions, hansardRecords, pageViews, userActivityLog, constituencies, dunMembers } from "@shared/schema";
 import { eq, sql, desc } from "drizzle-orm";
 import { MPNameMatcher } from "./mp-name-matcher";
 import { HansardScraper } from "./hansard-scraper";
@@ -146,6 +146,15 @@ export interface IStorage {
   getQaCache(hansardRecordId: string, question: string): Promise<any | undefined>;
   saveQaCache(data: any): Promise<any>;
   getHansardById(id: string): Promise<HansardRecord | undefined>;
+
+  // DUN Member methods
+  getDunMember(id: string): Promise<DunMember | undefined>;
+  getDunMembersByState(state: string): Promise<DunMember[]>;
+  getAllDunMembers(): Promise<DunMember[]>;
+  createDunMember(member: InsertDunMember): Promise<DunMember>;
+  updateDunMember(id: string, member: Partial<InsertDunMember>): Promise<DunMember | undefined>;
+  deleteDunMember(id: string): Promise<boolean>;
+  deleteAllDunMembersByState(state: string): Promise<number>;
 }
 
 export class MemStorage implements IStorage {
@@ -1664,6 +1673,46 @@ export class MemStorage implements IStorage {
   async saveQaCache(data: any): Promise<any> {
     return data;
   }
+
+  // DUN Member methods (stub implementations for MemStorage)
+  async getDunMember(id: string): Promise<DunMember | undefined> {
+    return undefined;
+  }
+
+  async getDunMembersByState(state: string): Promise<DunMember[]> {
+    return [];
+  }
+
+  async getAllDunMembers(): Promise<DunMember[]> {
+    return [];
+  }
+
+  async createDunMember(member: InsertDunMember): Promise<DunMember> {
+    const id = randomUUID();
+    return {
+      ...member,
+      id,
+      title: member.title ?? null,
+      party: member.party ?? null,
+      photoUrl: member.photoUrl ?? null,
+      detailUrl: member.detailUrl ?? null,
+      scrapedAt: new Date(),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+  }
+
+  async updateDunMember(id: string, member: Partial<InsertDunMember>): Promise<DunMember | undefined> {
+    return undefined;
+  }
+
+  async deleteDunMember(id: string): Promise<boolean> {
+    return false;
+  }
+
+  async deleteAllDunMembersByState(state: string): Promise<number> {
+    return 0;
+  }
 }
 
 // Database storage implementation using Drizzle ORM
@@ -2801,6 +2850,44 @@ export class DbStorage implements IStorage {
     const { hansardQaCache } = await import("@shared/schema");
     const result = await db.insert(hansardQaCache).values(data).returning();
     return result[0];
+  }
+
+  // DUN Member methods
+  async getDunMember(id: string): Promise<DunMember | undefined> {
+    const result = await db.select().from(dunMembers).where(eq(dunMembers.id, id));
+    return result[0];
+  }
+
+  async getDunMembersByState(state: string): Promise<DunMember[]> {
+    return await db.select().from(dunMembers).where(eq(dunMembers.state, state)).orderBy(dunMembers.constituencyCode);
+  }
+
+  async getAllDunMembers(): Promise<DunMember[]> {
+    return await db.select().from(dunMembers).orderBy(dunMembers.state, dunMembers.constituencyCode);
+  }
+
+  async createDunMember(member: InsertDunMember): Promise<DunMember> {
+    const result = await db.insert(dunMembers).values(member).returning();
+    return result[0];
+  }
+
+  async updateDunMember(id: string, member: Partial<InsertDunMember>): Promise<DunMember | undefined> {
+    const result = await db
+      .update(dunMembers)
+      .set({ ...member, updatedAt: new Date() })
+      .where(eq(dunMembers.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async deleteDunMember(id: string): Promise<boolean> {
+    const result = await db.delete(dunMembers).where(eq(dunMembers.id, id)).returning();
+    return result.length > 0;
+  }
+
+  async deleteAllDunMembersByState(state: string): Promise<number> {
+    const result = await db.delete(dunMembers).where(eq(dunMembers.state, state)).returning();
+    return result.length;
   }
 }
 

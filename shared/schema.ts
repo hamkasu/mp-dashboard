@@ -808,3 +808,31 @@ export const insertParliamentaryAnswerPdfFileSchema = createInsertSchema(parliam
 
 export type InsertParliamentaryAnswerPdfFile = z.infer<typeof insertParliamentaryAnswerPdfFileSchema>;
 export type ParliamentaryAnswerPdfFile = typeof parliamentaryAnswerPdfFiles.$inferSelect;
+
+export const dunMembers = pgTable("dun_members", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  state: text("state").notNull(),
+  constituencyCode: text("constituency_code").notNull(),
+  constituencyName: text("constituency_name").notNull(),
+  name: text("name").notNull(),
+  title: text("title"),
+  party: text("party"),
+  photoUrl: text("photo_url"),
+  detailUrl: text("detail_url"),
+  scrapedAt: timestamp("scraped_at").notNull().default(sql`NOW()`),
+  createdAt: timestamp("created_at").notNull().default(sql`NOW()`),
+  updatedAt: timestamp("updated_at").notNull().default(sql`NOW()`),
+});
+
+export const insertDunMemberSchema = createInsertSchema(dunMembers).omit({
+  id: true,
+  scrapedAt: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const updateDunMemberSchema = insertDunMemberSchema.partial();
+
+export type InsertDunMember = z.infer<typeof insertDunMemberSchema>;
+export type UpdateDunMember = z.infer<typeof updateDunMemberSchema>;
+export type DunMember = typeof dunMembers.$inferSelect;
