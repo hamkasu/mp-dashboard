@@ -8,8 +8,11 @@ import { useLocation } from "wouter";
 import { Header } from "@/components/Header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, Download, Trash2, AlertTriangle, CheckCircle2, RefreshCw, Upload, FileText, X, Database, Clock, History, Share2, Sparkles, StopCircle, Users, Edit } from "lucide-react";
+import { Loader2, Download, Trash2, AlertTriangle, CheckCircle2, RefreshCw, Upload, FileText, X, Database, Clock, History, Share2, Sparkles, StopCircle, Users, Edit, UserX } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { UnmatchedSpeakersManager } from "@/components/UnmatchedSpeakersManager";
@@ -95,6 +98,12 @@ export default function HansardAdmin() {
   const [selectedHansardId, setSelectedHansardId] = useState<string>("");
   const [attendanceEditorRecord, setAttendanceEditorRecord] = useState<HansardRecord | null>(null);
 
+  // MP Status Update states
+  const [selectedMpId, setSelectedMpId] = useState("");
+  const [dateOfPassing, setDateOfPassing] = useState("");
+  const [byElectionDate, setByElectionDate] = useState("");
+  const [byElectionNotes, setByElectionNotes] = useState("");
+
   // Cleanup polling interval on unmount
   useEffect(() => {
     return () => {
@@ -112,6 +121,43 @@ export default function HansardAdmin() {
   const { data: syncLogs, isLoading: syncLogsLoading, refetch: refetchSyncLogs } = useQuery<SyncLogsResponse>({
     queryKey: ["/api/admin/hansard-sync-logs"],
     refetchInterval: 60000, // Refresh every minute
+  });
+
+  // Fetch all MPs for status update
+  const { data: allMps = [] } = useQuery<Array<{id: string; name: string; constituency: string; party: string; termEndDate: string | null}>>({
+    queryKey: ["/api/mps"],
+  });
+
+  // Update MP status mutation
+  const updateMpStatusMutation = useMutation({
+    mutationFn: async (data: {
+      mpId: string;
+      termEndDate: string;
+      byElectionDate?: string;
+      byElectionNotes?: string;
+    }) => {
+      return await apiRequest("POST", "/api/admin/update-mp-status", data);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "MP status updated successfully",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/mps"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
+      // Reset form
+      setSelectedMpId("");
+      setDateOfPassing("");
+      setByElectionDate("");
+      setByElectionNotes("");
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update MP status",
+        variant: "destructive",
+      });
+    },
   });
 
   const deleteMutation = useMutation({
@@ -659,6 +705,117 @@ export default function HansardAdmin() {
             </p>
           </div>
         </div>
+
+      {/* MP Status Update Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <UserX className="h-5 w-5" />
+            Update MP Status
+          </CardTitle>
+          <CardDescription>
+            Mark an MP as former when they pass away or resign
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="mp-select">Select MP *</Label>
+              <Select value={selectedMpId} onValueChange={setSelectedMpId}>
+                <SelectTrigger id="mp-select">
+                  <SelectValue placeholder="Choose an MP..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {allMps
+                    .filter((mp) => !mp.termEndDate || new Date(mp.termEndDate) > new Date())
+                    .map((mp) => (
+                      <SelectItem key={mp.id} value={mp.id}>
+                        {mp.name} - {mp.constituency}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="term-end-date">Date of Passing/Resignation *</Label>
+              <Input
+                id="term-end-date"
+                type="date"
+                value={dateOfPassing}
+                onChange={(e) => setDateOfPassing(e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="by-election-date">By-Election Date (Optional)</Label>
+              <Input
+                id="by-election-date"
+                type="date"
+                value={byElectionDate}
+                onChange={(e) => setByElectionDate(e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="by-election-notes">By-Election Notes (Optional)</Label>
+              <Textarea
+                id="by-election-notes"
+                placeholder="Enter notes..."
+                value={byElectionNotes}
+                onChange={(e) => setByElectionNotes(e.target.value)}
+                rows={3}
+              />
+            </div>
+          </div>
+
+          <div className="flex gap-3 mt-4">
+            <Button
+              onClick={() => {
+                if (!selectedMpId || !dateOfPassing) {
+                  toast({
+                    title: "Validation Error",
+                    description: "Please select an MP and provide the date",
+                    variant: "destructive",
+                  });
+                  return;
+                }
+                updateMpStatusMutation.mutate({
+                  mpId: selectedMpId,
+                  termEndDate: dateOfPassing,
+                  byElectionDate: byElectionDate || undefined,
+                  byElectionNotes: byElectionNotes || undefined,
+                });
+              }}
+              disabled={!selectedMpId || !dateOfPassing || updateMpStatusMutation.isPending}
+            >
+              {updateMpStatusMutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Updating...
+                </>
+              ) : (
+                <>
+                  <CheckCircle2 className="mr-2 h-4 w-4" />
+                  Update Status
+                </>
+              )}
+            </Button>
+
+            <Button
+              variant="outline"
+              onClick={() => {
+                setSelectedMpId("");
+                setDateOfPassing("");
+                setByElectionDate("");
+                setByElectionNotes("");
+              }}
+            >
+              Clear
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       <Card className="border-primary">
         <CardHeader>
