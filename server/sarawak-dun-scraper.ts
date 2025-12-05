@@ -33,29 +33,32 @@ export class SarawakDunScraper {
 
       console.log('[SarawakDunScraper] Page loaded successfully');
       
-      $('table.table tbody tr').each((index, row) => {
-        const cells = $(row).find('td');
-        if (cells.length >= 3) {
-          const bilNo = $(cells[0]).text().trim();
+      $('table.ahli-dun-table td.card-cell').each((index, cell) => {
+        try {
+          const $cell = $(cell);
           
-          const constituencyCell = $(cells[1]);
-          const constituencyText = constituencyCell.text().trim();
+          const nameSpan = $cell.find('.name-span');
+          const memberName = nameSpan.text().trim();
           
-          const memberCell = $(cells[2]);
-          const memberName = memberCell.find('a').first().text().trim() || memberCell.text().trim();
-          const detailLink = memberCell.find('a').first().attr('href');
+          const strongTag = $cell.find('.info-div strong');
+          const constituencyText = strongTag.text().trim();
           
-          const imgTag = memberCell.find('img').first();
-          let photoUrl = imgTag.attr('src') || imgTag.attr('data-src') || '';
+          const constituencyMatch = constituencyText.match(/^N\.?(\d+)\s+(.+)$/i);
+          
+          const imgTag = $cell.find('img.profile-img');
+          let photoUrl = imgTag.attr('src') || '';
           
           if (photoUrl && !photoUrl.startsWith('http')) {
             photoUrl = this.baseUrl + (photoUrl.startsWith('/') ? '' : '/') + photoUrl;
           }
-
-          const constituencyMatch = constituencyText.match(/^(N\d+)\s*[\.\-\s]*\s*(.+)$/i);
+          
+          let detailLink = $cell.find('a[href*="attachment/show"]').first().attr('href') || '';
+          if (detailLink && !detailLink.startsWith('http')) {
+            detailLink = this.baseUrl + (detailLink.startsWith('/') ? '' : '/') + detailLink;
+          }
           
           if (constituencyMatch && memberName) {
-            const constituencyCode = constituencyMatch[1].toUpperCase();
+            const constituencyCode = `N${constituencyMatch[1]}`;
             const constituencyName = constituencyMatch[2].trim();
 
             members.push({
@@ -63,38 +66,64 @@ export class SarawakDunScraper {
               constituencyName,
               memberName: this.cleanMemberName(memberName),
               photoUrl: photoUrl || undefined,
-              detailUrl: detailLink ? (detailLink.startsWith('http') ? detailLink : this.baseUrl + detailLink) : undefined,
+              detailUrl: detailLink || undefined,
             });
           }
+        } catch (err) {
+          console.error(`[SarawakDunScraper] Error parsing cell ${index}:`, err);
         }
       });
 
       if (members.length === 0) {
-        console.log('[SarawakDunScraper] Table parsing failed, trying alternative patterns...');
+        console.log('[SarawakDunScraper] Primary parsing failed, trying alternative pattern...');
         
-        $('tr, .constituency-row, .member-row').each((index, row) => {
-          const text = $(row).text();
-          const match = text.match(/(N\d+)\s*[\.\-\s]*([A-Z][A-Za-z\s]+?)\s+(YB|DATUK|DATO|TAN SRI|DR|YAB|YANG)/i);
-          
-          if (match) {
-            const constituencyCode = match[1].toUpperCase();
-            const remainingText = text.substring(text.indexOf(match[2]));
-            const nameMatch = remainingText.match(/^([A-Za-z\s]+(?:BIN|BINTI|A\/L|A\/P)?[A-Za-z\s]+)/i);
+        $('td.card-cell').each((index, cell) => {
+          try {
+            const $cell = $(cell);
+            const text = $cell.text();
             
-            if (nameMatch) {
-              members.push({
-                constituencyCode,
-                constituencyName: match[2].trim(),
-                memberName: this.cleanMemberName(nameMatch[1]),
-              });
+            const match = text.match(/N\.?(\d+)\s+([A-Z][A-Za-z\s]+?)\s+(YB|DATUK|DATO|TAN SRI|DR|YAB|ENCIK|PUAN)/i);
+            
+            if (match) {
+              const constituencyCode = `N${match[1]}`;
+              const constituencyName = match[2].trim();
+              
+              const nameMatch = text.match(/(YB|YAB)[\s\S]+?(DATUK|DATO['']?|TAN SRI|DR\.?|HAJI|HAJJAH|ENCIK|PUAN)?[\s\S]*?([A-Z][A-Za-z\s]+(?:BIN|BINTI|ANAK|A\/L|A\/P)?[\s\S]*?)(?:\n|$)/i);
+              
+              if (nameMatch) {
+                const imgTag = $cell.find('img').first();
+                let photoUrl = imgTag.attr('src') || '';
+                
+                if (photoUrl && !photoUrl.startsWith('http')) {
+                  photoUrl = this.baseUrl + (photoUrl.startsWith('/') ? '' : '/') + photoUrl;
+                }
+                
+                members.push({
+                  constituencyCode,
+                  constituencyName,
+                  memberName: this.cleanMemberName(nameMatch[0]),
+                  photoUrl: photoUrl || undefined,
+                });
+              }
             }
+          } catch (err) {
+            console.error(`[SarawakDunScraper] Error in alternative parse ${index}:`, err);
           }
         });
       }
 
       console.log(`[SarawakDunScraper] Found ${members.length} members from page`);
+      
+      const uniqueMembers = new Map<string, SarawakDunMemberRaw>();
+      for (const member of members) {
+        if (!uniqueMembers.has(member.constituencyCode)) {
+          uniqueMembers.set(member.constituencyCode, member);
+        }
+      }
 
-      const dunMembers: InsertDunMember[] = members.map(member => ({
+      console.log(`[SarawakDunScraper] After deduplication: ${uniqueMembers.size} unique members`);
+
+      const dunMembers: InsertDunMember[] = Array.from(uniqueMembers.values()).map(member => ({
         state: 'Sarawak',
         constituencyCode: member.constituencyCode,
         constituencyName: member.constituencyName,
@@ -123,7 +152,7 @@ export class SarawakDunScraper {
     const titlePatterns = [
       /^(YAB|YB|YANG BERHORMAT|YANG AMAT BERHORMAT)\s*/i,
       /^(TAN SRI|DATUK PATINGGI|DATUK AMAR|DATUK SRI|DATUK|DATO' SRI|DATO'|DATO)\s*/i,
-      /^(DR\.?|PROF\.?|HAJI|HAJJAH)\s*/i,
+      /^(DR\.?|PROF\.?|HAJI|HAJJAH|ENCIK|PUAN)\s*/i,
     ];
 
     let title = '';

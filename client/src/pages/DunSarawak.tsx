@@ -49,8 +49,12 @@ export default function DunSarawak() {
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
 
+  const { data: authStatus } = useQuery<{ isAdmin: boolean }>({
+    queryKey: ["/api/admin/status"],
+  });
+
   const { data: members = [], isLoading, refetch } = useQuery<DunMember[]>({
-    queryKey: ["/api/dun/Sarawak/members"],
+    queryKey: ["/api/dun/sarawak/members"],
   });
 
   const scrapeMutation = useMutation({
@@ -65,7 +69,7 @@ export default function DunSarawak() {
           ? `${data.insertedCount} ahli DUN Sarawak telah dikemas kini`
           : `${data.insertedCount} Sarawak DUN members have been updated`,
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/dun/Sarawak/members"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dun/sarawak/members"] });
     },
     onError: (error: any) => {
       toast({
@@ -123,17 +127,19 @@ export default function DunSarawak() {
               data-testid="input-search-dun-members"
             />
           </div>
-          <Button 
-            onClick={() => scrapeMutation.mutate()} 
-            disabled={scrapeMutation.isPending}
-            variant="outline"
-            data-testid="button-refresh-dun-data"
-          >
-            <RefreshCw className={`h-4 w-4 mr-2 ${scrapeMutation.isPending ? 'animate-spin' : ''}`} />
-            {scrapeMutation.isPending 
-              ? (language === 'ms' ? 'Mengemas kini...' : 'Updating...') 
-              : (language === 'ms' ? 'Kemas Kini Data' : 'Refresh Data')}
-          </Button>
+          {authStatus?.isAdmin && (
+            <Button 
+              onClick={() => scrapeMutation.mutate()} 
+              disabled={scrapeMutation.isPending}
+              variant="outline"
+              data-testid="button-refresh-dun-data"
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${scrapeMutation.isPending ? 'animate-spin' : ''}`} />
+              {scrapeMutation.isPending 
+                ? (language === 'ms' ? 'Mengemas kini...' : 'Updating...') 
+                : (language === 'ms' ? 'Kemas Kini Data' : 'Refresh Data')}
+            </Button>
+          )}
         </div>
 
         <div className="flex items-center gap-4 mb-6">
@@ -174,13 +180,15 @@ export default function DunSarawak() {
               </h3>
               <p className="text-muted-foreground mb-4">
                 {language === 'ms' 
-                  ? 'Klik butang "Kemas Kini Data" untuk mengambil data ahli DUN Sarawak.'
-                  : 'Click the "Refresh Data" button to fetch Sarawak DUN member data.'}
+                  ? 'Data ahli DUN Sarawak belum tersedia.'
+                  : 'Sarawak DUN member data is not yet available.'}
               </p>
-              <Button onClick={() => scrapeMutation.mutate()} disabled={scrapeMutation.isPending}>
-                <RefreshCw className={`h-4 w-4 mr-2 ${scrapeMutation.isPending ? 'animate-spin' : ''}`} />
-                {language === 'ms' ? 'Kemas Kini Data' : 'Refresh Data'}
-              </Button>
+              {authStatus?.isAdmin && (
+                <Button onClick={() => scrapeMutation.mutate()} disabled={scrapeMutation.isPending}>
+                  <RefreshCw className={`h-4 w-4 mr-2 ${scrapeMutation.isPending ? 'animate-spin' : ''}`} />
+                  {language === 'ms' ? 'Kemas Kini Data' : 'Refresh Data'}
+                </Button>
+              )}
             </CardContent>
           </Card>
         ) : (
