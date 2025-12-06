@@ -5,6 +5,15 @@ This web application provides a comprehensive dashboard for Malaysian Members of
 
 ## Recent Changes
 
+### December 6, 2025 - Safe Cabinet Update for Sarawak DUN
+Added a safe, non-destructive way to update cabinet role data for Sarawak DUN members:
+- New endpoint `/api/admin/dun/sarawak/update-cabinet` updates only cabinet fields without deleting member data
+- Updates: cabinetRole, cabinetBaseSalary, cabinetEntertainment, cabinetSpecialAllowance, cabinetTotalSalary
+- Constituency code matching normalized to handle formats: "N.24", "N24", "n.24", "N 24"
+- Admin-only "Update Cabinet Data" button (Crown icon) on DunSarawak page
+- Preserves all existing member data (photos, party, poverty rates) while adding cabinet info
+- Key files: `server/routes.ts` (endpoint), `server/sarawak-cabinet-data.ts` (normalization), `client/src/pages/DunSarawak.tsx` (button)
+
 ### December 5, 2025 - Sarawak DUN Salary and Poverty Data
 Added salary (RM40,000/month) and DOSM Kawasanku poverty rate tracking for Sarawak DUN members:
 - Extended `dunMembers` schema with salary fields: baseSalary, serviceAllowance, constituencyAllowance, sittingAllowance, otherBenefits
