@@ -76,7 +76,8 @@ export default function DunSarawak() {
   const [searchQuery, setSearchQuery] = useState("");
 
   const { data: authStatus } = useQuery<{ isAdmin: boolean }>({
-    queryKey: ["/api/admin/status"],
+    queryKey: ["/api/admin/auth-status"],
+    retry: false,
   });
 
   const { data: members = [], isLoading, refetch } = useQuery<DunMember[]>({
