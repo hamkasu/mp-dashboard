@@ -16,6 +16,10 @@ interface SelangorDunMemberRaw {
   detailUrl?: string;
 }
 
+// NOTE: Party data is not available in the individual member popup blocks on the website.
+// The party dropdown on the page is only for filtering, not per-member party data.
+// Party field will remain null until the website provides this information per-member.
+
 export class SelangorDunScraper {
   private baseUrl = 'https://dewan.selangor.gov.my';
   private mainPageUrl = 'https://dewan.selangor.gov.my/dewan-negeri-selangor/';
@@ -39,128 +43,171 @@ export class SelangorDunScraper {
 
       console.log('[SelangorDunScraper] Page loaded successfully');
 
-      $('table tbody tr').each((index, row) => {
+      $('.popup-block-adun').each((index, element) => {
         try {
-          const $row = $(row);
-          const cells = $row.find('td');
+          const $element = $(element);
+          const elementId = $element.attr('id') || '';
           
-          if (cells.length >= 3) {
-            const constituencyCell = $(cells[0]).text().trim();
-            const nameCell = $(cells[1]).text().trim();
-            const partyCell = $(cells[2]).text().trim();
+          const codeMatch = elementId.match(/^n(\d+)$/i);
+          if (!codeMatch) return;
+          
+          const constituencyCode = `N${codeMatch[1].padStart(2, '0')}`;
+          
+          const nameElement = $element.find('h4.mt-3').first();
+          const memberName = nameElement.text().trim();
+          
+          if (!memberName) {
+            console.log(`[SelangorDunScraper] No name found for ${constituencyCode}`);
+            return;
+          }
+          
+          let photoUrl = '';
+          const imgTag = $element.find('.thumb img').first();
+          if (imgTag.length) {
+            photoUrl = imgTag.attr('src') || '';
+          }
+          
+          let constituencyName = '';
+          
+          $element.find('p').each((_, pElement) => {
+            const $p = $(pElement);
+            const pHtml = $p.html() || '';
+            const strongText = $p.find('strong').first().text();
             
-            const constituencyMatch = constituencyCell.match(/^N\.?(\d+)\s+(.+)$/i) ||
-                                      constituencyCell.match(/^N(\d+)\s*[-–]\s*(.+)$/i);
-            
-            if (constituencyMatch && nameCell) {
-              const constituencyCode = `N${constituencyMatch[1].padStart(2, '0')}`;
-              const constituencyName = constituencyMatch[2].trim();
-              
-              let photoUrl = '';
-              const imgTag = $row.find('img').first();
-              if (imgTag.length) {
-                photoUrl = imgTag.attr('src') || '';
-                if (photoUrl && !photoUrl.startsWith('http')) {
-                  photoUrl = this.baseUrl + (photoUrl.startsWith('/') ? '' : '/') + photoUrl;
-                }
+            if (strongText.includes('Tempat')) {
+              const fullText = $p.text().replace(/\s+/g, ' ').trim();
+              const tempatMatch = fullText.match(/Tempat:\s*N\d+\s+(.+?)$/i);
+              if (tempatMatch) {
+                constituencyName = tempatMatch[1].trim();
               }
-              
-              let detailUrl = '';
-              const linkTag = $row.find('a').first();
-              if (linkTag.length) {
-                detailUrl = linkTag.attr('href') || '';
-                if (detailUrl && !detailUrl.startsWith('http')) {
-                  detailUrl = this.baseUrl + (detailUrl.startsWith('/') ? '' : '/') + detailUrl;
-                }
+            }
+          });
+          
+          if (!constituencyName) {
+            const rawHtml = $element.html() || '';
+            const htmlMatch = rawHtml.match(/Tempat:[^<]*N\d+\s+([A-Za-z\s'-]+?)(?:<|$)/i);
+            if (htmlMatch) {
+              constituencyName = htmlMatch[1].trim();
+            }
+          }
+          
+          if (!constituencyName) {
+            console.warn(`[SelangorDunScraper] Could not extract constituency name for ${constituencyCode}, using fallback`);
+            const constituencyDropdown = $(`option[value*="${elementId}"]`);
+            if (constituencyDropdown.length) {
+              const dropdownText = constituencyDropdown.text().trim();
+              const dropdownMatch = dropdownText.match(/N\d+\s+(.+)/);
+              if (dropdownMatch) {
+                constituencyName = dropdownMatch[1].trim();
               }
-
-              members.push({
-                constituencyCode,
-                constituencyName,
-                memberName: this.cleanMemberName(nameCell),
-                party: partyCell || undefined,
-                photoUrl: photoUrl || undefined,
-                detailUrl: detailUrl || undefined,
+            }
+          }
+          
+          if (!constituencyName) {
+            console.warn(`[SelangorDunScraper] Fallback failed for ${constituencyCode}, extracting from dropdown by code`);
+            const codeNum = parseInt(codeMatch[1]);
+            const dropdownOption = $(`option[value="n${codeNum}-"]`).first();
+            if (!dropdownOption.length) {
+              $('option').each((_, opt) => {
+                const val = $(opt).attr('value') || '';
+                if (val.startsWith(`n${codeNum}-`) || val.startsWith(`n${codeMatch[1].padStart(2, '0')}-`)) {
+                  const text = $(opt).text().trim();
+                  const match = text.match(/N\d+\s+(.+)/);
+                  if (match) {
+                    constituencyName = match[1].trim();
+                    return false;
+                  }
+                }
               });
             }
           }
+          
+          if (!constituencyName) {
+            constituencyName = `Unknown ${constituencyCode}`;
+            console.error(`[SelangorDunScraper] FAILED to extract constituency name for ${constituencyCode}`);
+          }
+
+          members.push({
+            constituencyCode,
+            constituencyName,
+            memberName: this.cleanMemberName(memberName),
+            photoUrl: photoUrl || undefined,
+          });
         } catch (err) {
-          console.error(`[SelangorDunScraper] Error parsing row ${index}:`, err);
+          console.error(`[SelangorDunScraper] Error parsing popup ${index}:`, err);
         }
       });
 
+      console.log(`[SelangorDunScraper] Found ${members.length} members from popup blocks`);
+
       if (members.length === 0) {
-        console.log('[SelangorDunScraper] Table parsing failed, trying card/grid layout...');
+        console.log('[SelangorDunScraper] No members found in popup blocks, trying alternative parsing...');
         
-        $('.elementor-widget-container, .wp-block-group, .member-card, .adun-card, article').each((index, element) => {
+        $('[id^="n"]').each((index, element) => {
           try {
             const $element = $(element);
-            const text = $element.text();
+            const elementId = $element.attr('id') || '';
             
-            const constituencyMatch = text.match(/N\.?(\d+)\s*[-–:]\s*([A-Za-z\s]+?)(?:\n|YB|DATUK|DATO|$)/i);
+            const codeMatch = elementId.match(/^n(\d+)$/i);
+            if (!codeMatch) return;
             
-            if (constituencyMatch) {
-              const constituencyCode = `N${constituencyMatch[1].padStart(2, '0')}`;
-              const constituencyName = constituencyMatch[2].trim();
-              
-              const nameMatch = text.match(/(YB|YAB|DATUK|DATO['']?|TAN SRI|DR\.?)\s*([A-Za-z\s@'.-]+?)(?:\n|$)/i);
-              
-              if (nameMatch) {
-                let photoUrl = '';
-                const imgTag = $element.find('img').first();
-                if (imgTag.length) {
-                  photoUrl = imgTag.attr('src') || '';
-                  if (photoUrl && !photoUrl.startsWith('http')) {
-                    photoUrl = this.baseUrl + (photoUrl.startsWith('/') ? '' : '/') + photoUrl;
-                  }
+            const constituencyCode = `N${codeMatch[1].padStart(2, '0')}`;
+            
+            const h4Text = $element.find('h4').first().text().trim();
+            if (!h4Text) return;
+            
+            let photoUrl = '';
+            const imgTag = $element.find('img').first();
+            if (imgTag.length) {
+              photoUrl = imgTag.attr('src') || '';
+            }
+            
+            let constituencyName = '';
+            $element.find('p').each((_, pElement) => {
+              const $p = $(pElement);
+              if ($p.find('strong').text().includes('Tempat')) {
+                const match = $p.text().match(/N\d+\s+(.+?)$/);
+                if (match) {
+                  constituencyName = match[1].trim();
+                  return false;
                 }
-                
-                members.push({
-                  constituencyCode,
-                  constituencyName,
-                  memberName: this.cleanMemberName(nameMatch[0]),
-                  photoUrl: photoUrl || undefined,
-                });
               }
+            });
+            
+            if (!constituencyName) {
+              constituencyName = `Unknown ${constituencyCode}`;
+            }
+
+            if (!members.find(m => m.constituencyCode === constituencyCode)) {
+              members.push({
+                constituencyCode,
+                constituencyName,
+                memberName: this.cleanMemberName(h4Text),
+                photoUrl: photoUrl || undefined,
+              });
             }
           } catch (err) {
             console.error(`[SelangorDunScraper] Error in alternative parse ${index}:`, err);
           }
         });
-      }
-
-      if (members.length === 0) {
-        console.log('[SelangorDunScraper] Trying regex pattern on full page...');
         
-        const pageText = $('body').text();
-        const patterns = pageText.match(/N\.?(\d+)\s*[-–:]\s*([A-Za-z\s]+?)\s+(YB|YAB|DATUK|DATO)/gi);
-        
-        if (patterns) {
-          for (const pattern of patterns) {
-            const match = pattern.match(/N\.?(\d+)\s*[-–:]\s*([A-Za-z\s]+?)\s+(YB|YAB|DATUK|DATO)/i);
-            if (match) {
-              members.push({
-                constituencyCode: `N${match[1].padStart(2, '0')}`,
-                constituencyName: match[2].trim(),
-                memberName: match[3],
-              });
-            }
-          }
-        }
+        console.log(`[SelangorDunScraper] Found ${members.length} members after alternative parsing`);
       }
 
-      console.log(`[SelangorDunScraper] Found ${members.length} members from page`);
-      
-      const uniqueMembers = new Map<string, SelangorDunMemberRaw>();
-      for (const member of members) {
-        if (!uniqueMembers.has(member.constituencyCode)) {
-          uniqueMembers.set(member.constituencyCode, member);
-        }
+      members.sort((a, b) => {
+        const numA = parseInt(a.constituencyCode.replace('N', ''));
+        const numB = parseInt(b.constituencyCode.replace('N', ''));
+        return numA - numB;
+      });
+
+      const unknownCount = members.filter(m => m.constituencyName.startsWith('Unknown')).length;
+      if (unknownCount > 0) {
+        console.warn(`[SelangorDunScraper] WARNING: ${unknownCount} members have unknown constituency names`);
       }
 
-      console.log(`[SelangorDunScraper] After deduplication: ${uniqueMembers.size} unique members`);
+      console.log(`[SelangorDunScraper] After sorting: ${members.length} unique members`);
 
-      const dunMembers: InsertDunMember[] = Array.from(uniqueMembers.values()).map(member => ({
+      const dunMembers: InsertDunMember[] = members.map(member => ({
         state: 'Selangor',
         constituencyCode: member.constituencyCode,
         constituencyName: member.constituencyName,
