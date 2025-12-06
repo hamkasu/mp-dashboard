@@ -94,12 +94,14 @@ function getCabinetRoleColor(role: string | null): string {
 
 
 type SortOption = 'code' | 'population-asc' | 'population-desc';
+type CabinetFilter = 'all' | 'cabinet' | 'premier' | 'deputy-premier' | 'minister' | 'assistant-minister' | 'backbencher';
 
 export default function DunSarawak() {
   const { t, language } = useLanguage();
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<SortOption>('code');
+  const [cabinetFilter, setCabinetFilter] = useState<CabinetFilter>('all');
 
   const { data: authStatus } = useQuery<{ isAdmin: boolean }>({
     queryKey: ["/api/admin/auth-status"],
@@ -199,14 +201,45 @@ export default function DunSarawak() {
   });
 
   const filteredMembers = members.filter(member => {
-    if (!searchQuery) return true;
-    const query = searchQuery.toLowerCase();
-    return (
-      member.name.toLowerCase().includes(query) ||
-      member.constituencyName.toLowerCase().includes(query) ||
-      member.constituencyCode.toLowerCase().includes(query) ||
-      (member.party && member.party.toLowerCase().includes(query))
-    );
+    // Search filter
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      const matchesSearch = (
+        member.name.toLowerCase().includes(query) ||
+        member.constituencyName.toLowerCase().includes(query) ||
+        member.constituencyCode.toLowerCase().includes(query) ||
+        (member.party && member.party.toLowerCase().includes(query))
+      );
+      if (!matchesSearch) return false;
+    }
+    
+    // Cabinet position filter
+    if (cabinetFilter !== 'all') {
+      const role = member.cabinetRole?.toLowerCase() || '';
+      
+      switch (cabinetFilter) {
+        case 'cabinet':
+          if (!member.cabinetRole) return false;
+          break;
+        case 'premier':
+          if (!(role.includes('premier') || role.includes('chief minister')) || role.includes('deputy')) return false;
+          break;
+        case 'deputy-premier':
+          if (!(role.includes('deputy premier') || role.includes('deputy chief'))) return false;
+          break;
+        case 'minister':
+          if (!(role.includes('minister') && !role.includes('deputy') && !role.includes('assistant'))) return false;
+          break;
+        case 'assistant-minister':
+          if (!role.includes('assistant')) return false;
+          break;
+        case 'backbencher':
+          if (member.cabinetRole) return false;
+          break;
+      }
+    }
+    
+    return true;
   });
 
   const sortedMembers = [...filteredMembers].sort((a, b) => {
@@ -335,6 +368,35 @@ export default function DunSarawak() {
               </SelectItem>
             </SelectContent>
           </Select>
+          <Select value={cabinetFilter} onValueChange={(value: CabinetFilter) => setCabinetFilter(value)}>
+            <SelectTrigger className="w-full sm:w-[200px]" data-testid="select-cabinet-filter">
+              <Crown className="h-4 w-4 mr-2" />
+              <SelectValue placeholder={language === 'ms' ? 'Tapis Kabinet...' : 'Cabinet Filter...'} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">
+                {language === 'ms' ? 'Semua Ahli' : 'All Members'}
+              </SelectItem>
+              <SelectItem value="cabinet">
+                {language === 'ms' ? 'Ahli Kabinet' : 'Cabinet Members'}
+              </SelectItem>
+              <SelectItem value="premier">
+                {language === 'ms' ? 'Premier' : 'Premier'}
+              </SelectItem>
+              <SelectItem value="deputy-premier">
+                {language === 'ms' ? 'Timbalan Premier' : 'Deputy Premier'}
+              </SelectItem>
+              <SelectItem value="minister">
+                {language === 'ms' ? 'Menteri' : 'Minister'}
+              </SelectItem>
+              <SelectItem value="assistant-minister">
+                {language === 'ms' ? 'Pembantu Menteri' : 'Assistant Minister'}
+              </SelectItem>
+              <SelectItem value="backbencher">
+                {language === 'ms' ? 'Ahli Biasa' : 'Backbencher'}
+              </SelectItem>
+            </SelectContent>
+          </Select>
           {authStatus?.isAdmin && (
             <div className="flex flex-wrap gap-2">
               <Button 
@@ -383,7 +445,7 @@ export default function DunSarawak() {
             <Eye className="h-3 w-3 mr-1" />
             {viewsData?.views?.toLocaleString() || '0'} {language === 'ms' ? 'tontonan' : 'views'}
           </Badge>
-          {searchQuery && (
+          {(searchQuery || cabinetFilter !== 'all') && (
             <Badge variant="outline" className="text-sm">
               {language === 'ms' ? 'Ditapis' : 'Filtered'}: {filteredMembers.length}
             </Badge>
