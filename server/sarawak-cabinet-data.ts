@@ -274,8 +274,13 @@ export const SARAWAK_CABINET_MEMBERS: CabinetMemberData[] = [
 ];
 
 export function getCabinetMemberByConstituency(constituencyCode: string): CabinetMemberData | undefined {
-  const normalizedCode = constituencyCode.toUpperCase().replace(/^N\.?/, 'N');
-  return SARAWAK_CABINET_MEMBERS.find(m => m.constituencyCode === normalizedCode);
+  // Normalize by removing all non-alphanumeric characters and uppercasing
+  // This handles: "N.24", "N24", "n.24", "N 24", etc. all become "N24"
+  const normalizedInput = constituencyCode.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+  return SARAWAK_CABINET_MEMBERS.find(m => {
+    const normalizedLookup = m.constituencyCode.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+    return normalizedLookup === normalizedInput;
+  });
 }
 
 export function getCabinetAllowance(role: CabinetPosition['role']): typeof CABINET_ALLOWANCES[CabinetPosition['role']] {

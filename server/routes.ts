@@ -7085,6 +7085,76 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
+  // Safe update: Add cabinet roles/salaries to existing Sarawak DUN members without deleting data
+  app.post("/api/admin/dun/sarawak/update-cabinet", requireAdmin, async (_req, res) => {
+    try {
+      const { getCabinetMemberByConstituency, getCabinetAllowance } = await import("./sarawak-cabinet-data");
+      
+      console.log("[Cabinet Update] Starting safe cabinet data update for Sarawak DUN...");
+      
+      // Get existing DUN members (does NOT delete them)
+      const existingMembers = await storage.getDunMembersByState("Sarawak");
+      console.log(`[Cabinet Update] Found ${existingMembers.length} existing Sarawak DUN members`);
+      
+      if (existingMembers.length === 0) {
+        return res.status(400).json({ 
+          error: "No existing DUN members found. Please ensure DUN member data exists in the database." 
+        });
+      }
+      
+      let updatedCount = 0;
+      let cabinetMembersFound = 0;
+      let alreadyHadCabinet = 0;
+      
+      for (const member of existingMembers) {
+        const cabinetData = getCabinetMemberByConstituency(member.constituencyCode);
+        
+        if (cabinetData) {
+          cabinetMembersFound++;
+          const allowance = getCabinetAllowance(cabinetData.role);
+          
+          // Check if already has cabinet data
+          if (member.cabinetRole === cabinetData.role) {
+            alreadyHadCabinet++;
+            console.log(`[Cabinet Update] ${member.name} (${member.constituencyCode}) already has cabinet role: ${cabinetData.role}`);
+            continue;
+          }
+          
+          try {
+            await storage.updateDunMember(member.id, {
+              cabinetRole: cabinetData.role,
+              cabinetBaseSalary: allowance.baseSalary,
+              cabinetEntertainment: allowance.entertainment,
+              cabinetSpecialAllowance: allowance.specialAllowance,
+              cabinetTotalSalary: allowance.total,
+            });
+            updatedCount++;
+            console.log(`[Cabinet Update] Updated ${member.name} (${member.constituencyCode}) with role: ${cabinetData.role}, total: RM ${allowance.total}`);
+          } catch (err) {
+            console.error(`[Cabinet Update] Error updating member ${member.constituencyCode}:`, err);
+          }
+        }
+      }
+      
+      console.log(`[Cabinet Update] Complete: ${updatedCount} updated, ${alreadyHadCabinet} already had cabinet data, ${cabinetMembersFound} total cabinet members found`);
+      
+      res.json({
+        success: true,
+        message: `Successfully updated cabinet data for ${updatedCount} DUN members`,
+        totalMembers: existingMembers.length,
+        cabinetMembersFound,
+        updatedCount,
+        alreadyHadCabinet,
+      });
+    } catch (error: any) {
+      console.error("[Cabinet Update] Error:", error);
+      res.status(500).json({ 
+        error: error.message || "Failed to update cabinet data",
+        details: error.stack
+      });
+    }
+  });
+
   // Get DUN member count by state
   app.get("/api/dun/:state/count", async (req, res) => {
     try {

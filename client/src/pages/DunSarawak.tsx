@@ -196,6 +196,29 @@ export default function DunSarawak() {
     },
   });
 
+  const updateCabinetMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/admin/dun/sarawak/update-cabinet");
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: language === 'ms' ? "Berjaya" : "Success",
+        description: language === 'ms' 
+          ? `Data kabinet untuk ${data.updatedCount} ahli telah dikemas kini (${data.cabinetMembersFound} ahli kabinet dijumpai)`
+          : `Cabinet data for ${data.updatedCount} members has been updated (${data.cabinetMembersFound} cabinet members found)`,
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/dun/sarawak/members"] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: language === 'ms' ? "Ralat" : "Error",
+        description: error.message || "Failed to update cabinet data",
+        variant: "destructive",
+      });
+    },
+  });
+
   const filteredMembers = members.filter(member => {
     if (!searchQuery) return true;
     const query = searchQuery.toLowerCase();
@@ -293,15 +316,15 @@ export default function DunSarawak() {
           {authStatus?.isAdmin && (
             <div className="flex flex-wrap gap-2">
               <Button 
-                onClick={() => scrapeMutation.mutate()} 
-                disabled={scrapeMutation.isPending || scrapePovertyMutation.isPending}
-                variant="outline"
-                data-testid="button-refresh-dun-data"
+                onClick={() => updateCabinetMutation.mutate()} 
+                disabled={updateCabinetMutation.isPending || members.length === 0}
+                variant="default"
+                data-testid="button-update-cabinet-data"
               >
-                <RefreshCw className={`h-4 w-4 mr-2 ${scrapeMutation.isPending ? 'animate-spin' : ''}`} />
-                {scrapeMutation.isPending 
+                <Crown className={`h-4 w-4 mr-2 ${updateCabinetMutation.isPending ? 'animate-spin' : ''}`} />
+                {updateCabinetMutation.isPending 
                   ? (language === 'ms' ? 'Mengemas kini...' : 'Updating...') 
-                  : (language === 'ms' ? 'Kemas Kini Ahli' : 'Refresh Members')}
+                  : (language === 'ms' ? 'Kemas Kini Data Kabinet' : 'Update Cabinet Data')}
               </Button>
               <Button 
                 onClick={() => scrapePovertyMutation.mutate()} 
@@ -313,6 +336,17 @@ export default function DunSarawak() {
                 {scrapePovertyMutation.isPending 
                   ? (language === 'ms' ? 'Mengemas kini...' : 'Updating...') 
                   : (language === 'ms' ? 'Kemas Kini Data Kemiskinan' : 'Refresh Poverty Data')}
+              </Button>
+              <Button 
+                onClick={() => scrapeMutation.mutate()} 
+                disabled={scrapeMutation.isPending || scrapePovertyMutation.isPending}
+                variant="outline"
+                data-testid="button-refresh-dun-data"
+              >
+                <RefreshCw className={`h-4 w-4 mr-2 ${scrapeMutation.isPending ? 'animate-spin' : ''}`} />
+                {scrapeMutation.isPending 
+                  ? (language === 'ms' ? 'Mengemas kini...' : 'Updating...') 
+                  : (language === 'ms' ? 'Kemas Kini Ahli' : 'Refresh Members')}
               </Button>
             </div>
           )}
