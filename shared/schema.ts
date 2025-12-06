@@ -678,7 +678,7 @@ export const courtCaseNewsArticles = pgTable("court_case_news_articles", {
   status: text("status").notNull().default("pending"),
   reviewedBy: varchar("reviewed_by"),
   reviewedAt: timestamp("reviewed_at"),
-  linkedCourtCaseId: varchar("linked_court_case_id").references(() => courtCases.id),
+  linkedCourtCaseId: varchar("linked_court_case_id").references(() => courtCases.id, { onDelete: 'set null' }),
   scrapedAt: timestamp("scraped_at").notNull().default(sql`NOW()`),
   createdAt: timestamp("created_at").notNull().default(sql`NOW()`),
 });
