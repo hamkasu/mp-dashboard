@@ -92,27 +92,6 @@ function getCabinetRoleColor(role: string | null): string {
   return "bg-muted text-muted-foreground";
 }
 
-function getCabinetSalary(role: string | null): { baseSalary: number; entertainment: number; special: number; total: number } | null {
-  if (!role) return null;
-  const lowerRole = role.toLowerCase();
-  
-  if (lowerRole.includes('deputy chief') || lowerRole.includes('deputy premier')) {
-    return { baseSalary: 33000, entertainment: 15000, special: 25000, total: 73000 };
-  }
-  if (lowerRole.includes('deputy minister')) {
-    return { baseSalary: 22500, entertainment: 7500, special: 12500, total: 42500 };
-  }
-  if (lowerRole.includes('assistant minister') || lowerRole.includes('assistant')) {
-    return { baseSalary: 17000, entertainment: 4000, special: 9000, total: 30000 };
-  }
-  if ((lowerRole.includes('premier') || lowerRole.includes('chief minister')) && !lowerRole.includes('deputy')) {
-    return { baseSalary: 39000, entertainment: 18000, special: 30000, total: 87000 };
-  }
-  if (lowerRole.includes('minister') && !lowerRole.includes('deputy') && !lowerRole.includes('assistant')) {
-    return { baseSalary: 30000, entertainment: 12000, special: 20000, total: 62000 };
-  }
-  return null;
-}
 
 type SortOption = 'code' | 'population-asc' | 'population-desc';
 
@@ -252,16 +231,59 @@ export default function DunSarawak() {
     }
   });
 
-  // Calculate total salary including cabinet positions
+  // Calculate total salary including cabinet positions from database
   const calculateTotalMonthlySalary = () => {
     let total = 0;
     members.forEach(member => {
       const dunSalary = member.totalMonthlyAllowance || 40000;
-      const cabinetSalary = getCabinetSalary(member.cabinetRole);
-      total += dunSalary + (cabinetSalary?.total || 0);
+      const cabinetSalary = member.cabinetTotalSalary || 0;
+      total += dunSalary + cabinetSalary;
     });
     return total;
   };
+  
+  // Calculate cabinet salary totals by role from database
+  const calculateCabinetSalaryByRole = () => {
+    const roleGroups = {
+      premier: { total: 0, count: 0 },
+      deputyPremier: { total: 0, count: 0 },
+      minister: { total: 0, count: 0 },
+      deputyMinister: { total: 0, count: 0 },
+      assistantMinister: { total: 0, count: 0 },
+    };
+    
+    members.forEach(member => {
+      if (!member.cabinetRole || !member.cabinetTotalSalary) return;
+      const lowerRole = member.cabinetRole.toLowerCase();
+      
+      if ((lowerRole.includes('premier') || lowerRole.includes('chief minister')) && !lowerRole.includes('deputy')) {
+        roleGroups.premier.total += member.cabinetTotalSalary;
+        roleGroups.premier.count++;
+      } else if (lowerRole.includes('deputy chief') || lowerRole.includes('deputy premier')) {
+        roleGroups.deputyPremier.total += member.cabinetTotalSalary;
+        roleGroups.deputyPremier.count++;
+      } else if (lowerRole.includes('deputy minister')) {
+        roleGroups.deputyMinister.total += member.cabinetTotalSalary;
+        roleGroups.deputyMinister.count++;
+      } else if (lowerRole.includes('assistant minister') || lowerRole.includes('assistant')) {
+        roleGroups.assistantMinister.total += member.cabinetTotalSalary;
+        roleGroups.assistantMinister.count++;
+      } else if (lowerRole.includes('minister')) {
+        roleGroups.minister.total += member.cabinetTotalSalary;
+        roleGroups.minister.count++;
+      }
+    });
+    
+    return {
+      premier: roleGroups.premier.count > 0 ? Math.round(roleGroups.premier.total / roleGroups.premier.count) : 0,
+      deputyPremier: roleGroups.deputyPremier.count > 0 ? Math.round(roleGroups.deputyPremier.total / roleGroups.deputyPremier.count) : 0,
+      minister: roleGroups.minister.count > 0 ? Math.round(roleGroups.minister.total / roleGroups.minister.count) : 0,
+      deputyMinister: roleGroups.deputyMinister.count > 0 ? Math.round(roleGroups.deputyMinister.total / roleGroups.deputyMinister.count) : 0,
+      assistantMinister: roleGroups.assistantMinister.count > 0 ? Math.round(roleGroups.assistantMinister.total / roleGroups.assistantMinister.count) : 0,
+    };
+  };
+  
+  const cabinetSalaryByRole = calculateCabinetSalaryByRole();
 
   const totalMonthlySalary = calculateTotalMonthlySalary();
   const cabinetMembersCount = members.filter(m => m.cabinetRole).length;
@@ -413,23 +435,33 @@ export default function DunSarawak() {
                 <div className="grid grid-cols-2 md:grid-cols-5 gap-3 text-xs">
                   <div className="p-2 rounded-md bg-amber-50 dark:bg-amber-900/20">
                     <p className="text-muted-foreground">{language === 'ms' ? 'Premier' : 'Premier'}</p>
-                    <p className="font-semibold text-amber-700 dark:text-amber-400">+RM 87,000</p>
+                    <p className="font-semibold text-amber-700 dark:text-amber-400">
+                      {cabinetSalaryByRole.premier > 0 ? `+${formatCurrency(cabinetSalaryByRole.premier)}` : 'N/A'}
+                    </p>
                   </div>
                   <div className="p-2 rounded-md bg-orange-50 dark:bg-orange-900/20">
                     <p className="text-muted-foreground">{language === 'ms' ? 'Timbalan Premier' : 'Deputy Premier'}</p>
-                    <p className="font-semibold text-orange-700 dark:text-orange-400">+RM 73,000</p>
+                    <p className="font-semibold text-orange-700 dark:text-orange-400">
+                      {cabinetSalaryByRole.deputyPremier > 0 ? `+${formatCurrency(cabinetSalaryByRole.deputyPremier)}` : 'N/A'}
+                    </p>
                   </div>
                   <div className="p-2 rounded-md bg-purple-50 dark:bg-purple-900/20">
                     <p className="text-muted-foreground">{language === 'ms' ? 'Menteri' : 'Minister'}</p>
-                    <p className="font-semibold text-purple-700 dark:text-purple-400">+RM 62,000</p>
+                    <p className="font-semibold text-purple-700 dark:text-purple-400">
+                      {cabinetSalaryByRole.minister > 0 ? `+${formatCurrency(cabinetSalaryByRole.minister)}` : 'N/A'}
+                    </p>
                   </div>
                   <div className="p-2 rounded-md bg-indigo-50 dark:bg-indigo-900/20">
                     <p className="text-muted-foreground">{language === 'ms' ? 'Timbalan Menteri' : 'Deputy Minister'}</p>
-                    <p className="font-semibold text-indigo-700 dark:text-indigo-400">+RM 42,500</p>
+                    <p className="font-semibold text-indigo-700 dark:text-indigo-400">
+                      {cabinetSalaryByRole.deputyMinister > 0 ? `+${formatCurrency(cabinetSalaryByRole.deputyMinister)}` : 'N/A'}
+                    </p>
                   </div>
                   <div className="p-2 rounded-md bg-sky-50 dark:bg-sky-900/20">
                     <p className="text-muted-foreground">{language === 'ms' ? 'Pembantu Menteri' : 'Assistant Minister'}</p>
-                    <p className="font-semibold text-sky-700 dark:text-sky-400">+RM 30,000</p>
+                    <p className="font-semibold text-sky-700 dark:text-sky-400">
+                      {cabinetSalaryByRole.assistantMinister > 0 ? `+${formatCurrency(cabinetSalaryByRole.assistantMinister)}` : 'N/A'}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -528,8 +560,8 @@ export default function DunSarawak() {
                   <div className="mt-3 pt-3 border-t border-border space-y-2">
                     {(() => {
                       const dunSalary = member.totalMonthlyAllowance || 40000;
-                      const cabinetSalary = getCabinetSalary(member.cabinetRole);
-                      const totalSalary = dunSalary + (cabinetSalary?.total || 0);
+                      const cabinetSalary = member.cabinetTotalSalary || 0;
+                      const totalSalary = dunSalary + cabinetSalary;
                       
                       return (
                         <Tooltip>
@@ -580,27 +612,33 @@ export default function DunSarawak() {
                                 <span>{formatCurrency(dunSalary)}</span>
                               </div>
                               
-                              {cabinetSalary && (
+                              {member.cabinetRole && member.cabinetTotalSalary && (
                                 <>
                                   <p className="font-semibold mt-3 mb-2 flex items-center gap-1">
                                     <Crown className="h-3 w-3" />
                                     {language === 'ms' ? 'Elaun Kabinet:' : 'Cabinet Allowance:'}
                                   </p>
-                                  <div className="flex justify-between gap-4">
-                                    <span>{language === 'ms' ? 'Gaji Asas Kabinet' : 'Cabinet Basic Salary'}:</span>
-                                    <span>{formatCurrency(cabinetSalary.baseSalary)}</span>
-                                  </div>
-                                  <div className="flex justify-between gap-4">
-                                    <span>{language === 'ms' ? 'Elaun Hiburan' : 'Entertainment'}:</span>
-                                    <span>{formatCurrency(cabinetSalary.entertainment)}</span>
-                                  </div>
-                                  <div className="flex justify-between gap-4">
-                                    <span>{language === 'ms' ? 'Elaun Khas' : 'Special Allowance'}:</span>
-                                    <span>{formatCurrency(cabinetSalary.special)}</span>
-                                  </div>
+                                  {member.cabinetBaseSalary && (
+                                    <div className="flex justify-between gap-4">
+                                      <span>{language === 'ms' ? 'Gaji Asas Kabinet' : 'Cabinet Basic Salary'}:</span>
+                                      <span>{formatCurrency(member.cabinetBaseSalary)}</span>
+                                    </div>
+                                  )}
+                                  {member.cabinetEntertainment && (
+                                    <div className="flex justify-between gap-4">
+                                      <span>{language === 'ms' ? 'Elaun Hiburan' : 'Entertainment'}:</span>
+                                      <span>{formatCurrency(member.cabinetEntertainment)}</span>
+                                    </div>
+                                  )}
+                                  {member.cabinetSpecialAllowance && (
+                                    <div className="flex justify-between gap-4">
+                                      <span>{language === 'ms' ? 'Elaun Khas' : 'Special Allowance'}:</span>
+                                      <span>{formatCurrency(member.cabinetSpecialAllowance)}</span>
+                                    </div>
+                                  )}
                                   <div className="flex justify-between gap-4 pt-1 border-t font-medium">
                                     <span>{language === 'ms' ? 'Jumlah Kabinet' : 'Cabinet Total'}:</span>
-                                    <span>{formatCurrency(cabinetSalary.total)}</span>
+                                    <span>{formatCurrency(member.cabinetTotalSalary)}</span>
                                   </div>
                                 </>
                               )}
