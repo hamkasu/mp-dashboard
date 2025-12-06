@@ -7,7 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { Users, MapPin, RefreshCw, Search, Building2, DollarSign, TrendingDown, Home, AlertTriangle } from "lucide-react";
+import { Users, MapPin, RefreshCw, Search, Building2, DollarSign, TrendingDown, Home, AlertTriangle, Briefcase, BarChart3, Wallet } from "lucide-react";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { useState, useEffect } from "react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -396,51 +396,63 @@ export default function DunSarawak() {
                     </Tooltip>
 
                     {member.povertyRate !== null && member.povertyRate !== undefined && (
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <div className="flex items-center justify-between text-xs">
-                            <span className="flex items-center gap-1 text-muted-foreground">
-                              <AlertTriangle className="h-3 w-3" />
-                              {language === 'ms' ? 'Kadar Kemiskinan' : 'Poverty Rate'}
-                            </span>
-                            <span className={`font-semibold ${getPovertyColor(member.povertyRate)}`} data-testid={`text-poverty-${member.id}`}>
-                              {formatPovertyRate(member.povertyRate)}
-                            </span>
-                          </div>
-                        </TooltipTrigger>
-                        <TooltipContent side="top" className="max-w-xs">
-                          <div className="space-y-1 text-xs">
-                            <p className="font-semibold mb-2">{language === 'ms' ? 'Data Ekonomi Kawasan:' : 'Constituency Economic Data:'}</p>
-                            {member.population && (
-                              <div className="flex justify-between gap-4">
-                                <span>{language === 'ms' ? 'Populasi' : 'Population'}:</span>
-                                <span>{member.population.toLocaleString()}</span>
-                              </div>
-                            )}
-                            {member.householdIncome && (
-                              <div className="flex justify-between gap-4">
-                                <span>{language === 'ms' ? 'Pendapatan Isi Rumah' : 'Household Income'}:</span>
-                                <span>{formatCurrency(member.householdIncome)}</span>
-                              </div>
-                            )}
-                            {member.unemploymentRate && (
-                              <div className="flex justify-between gap-4">
-                                <span>{language === 'ms' ? 'Kadar Pengangguran' : 'Unemployment'}:</span>
-                                <span>{(member.unemploymentRate / 10).toFixed(1)}%</span>
-                              </div>
-                            )}
-                            {member.giniCoefficient && (
-                              <div className="flex justify-between gap-4">
-                                <span>{language === 'ms' ? 'Pekali Gini' : 'Gini Coefficient'}:</span>
-                                <span>{(member.giniCoefficient / 1000).toFixed(3)}</span>
-                              </div>
-                            )}
-                            <p className="text-muted-foreground pt-1 text-[10px]">
-                              {language === 'ms' ? 'Sumber: DOSM Kawasanku' : 'Source: DOSM Kawasanku'}
-                            </p>
-                          </div>
-                        </TooltipContent>
-                      </Tooltip>
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="flex items-center gap-1 text-muted-foreground">
+                          <AlertTriangle className="h-3 w-3" />
+                          {language === 'ms' ? 'Kadar Kemiskinan' : 'Poverty Rate'}
+                        </span>
+                        <span className={`font-semibold ${getPovertyColor(member.povertyRate)}`} data-testid={`text-poverty-${member.id}`}>
+                          {formatPovertyRate(member.povertyRate)}
+                        </span>
+                      </div>
+                    )}
+
+                    {member.householdIncome !== null && member.householdIncome !== undefined && (
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="flex items-center gap-1 text-muted-foreground">
+                          <Wallet className="h-3 w-3" />
+                          {language === 'ms' ? 'Pendapatan Isi Rumah' : 'Household Income'}
+                        </span>
+                        <span className="font-semibold" data-testid={`text-household-income-${member.id}`}>
+                          {formatCurrency(member.householdIncome)}
+                        </span>
+                      </div>
+                    )}
+
+                    {member.giniCoefficient !== null && member.giniCoefficient !== undefined && (
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="flex items-center gap-1 text-muted-foreground">
+                          <BarChart3 className="h-3 w-3" />
+                          {language === 'ms' ? 'Pekali Gini' : 'Gini Coefficient'}
+                        </span>
+                        <span className="font-semibold" data-testid={`text-gini-${member.id}`}>
+                          {(member.giniCoefficient / 1000).toFixed(3)}
+                        </span>
+                      </div>
+                    )}
+
+                    {member.unemploymentRate !== null && member.unemploymentRate !== undefined && (
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="flex items-center gap-1 text-muted-foreground">
+                          <Briefcase className="h-3 w-3" />
+                          {language === 'ms' ? 'Kadar Pengangguran' : 'Unemployment Rate'}
+                        </span>
+                        <span className="font-semibold" data-testid={`text-unemployment-${member.id}`}>
+                          {(member.unemploymentRate / 10).toFixed(1)}%
+                        </span>
+                      </div>
+                    )}
+
+                    {member.population !== null && member.population !== undefined && (
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="flex items-center gap-1 text-muted-foreground">
+                          <Users className="h-3 w-3" />
+                          {language === 'ms' ? 'Populasi' : 'Population'}
+                        </span>
+                        <span className="font-semibold" data-testid={`text-population-${member.id}`}>
+                          {member.population.toLocaleString()}
+                        </span>
+                      </div>
                     )}
                   </div>
                 </CardContent>
