@@ -332,7 +332,7 @@ export default function DunSelangor() {
                             {language === 'ms' ? 'Elaun Bulanan' : 'Monthly Allowance'}
                           </span>
                           <span className="font-semibold text-green-600 dark:text-green-400" data-testid={`text-selangor-salary-${member.id}`}>
-                            {formatCurrency(member.totalMonthlyAllowance || 25000)}
+                            {formatCurrency(25000)}
                           </span>
                         </div>
                       </TooltipTrigger>
