@@ -1,6 +1,11 @@
 import * as cheerio from 'cheerio';
 import axios from 'axios';
+import * as https from 'https';
 import { InsertDunMember } from '@shared/schema';
+
+const httpsAgent = new https.Agent({
+  rejectUnauthorized: false
+});
 
 interface SelangorDunMemberRaw {
   constituencyCode: string;
@@ -26,6 +31,7 @@ export class SelangorDunScraper {
           'Accept-Language': 'en-US,en;q=0.5',
         },
         timeout: 30000,
+        httpsAgent,
       });
 
       const $ = cheerio.load(response.data);
@@ -207,6 +213,7 @@ export class SelangorDunScraper {
         headers: {
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
         },
+        httpsAgent,
       });
       return response.status === 200;
     } catch {
