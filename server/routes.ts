@@ -7005,6 +7005,27 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
+  // Get page view count for a specific DUN state
+  app.get("/api/dun/:state/views", async (req, res) => {
+    try {
+      const { visitorAnalytics } = await import("@shared/schema");
+      const { count, eq } = await import("drizzle-orm");
+      
+      const { state } = req.params;
+      const path = `/dun/${state.toLowerCase()}`;
+      
+      const [result] = await db
+        .select({ views: count() })
+        .from(visitorAnalytics)
+        .where(eq(visitorAnalytics.path, path));
+      
+      res.json({ views: result?.views || 0 });
+    } catch (error) {
+      console.error("Error fetching DUN page views:", error);
+      res.status(500).json({ error: "Failed to fetch page views" });
+    }
+  });
+
   // Get a single DUN member by ID
   app.get("/api/dun/member/:id", async (req, res) => {
     try {

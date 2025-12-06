@@ -7,7 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { Users, MapPin, RefreshCw, Search, Building2, DollarSign, TrendingDown, Home, AlertTriangle, Briefcase, BarChart3, Wallet } from "lucide-react";
+import { Users, MapPin, RefreshCw, Search, Building2, DollarSign, TrendingDown, Home, AlertTriangle, Briefcase, BarChart3, Wallet, Eye } from "lucide-react";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { useState, useEffect } from "react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -82,6 +82,10 @@ export default function DunSarawak() {
 
   const { data: members = [], isLoading, refetch } = useQuery<DunMember[]>({
     queryKey: ["/api/dun/sarawak/members"],
+  });
+
+  const { data: viewsData } = useQuery<{ views: number }>({
+    queryKey: ["/api/dun/sarawak/views"],
   });
 
   // Track page view
@@ -224,6 +228,10 @@ export default function DunSarawak() {
           <Badge variant="secondary" className="text-sm">
             <Users className="h-3 w-3 mr-1" />
             {isLoading ? '...' : `${members.length} ${language === 'ms' ? 'Ahli' : 'Members'}`}
+          </Badge>
+          <Badge variant="outline" className="text-sm" data-testid="badge-page-views">
+            <Eye className="h-3 w-3 mr-1" />
+            {viewsData?.views?.toLocaleString() || '0'} {language === 'ms' ? 'tontonan' : 'views'}
           </Badge>
           {searchQuery && (
             <Badge variant="outline" className="text-sm">
