@@ -850,6 +850,12 @@ export const dunMembers = pgTable("dun_members", {
   entertainmentAllowance: integer("entertainment_allowance").default(1500),
   housingAllowance: integer("housing_allowance").default(3000),
   totalMonthlyAllowance: integer("total_monthly_allowance").default(40000), // 25,000-40,000 for ordinary ADUN
+  // Cabinet position and salary (for Premier, Deputy CM, Ministers, etc.)
+  cabinetRole: text("cabinet_role"), // Premier, Deputy Chief Minister, Minister, Deputy Minister, Assistant Minister
+  cabinetBaseSalary: integer("cabinet_base_salary"), // Base salary for cabinet position
+  cabinetEntertainment: integer("cabinet_entertainment"), // Entertainment allowance
+  cabinetSpecialAllowance: integer("cabinet_special_allowance"), // Special allowance
+  cabinetTotalSalary: integer("cabinet_total_salary"), // Total cabinet monthly emolument
   // Poverty and economic data from DOSM Kawasanku
   povertyRate: integer("poverty_rate"), // percentage * 10 (e.g. 125 = 12.5%)
   householdIncome: integer("household_income"), // median household income in RM

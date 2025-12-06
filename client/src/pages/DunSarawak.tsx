@@ -7,7 +7,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { Users, MapPin, RefreshCw, Search, Building2, DollarSign, TrendingDown, Home, AlertTriangle, Briefcase, BarChart3, Wallet, Eye } from "lucide-react";
+import { Users, MapPin, RefreshCw, Search, Building2, DollarSign, TrendingDown, Home, AlertTriangle, Briefcase, BarChart3, Wallet, Eye, ArrowUpDown, Crown, Award } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { useState, useEffect } from "react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -70,10 +71,55 @@ function formatPovertyRate(povertyRate: number | null): string {
   return (povertyRate / 10).toFixed(1) + "%";
 }
 
+function getCabinetRoleColor(role: string | null): string {
+  if (!role) return "";
+  const lowerRole = role.toLowerCase();
+  if (lowerRole.includes('premier') || lowerRole.includes('chief minister')) {
+    return "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400";
+  }
+  if (lowerRole.includes('deputy chief') || lowerRole.includes('deputy premier')) {
+    return "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400";
+  }
+  if (lowerRole.includes('minister') && !lowerRole.includes('deputy') && !lowerRole.includes('assistant')) {
+    return "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400";
+  }
+  if (lowerRole.includes('deputy minister')) {
+    return "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-400";
+  }
+  if (lowerRole.includes('assistant')) {
+    return "bg-sky-100 text-sky-800 dark:bg-sky-900/30 dark:text-sky-400";
+  }
+  return "bg-muted text-muted-foreground";
+}
+
+function getCabinetSalary(role: string | null): { baseSalary: number; entertainment: number; special: number; total: number } | null {
+  if (!role) return null;
+  const lowerRole = role.toLowerCase();
+  if (lowerRole.includes('premier') || lowerRole.includes('chief minister') && !lowerRole.includes('deputy')) {
+    return { baseSalary: 39000, entertainment: 18000, special: 30000, total: 87000 };
+  }
+  if (lowerRole.includes('deputy chief') || lowerRole.includes('deputy premier')) {
+    return { baseSalary: 33000, entertainment: 15000, special: 25000, total: 73000 };
+  }
+  if (lowerRole.includes('minister') && !lowerRole.includes('deputy') && !lowerRole.includes('assistant')) {
+    return { baseSalary: 30000, entertainment: 12000, special: 20000, total: 62000 };
+  }
+  if (lowerRole.includes('deputy minister')) {
+    return { baseSalary: 22500, entertainment: 7500, special: 12500, total: 42500 };
+  }
+  if (lowerRole.includes('assistant')) {
+    return { baseSalary: 17000, entertainment: 4000, special: 9000, total: 30000 };
+  }
+  return null;
+}
+
+type SortOption = 'code' | 'population-asc' | 'population-desc';
+
 export default function DunSarawak() {
   const { t, language } = useLanguage();
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
+  const [sortBy, setSortBy] = useState<SortOption>('code');
 
   const { data: authStatus } = useQuery<{ isAdmin: boolean }>({
     queryKey: ["/api/admin/auth-status"],
@@ -161,10 +207,40 @@ export default function DunSarawak() {
   });
 
   const sortedMembers = [...filteredMembers].sort((a, b) => {
-    const codeA = parseInt(a.constituencyCode.replace(/\D/g, ''));
-    const codeB = parseInt(b.constituencyCode.replace(/\D/g, ''));
-    return codeA - codeB;
+    switch (sortBy) {
+      case 'population-asc':
+        // Smallest constituency first (nulls last)
+        if (a.population === null && b.population === null) return 0;
+        if (a.population === null) return 1;
+        if (b.population === null) return -1;
+        return a.population - b.population;
+      case 'population-desc':
+        // Biggest constituency first (nulls last)
+        if (a.population === null && b.population === null) return 0;
+        if (a.population === null) return 1;
+        if (b.population === null) return -1;
+        return b.population - a.population;
+      case 'code':
+      default:
+        const codeA = parseInt(a.constituencyCode.replace(/\D/g, ''));
+        const codeB = parseInt(b.constituencyCode.replace(/\D/g, ''));
+        return codeA - codeB;
+    }
   });
+
+  // Calculate total salary including cabinet positions
+  const calculateTotalMonthlySalary = () => {
+    let total = 0;
+    members.forEach(member => {
+      const dunSalary = member.totalMonthlyAllowance || 40000;
+      const cabinetSalary = getCabinetSalary(member.cabinetRole);
+      total += dunSalary + (cabinetSalary?.total || 0);
+    });
+    return total;
+  };
+
+  const totalMonthlySalary = calculateTotalMonthlySalary();
+  const cabinetMembersCount = members.filter(m => m.cabinetRole).length;
 
   return (
     <div className="min-h-screen bg-background">
@@ -196,6 +272,23 @@ export default function DunSarawak() {
               data-testid="input-search-dun-members"
             />
           </div>
+          <Select value={sortBy} onValueChange={(value: SortOption) => setSortBy(value)}>
+            <SelectTrigger className="w-full sm:w-[220px]" data-testid="select-sort-dun">
+              <ArrowUpDown className="h-4 w-4 mr-2" />
+              <SelectValue placeholder={language === 'ms' ? 'Susun mengikut...' : 'Sort by...'} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="code">
+                {language === 'ms' ? 'Kod Kawasan' : 'Constituency Code'}
+              </SelectItem>
+              <SelectItem value="population-asc">
+                {language === 'ms' ? 'Populasi (Terkecil)' : 'Population (Smallest)'}
+              </SelectItem>
+              <SelectItem value="population-desc">
+                {language === 'ms' ? 'Populasi (Terbesar)' : 'Population (Largest)'}
+              </SelectItem>
+            </SelectContent>
+          </Select>
           {authStatus?.isAdmin && (
             <div className="flex flex-wrap gap-2">
               <Button 
@@ -245,21 +338,22 @@ export default function DunSarawak() {
             <CardHeader className="pb-2">
               <CardTitle className="text-lg flex items-center gap-2">
                 <DollarSign className="h-5 w-5 text-primary" />
-                {language === 'ms' ? 'Jumlah Gaji & Elaun ADUN' : 'Total ADUN Salaries & Allowances'}
+                {language === 'ms' ? 'Jumlah Gaji & Elaun ADUN + Kabinet' : 'Total ADUN + Cabinet Salaries & Allowances'}
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold text-primary" data-testid="text-total-dun-salary">
-                {formatCurrency(members.length * 40000)}/{language === 'ms' ? 'bulan' : 'month'}
+                {formatCurrency(totalMonthlySalary)}/{language === 'ms' ? 'bulan' : 'month'}
               </div>
               <p className="text-sm text-muted-foreground mt-1">
                 {language === 'ms' 
-                  ? `Kos kumulatif untuk ${members.length} ahli DUN pada RM40,000/bulan setiap seorang`
-                  : `Cumulative cost for ${members.length} DUN members at RM40,000/month each`}
+                  ? `Kos kumulatif untuk ${members.length} ahli DUN (termasuk ${cabinetMembersCount} ahli kabinet)`
+                  : `Cumulative cost for ${members.length} DUN members (including ${cabinetMembersCount} cabinet members)`}
               </p>
+              
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4 pt-4 border-t">
                 <div>
-                  <p className="text-xs text-muted-foreground">{language === 'ms' ? 'Gaji Asas' : 'Basic Salary'}</p>
+                  <p className="text-xs text-muted-foreground">{language === 'ms' ? 'Gaji Asas ADUN' : 'ADUN Basic Salary'}</p>
                   <p className="font-semibold">RM 11,130</p>
                 </div>
                 <div>
@@ -271,8 +365,37 @@ export default function DunSarawak() {
                   <p className="font-semibold">RM 450/day</p>
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground">{language === 'ms' ? 'Jumlah Bulanan' : 'Total Monthly'}</p>
+                  <p className="text-xs text-muted-foreground">{language === 'ms' ? 'Jumlah ADUN Bulanan' : 'Total ADUN Monthly'}</p>
                   <p className="font-semibold">RM 25,000-40,000</p>
+                </div>
+              </div>
+              
+              <div className="mt-4 pt-4 border-t">
+                <p className="text-xs text-muted-foreground mb-3 flex items-center gap-1">
+                  <Crown className="h-3 w-3" />
+                  {language === 'ms' ? 'Elaun Kabinet Negeri (tambahan kepada elaun ADUN)' : 'State Cabinet Allowances (additional to ADUN allowances)'}
+                </p>
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-3 text-xs">
+                  <div className="p-2 rounded-md bg-amber-50 dark:bg-amber-900/20">
+                    <p className="text-muted-foreground">{language === 'ms' ? 'Premier' : 'Premier'}</p>
+                    <p className="font-semibold text-amber-700 dark:text-amber-400">+RM 87,000</p>
+                  </div>
+                  <div className="p-2 rounded-md bg-orange-50 dark:bg-orange-900/20">
+                    <p className="text-muted-foreground">{language === 'ms' ? 'Timbalan Premier' : 'Deputy Premier'}</p>
+                    <p className="font-semibold text-orange-700 dark:text-orange-400">+RM 73,000</p>
+                  </div>
+                  <div className="p-2 rounded-md bg-purple-50 dark:bg-purple-900/20">
+                    <p className="text-muted-foreground">{language === 'ms' ? 'Menteri' : 'Minister'}</p>
+                    <p className="font-semibold text-purple-700 dark:text-purple-400">+RM 62,000</p>
+                  </div>
+                  <div className="p-2 rounded-md bg-indigo-50 dark:bg-indigo-900/20">
+                    <p className="text-muted-foreground">{language === 'ms' ? 'Timbalan Menteri' : 'Deputy Minister'}</p>
+                    <p className="font-semibold text-indigo-700 dark:text-indigo-400">+RM 42,500</p>
+                  </div>
+                  <div className="p-2 rounded-md bg-sky-50 dark:bg-sky-900/20">
+                    <p className="text-muted-foreground">{language === 'ms' ? 'Pembantu Menteri' : 'Assistant Minister'}</p>
+                    <p className="font-semibold text-sky-700 dark:text-sky-400">+RM 30,000</p>
+                  </div>
                 </div>
               </div>
             </CardContent>
@@ -343,65 +466,119 @@ export default function DunSarawak() {
                           <span className="font-medium">{member.constituencyCode}</span> - {member.constituencyName}
                         </span>
                       </div>
-                      {member.party && (
-                        <Badge 
-                          variant="secondary" 
-                          className={`text-xs ${getPartyColor(member.party)}`}
-                          data-testid={`badge-party-${member.id}`}
-                        >
-                          {member.party}
-                        </Badge>
-                      )}
+                      <div className="flex flex-wrap gap-1">
+                        {member.party && (
+                          <Badge 
+                            variant="secondary" 
+                            className={`text-xs ${getPartyColor(member.party)}`}
+                            data-testid={`badge-party-${member.id}`}
+                          >
+                            {member.party}
+                          </Badge>
+                        )}
+                        {member.cabinetRole && (
+                          <Badge 
+                            variant="secondary" 
+                            className={`text-xs ${getCabinetRoleColor(member.cabinetRole)}`}
+                            data-testid={`badge-cabinet-${member.id}`}
+                          >
+                            <Crown className="h-2.5 w-2.5 mr-1" />
+                            {member.cabinetRole}
+                          </Badge>
+                        )}
+                      </div>
                     </div>
                   </div>
                   
                   <div className="mt-3 pt-3 border-t border-border space-y-2">
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="flex items-center gap-1 text-muted-foreground">
-                            <DollarSign className="h-3 w-3" />
-                            {language === 'ms' ? 'Elaun Bulanan' : 'Monthly Allowance'}
-                          </span>
-                          <span className="font-semibold text-green-600 dark:text-green-400" data-testid={`text-salary-${member.id}`}>
-                            {formatCurrency(member.totalMonthlyAllowance || 40000)}
-                          </span>
-                        </div>
-                      </TooltipTrigger>
-                      <TooltipContent side="top" className="max-w-xs">
-                        <div className="space-y-1 text-xs">
-                          <p className="font-semibold mb-2">{language === 'ms' ? 'Pecahan Elaun:' : 'Allowance Breakdown:'}</p>
-                          <div className="flex justify-between gap-4">
-                            <span>{language === 'ms' ? 'Gaji Asas' : 'Basic Salary'}:</span>
-                            <span>{formatCurrency(member.baseSalary || 11130)}</span>
-                          </div>
-                          <div className="flex justify-between gap-4">
-                            <span>{language === 'ms' ? 'Elaun Perkhidmatan' : 'Service Allowance'}:</span>
-                            <span>{formatCurrency(member.serviceAllowance || 3870)}</span>
-                          </div>
-                          <div className="flex justify-between gap-4">
-                            <span>{language === 'ms' ? 'Elaun Kawasan' : 'Constituency Allowance'}:</span>
-                            <span>{formatCurrency(member.constituencyAllowance || 10500)}</span>
-                          </div>
-                          <div className="flex justify-between gap-4">
-                            <span>{language === 'ms' ? 'Elaun Perjalanan' : 'Travel Allowance'}:</span>
-                            <span>{formatCurrency(member.travelAllowance || 2000)}</span>
-                          </div>
-                          <div className="flex justify-between gap-4">
-                            <span>{language === 'ms' ? 'Elaun Hiburan' : 'Entertainment'}:</span>
-                            <span>{formatCurrency(member.entertainmentAllowance || 1500)}</span>
-                          </div>
-                          <div className="flex justify-between gap-4">
-                            <span>{language === 'ms' ? 'Elaun Penginapan' : 'Housing Allowance'}:</span>
-                            <span>{formatCurrency(member.housingAllowance || 3000)}</span>
-                          </div>
-                          <div className="flex justify-between gap-4 pt-1 border-t">
-                            <span>{language === 'ms' ? 'Elaun Duduk' : 'Sitting Allowance'}:</span>
-                            <span>{formatCurrency(member.sittingAllowance || 450)}/day</span>
-                          </div>
-                        </div>
-                      </TooltipContent>
-                    </Tooltip>
+                    {(() => {
+                      const dunSalary = member.totalMonthlyAllowance || 40000;
+                      const cabinetSalary = getCabinetSalary(member.cabinetRole);
+                      const totalSalary = dunSalary + (cabinetSalary?.total || 0);
+                      
+                      return (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div className="flex items-center justify-between text-xs">
+                              <span className="flex items-center gap-1 text-muted-foreground">
+                                <DollarSign className="h-3 w-3" />
+                                {language === 'ms' ? 'Jumlah Bulanan' : 'Total Monthly'}
+                              </span>
+                              <span className="font-semibold text-green-600 dark:text-green-400" data-testid={`text-salary-${member.id}`}>
+                                {formatCurrency(totalSalary)}
+                              </span>
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent side="top" className="max-w-xs">
+                            <div className="space-y-1 text-xs">
+                              <p className="font-semibold mb-2">{language === 'ms' ? 'Pecahan Elaun ADUN:' : 'ADUN Allowance Breakdown:'}</p>
+                              <div className="flex justify-between gap-4">
+                                <span>{language === 'ms' ? 'Gaji Asas' : 'Basic Salary'}:</span>
+                                <span>{formatCurrency(member.baseSalary || 11130)}</span>
+                              </div>
+                              <div className="flex justify-between gap-4">
+                                <span>{language === 'ms' ? 'Elaun Perkhidmatan' : 'Service Allowance'}:</span>
+                                <span>{formatCurrency(member.serviceAllowance || 3870)}</span>
+                              </div>
+                              <div className="flex justify-between gap-4">
+                                <span>{language === 'ms' ? 'Elaun Kawasan' : 'Constituency Allowance'}:</span>
+                                <span>{formatCurrency(member.constituencyAllowance || 10500)}</span>
+                              </div>
+                              <div className="flex justify-between gap-4">
+                                <span>{language === 'ms' ? 'Elaun Perjalanan' : 'Travel Allowance'}:</span>
+                                <span>{formatCurrency(member.travelAllowance || 2000)}</span>
+                              </div>
+                              <div className="flex justify-between gap-4">
+                                <span>{language === 'ms' ? 'Elaun Hiburan' : 'Entertainment'}:</span>
+                                <span>{formatCurrency(member.entertainmentAllowance || 1500)}</span>
+                              </div>
+                              <div className="flex justify-between gap-4">
+                                <span>{language === 'ms' ? 'Elaun Penginapan' : 'Housing Allowance'}:</span>
+                                <span>{formatCurrency(member.housingAllowance || 3000)}</span>
+                              </div>
+                              <div className="flex justify-between gap-4">
+                                <span>{language === 'ms' ? 'Elaun Duduk' : 'Sitting Allowance'}:</span>
+                                <span>{formatCurrency(member.sittingAllowance || 450)}/day</span>
+                              </div>
+                              <div className="flex justify-between gap-4 pt-1 border-t font-medium">
+                                <span>{language === 'ms' ? 'Jumlah ADUN' : 'ADUN Total'}:</span>
+                                <span>{formatCurrency(dunSalary)}</span>
+                              </div>
+                              
+                              {cabinetSalary && (
+                                <>
+                                  <p className="font-semibold mt-3 mb-2 flex items-center gap-1">
+                                    <Crown className="h-3 w-3" />
+                                    {language === 'ms' ? 'Elaun Kabinet:' : 'Cabinet Allowance:'}
+                                  </p>
+                                  <div className="flex justify-between gap-4">
+                                    <span>{language === 'ms' ? 'Gaji Asas Kabinet' : 'Cabinet Basic Salary'}:</span>
+                                    <span>{formatCurrency(cabinetSalary.baseSalary)}</span>
+                                  </div>
+                                  <div className="flex justify-between gap-4">
+                                    <span>{language === 'ms' ? 'Elaun Hiburan' : 'Entertainment'}:</span>
+                                    <span>{formatCurrency(cabinetSalary.entertainment)}</span>
+                                  </div>
+                                  <div className="flex justify-between gap-4">
+                                    <span>{language === 'ms' ? 'Elaun Khas' : 'Special Allowance'}:</span>
+                                    <span>{formatCurrency(cabinetSalary.special)}</span>
+                                  </div>
+                                  <div className="flex justify-between gap-4 pt-1 border-t font-medium">
+                                    <span>{language === 'ms' ? 'Jumlah Kabinet' : 'Cabinet Total'}:</span>
+                                    <span>{formatCurrency(cabinetSalary.total)}</span>
+                                  </div>
+                                </>
+                              )}
+                              
+                              <div className="flex justify-between gap-4 pt-2 border-t-2 font-bold text-green-600 dark:text-green-400">
+                                <span>{language === 'ms' ? 'JUMLAH KESELURUHAN' : 'GRAND TOTAL'}:</span>
+                                <span>{formatCurrency(totalSalary)}</span>
+                              </div>
+                            </div>
+                          </TooltipContent>
+                        </Tooltip>
+                      );
+                    })()}
 
                     {member.povertyRate !== null && member.povertyRate !== undefined && (
                       <div className="flex items-center justify-between text-xs">
