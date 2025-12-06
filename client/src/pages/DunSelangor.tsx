@@ -228,11 +228,11 @@ export default function DunSelangor() {
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4 pt-4 border-t">
                 <div>
                   <p className="text-xs text-muted-foreground">{language === 'ms' ? 'Gaji Asas' : 'Basic Salary'}</p>
-                  <p className="font-semibold">RM 11,130</p>
+                  <p className="font-semibold">RM 11,500</p>
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">{language === 'ms' ? 'Elaun Kawasan' : 'Constituency'}</p>
-                  <p className="font-semibold">RM 5,000-10,000</p>
+                  <p className="font-semibold">RM 8,000-10,000</p>
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">{language === 'ms' ? 'Elaun Duduk' : 'Sitting Allowance'}</p>
@@ -341,7 +341,7 @@ export default function DunSelangor() {
                           <p className="font-semibold mb-2">{language === 'ms' ? 'Pecahan Elaun:' : 'Allowance Breakdown:'}</p>
                           <div className="flex justify-between gap-4">
                             <span>{language === 'ms' ? 'Gaji Asas' : 'Basic Salary'}:</span>
-                            <span>{formatCurrency(member.baseSalary || 11130)}</span>
+                            <span>{formatCurrency(member.baseSalary || 11500)}</span>
                           </div>
                           <div className="flex justify-between gap-4">
                             <span>{language === 'ms' ? 'Elaun Perkhidmatan' : 'Service Allowance'}:</span>
