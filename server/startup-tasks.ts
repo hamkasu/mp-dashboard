@@ -122,6 +122,14 @@ export async function runStartupTasks(): Promise<void> {
   );
   results.push(aggregateConstituencyResult);
 
+  // Task 7: Seed Selangor DUN data (if empty)
+  const selangorDunResult = await runCommand(
+    "Seed Selangor DUN data",
+    "npx",
+    ["tsx", "scripts/seed-selangor-dun.ts"]
+  );
+  results.push(selangorDunResult);
+
   logSummary(results, startTime);
 }
 

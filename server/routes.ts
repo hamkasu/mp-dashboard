@@ -7099,6 +7099,50 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
+  // Scrape DUN members for Selangor (admin only)
+  app.post("/api/admin/dun/selangor/scrape", requireAdmin, async (_req, res) => {
+    try {
+      const { selangorDunScraper } = await import("./selangor-dun-scraper");
+      
+      console.log("[DUN Scraper] Starting Selangor DUN scrape...");
+      
+      // First, delete existing Selangor members
+      const deletedCount = await storage.deleteAllDunMembersByState("Selangor");
+      console.log(`[DUN Scraper] Deleted ${deletedCount} existing Selangor members`);
+      
+      // Scrape new data
+      const scrapedMembers = await selangorDunScraper.scrapeAllMembers();
+      console.log(`[DUN Scraper] Scraped ${scrapedMembers.length} members`);
+      
+      // Insert new members
+      let insertedCount = 0;
+      for (const member of scrapedMembers) {
+        try {
+          await storage.createDunMember(member);
+          insertedCount++;
+        } catch (err) {
+          console.error(`[DUN Scraper] Error inserting member ${member.constituencyCode}:`, err);
+        }
+      }
+      
+      console.log(`[DUN Scraper] Successfully inserted ${insertedCount} members`);
+      
+      res.json({
+        success: true,
+        message: `Successfully scraped and stored ${insertedCount} DUN members for Selangor`,
+        deletedCount,
+        scrapedCount: scrapedMembers.length,
+        insertedCount,
+      });
+    } catch (error: any) {
+      console.error("[DUN Scraper] Error:", error);
+      res.status(500).json({ 
+        error: error.message || "Failed to scrape Selangor DUN data",
+        details: error.stack
+      });
+    }
+  });
+
   // Scrape DOSM Kawasanku poverty data for Sarawak DUN constituencies (admin only)
   app.post("/api/admin/dun/sarawak/scrape-poverty", requireAdmin, async (_req, res) => {
     try {
