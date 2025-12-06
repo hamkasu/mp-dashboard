@@ -574,13 +574,19 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         ? (totalDaysAttended / totalPossibleDays) * 100
         : 0;
 
-      // Calculate cumulative costs for all MPs since sworn in
-      const totalCumulativeCosts = mps.reduce((sum, mp) => {
+      // Calculate cumulative costs for ALL MPs (including deceased) since sworn in
+      // For deceased MPs, calculate up to their termEndDate instead of current date
+      const totalCumulativeCosts = allMps.reduce((sum, mp) => {
         const swornInDate = new Date(mp.swornInDate);
+
+        // For deceased/resigned MPs, calculate up to their termEndDate
+        // For active MPs, calculate up to now
+        const endDate = mp.termEndDate ? new Date(mp.termEndDate) : now;
+
         const monthsSinceSwornIn = Math.max(
           0,
-          (now.getFullYear() - swornInDate.getFullYear()) * 12 +
-          (now.getMonth() - swornInDate.getMonth())
+          (endDate.getFullYear() - swornInDate.getFullYear()) * 12 +
+          (endDate.getMonth() - swornInDate.getMonth())
         );
 
         // Base salary and allowances per month
