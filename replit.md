@@ -5,6 +5,14 @@ This web application provides a comprehensive dashboard for Malaysian Members of
 
 ## Recent Changes
 
+### December 6, 2025 - Resources & Documents Section for Sarawak DUN
+Added a Resources & Documents section to the Sarawak DUN landing page:
+- Two reference documents: "Availability of Sarawak DUN Hansard" and "ADUN Remuneration & Allowances"
+- Documents imported from attached_assets and served via Vite's asset handling
+- Each document has View (opens in new tab) and Download buttons
+- Full bilingual support (English/Bahasa Malaysia) for titles, descriptions, and buttons
+- Key file: `client/src/pages/DunSarawak.tsx`
+
 ### December 6, 2025 - Safe Cabinet Update for Sarawak DUN
 Added a safe, non-destructive way to update cabinet role data for Sarawak DUN members:
 - New endpoint `/api/admin/dun/sarawak/update-cabinet` updates only cabinet fields without deleting member data

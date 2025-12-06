@@ -7,7 +7,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { Users, MapPin, RefreshCw, Search, Building2, DollarSign, TrendingDown, Home, AlertTriangle, Briefcase, BarChart3, Wallet, Eye, ArrowUpDown, Crown, Award } from "lucide-react";
+import { Users, MapPin, RefreshCw, Search, Building2, DollarSign, TrendingDown, Home, AlertTriangle, Briefcase, BarChart3, Wallet, Eye, ArrowUpDown, Crown, Award, FileText, Download, ExternalLink } from "lucide-react";
+import hansardAvailabilityPdf from "@assets/Availability_of_Sarawak_DUN_Hansard_1765044965736.pdf";
+import remunerationPdf from "@assets/Remuneration_and_Allowances_for_Members_of_the_Sarawak_State_L_1765044965737.pdf";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { useState, useEffect } from "react";
@@ -524,6 +526,114 @@ export default function DunSarawak() {
             </CardContent>
           </Card>
         )}
+
+        {/* Resources & Documents Section */}
+        <Card className="mb-6">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <FileText className="h-5 w-5 text-primary" />
+              {language === 'ms' ? 'Sumber & Dokumen' : 'Resources & Documents'}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground mb-4">
+              {language === 'ms' 
+                ? 'Dokumen rujukan berkaitan Dewan Undangan Negeri Sarawak'
+                : 'Reference documents related to the Sarawak State Legislative Assembly'}
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Hansard Availability Document */}
+              <div className="p-4 rounded-md border border-border bg-muted/30">
+                <div className="flex items-start gap-3">
+                  <div className="p-2 rounded-md bg-primary/10 flex-shrink-0">
+                    <FileText className="h-5 w-5 text-primary" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h4 className="font-medium text-sm mb-1" data-testid="text-doc-hansard-title">
+                      {language === 'ms' 
+                        ? 'Ketersediaan Hansard DUN Sarawak' 
+                        : 'Availability of Sarawak DUN Hansard'}
+                    </h4>
+                    <p className="text-xs text-muted-foreground mb-3 line-clamp-2">
+                      {language === 'ms'
+                        ? 'Maklumat tentang akses kepada transkrip rasmi persidangan DUN Sarawak, termasuk had dan kaedah capaian.'
+                        : 'Information about accessing official transcripts of DUN Sarawak proceedings, including limitations and access methods.'}
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        asChild
+                        data-testid="button-view-hansard-doc"
+                      >
+                        <a href={hansardAvailabilityPdf} target="_blank" rel="noopener noreferrer">
+                          <ExternalLink className="h-3 w-3 mr-1" />
+                          {language === 'ms' ? 'Lihat' : 'View'}
+                        </a>
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        asChild
+                        data-testid="button-download-hansard-doc"
+                      >
+                        <a href={hansardAvailabilityPdf} download="Sarawak_DUN_Hansard_Availability.pdf">
+                          <Download className="h-3 w-3 mr-1" />
+                          {language === 'ms' ? 'Muat Turun' : 'Download'}
+                        </a>
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Remuneration Document */}
+              <div className="p-4 rounded-md border border-border bg-muted/30">
+                <div className="flex items-start gap-3">
+                  <div className="p-2 rounded-md bg-green-500/10 flex-shrink-0">
+                    <DollarSign className="h-5 w-5 text-green-600 dark:text-green-400" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h4 className="font-medium text-sm mb-1" data-testid="text-doc-remuneration-title">
+                      {language === 'ms' 
+                        ? 'Imbuhan & Elaun ADUN' 
+                        : 'ADUN Remuneration & Allowances'}
+                    </h4>
+                    <p className="text-xs text-muted-foreground mb-3 line-clamp-2">
+                      {language === 'ms'
+                        ? 'Butiran lengkap tentang gaji, elaun, dan faedah untuk ahli Dewan Undangan Negeri Sarawak.'
+                        : 'Complete details on salaries, allowances, and benefits for members of the Sarawak State Legislative Assembly.'}
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        asChild
+                        data-testid="button-view-remuneration-doc"
+                      >
+                        <a href={remunerationPdf} target="_blank" rel="noopener noreferrer">
+                          <ExternalLink className="h-3 w-3 mr-1" />
+                          {language === 'ms' ? 'Lihat' : 'View'}
+                        </a>
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        asChild
+                        data-testid="button-download-remuneration-doc"
+                      >
+                        <a href={remunerationPdf} download="Sarawak_ADUN_Remuneration_Allowances.pdf">
+                          <Download className="h-3 w-3 mr-1" />
+                          {language === 'ms' ? 'Muat Turun' : 'Download'}
+                        </a>
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         {isLoading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
