@@ -4396,6 +4396,58 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
+  // Track page view
+  app.post("/api/track-view", async (req, res) => {
+    try {
+      const { visitorAnalytics } = await import("@shared/schema");
+      const { path } = req.body;
+
+      if (!path) {
+        return res.status(400).json({ error: "Path is required" });
+      }
+
+      // Get IP address from various possible headers
+      const ip = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ||
+                 (req.headers['x-real-ip'] as string) ||
+                 req.socket.remoteAddress ||
+                 'unknown';
+
+      // Get geolocation data if available from headers (Railway/Cloudflare provide these)
+      const country = (req.headers['cf-ipcountry'] as string) ||
+                     (req.headers['x-vercel-ip-country'] as string) ||
+                     null;
+      const city = (req.headers['cf-ipcity'] as string) ||
+                  (req.headers['x-vercel-ip-city'] as string) ||
+                  null;
+      const region = (req.headers['cf-region'] as string) ||
+                    (req.headers['x-vercel-ip-country-region'] as string) ||
+                    null;
+      const timezone = (req.headers['cf-timezone'] as string) ||
+                      (req.headers['x-vercel-ip-timezone'] as string) ||
+                      null;
+
+      const userAgent = req.headers['user-agent'] || null;
+      const referrer = req.headers['referer'] || req.headers['referrer'] || null;
+
+      await db.insert(visitorAnalytics).values({
+        path,
+        ip,
+        country,
+        city,
+        region,
+        timezone,
+        userAgent,
+        referrer,
+      });
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error tracking view:", error);
+      // Don't fail the request if tracking fails
+      res.json({ success: false });
+    }
+  });
+
   // Analytics API routes (protected - admin only)
   app.get("/api/analytics/summary", async (_req, res) => {
     try {
