@@ -1,23 +1,4 @@
-import puppeteer, { Browser, Page } from 'puppeteer';
-import { execSync } from 'child_process';
-
-function getChromiumPath(): string | undefined {
-  if (process.env.PUPPETEER_EXECUTABLE_PATH) {
-    return process.env.PUPPETEER_EXECUTABLE_PATH;
-  }
-  
-  try {
-    const chromiumPath = execSync('which chromium 2>/dev/null || which chromium-browser 2>/dev/null || which google-chrome 2>/dev/null', { encoding: 'utf-8' }).trim();
-    if (chromiumPath) {
-      console.log(`[DosmKawasankuScraper] Found Chromium at: ${chromiumPath}`);
-      return chromiumPath;
-    }
-  } catch (error) {
-    console.log('[DosmKawasankuScraper] Could not find system Chromium, will use Puppeteer default');
-  }
-  
-  return undefined;
-}
+import axios from 'axios';
 
 export interface KawasankuData {
   constituencyCode: string;
@@ -27,6 +8,35 @@ export interface KawasankuData {
   giniCoefficient: number | null;
   unemploymentRate: number | null;
   population: number | null;
+}
+
+interface AreaDataPoint {
+  area: string;
+  x: number;
+  y: number;
+  tooltip: number;
+}
+
+interface EconomyCategory {
+  key: string;
+  data: AreaDataPoint[];
+}
+
+interface NextDataPageProps {
+  population_callout?: {
+    total?: number;
+  };
+  jitterplot?: {
+    data?: {
+      economy?: EconomyCategory[];
+    };
+  };
+}
+
+interface NextData {
+  props?: {
+    pageProps?: NextDataPageProps;
+  };
 }
 
 export class DosmKawasankuScraper {
@@ -115,147 +125,104 @@ export class DosmKawasankuScraper {
     { code: 'N.82', name: 'Ba Kelalan' },
   ];
 
-  async fetchConstituencyData(constituencyCode: string, constituencyName: string, browser: Browser): Promise<KawasankuData | null> {
-    let page: Page | null = null;
+  private findValueForArea(economyData: EconomyCategory[], key: string, areaName: string): number | null {
+    const category = economyData.find(cat => cat.key === key);
+    if (!category || !category.data) return null;
+    
+    const areaData = category.data.find(d => d.area === areaName);
+    if (!areaData) return null;
+    
+    return areaData.tooltip;
+  }
+
+  async fetchConstituencyData(constituencyCode: string, constituencyName: string): Promise<KawasankuData | null> {
     try {
       const encodedName = encodeURIComponent(`${constituencyCode} ${constituencyName}`);
       const url = `https://open.dosm.gov.my/ms-MY/dashboard/kawasanku/Sarawak/dun/${encodedName}`;
       
-      console.log(`[DosmKawasankuScraper] Fetching data for ${constituencyCode} ${constituencyName}`);
+      console.log(`[DosmKawasankuScraper] Fetching data for ${constituencyCode} ${constituencyName} from ${url}`);
       
-      page = await browser.newPage();
-      
-      await page.setViewport({ width: 1280, height: 800 });
-      await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
-      
-      await page.goto(url, { 
-        waitUntil: 'networkidle2',
-        timeout: 60000 
+      const response = await axios.get(url, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+          'Accept-Language': 'en-US,en;q=0.9',
+        },
+        timeout: 30000,
       });
+
+      const html = response.data as string;
       
-      await page.waitForFunction(() => {
-        const text = document.body.innerText || '';
-        return text.includes('Kadar kemiskinan') || 
-               text.includes('poverty') || 
-               text.includes('%');
-      }, { timeout: 30000 }).catch(() => {
-        console.log(`[DosmKawasankuScraper] Timeout waiting for content on ${constituencyCode}`);
-      });
+      const nextDataMatch = html.match(/<script id="__NEXT_DATA__" type="application\/json">([\s\S]*?)<\/script>/);
+      if (!nextDataMatch || !nextDataMatch[1]) {
+        console.error(`[DosmKawasankuScraper] Could not find __NEXT_DATA__ for ${constituencyCode}`);
+        return null;
+      }
+
+      let nextData: NextData;
+      try {
+        nextData = JSON.parse(nextDataMatch[1]);
+      } catch (parseError) {
+        console.error(`[DosmKawasankuScraper] Failed to parse __NEXT_DATA__ JSON for ${constituencyCode}:`, parseError);
+        return null;
+      }
+
+      const pageProps = nextData.props?.pageProps;
+      if (!pageProps) {
+        console.error(`[DosmKawasankuScraper] No pageProps found for ${constituencyCode}`);
+        return null;
+      }
+
+      const population = pageProps.population_callout?.total ?? null;
+      const economyData = pageProps.jitterplot?.data?.economy ?? [];
+
+      const areaName = `${constituencyCode} ${constituencyName}`;
       
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      const data = await page.evaluate(() => {
-        const getText = () => document.body.innerText || '';
-        const text = getText();
-        
-        let povertyRate: number | null = null;
-        let householdIncome: number | null = null;
-        let giniCoefficient: number | null = null;
-        let unemploymentRate: number | null = null;
-        let population: number | null = null;
-        
-        const povertyMatch = text.match(/Kadar kemiskinan[\s\S]*?(\d+\.?\d*)\s*%/i) ||
-                            text.match(/(\d+\.?\d*)\s*%[\s\S]*?kemiskinan/i);
-        if (povertyMatch) {
-          povertyRate = parseFloat(povertyMatch[1]);
-        }
-        
-        const incomeMatch = text.match(/RM\s*([\d,]+)[\s\S]*?(?:pendapatan|income|median)/i) ||
-                           text.match(/(?:pendapatan|income|median)[\s\S]*?RM\s*([\d,]+)/i);
-        if (incomeMatch) {
-          householdIncome = parseInt(incomeMatch[1].replace(/,/g, ''));
-        }
-        
-        const giniMatch = text.match(/(?:Gini|pekali gini)[\s\S]*?(0\.\d+)/i) ||
-                         text.match(/(0\.\d+)[\s\S]*?(?:Gini|pekali)/i);
-        if (giniMatch) {
-          giniCoefficient = parseFloat(giniMatch[1]);
-        }
-        
-        const unemploymentMatch = text.match(/(?:pengangguran|unemployment)[\s\S]*?(\d+\.?\d*)\s*%/i) ||
-                                 text.match(/(\d+\.?\d*)\s*%[\s\S]*?(?:pengangguran|unemployment)/i);
-        if (unemploymentMatch) {
-          unemploymentRate = parseFloat(unemploymentMatch[1]);
-        }
-        
-        const populationMatch = text.match(/(?:populasi|population)[\s\S]*?([\d,]+)\s*(?:penduduk|orang|people)/i) ||
-                               text.match(/([\d,]+)\s*(?:penduduk|orang)[\s\S]*?(?:populasi)/i);
-        if (populationMatch) {
-          population = parseInt(populationMatch[1].replace(/,/g, ''));
-        }
-        
-        return { povertyRate, householdIncome, giniCoefficient, unemploymentRate, population };
-      });
-      
-      await page.close();
-      
-      console.log(`[DosmKawasankuScraper] Extracted data for ${constituencyCode}: poverty=${data.povertyRate}%`);
+      const povertyRate = this.findValueForArea(economyData, 'poverty', areaName);
+      const householdIncome = this.findValueForArea(economyData, 'income_mean', areaName);
+      const giniCoefficient = this.findValueForArea(economyData, 'gini', areaName);
+      const unemploymentRate = this.findValueForArea(economyData, 'labour_urate', areaName);
+
+      console.log(`[DosmKawasankuScraper] Extracted data for ${constituencyCode}: poverty=${povertyRate}%, income=${householdIncome}, gini=${giniCoefficient}, unemployment=${unemploymentRate}%, population=${population}`);
       
       return {
         constituencyCode: constituencyCode.replace('.', ''),
         constituencyName,
-        povertyRate: data.povertyRate !== null ? Math.round(data.povertyRate * 10) : null,
-        householdIncome: data.householdIncome,
-        giniCoefficient: data.giniCoefficient !== null ? Math.round(data.giniCoefficient * 1000) : null,
-        unemploymentRate: data.unemploymentRate !== null ? Math.round(data.unemploymentRate * 10) : null,
-        population: data.population,
+        povertyRate: povertyRate !== null ? Math.round(povertyRate * 10) : null,
+        householdIncome: householdIncome !== null ? Math.round(householdIncome) : null,
+        giniCoefficient: giniCoefficient !== null ? Math.round(giniCoefficient * 1000) : null,
+        unemploymentRate: unemploymentRate !== null ? Math.round(unemploymentRate * 10) : null,
+        population: population,
       };
     } catch (error) {
-      console.error(`[DosmKawasankuScraper] Error fetching data for ${constituencyCode}:`, error);
-      if (page) {
-        try {
-          await page.close();
-        } catch (closeError) {
-          console.error(`[DosmKawasankuScraper] Error closing page:`, closeError);
-        }
+      if (axios.isAxiosError(error)) {
+        console.error(`[DosmKawasankuScraper] HTTP error fetching data for ${constituencyCode}: ${error.response?.status} - ${error.message}`);
+      } else {
+        console.error(`[DosmKawasankuScraper] Error fetching data for ${constituencyCode}:`, error);
       }
       return null;
     }
   }
 
   async fetchAllSarawakDunData(): Promise<KawasankuData[]> {
-    console.log('[DosmKawasankuScraper] Starting to fetch poverty data for all Sarawak DUN constituencies using headless browser...');
+    console.log('[DosmKawasankuScraper] Starting to fetch poverty data for all Sarawak DUN constituencies...');
     
     const results: KawasankuData[] = [];
-    let browser: Browser | null = null;
+    let successCount = 0;
+    let failCount = 0;
     
-    try {
-      const chromiumPath = getChromiumPath();
-      browser = await puppeteer.launch({
-        headless: true,
-        ...(chromiumPath && { executablePath: chromiumPath }),
-        args: [
-          '--no-sandbox',
-          '--disable-setuid-sandbox',
-          '--disable-dev-shm-usage',
-          '--disable-accelerated-2d-canvas',
-          '--disable-gpu',
-          '--window-size=1280x800',
-        ],
-      });
-      
-      console.log('[DosmKawasankuScraper] Browser launched successfully');
-      
-      for (const constituency of this.sarawakDunConstituencies) {
-        const data = await this.fetchConstituencyData(constituency.code, constituency.name, browser);
-        if (data) {
-          results.push(data);
-        }
-        await new Promise(resolve => setTimeout(resolve, 1000));
+    for (const constituency of this.sarawakDunConstituencies) {
+      const data = await this.fetchConstituencyData(constituency.code, constituency.name);
+      if (data) {
+        results.push(data);
+        successCount++;
+      } else {
+        failCount++;
       }
-      
-      await browser.close();
-      console.log(`[DosmKawasankuScraper] Successfully fetched data for ${results.length} constituencies`);
-    } catch (error) {
-      console.error('[DosmKawasankuScraper] Error during scraping:', error);
-      if (browser) {
-        try {
-          await browser.close();
-        } catch (closeError) {
-          console.error('[DosmKawasankuScraper] Error closing browser:', closeError);
-        }
-      }
+      await new Promise(resolve => setTimeout(resolve, 500));
     }
+    
+    console.log(`[DosmKawasankuScraper] Completed: ${successCount} successful, ${failCount} failed out of ${this.sarawakDunConstituencies.length} constituencies`);
     
     return results;
   }
