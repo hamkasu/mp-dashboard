@@ -6943,7 +6943,9 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   app.get("/api/dun/:state/members", async (req, res) => {
     try {
       const { state } = req.params;
-      const members = await storage.getDunMembersByState(state);
+      // Capitalize first letter to match database format (e.g., "sarawak" -> "Sarawak")
+      const capitalizedState = state.charAt(0).toUpperCase() + state.slice(1).toLowerCase();
+      const members = await storage.getDunMembersByState(capitalizedState);
       res.json(members);
     } catch (error) {
       console.error("Error fetching DUN members:", error);
@@ -7014,8 +7016,10 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   app.get("/api/dun/:state/count", async (req, res) => {
     try {
       const { state } = req.params;
-      const members = await storage.getDunMembersByState(state);
-      res.json({ count: members.length, state });
+      // Capitalize first letter to match database format
+      const capitalizedState = state.charAt(0).toUpperCase() + state.slice(1).toLowerCase();
+      const members = await storage.getDunMembersByState(capitalizedState);
+      res.json({ count: members.length, state: capitalizedState });
     } catch (error) {
       console.error("Error fetching DUN member count:", error);
       res.status(500).json({ error: "Failed to fetch DUN member count" });
