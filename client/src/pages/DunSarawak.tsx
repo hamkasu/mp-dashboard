@@ -95,20 +95,21 @@ function getCabinetRoleColor(role: string | null): string {
 function getCabinetSalary(role: string | null): { baseSalary: number; entertainment: number; special: number; total: number } | null {
   if (!role) return null;
   const lowerRole = role.toLowerCase();
-  if (lowerRole.includes('premier') || lowerRole.includes('chief minister') && !lowerRole.includes('deputy')) {
-    return { baseSalary: 39000, entertainment: 18000, special: 30000, total: 87000 };
-  }
+  
   if (lowerRole.includes('deputy chief') || lowerRole.includes('deputy premier')) {
     return { baseSalary: 33000, entertainment: 15000, special: 25000, total: 73000 };
-  }
-  if (lowerRole.includes('minister') && !lowerRole.includes('deputy') && !lowerRole.includes('assistant')) {
-    return { baseSalary: 30000, entertainment: 12000, special: 20000, total: 62000 };
   }
   if (lowerRole.includes('deputy minister')) {
     return { baseSalary: 22500, entertainment: 7500, special: 12500, total: 42500 };
   }
-  if (lowerRole.includes('assistant')) {
+  if (lowerRole.includes('assistant minister') || lowerRole.includes('assistant')) {
     return { baseSalary: 17000, entertainment: 4000, special: 9000, total: 30000 };
+  }
+  if ((lowerRole.includes('premier') || lowerRole.includes('chief minister')) && !lowerRole.includes('deputy')) {
+    return { baseSalary: 39000, entertainment: 18000, special: 30000, total: 87000 };
+  }
+  if (lowerRole.includes('minister') && !lowerRole.includes('deputy') && !lowerRole.includes('assistant')) {
+    return { baseSalary: 30000, entertainment: 12000, special: 20000, total: 62000 };
   }
   return null;
 }

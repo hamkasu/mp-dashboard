@@ -1,6 +1,7 @@
 import * as cheerio from 'cheerio';
 import axios from 'axios';
 import { InsertDunMember } from '@shared/schema';
+import { getCabinetMemberByConstituency, getCabinetAllowance } from './sarawak-cabinet-data';
 
 interface SarawakDunMemberRaw {
   constituencyCode: string;
@@ -123,17 +124,50 @@ export class SarawakDunScraper {
 
       console.log(`[SarawakDunScraper] After deduplication: ${uniqueMembers.size} unique members`);
 
-      const dunMembers: InsertDunMember[] = Array.from(uniqueMembers.values()).map(member => ({
-        state: 'Sarawak',
-        constituencyCode: member.constituencyCode,
-        constituencyName: member.constituencyName,
-        name: member.memberName,
-        title: this.extractTitle(member.memberName),
-        party: member.party || null,
-        photoUrl: member.photoUrl || null,
-        detailUrl: member.detailUrl || null,
-      }));
+      let cabinetCount = 0;
+      const dunMembers: InsertDunMember[] = Array.from(uniqueMembers.values()).map(member => {
+        const cabinetData = getCabinetMemberByConstituency(member.constituencyCode);
+        
+        if (cabinetData) {
+          cabinetCount++;
+          const allowance = getCabinetAllowance(cabinetData.role);
+          console.log(`[SarawakDunScraper] Cabinet member found: ${member.memberName} (${member.constituencyCode}) - ${cabinetData.role}`);
+          
+          return {
+            state: 'Sarawak',
+            constituencyCode: member.constituencyCode,
+            constituencyName: member.constituencyName,
+            name: member.memberName,
+            title: this.extractTitle(member.memberName),
+            party: member.party || null,
+            photoUrl: member.photoUrl || null,
+            detailUrl: member.detailUrl || null,
+            cabinetRole: cabinetData.role,
+            cabinetBaseSalary: allowance.baseSalary,
+            cabinetEntertainment: allowance.entertainment,
+            cabinetSpecialAllowance: allowance.specialAllowance,
+            cabinetTotalSalary: allowance.total,
+          };
+        }
+        
+        return {
+          state: 'Sarawak',
+          constituencyCode: member.constituencyCode,
+          constituencyName: member.constituencyName,
+          name: member.memberName,
+          title: this.extractTitle(member.memberName),
+          party: member.party || null,
+          photoUrl: member.photoUrl || null,
+          detailUrl: member.detailUrl || null,
+          cabinetRole: null,
+          cabinetBaseSalary: null,
+          cabinetEntertainment: null,
+          cabinetSpecialAllowance: null,
+          cabinetTotalSalary: null,
+        };
+      });
 
+      console.log(`[SarawakDunScraper] Identified ${cabinetCount} cabinet members out of ${dunMembers.length} total members`);
       return dunMembers;
     } catch (error) {
       console.error('[SarawakDunScraper] Error scraping:', error);
