@@ -9,7 +9,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Users, MapPin, RefreshCw, Search, Building2, DollarSign, TrendingDown, Home, AlertTriangle } from "lucide-react";
 import { useLanguage } from "@/i18n/LanguageContext";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { DunMember } from "@shared/schema";
@@ -83,6 +83,21 @@ export default function DunSarawak() {
   const { data: members = [], isLoading, refetch } = useQuery<DunMember[]>({
     queryKey: ["/api/dun/sarawak/members"],
   });
+
+  // Track page view
+  useEffect(() => {
+    const trackView = async () => {
+      try {
+        await apiRequest("POST", "/api/track-view", {
+          path: "/dun/sarawak",
+        });
+      } catch (error) {
+        // Silently fail - don't interrupt user experience
+        console.debug("Failed to track page view:", error);
+      }
+    };
+    trackView();
+  }, []); // Run only once on mount
 
   const scrapeMutation = useMutation({
     mutationFn: async () => {
