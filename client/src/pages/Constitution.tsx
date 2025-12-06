@@ -7,14 +7,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Scale } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useLanguage } from "@/i18n/LanguageContext";
-import federalConstitutionPdf from "@assets/Federal Constitution (Reprint 2020)_1763559512512.pdf";
 
 export default function Constitution() {
   const { t } = useLanguage();
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <Header />
-      
+
       <main className="flex-1 container mx-auto px-4 py-6 md:py-8 max-w-7xl">
         <div className="space-y-6">
           <div>
@@ -46,7 +45,7 @@ export default function Constitution() {
             <CardContent>
               <div className="w-full h-[calc(100vh-300px)] min-h-[600px] border rounded-md overflow-hidden">
                 <iframe
-                  src={federalConstitutionPdf}
+                  src="/federal-constitution.pdf"
                   className="w-full h-full"
                   title="Federal Constitution of Malaysia"
                   data-testid="pdf-viewer-constitution"
