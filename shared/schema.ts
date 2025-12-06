@@ -834,11 +834,12 @@ export type ParliamentaryAnswerPdfFile = typeof parliamentaryAnswerPdfFiles.$inf
 export const dunMembers = pgTable("dun_members", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   state: text("state").notNull(),
-  constituencyCode: text("constituency_code").notNull(),
-  constituencyName: text("constituency_name").notNull(),
+  constituencyCode: text("constituency_code"), // Nullable for Speaker who has no constituency
+  constituencyName: text("constituency_name"), // Nullable for Speaker
   name: text("name").notNull(),
   title: text("title"),
   party: text("party"),
+  role: text("role"), // "Speaker", "Deputy Speaker", or null for regular members
   photoUrl: text("photo_url"),
   detailUrl: text("detail_url"),
   // Sarawak DUN salary and allowance fields (RM per month unless specified)
@@ -850,6 +851,8 @@ export const dunMembers = pgTable("dun_members", {
   entertainmentAllowance: integer("entertainment_allowance").default(1500),
   housingAllowance: integer("housing_allowance").default(3000),
   totalMonthlyAllowance: integer("total_monthly_allowance").default(40000), // 25,000-40,000 for ordinary ADUN
+  // Speaker/Deputy Speaker additional allowances
+  speakerAllowance: integer("speaker_allowance").default(0), // Additional allowance for Speaker/Deputy Speaker
   // Poverty and economic data from DOSM Kawasanku
   povertyRate: integer("poverty_rate"), // percentage * 10 (e.g. 125 = 12.5%)
   householdIncome: integer("household_income"), // median household income in RM

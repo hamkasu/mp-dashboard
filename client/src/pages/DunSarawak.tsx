@@ -145,20 +145,25 @@ export default function DunSarawak() {
     },
   });
 
-  const filteredMembers = members.filter(member => {
+  // Separate Speaker and Deputy Speaker from regular members
+  const speaker = members.find(m => m.role === 'Speaker');
+  const deputySpeaker = members.find(m => m.role === 'Deputy Speaker');
+  const regularMembers = members.filter(m => m.role !== 'Speaker');
+
+  const filteredMembers = regularMembers.filter(member => {
     if (!searchQuery) return true;
     const query = searchQuery.toLowerCase();
     return (
       member.name.toLowerCase().includes(query) ||
-      member.constituencyName.toLowerCase().includes(query) ||
-      member.constituencyCode.toLowerCase().includes(query) ||
+      (member.constituencyName && member.constituencyName.toLowerCase().includes(query)) ||
+      (member.constituencyCode && member.constituencyCode.toLowerCase().includes(query)) ||
       (member.party && member.party.toLowerCase().includes(query))
     );
   });
 
   const sortedMembers = [...filteredMembers].sort((a, b) => {
-    const codeA = parseInt(a.constituencyCode.replace(/\D/g, ''));
-    const codeB = parseInt(b.constituencyCode.replace(/\D/g, ''));
+    const codeA = parseInt(a.constituencyCode?.replace(/\D/g, '') || '0');
+    const codeB = parseInt(b.constituencyCode?.replace(/\D/g, '') || '0');
     return codeA - codeB;
   });
 
@@ -175,11 +180,70 @@ export default function DunSarawak() {
             </h1>
           </div>
           <p className="text-muted-foreground" data-testid="text-dun-sarawak-description">
-            {language === 'ms' 
+            {language === 'ms'
               ? 'Ahli-ahli Dewan Undangan Negeri Sarawak (82 kerusi)'
               : 'Members of the Sarawak State Legislative Assembly (82 seats)'}
           </p>
         </div>
+
+        {/* Speaker Card */}
+        {speaker && (
+          <Card className="mb-6 border-primary/40 shadow-lg" data-testid="card-dun-speaker">
+            <CardHeader className="pb-4">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Users className="h-5 w-5 text-primary" />
+                  {language === 'ms' ? 'Speaker Dewan' : 'Speaker of the Assembly'}
+                </CardTitle>
+                <Badge className="bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400">
+                  {language === 'ms' ? 'Speaker' : 'Speaker'}
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col md:flex-row gap-6">
+                <Avatar className="h-32 w-32 border-4 border-primary/20 flex-shrink-0">
+                  <AvatarImage
+                    src={speaker.photoUrl || undefined}
+                    alt={speaker.name}
+                    className="object-cover"
+                  />
+                  <AvatarFallback className="text-2xl font-medium bg-primary/10 text-primary">
+                    {getMemberInitials(speaker.name)}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1">
+                  <h2 className="text-2xl font-bold mb-2" data-testid="text-speaker-name">
+                    {speaker.title && <span className="text-muted-foreground">{speaker.title} </span>}
+                    {speaker.name.replace(new RegExp(`^${speaker.title}\\s*`, 'i'), '')}
+                  </h2>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                    <div className="bg-muted/50 p-3 rounded-lg">
+                      <p className="text-xs text-muted-foreground mb-1">{language === 'ms' ? 'Gaji Tetap' : 'Fixed Salary'}</p>
+                      <p className="text-lg font-bold text-primary">{formatCurrency(speaker.baseSalary || 30000)}</p>
+                    </div>
+                    <div className="bg-muted/50 p-3 rounded-lg">
+                      <p className="text-xs text-muted-foreground mb-1">{language === 'ms' ? 'Elaun ADUN Biasa' : 'Ordinary ADUN Allowance'}</p>
+                      <p className="text-lg font-bold text-primary">{formatCurrency(speaker.constituencyAllowance || 15000)}</p>
+                    </div>
+                    <div className="bg-muted/50 p-3 rounded-lg">
+                      <p className="text-xs text-muted-foreground mb-1">{language === 'ms' ? 'Elaun Speaker' : 'Speaker Allowance'}</p>
+                      <p className="text-lg font-bold text-primary">{formatCurrency(speaker.speakerAllowance || 15000)}</p>
+                    </div>
+                  </div>
+                  <div className="mt-4 p-4 bg-primary/5 rounded-lg border border-primary/20">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium">{language === 'ms' ? 'Jumlah Bulanan' : 'Total Monthly'}</span>
+                      <span className="text-2xl font-bold text-primary" data-testid="text-speaker-total-salary">
+                        {formatCurrency(speaker.totalMonthlyAllowance || 65000)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         <div className="flex flex-col sm:flex-row gap-4 mb-6">
           <div className="relative flex-1">
@@ -325,10 +389,17 @@ export default function DunSarawak() {
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-sm line-clamp-2 mb-1" data-testid={`text-member-name-${member.id}`}>
-                        {member.title && <span className="text-muted-foreground">{member.title} </span>}
-                        {member.name.replace(new RegExp(`^${member.title}\\s*`, 'i'), '')}
-                      </h3>
+                      <div className="flex items-start gap-2 mb-1">
+                        <h3 className="font-semibold text-sm line-clamp-2 flex-1" data-testid={`text-member-name-${member.id}`}>
+                          {member.title && <span className="text-muted-foreground">{member.title} </span>}
+                          {member.name.replace(new RegExp(`^${member.title}\\s*`, 'i'), '')}
+                        </h3>
+                        {member.role === 'Deputy Speaker' && (
+                          <Badge className="bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400 text-[10px] shrink-0">
+                            {language === 'ms' ? 'Timbalan Speaker' : 'Deputy'}
+                          </Badge>
+                        )}
+                      </div>
                       <div className="flex items-center gap-1 text-xs text-muted-foreground mb-2">
                         <MapPin className="h-3 w-3 flex-shrink-0" />
                         <span className="truncate">
@@ -336,8 +407,8 @@ export default function DunSarawak() {
                         </span>
                       </div>
                       {member.party && (
-                        <Badge 
-                          variant="secondary" 
+                        <Badge
+                          variant="secondary"
                           className={`text-xs ${getPartyColor(member.party)}`}
                           data-testid={`badge-party-${member.id}`}
                         >
@@ -387,6 +458,12 @@ export default function DunSarawak() {
                             <span>{language === 'ms' ? 'Elaun Penginapan' : 'Housing Allowance'}:</span>
                             <span>{formatCurrency(member.housingAllowance || 3000)}</span>
                           </div>
+                          {member.role === 'Deputy Speaker' && member.speakerAllowance && member.speakerAllowance > 0 && (
+                            <div className="flex justify-between gap-4 font-semibold bg-purple-50 dark:bg-purple-900/20 px-2 py-1 rounded">
+                              <span>{language === 'ms' ? 'Elaun Timbalan Speaker' : 'Deputy Speaker Allowance'}:</span>
+                              <span>{formatCurrency(member.speakerAllowance)}</span>
+                            </div>
+                          )}
                           <div className="flex justify-between gap-4 pt-1 border-t">
                             <span>{language === 'ms' ? 'Elaun Duduk' : 'Sitting Allowance'}:</span>
                             <span>{formatCurrency(member.sittingAllowance || 450)}/day</span>

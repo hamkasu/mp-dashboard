@@ -45,6 +45,7 @@ async function main() {
     "0004_add_missing_columns.sql",
     "0011_create_parliamentary_answers_tables.sql",
     "0012_add_by_election_columns.sql",
+    "add-dun-speaker-fields.sql",
   ];
 
   let successCount = 0;
