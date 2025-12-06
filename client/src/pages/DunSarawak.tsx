@@ -432,7 +432,7 @@ export default function DunSarawak() {
                   <Crown className="h-3 w-3" />
                   {language === 'ms' ? 'Elaun Kabinet Negeri (tambahan kepada elaun ADUN)' : 'State Cabinet Allowances (additional to ADUN allowances)'}
                 </p>
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-3 text-xs">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
                   <div className="p-2 rounded-md bg-amber-50 dark:bg-amber-900/20">
                     <p className="text-muted-foreground">{language === 'ms' ? 'Premier' : 'Premier'}</p>
                     <p className="font-semibold text-amber-700 dark:text-amber-400">
@@ -449,12 +449,6 @@ export default function DunSarawak() {
                     <p className="text-muted-foreground">{language === 'ms' ? 'Menteri' : 'Minister'}</p>
                     <p className="font-semibold text-purple-700 dark:text-purple-400">
                       {cabinetSalaryByRole.minister > 0 ? `+${formatCurrency(cabinetSalaryByRole.minister)}` : 'N/A'}
-                    </p>
-                  </div>
-                  <div className="p-2 rounded-md bg-indigo-50 dark:bg-indigo-900/20">
-                    <p className="text-muted-foreground">{language === 'ms' ? 'Timbalan Menteri' : 'Deputy Minister'}</p>
-                    <p className="font-semibold text-indigo-700 dark:text-indigo-400">
-                      {cabinetSalaryByRole.deputyMinister > 0 ? `+${formatCurrency(cabinetSalaryByRole.deputyMinister)}` : 'N/A'}
                     </p>
                   </div>
                   <div className="p-2 rounded-md bg-sky-50 dark:bg-sky-900/20">
