@@ -1,4 +1,23 @@
-import axios from 'axios';
+import puppeteer, { Browser, Page } from 'puppeteer';
+import { execSync } from 'child_process';
+
+function getChromiumPath(): string | undefined {
+  if (process.env.PUPPETEER_EXECUTABLE_PATH) {
+    return process.env.PUPPETEER_EXECUTABLE_PATH;
+  }
+  
+  try {
+    const chromiumPath = execSync('which chromium 2>/dev/null || which chromium-browser 2>/dev/null || which google-chrome 2>/dev/null', { encoding: 'utf-8' }).trim();
+    if (chromiumPath) {
+      console.log(`[DosmKawasankuScraper] Found Chromium at: ${chromiumPath}`);
+      return chromiumPath;
+    }
+  } catch (error) {
+    console.log('[DosmKawasankuScraper] Could not find system Chromium, will use Puppeteer default');
+  }
+  
+  return undefined;
+}
 
 export interface KawasankuData {
   constituencyCode: string;
@@ -10,19 +29,7 @@ export interface KawasankuData {
   population: number | null;
 }
 
-interface DosmApiResponse {
-  data: {
-    poverty_rate?: number;
-    income_median?: number;
-    gini?: number;
-    unemployment_rate?: number;
-    population?: number;
-  };
-}
-
 export class DosmKawasankuScraper {
-  private baseApiUrl = 'https://api.data.gov.my/dashboard';
-  
   private sarawakDunConstituencies: { code: string; name: string }[] = [
     { code: 'N.01', name: 'Opar' },
     { code: 'N.02', name: 'Tasik Biru' },
@@ -108,109 +115,149 @@ export class DosmKawasankuScraper {
     { code: 'N.82', name: 'Ba Kelalan' },
   ];
 
-  async fetchConstituencyData(constituencyCode: string, constituencyName: string): Promise<KawasankuData | null> {
+  async fetchConstituencyData(constituencyCode: string, constituencyName: string, browser: Browser): Promise<KawasankuData | null> {
+    let page: Page | null = null;
     try {
       const encodedName = encodeURIComponent(`${constituencyCode} ${constituencyName}`);
       const url = `https://open.dosm.gov.my/ms-MY/dashboard/kawasanku/Sarawak/dun/${encodedName}`;
       
       console.log(`[DosmKawasankuScraper] Fetching data for ${constituencyCode} ${constituencyName}`);
       
-      const response = await axios.get(url, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-          'Accept-Language': 'en-US,en;q=0.5',
-        },
-        timeout: 30000,
+      page = await browser.newPage();
+      
+      await page.setViewport({ width: 1280, height: 800 });
+      await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+      
+      await page.goto(url, { 
+        waitUntil: 'networkidle2',
+        timeout: 60000 
       });
-
-      const html = response.data as string;
       
-      const povertyMatch = html.match(/Kadar kemiskinan[^<]*<[^>]*>([0-9.]+)\s*%/i) ||
-                          html.match(/poverty[^<]*rate[^<]*<[^>]*>([0-9.]+)\s*%/i) ||
-                          html.match(/"poverty_rate":\s*([0-9.]+)/i);
+      await page.waitForFunction(() => {
+        const text = document.body.innerText || '';
+        return text.includes('Kadar kemiskinan') || 
+               text.includes('poverty') || 
+               text.includes('%');
+      }, { timeout: 30000 }).catch(() => {
+        console.log(`[DosmKawasankuScraper] Timeout waiting for content on ${constituencyCode}`);
+      });
       
-      const incomeMatch = html.match(/Pendapatan isi rumah[^<]*<[^>]*>RM\s*([0-9,]+)/i) ||
-                         html.match(/household[^<]*income[^<]*<[^>]*>RM\s*([0-9,]+)/i) ||
-                         html.match(/"income_median":\s*([0-9.]+)/i);
+      await new Promise(resolve => setTimeout(resolve, 2000));
       
-      const giniMatch = html.match(/Pekali Gini[^<]*<[^>]*>([0-9.]+)/i) ||
-                       html.match(/Gini[^<]*coefficient[^<]*<[^>]*>([0-9.]+)/i) ||
-                       html.match(/"gini":\s*([0-9.]+)/i);
+      const data = await page.evaluate(() => {
+        const getText = () => document.body.innerText || '';
+        const text = getText();
+        
+        let povertyRate: number | null = null;
+        let householdIncome: number | null = null;
+        let giniCoefficient: number | null = null;
+        let unemploymentRate: number | null = null;
+        let population: number | null = null;
+        
+        const povertyMatch = text.match(/Kadar kemiskinan[\s\S]*?(\d+\.?\d*)\s*%/i) ||
+                            text.match(/(\d+\.?\d*)\s*%[\s\S]*?kemiskinan/i);
+        if (povertyMatch) {
+          povertyRate = parseFloat(povertyMatch[1]);
+        }
+        
+        const incomeMatch = text.match(/RM\s*([\d,]+)[\s\S]*?(?:pendapatan|income|median)/i) ||
+                           text.match(/(?:pendapatan|income|median)[\s\S]*?RM\s*([\d,]+)/i);
+        if (incomeMatch) {
+          householdIncome = parseInt(incomeMatch[1].replace(/,/g, ''));
+        }
+        
+        const giniMatch = text.match(/(?:Gini|pekali gini)[\s\S]*?(0\.\d+)/i) ||
+                         text.match(/(0\.\d+)[\s\S]*?(?:Gini|pekali)/i);
+        if (giniMatch) {
+          giniCoefficient = parseFloat(giniMatch[1]);
+        }
+        
+        const unemploymentMatch = text.match(/(?:pengangguran|unemployment)[\s\S]*?(\d+\.?\d*)\s*%/i) ||
+                                 text.match(/(\d+\.?\d*)\s*%[\s\S]*?(?:pengangguran|unemployment)/i);
+        if (unemploymentMatch) {
+          unemploymentRate = parseFloat(unemploymentMatch[1]);
+        }
+        
+        const populationMatch = text.match(/(?:populasi|population)[\s\S]*?([\d,]+)\s*(?:penduduk|orang|people)/i) ||
+                               text.match(/([\d,]+)\s*(?:penduduk|orang)[\s\S]*?(?:populasi)/i);
+        if (populationMatch) {
+          population = parseInt(populationMatch[1].replace(/,/g, ''));
+        }
+        
+        return { povertyRate, householdIncome, giniCoefficient, unemploymentRate, population };
+      });
       
-      const unemploymentMatch = html.match(/Kadar pengangguran[^<]*<[^>]*>([0-9.]+)\s*%/i) ||
-                               html.match(/unemployment[^<]*rate[^<]*<[^>]*>([0-9.]+)\s*%/i) ||
-                               html.match(/"unemployment_rate":\s*([0-9.]+)/i);
+      await page.close();
       
-      const populationMatch = html.match(/Populasi[^<]*sebanyak\s*([0-9,]+)\s*penduduk/i) ||
-                             html.match(/population[^<]*of\s*([0-9,]+)/i) ||
-                             html.match(/"population":\s*([0-9]+)/i);
-
-      const povertyRate = povertyMatch ? Math.round(parseFloat(povertyMatch[1]) * 10) : null;
-      const householdIncome = incomeMatch ? parseInt(incomeMatch[1].replace(/,/g, '')) : null;
-      const giniCoefficient = giniMatch ? Math.round(parseFloat(giniMatch[1]) * 1000) : null;
-      const unemploymentRate = unemploymentMatch ? Math.round(parseFloat(unemploymentMatch[1]) * 10) : null;
-      const population = populationMatch ? parseInt(populationMatch[1].replace(/,/g, '')) : null;
-
+      console.log(`[DosmKawasankuScraper] Extracted data for ${constituencyCode}: poverty=${data.povertyRate}%`);
+      
       return {
         constituencyCode: constituencyCode.replace('.', ''),
         constituencyName,
-        povertyRate,
-        householdIncome,
-        giniCoefficient,
-        unemploymentRate,
-        population,
+        povertyRate: data.povertyRate !== null ? Math.round(data.povertyRate * 10) : null,
+        householdIncome: data.householdIncome,
+        giniCoefficient: data.giniCoefficient !== null ? Math.round(data.giniCoefficient * 1000) : null,
+        unemploymentRate: data.unemploymentRate !== null ? Math.round(data.unemploymentRate * 10) : null,
+        population: data.population,
       };
     } catch (error) {
       console.error(`[DosmKawasankuScraper] Error fetching data for ${constituencyCode}:`, error);
+      if (page) {
+        try {
+          await page.close();
+        } catch (closeError) {
+          console.error(`[DosmKawasankuScraper] Error closing page:`, closeError);
+        }
+      }
       return null;
     }
   }
 
   async fetchAllSarawakDunData(): Promise<KawasankuData[]> {
-    console.log('[DosmKawasankuScraper] Starting to fetch poverty data for all Sarawak DUN constituencies...');
+    console.log('[DosmKawasankuScraper] Starting to fetch poverty data for all Sarawak DUN constituencies using headless browser...');
     
     const results: KawasankuData[] = [];
-    
-    for (const constituency of this.sarawakDunConstituencies) {
-      const data = await this.fetchConstituencyData(constituency.code, constituency.name);
-      if (data) {
-        results.push(data);
-      }
-      await new Promise(resolve => setTimeout(resolve, 500));
-    }
-
-    console.log(`[DosmKawasankuScraper] Successfully fetched data for ${results.length} constituencies`);
-    return results;
-  }
-
-  async fetchPovertyDataByDistrict(): Promise<Map<string, number>> {
-    console.log('[DosmKawasankuScraper] Fetching district-level poverty data from DOSM API...');
-    
-    const districtPoverty = new Map<string, number>();
+    let browser: Browser | null = null;
     
     try {
-      const response = await axios.get('https://api.data.gov.my/data-catalogue?id=hh_poverty_district&limit=100', {
-        timeout: 30000,
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        },
+      const chromiumPath = getChromiumPath();
+      browser = await puppeteer.launch({
+        headless: true,
+        ...(chromiumPath && { executablePath: chromiumPath }),
+        args: [
+          '--no-sandbox',
+          '--disable-setuid-sandbox',
+          '--disable-dev-shm-usage',
+          '--disable-accelerated-2d-canvas',
+          '--disable-gpu',
+          '--window-size=1280x800',
+        ],
       });
       
-      if (response.data && Array.isArray(response.data)) {
-        for (const record of response.data) {
-          if (record.state === 'Sarawak' && record.district && record.incidence_abs !== undefined) {
-            districtPoverty.set(record.district.toLowerCase(), record.incidence_abs);
-          }
+      console.log('[DosmKawasankuScraper] Browser launched successfully');
+      
+      for (const constituency of this.sarawakDunConstituencies) {
+        const data = await this.fetchConstituencyData(constituency.code, constituency.name, browser);
+        if (data) {
+          results.push(data);
         }
+        await new Promise(resolve => setTimeout(resolve, 1000));
       }
       
-      console.log(`[DosmKawasankuScraper] Retrieved poverty data for ${districtPoverty.size} districts`);
+      await browser.close();
+      console.log(`[DosmKawasankuScraper] Successfully fetched data for ${results.length} constituencies`);
     } catch (error) {
-      console.error('[DosmKawasankuScraper] Error fetching district poverty data:', error);
+      console.error('[DosmKawasankuScraper] Error during scraping:', error);
+      if (browser) {
+        try {
+          await browser.close();
+        } catch (closeError) {
+          console.error('[DosmKawasankuScraper] Error closing browser:', closeError);
+        }
+      }
     }
     
-    return districtPoverty;
+    return results;
   }
 
   getSarawakConstituencies(): { code: string; name: string }[] {
