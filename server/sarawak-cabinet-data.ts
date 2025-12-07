@@ -4,11 +4,11 @@
  * Last Updated: December 2024
  * 
  * Cabinet Allowance Structure (additional to ADUN allowances):
- * - Premier: RM 87,000/month
- * - Deputy Premier: RM 73,000/month
- * - Minister: RM 62,000/month
- * - Deputy Minister: RM 42,500/month
- * - Assistant Minister: RM 30,000/month
+ * - Premier: RM 56,000/month
+ * - Deputy Premier: RM 48,400/month
+ * - Minister: RM 40,750/month
+ * - Deputy Minister: RM 30,000/month
+ * - Assistant Minister: N/A (0)
  */
 
 export interface CabinetPosition {
@@ -21,11 +21,11 @@ export interface CabinetPosition {
 }
 
 export const CABINET_ALLOWANCES: Record<CabinetPosition['role'], { baseSalary: number; entertainment: number; specialAllowance: number; total: number }> = {
-  'Premier': { baseSalary: 39000, entertainment: 18000, specialAllowance: 30000, total: 87000 },
-  'Deputy Premier': { baseSalary: 33000, entertainment: 15000, specialAllowance: 25000, total: 73000 },
-  'Minister': { baseSalary: 30000, entertainment: 12000, specialAllowance: 20000, total: 62000 },
-  'Deputy Minister': { baseSalary: 22500, entertainment: 7500, specialAllowance: 12500, total: 42500 },
-  'Assistant Minister': { baseSalary: 17000, entertainment: 4000, specialAllowance: 9000, total: 30000 },
+  'Premier': { baseSalary: 30000, entertainment: 13000, specialAllowance: 13000, total: 56000 },
+  'Deputy Premier': { baseSalary: 26500, entertainment: 11000, specialAllowance: 10900, total: 48400 },
+  'Minister': { baseSalary: 22500, entertainment: 9125, specialAllowance: 9125, total: 40750 },
+  'Deputy Minister': { baseSalary: 17000, entertainment: 6500, specialAllowance: 6500, total: 30000 },
+  'Assistant Minister': { baseSalary: 0, entertainment: 0, specialAllowance: 0, total: 0 },
 };
 
 export interface CabinetMemberData {
