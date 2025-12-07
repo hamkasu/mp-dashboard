@@ -328,6 +328,16 @@ export default function DunSarawak() {
 
   const totalMonthlySalary = calculateTotalMonthlySalary();
   const cabinetMembersCount = members.filter(m => m.cabinetRole).length;
+  
+  // Calculate average ADUN Basic Salary from database
+  const calculateAverageBaseSalary = () => {
+    const membersWithSalary = members.filter(m => m.baseSalary && m.baseSalary > 0);
+    if (membersWithSalary.length === 0) return 25000; // Default fallback
+    const total = membersWithSalary.reduce((sum, m) => sum + (m.baseSalary || 0), 0);
+    return Math.round(total / membersWithSalary.length);
+  };
+  
+  const averageBaseSalary = calculateAverageBaseSalary();
 
   return (
     <div className="min-h-screen bg-background">
@@ -481,7 +491,7 @@ export default function DunSarawak() {
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4 pt-4 border-t">
                 <div>
                   <p className="text-xs text-muted-foreground">{language === 'ms' ? 'Gaji Asas ADUN' : 'ADUN Basic Salary'}</p>
-                  <p className="font-semibold">RM 11,130</p>
+                  <p className="font-semibold">{formatCurrency(averageBaseSalary)}</p>
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">{language === 'ms' ? 'Elaun Kawasan' : 'Constituency'}</p>
@@ -771,7 +781,7 @@ export default function DunSarawak() {
                               <p className="font-semibold mb-2">{language === 'ms' ? 'Pecahan Elaun ADUN:' : 'ADUN Allowance Breakdown:'}</p>
                               <div className="flex justify-between gap-4">
                                 <span>{language === 'ms' ? 'Gaji Asas' : 'Basic Salary'}:</span>
-                                <span>{formatCurrency(member.baseSalary || 11130)}</span>
+                                <span>{formatCurrency(member.baseSalary || 25000)}</span>
                               </div>
                               <div className="flex justify-between gap-4">
                                 <span>{language === 'ms' ? 'Elaun Perkhidmatan' : 'Service Allowance'}:</span>
