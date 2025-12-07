@@ -276,9 +276,9 @@ export default function DunSarawak() {
   const calculateTotalMonthlySalary = () => {
     let total = 0;
     members.forEach(member => {
-      const dunSalary = member.totalMonthlyAllowance || 40000;
-      const cabinetSalary = member.cabinetTotalSalary || 0;
-      total += dunSalary + cabinetSalary;
+      const baseSalary = member.baseSalary || 25000;
+      const cabinetBaseSalary = member.cabinetRole && member.cabinetBaseSalary ? member.cabinetBaseSalary : 0;
+      total += baseSalary + cabinetBaseSalary;
     });
     return total;
   };
@@ -488,22 +488,14 @@ export default function DunSarawak() {
                   : `Cumulative cost for ${members.length} DUN members (including ${cabinetMembersCount} cabinet members)`}
               </p>
               
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4 pt-4 border-t">
+              <div className="grid grid-cols-2 gap-4 mt-4 pt-4 border-t">
                 <div>
                   <p className="text-xs text-muted-foreground">{language === 'ms' ? 'Gaji Asas ADUN' : 'ADUN Basic Salary'}</p>
                   <p className="font-semibold">{formatCurrency(averageBaseSalary)}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground">{language === 'ms' ? 'Elaun Kawasan' : 'Constituency'}</p>
-                  <p className="font-semibold">RM 6,000-15,000</p>
-                </div>
-                <div>
                   <p className="text-xs text-muted-foreground">{language === 'ms' ? 'Elaun Duduk' : 'Sitting Allowance'}</p>
-                  <p className="font-semibold">RM 450/day</p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">{language === 'ms' ? 'Jumlah ADUN Bulanan' : 'Total ADUN Monthly'}</p>
-                  <p className="font-semibold">RM 25,000-40,000</p>
+                  <p className="font-semibold">RM 450/{language === 'ms' ? 'hari' : 'day'}</p>
                 </div>
               </div>
               
@@ -759,9 +751,9 @@ export default function DunSarawak() {
                   
                   <div className="mt-3 pt-3 border-t border-border space-y-2">
                     {(() => {
-                      const dunSalary = member.totalMonthlyAllowance || 40000;
-                      const cabinetSalary = member.cabinetTotalSalary || 0;
-                      const totalSalary = dunSalary + cabinetSalary;
+                      const baseSalary = member.baseSalary || 25000;
+                      const cabinetBaseSalary = member.cabinetRole && member.cabinetBaseSalary ? member.cabinetBaseSalary : 0;
+                      const totalSalary = baseSalary + cabinetBaseSalary;
                       
                       return (
                         <Tooltip>
@@ -778,73 +770,29 @@ export default function DunSarawak() {
                           </TooltipTrigger>
                           <TooltipContent side="top" className="max-w-xs">
                             <div className="space-y-1 text-xs">
-                              <p className="font-semibold mb-2">{language === 'ms' ? 'Pecahan Elaun ADUN:' : 'ADUN Allowance Breakdown:'}</p>
+                              <p className="font-semibold mb-2">{language === 'ms' ? 'Pecahan Gaji:' : 'Salary Breakdown:'}</p>
                               <div className="flex justify-between gap-4">
-                                <span>{language === 'ms' ? 'Gaji Asas' : 'Basic Salary'}:</span>
-                                <span>{formatCurrency(member.baseSalary || 25000)}</span>
-                              </div>
-                              <div className="flex justify-between gap-4">
-                                <span>{language === 'ms' ? 'Elaun Perkhidmatan' : 'Service Allowance'}:</span>
-                                <span>{formatCurrency(member.serviceAllowance || 3870)}</span>
-                              </div>
-                              <div className="flex justify-between gap-4">
-                                <span>{language === 'ms' ? 'Elaun Kawasan' : 'Constituency Allowance'}:</span>
-                                <span>{formatCurrency(member.constituencyAllowance || 10500)}</span>
-                              </div>
-                              <div className="flex justify-between gap-4">
-                                <span>{language === 'ms' ? 'Elaun Perjalanan' : 'Travel Allowance'}:</span>
-                                <span>{formatCurrency(member.travelAllowance || 2000)}</span>
-                              </div>
-                              <div className="flex justify-between gap-4">
-                                <span>{language === 'ms' ? 'Elaun Hiburan' : 'Entertainment'}:</span>
-                                <span>{formatCurrency(member.entertainmentAllowance || 1500)}</span>
-                              </div>
-                              <div className="flex justify-between gap-4">
-                                <span>{language === 'ms' ? 'Elaun Penginapan' : 'Housing Allowance'}:</span>
-                                <span>{formatCurrency(member.housingAllowance || 3000)}</span>
-                              </div>
-                              <div className="flex justify-between gap-4">
-                                <span>{language === 'ms' ? 'Elaun Duduk' : 'Sitting Allowance'}:</span>
-                                <span>{formatCurrency(member.sittingAllowance || 450)}/day</span>
-                              </div>
-                              <div className="flex justify-between gap-4 pt-1 border-t font-medium">
-                                <span>{language === 'ms' ? 'Jumlah ADUN' : 'ADUN Total'}:</span>
-                                <span>{formatCurrency(dunSalary)}</span>
+                                <span>{language === 'ms' ? 'Gaji Asas ADUN' : 'ADUN Basic Salary'}:</span>
+                                <span>{formatCurrency(baseSalary)}</span>
                               </div>
                               
-                              {member.cabinetRole && member.cabinetTotalSalary && (
+                              {member.cabinetRole && cabinetBaseSalary > 0 && (
                                 <>
-                                  <p className="font-semibold mt-3 mb-2 flex items-center gap-1">
-                                    <Crown className="h-3 w-3" />
-                                    {language === 'ms' ? 'Elaun Kabinet:' : 'Cabinet Allowance:'}
-                                  </p>
-                                  {member.cabinetBaseSalary && (
-                                    <div className="flex justify-between gap-4">
-                                      <span>{language === 'ms' ? 'Gaji Asas Kabinet' : 'Cabinet Basic Salary'}:</span>
-                                      <span>{formatCurrency(member.cabinetBaseSalary)}</span>
-                                    </div>
-                                  )}
-                                  {member.cabinetEntertainment && (
-                                    <div className="flex justify-between gap-4">
-                                      <span>{language === 'ms' ? 'Elaun Hiburan' : 'Entertainment'}:</span>
-                                      <span>{formatCurrency(member.cabinetEntertainment)}</span>
-                                    </div>
-                                  )}
-                                  {member.cabinetSpecialAllowance && (
-                                    <div className="flex justify-between gap-4">
-                                      <span>{language === 'ms' ? 'Elaun Khas' : 'Special Allowance'}:</span>
-                                      <span>{formatCurrency(member.cabinetSpecialAllowance)}</span>
-                                    </div>
-                                  )}
-                                  <div className="flex justify-between gap-4 pt-1 border-t font-medium">
-                                    <span>{language === 'ms' ? 'Jumlah Kabinet' : 'Cabinet Total'}:</span>
-                                    <span>{formatCurrency(member.cabinetTotalSalary)}</span>
+                                  <div className="flex justify-between gap-4 mt-2">
+                                    <span className="flex items-center gap-1">
+                                      <Crown className="h-3 w-3" />
+                                      {language === 'ms' ? 'Gaji Asas Kabinet' : 'Cabinet Basic Salary'}:
+                                    </span>
+                                    <span>{formatCurrency(cabinetBaseSalary)}</span>
                                   </div>
+                                  <p className="text-muted-foreground text-[10px] italic">
+                                    ({member.cabinetRole})
+                                  </p>
                                 </>
                               )}
                               
-                              <div className="flex justify-between gap-4 pt-2 border-t-2 font-bold text-green-600 dark:text-green-400">
-                                <span>{language === 'ms' ? 'JUMLAH KESELURUHAN' : 'GRAND TOTAL'}:</span>
+                              <div className="flex justify-between gap-4 pt-2 border-t font-bold text-green-600 dark:text-green-400">
+                                <span>{language === 'ms' ? 'JUMLAH BULANAN' : 'TOTAL MONTHLY'}:</span>
                                 <span>{formatCurrency(totalSalary)}</span>
                               </div>
                             </div>
