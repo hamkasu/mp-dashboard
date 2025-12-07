@@ -204,6 +204,7 @@ export const translations = {
       excellent: "Excellent",
       good: "Good",
       needsImprovement: "Needs Improvement",
+      absentDates: "Dates Absent",
       source: "Source: Official Hansard Records",
 
       // Speaking Record
@@ -857,6 +858,7 @@ export const translations = {
       excellent: "Cemerlang",
       good: "Baik",
       needsImprovement: "Perlu Penambahbaikan",
+      absentDates: "Tarikh Tidak Hadir",
       source: "Sumber: Rekod Rasmi Hansard",
 
       // Speaking Record / Rekod Ucapan

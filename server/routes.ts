@@ -1336,6 +1336,58 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
+  // Get MP absent session dates from Hansard records
+  app.get("/api/mps/:id/absent-sessions", async (req, res) => {
+    try {
+      const { id } = req.params;
+
+      const mp = await storage.getMp(id);
+      if (!mp) {
+        return res.status(404).json({ error: "MP not found" });
+      }
+
+      // Get all Hansard records
+      const allHansardRecords = await storage.getAllHansardRecords();
+      
+      // Filter records after MP was sworn in
+      const mpSwornInDate = new Date(mp.swornInDate).toISOString().split('T')[0];
+      const relevantSessions = allHansardRecords.filter(record => {
+        const sessionDate = new Date(record.sessionDate).toISOString().split('T')[0];
+        return sessionDate >= mpSwornInDate;
+      });
+      
+      // Find sessions where MP was absent
+      const absentSessions = relevantSessions.filter(record => {
+        // Check if MP is in the absentMpIds list
+        if (record.absentMpIds && record.absentMpIds.includes(mp.id)) {
+          return true;
+        }
+        // If attendedMpIds exists and MP is not in it, they were absent
+        if (record.attendedMpIds && record.attendedMpIds.length > 0) {
+          return !record.attendedMpIds.includes(mp.id);
+        }
+        return false;
+      });
+      
+      // Return sorted list of absent session dates (newest first)
+      const absentSessionDates = absentSessions
+        .map(session => ({
+          date: session.sessionDate,
+          sessionNumber: session.sessionNumber
+        }))
+        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      
+      res.json({
+        totalSessions: relevantSessions.length,
+        totalAbsent: absentSessions.length,
+        absentSessions: absentSessionDates
+      });
+    } catch (error) {
+      console.error("Error fetching absent sessions:", error);
+      res.status(500).json({ error: "Failed to fetch absent sessions" });
+    }
+  });
+
   // Send a message/contact request to an MP
   app.post("/api/mps/:id/contact", mutationRateLimit, async (req, res) => {
     try {

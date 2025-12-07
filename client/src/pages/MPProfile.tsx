@@ -105,6 +105,16 @@ export default function MPProfile() {
     enabled: !!mpId,
   });
 
+  // Fetch absent session dates
+  const { data: absentSessionsData, isLoading: isLoadingAbsentSessions } = useQuery<{
+    totalSessions: number;
+    totalAbsent: number;
+    absentSessions: Array<{ date: string; sessionNumber: string }>;
+  }>({
+    queryKey: [`/api/mps/${mpId}/absent-sessions`],
+    enabled: !!mpId,
+  });
+
   // Fetch constituency data for poverty incidence
   const { data: constituency } = useConstituencyByCode(mp?.parliamentCode);
 
@@ -613,6 +623,28 @@ export default function MPProfile() {
                     </p>
                   </div>
                 </div>
+                {absentSessionsData && absentSessionsData.absentSessions.length > 0 && (
+                  <>
+                    <Separator />
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-2">
+                        {t('profile.absentDates') || 'Dates Absent'}
+                      </p>
+                      <div className="max-h-32 overflow-y-auto space-y-1" data-testid="list-absent-dates">
+                        {absentSessionsData.absentSessions.map((session, index) => (
+                          <div key={index} className="flex items-center justify-between text-sm" data-testid={`absent-date-${index}`}>
+                            <span className="text-red-600 dark:text-red-400">
+                              {format(new Date(session.date), "MMM d, yyyy")}
+                            </span>
+                            <span className="text-xs text-muted-foreground">
+                              {session.sessionNumber}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                )}
                 <Separator />
                 <p className="text-xs text-muted-foreground italic" data-testid="text-attendance-source">
                   {t('profile.source')}
