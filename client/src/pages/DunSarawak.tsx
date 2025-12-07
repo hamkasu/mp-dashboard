@@ -7,7 +7,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { Users, MapPin, RefreshCw, Search, Building2, DollarSign, TrendingDown, Home, AlertTriangle, Briefcase, BarChart3, Wallet, Eye, ArrowUpDown, Crown, Award, FileText, Download, ExternalLink } from "lucide-react";
+import { Users, MapPin, RefreshCw, Search, Building2, DollarSign, TrendingDown, Home, AlertTriangle, Briefcase, BarChart3, Wallet, Eye, ArrowUpDown, Crown, Award, FileText, Download, ExternalLink, Info, BookOpen } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import hansardAvailabilityPdf from "@assets/Availability_of_Sarawak_DUN_Hansard_1765044965736.pdf";
 import remunerationPdf from "@assets/Remuneration_and_Allowances_for_Members_of_the_Sarawak_State_L_1765044965737.pdf";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -104,6 +106,7 @@ export default function DunSarawak() {
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<SortOption>('code');
   const [cabinetFilter, setCabinetFilter] = useState<CabinetFilter>('all');
+  const [showHansardDialog, setShowHansardDialog] = useState(false);
 
   const { data: authStatus } = useQuery<{ isAdmin: boolean }>({
     queryKey: ["/api/admin/auth-status"],
@@ -561,6 +564,15 @@ export default function DunSarawak() {
                     </p>
                     <div className="flex flex-wrap gap-2">
                       <Button 
+                        variant="default" 
+                        size="sm" 
+                        onClick={() => setShowHansardDialog(true)}
+                        data-testid="button-read-hansard-doc"
+                      >
+                        <BookOpen className="h-3 w-3 mr-1" />
+                        {language === 'ms' ? 'Baca' : 'Read'}
+                      </Button>
+                      <Button 
                         variant="outline" 
                         size="sm" 
                         asChild
@@ -568,7 +580,7 @@ export default function DunSarawak() {
                       >
                         <a href={hansardAvailabilityPdf} target="_blank" rel="noopener noreferrer">
                           <ExternalLink className="h-3 w-3 mr-1" />
-                          {language === 'ms' ? 'Lihat' : 'View'}
+                          {language === 'ms' ? 'PDF' : 'PDF'}
                         </a>
                       </Button>
                       <Button 
@@ -901,6 +913,217 @@ export default function DunSarawak() {
           </Card>
         )}
       </main>
+
+      {/* Hansard Availability Dialog */}
+      <Dialog open={showHansardDialog} onOpenChange={setShowHansardDialog}>
+        <DialogContent className="max-w-3xl max-h-[90vh]" data-testid="dialog-hansard-availability">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Info className="h-5 w-5 text-primary" />
+              {language === 'ms' 
+                ? 'Ketersediaan Hansard DUN Sarawak' 
+                : 'Availability of Sarawak DUN Hansard'}
+            </DialogTitle>
+            <DialogDescription>
+              {language === 'ms' 
+                ? 'Dikemas kini setakat Disember 2025'
+                : 'As of December 2025'}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <ScrollArea className="max-h-[60vh] pr-4">
+            <div className="space-y-6 text-sm">
+              <p className="text-muted-foreground leading-relaxed">
+                {language === 'ms'
+                  ? 'Hansard Dewan Undangan Negeri (DUN) Sarawak (transkrip rasmi prosiding perhimpunan) tidak tersedia kepada orang ramai dalam format yang komprehensif dan mesra pengguna. Berbeza dengan Hansard Parlimen Malaysia persekutuan (boleh dicari sepenuhnya dalam talian sejak 1959), sistem Sarawak adalah terhad, terikat masa, dan memerlukan usaha untuk diakses.'
+                  : 'Sarawak Dewan Undangan Negeri (DUN) Hansard (official transcripts of assembly proceedings) is not readily available to the public in a comprehensive, user-friendly format. Unlike federal Malaysian Parliament Hansard (fully searchable online since 1959), Sarawak\'s system is limited, time-bound, and requires effort to access.'}
+              </p>
+
+              <div>
+                <h3 className="font-semibold text-base mb-3 flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4 text-amber-500" />
+                  {language === 'ms' ? 'Had Utama' : 'Key Limitations'}
+                </h3>
+                <ul className="space-y-3">
+                  <li className="flex gap-2">
+                    <span className="text-primary font-bold">1.</span>
+                    <div>
+                      <span className="font-medium">{language === 'ms' ? 'Akses Terhad Masa' : 'Time-Restricted Access'}:</span>
+                      <span className="text-muted-foreground ml-1">
+                        {language === 'ms'
+                          ? 'PDF Hansard yang belum disunting dipaparkan di laman web DUN rasmi (duns.sarawak.gov.my) hanya selama 1 bulan selepas tarikh persidangan. Selepas itu, ia dialih keluar daripada paparan awam.'
+                          : 'Unedited Hansard PDFs are posted on the official DUN website (duns.sarawak.gov.my) only for 1 month after the sitting date. After that, they are removed from public view.'}
+                      </span>
+                    </div>
+                  </li>
+                  <li className="flex gap-2">
+                    <span className="text-primary font-bold">2.</span>
+                    <div>
+                      <span className="font-medium">{language === 'ms' ? 'Tiada Arkib Awam atau Portal Carian' : 'No Public Archive or Search Portal'}:</span>
+                      <span className="text-muted-foreground ml-1">
+                        {language === 'ms'
+                          ? 'Tiada arkib dalam talian percuma dan terbuka untuk Hansard sejarah atau yang disunting. Sistem "e-Hansard" wujud (ehansard.sarawak.gov.my), tetapi memerlukan nama pengguna dan kata laluan.'
+                          : 'There is no free, open online archive for historical or edited Hansard. An "e-Hansard" system exists (ehansard.sarawak.gov.my), but it requires a username and password (likely for members, staff, or registered users only).'}
+                      </span>
+                    </div>
+                  </li>
+                  <li className="flex gap-2">
+                    <span className="text-primary font-bold">3.</span>
+                    <div>
+                      <span className="font-medium">{language === 'ms' ? 'Tiada Pendigitalan Proaktif' : 'No Proactive Digitization'}:</span>
+                      <span className="text-muted-foreground ml-1">
+                        {language === 'ms'
+                          ? 'Sesi lama (pra-2010) sering tidak boleh diakses dalam talian; ia mungkin wujud dalam bentuk fizikal di perpustakaan DUN di Kuching tetapi tidak didigitalkan untuk akses jarak jauh.'
+                          : 'Older sessions (pre-2010s) are often inaccessible online; they may exist in physical form at the DUN library in Kuching but aren\'t digitized for remote access.'}
+                      </span>
+                    </div>
+                  </li>
+                </ul>
+              </div>
+
+              <div>
+                <h3 className="font-semibold text-base mb-3">
+                  {language === 'ms' ? 'Cara Akses (Pilihan Terhad)' : 'How to Access (Limited Options)'}
+                </h3>
+                <div className="border rounded-md overflow-hidden">
+                  <table className="w-full text-xs">
+                    <thead className="bg-muted">
+                      <tr>
+                        <th className="text-left p-2 font-medium">{language === 'ms' ? 'Kaedah' : 'Method'}</th>
+                        <th className="text-left p-2 font-medium">{language === 'ms' ? 'Butiran' : 'Details'}</th>
+                        <th className="text-left p-2 font-medium">{language === 'ms' ? 'Kemudahan' : 'Ease'}</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y">
+                      <tr>
+                        <td className="p-2 font-medium">{language === 'ms' ? 'Laman Web Rasmi' : 'Official Website'}</td>
+                        <td className="p-2 text-muted-foreground">
+                          {language === 'ms' 
+                            ? 'Muat turun PDF dari duns.sarawak.gov.my di bawah bahagian "Hansard"' 
+                            : 'Download PDFs from duns.sarawak.gov.my under "Hansard" section'}
+                        </td>
+                        <td className="p-2">
+                          <Badge variant="secondary" className="text-xs">
+                            {language === 'ms' ? 'Sederhana (jika dalam 1 bulan)' : 'Moderate (if within 1 month)'}
+                          </Badge>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td className="p-2 font-medium">{language === 'ms' ? 'Portal e-Hansard' : 'e-Hansard Portal'}</td>
+                        <td className="p-2 text-muted-foreground">ehansard.sarawak.gov.my</td>
+                        <td className="p-2">
+                          <Badge variant="outline" className="text-xs">
+                            {language === 'ms' ? 'Rendah (perlu log masuk)' : 'Low (login required)'}
+                          </Badge>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td className="p-2 font-medium">{language === 'ms' ? 'Fizikal/Secara Langsung' : 'Physical/In-Person'}</td>
+                        <td className="p-2 text-muted-foreground">
+                          {language === 'ms' 
+                            ? 'Lawati Bangunan DUN (Petra Jaya, Kuching) atau Perpustakaan Negeri' 
+                            : 'Visit DUN Building (Petra Jaya, Kuching) or State Library'}
+                        </td>
+                        <td className="p-2">
+                          <Badge variant="outline" className="text-xs">
+                            {language === 'ms' ? 'Rendah' : 'Low'}
+                          </Badge>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td className="p-2 font-medium">{language === 'ms' ? 'FOI / OSA' : 'FOI (Freedom of Information)'}</td>
+                        <td className="p-2 text-muted-foreground">
+                          {language === 'ms' 
+                            ? 'Failkan di bawah pengecualian Akta Rahsia Rasmi melalui Kerani DUN' 
+                            : 'File under Official Secrets Act exemptions via DUN Clerk'}
+                        </td>
+                        <td className="p-2">
+                          <Badge variant="destructive" className="text-xs">
+                            {language === 'ms' ? 'Sangat Rendah' : 'Very Low'}
+                          </Badge>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td className="p-2 font-medium">{language === 'ms' ? 'Sumber Media/Sekunder' : 'Media/Secondary Sources'}</td>
+                        <td className="p-2 text-muted-foreground">
+                          {language === 'ms' 
+                            ? 'Petikan dalam akhbar (Sarawak Tribune, DayakDaily) atau blog' 
+                            : 'Excerpts in newspapers (Sarawak Tribune, DayakDaily) or blogs'}
+                        </td>
+                        <td className="p-2">
+                          <Badge variant="secondary" className="text-xs">
+                            {language === 'ms' ? 'Sederhana' : 'Moderate'}
+                          </Badge>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div>
+                <h3 className="font-semibold text-base mb-3">
+                  {language === 'ms' ? 'Contoh Terkini (2025)' : 'Recent Examples (2025)'}
+                </h3>
+                <ul className="space-y-2 text-muted-foreground">
+                  <li className="flex gap-2">
+                    <span className="text-primary">-</span>
+                    <span>
+                      <strong>{language === 'ms' ? 'Persidangan Mei 2025' : 'May 2025 Sitting'}:</strong>{' '}
+                      {language === 'ms'
+                        ? 'Bahagian Hansard yang tidak diterbitkan dirujuk dalam media (contoh: kenyataan yang dipadamkan oleh ADUN Pending Violet Yong), tetapi teks penuh tidak awam.'
+                        : 'Parts of unpublished Hansard were referenced in media (e.g., expunged remarks by Pending ADUN Violet Yong), but full text isn\'t public.'}
+                    </span>
+                  </li>
+                  <li className="flex gap-2">
+                    <span className="text-primary">-</span>
+                    <span>
+                      <strong>{language === 'ms' ? 'November 2025' : 'November 2025'}:</strong>{' '}
+                      {language === 'ms'
+                        ? 'PDF yang belum disunting tersedia sehingga ~Disember 2025; selepas itu, hilang melainkan diminta.'
+                        : 'Unedited PDFs available until ~December 2025; after that, gone unless requested.'}
+                    </span>
+                  </li>
+                </ul>
+              </div>
+
+              <div className="p-4 rounded-md bg-muted/50 border">
+                <h3 className="font-semibold text-base mb-2">
+                  {language === 'ms' ? 'Mengapa Begitu Tidak Telus?' : 'Why So Opaque?'}
+                </h3>
+                <p className="text-muted-foreground leading-relaxed">
+                  {language === 'ms'
+                    ? 'Ini selaras dengan kritikan yang lebih luas terhadap ketelusan Sarawak. Kumpulan sivil seperti ROSE menyokong pengarkiban dalam talian sepenuhnya, serupa dengan standard persekutuan, tetapi tiada perubahan setakat ini. Jika anda mencari persidangan tertentu, menghantar e-mel kepada Unit Penerbitan atau memfailkan FOI adalah pilihan terbaik anda—kejayaan berbeza-beza.'
+                    : 'This aligns with broader criticisms of Sarawak\'s transparency (e.g., opposition calls for open-data reforms in 2025 DUN sessions). Civil groups like ROSE advocate for full online archiving, similar to federal standards, but no changes as of now. If you\'re seeking a specific sitting (e.g., on allowances), emailing the Publication Unit or filing an FOI is your best bet—success varies.'}
+                </p>
+              </div>
+
+              <div className="flex flex-wrap gap-2 pt-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  asChild
+                >
+                  <a href={hansardAvailabilityPdf} target="_blank" rel="noopener noreferrer">
+                    <ExternalLink className="h-3 w-3 mr-1" />
+                    {language === 'ms' ? 'Lihat PDF Asal' : 'View Original PDF'}
+                  </a>
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  asChild
+                >
+                  <a href={hansardAvailabilityPdf} download="Sarawak_DUN_Hansard_Availability.pdf">
+                    <Download className="h-3 w-3 mr-1" />
+                    {language === 'ms' ? 'Muat Turun PDF' : 'Download PDF'}
+                  </a>
+                </Button>
+              </div>
+            </div>
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
