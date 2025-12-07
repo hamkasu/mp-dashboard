@@ -258,7 +258,8 @@ export class HansardPdfParser {
       const attendedSection = text.substring(attendedStart, attendedEnd === Number.MAX_SAFE_INTEGER ? undefined : attendedEnd);
       
       // Extract constituencies from entries like "Menteri..., Datuk ... (Constituency)"
-      const constituencyRegex = /\(([A-Z][a-z\s]+(?:\s+[A-Z][a-z]+)*)\)/g;
+      // Flexible regex to handle: multi-word names, hyphens, apostrophes, mixed case
+      const constituencyRegex = /\(([A-Za-z][A-Za-z\s\-'\.]+?)\)/g;
       let match;
       while ((match = constituencyRegex.exec(attendedSection)) !== null) {
         const constituency = match[1].trim();
@@ -284,7 +285,8 @@ export class HansardPdfParser {
       );
       const absentSection = text.substring(absentStart, absentEnd === Number.MAX_SAFE_INTEGER ? undefined : absentEnd);
       
-      const constituencyRegex = /\(([A-Z][a-z\s]+(?:\s+[A-Z][a-z]+)*)\)/g;
+      // Flexible regex to handle: multi-word names, hyphens, apostrophes, mixed case
+      const constituencyRegex = /\(([A-Za-z][A-Za-z\s\-'\.]+?)\)/g;
       let match;
       while ((match = constituencyRegex.exec(absentSection)) !== null) {
         const constituency = match[1].trim();
@@ -307,11 +309,25 @@ export class HansardPdfParser {
       ))
       .map(mp => mp.id);
 
+    // Find unmatched constituencies for debugging
+    const unmatchedAttended = attendedConstituencies.filter(c => 
+      !this.allMps.some(mp => this.normalizeConstituency(c) === this.normalizeConstituency(mp.constituency))
+    );
+    const unmatchedAbsent = absentConstituencies.filter(c => 
+      !this.allMps.some(mp => this.normalizeConstituency(c) === this.normalizeConstituency(mp.constituency))
+    );
+
     console.log(`📊 Attendance parsed:`);
     console.log(`   - Found ${attendedConstituencies.length} attended constituencies`);
     console.log(`   - Found ${absentConstituencies.length} absent constituencies`);
     console.log(`   - Matched ${attendedMpIds.length} attended MPs`);
     console.log(`   - Matched ${absentMpIds.length} absent MPs`);
+    if (unmatchedAttended.length > 0) {
+      console.log(`   - ⚠️ Unmatched attended constituencies: ${unmatchedAttended.slice(0, 10).join(', ')}${unmatchedAttended.length > 10 ? '...' : ''}`);
+    }
+    if (unmatchedAbsent.length > 0) {
+      console.log(`   - ⚠️ Unmatched absent constituencies: ${unmatchedAbsent.slice(0, 10).join(', ')}${unmatchedAbsent.length > 10 ? '...' : ''}`);
+    }
 
     return {
       attendedMpIds,
@@ -367,6 +383,7 @@ export class HansardPdfParser {
     return constituency
       .toLowerCase()
       .replace(/\s+/g, '')
+      .replace(/[\-'\.]/g, '')  // Remove hyphens, apostrophes, and periods
       .replace(/[^a-z]/g, '');
   }
 
