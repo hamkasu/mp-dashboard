@@ -4448,6 +4448,112 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
+  // Endpoint to rescan attendance data from ALL hansard records with PDFs
+  app.post("/api/admin/rescan-all-attendance", requireAdmin, async (req, res) => {
+    try {
+      console.log("🔄 Rescanning attendance data from ALL Hansard PDFs...");
+      
+      // Get all Hansard records
+      const allRecords = await db.select().from(hansardRecords);
+      
+      if (allRecords.length === 0) {
+        return res.json({
+          message: "No hansard records found",
+          processed: 0,
+          total: 0
+        });
+      }
+
+      console.log(`📊 Found ${allRecords.length} total records to rescan`);
+
+      // Get all MPs
+      const allMps = await db.select().from(mps);
+      const parser = new HansardPdfParser(allMps);
+      
+      let successCount = 0;
+      let errorCount = 0;
+      let skippedCount = 0;
+      const errors: string[] = [];
+      const updatedRecords: { sessionNumber: string; attendedCount: number; absentCount: number }[] = [];
+
+      for (const record of allRecords) {
+        try {
+          // Get the PDF file for this Hansard
+          const pdfFile = await db.select().from(hansardPdfFiles)
+            .where(eq(hansardPdfFiles.hansardRecordId, record.id))
+            .limit(1);
+
+          if (pdfFile.length === 0 || !pdfFile[0].pdfData) {
+            console.log(`⏭️  Skipping ${record.sessionNumber} - No PDF file available`);
+            skippedCount++;
+            continue;
+          }
+
+          console.log(`📄 Rescanning attendance for ${record.sessionNumber}...`);
+          
+          // Re-parse the PDF to extract attendance data
+          const parsed = await parser.parseHansardPdf(pdfFile[0].pdfData, pdfFile[0].originalFilename);
+
+          // Update the record with new attendance data
+          await db.update(hansardRecords)
+            .set({
+              attendedMpIds: parsed.attendance.attendedMpIds,
+              absentMpIds: parsed.attendance.absentMpIds,
+              constituenciesPresent: parsed.speakerStats.constituenciesAttended,
+              constituenciesAbsent: parsed.attendance.absentConstituencies.length,
+            })
+            .where(eq(hansardRecords.id, record.id));
+
+          console.log(`✅ Updated ${record.sessionNumber} - ${parsed.attendance.attendedMpIds.length} attended, ${parsed.attendance.absentMpIds.length} absent`);
+          
+          updatedRecords.push({
+            sessionNumber: record.sessionNumber,
+            attendedCount: parsed.attendance.attendedMpIds.length,
+            absentCount: parsed.attendance.absentMpIds.length
+          });
+          
+          successCount++;
+        } catch (error) {
+          console.error(`❌ Error rescanning ${record.sessionNumber}:`, error);
+          errors.push(`${record.sessionNumber}: ${String(error)}`);
+          errorCount++;
+        }
+      }
+
+      console.log(`✅ Attendance rescan complete: ${successCount} success, ${errorCount} errors, ${skippedCount} skipped`);
+
+      // If we successfully reprocessed any records, trigger MP data refresh
+      if (successCount > 0) {
+        // Invalidate the MP attendance cache so subsequent API calls get fresh data
+        mpAttendanceCache = null;
+        mpAttendanceCacheTime = 0;
+        console.log("🗑️  Cleared MP attendance cache");
+        
+        try {
+          console.log("🔄 Triggering MP data refresh after attendance rescan...");
+          const { refreshAllMpData } = await import('./aggregate-speeches');
+          const refreshResult = await refreshAllMpData();
+          console.log(`✅ MP data refreshed: ${refreshResult.attendance.totalMpsUpdated} MPs updated`);
+        } catch (refreshError) {
+          console.error("⚠️  Failed to auto-refresh MP data after rescan:", refreshError);
+        }
+      }
+
+      res.json({
+        message: successCount > 0 ? "Attendance rescan complete - MP data refreshed" : "Attendance rescan complete",
+        total: allRecords.length,
+        successCount,
+        errorCount,
+        skippedCount,
+        updatedRecords: updatedRecords.slice(0, 10), // Return first 10 for summary
+        errors: errorCount > 0 ? errors.slice(0, 20) : undefined
+      });
+    } catch (error) {
+      console.error("Error rescanning attendance:", error);
+      res.status(500).json({ error: "Failed to rescan attendance", details: String(error) });
+    }
+  });
+
   // Track page view
   app.post("/api/track-view", async (req, res) => {
     try {

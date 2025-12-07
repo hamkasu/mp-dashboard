@@ -553,6 +553,36 @@ export default function HansardAdmin() {
     }
   };
 
+  // Rescan All Attendance mutation
+  const rescanAttendanceMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/admin/rescan-all-attendance");
+      return await res.json();
+    },
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/hansard-records"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/mps"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
+      toast({
+        title: "Attendance Rescan Complete",
+        description: `Successfully rescanned ${data.successCount} of ${data.total} records. ${data.skippedCount > 0 ? `${data.skippedCount} skipped (no PDF).` : ''}`,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to rescan attendance data",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleRescanAllAttendance = () => {
+    if (confirm("This will rescan attendance data from ALL Hansard PDFs. This may take several minutes. Continue?")) {
+      rescanAttendanceMutation.mutate();
+    }
+  };
+
   const uploadMutation = useMutation({
     mutationFn: async (files: File[]) => {
       // Clear previous results when starting new upload
@@ -1328,6 +1358,50 @@ export default function HansardAdmin() {
                 <>
                   <Database className="mr-2 h-4 w-4" />
                   Refresh MP Data
+                </>
+              )}
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* Rescan All Attendance Card */}
+        <Card className="border-orange-500">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5" />
+              Rescan All Attendance
+            </CardTitle>
+            <CardDescription>
+              Re-extract attendance data from all Hansard PDFs
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <p className="text-sm text-muted-foreground">
+                This will re-parse all Hansard PDFs and update attendance records (attended/absent MPs) for every session. Use this if the attendance parser has been improved.
+              </p>
+              <Alert>
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription>
+                  This operation may take several minutes depending on the number of Hansard records. Records without PDFs will be skipped.
+                </AlertDescription>
+              </Alert>
+            </div>
+            <Button
+              onClick={handleRescanAllAttendance}
+              disabled={rescanAttendanceMutation.isPending}
+              className="w-full"
+              data-testid="button-rescan-all-attendance"
+            >
+              {rescanAttendanceMutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Rescanning Attendance...
+                </>
+              ) : (
+                <>
+                  <Users className="mr-2 h-4 w-4" />
+                  Rescan All Attendance Data
                 </>
               )}
             </Button>
