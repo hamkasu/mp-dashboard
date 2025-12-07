@@ -19,6 +19,7 @@ import type { DunMember } from "@shared/schema";
 
 const hansardAvailabilityPdf = "/documents/sarawak-hansard-availability.pdf";
 const remunerationPdf = "/documents/sarawak-adun-remuneration.pdf";
+const cabinetRemunerationPdf = "/documents/sarawak-cabinet-remuneration.pdf";
 
 function getMemberInitials(name: string): string {
   const parts = name.split(' ').filter(p => 
@@ -108,6 +109,7 @@ export default function DunSarawak() {
   const [sortBy, setSortBy] = useState<SortOption>('code');
   const [cabinetFilter, setCabinetFilter] = useState<CabinetFilter>('all');
   const [showHansardDialog, setShowHansardDialog] = useState(false);
+  const [showRemunerationDialog, setShowRemunerationDialog] = useState(false);
 
   const { data: authStatus } = useQuery<{ isAdmin: boolean }>({
     queryKey: ["/api/admin/auth-status"],
@@ -619,6 +621,15 @@ export default function DunSarawak() {
                     </p>
                     <div className="flex flex-wrap gap-2">
                       <Button 
+                        variant="default" 
+                        size="sm" 
+                        onClick={() => setShowRemunerationDialog(true)}
+                        data-testid="button-read-remuneration-doc"
+                      >
+                        <BookOpen className="h-3 w-3 mr-1" />
+                        {language === 'ms' ? 'Baca' : 'Read'}
+                      </Button>
+                      <Button 
                         variant="outline" 
                         size="sm" 
                         asChild
@@ -626,7 +637,7 @@ export default function DunSarawak() {
                       >
                         <a href={remunerationPdf} target="_blank" rel="noopener noreferrer">
                           <ExternalLink className="h-3 w-3 mr-1" />
-                          {language === 'ms' ? 'Lihat' : 'View'}
+                          {language === 'ms' ? 'PDF' : 'PDF'}
                         </a>
                       </Button>
                       <Button 
@@ -1116,6 +1127,191 @@ export default function DunSarawak() {
                   asChild
                 >
                   <a href={hansardAvailabilityPdf} download="Sarawak_DUN_Hansard_Availability.pdf">
+                    <Download className="h-3 w-3 mr-1" />
+                    {language === 'ms' ? 'Muat Turun PDF' : 'Download PDF'}
+                  </a>
+                </Button>
+              </div>
+            </div>
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
+
+      {/* ADUN Remuneration Dialog */}
+      <Dialog open={showRemunerationDialog} onOpenChange={setShowRemunerationDialog}>
+        <DialogContent className="max-w-4xl max-h-[90vh]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-xl">
+              <DollarSign className="h-5 w-5 text-green-600" />
+              {language === 'ms' 
+                ? 'Imbuhan Kabinet Sarawak: Jumlah Gaji dan Elaun' 
+                : 'Sarawak Cabinet Remuneration: Total Salary and Allowances'}
+            </DialogTitle>
+            <DialogDescription>
+              {language === 'ms' 
+                ? 'Setakat Disember 2025' 
+                : 'As of December 2025'}
+            </DialogDescription>
+          </DialogHeader>
+          <ScrollArea className="max-h-[calc(90vh-120px)] pr-4">
+            <div className="space-y-6 text-sm">
+              <div className="p-4 rounded-md bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
+                <div className="flex gap-2">
+                  <Info className="h-4 w-4 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+                  <p className="text-amber-800 dark:text-amber-200 leading-relaxed">
+                    {language === 'ms'
+                      ? 'Angka jumlah tepat untuk Premier, Timbalan Premier, Menteri Kabinet, dan Timbalan Menteri Sarawak (termasuk semua elaun) tidak diperincikan secara terperinci kepada umum, kerana kerajaan negeri mendedahkan gaji asas dengan lebih telus sambil menganggap faedah tertentu (contoh: perumahan, perjalanan, hiburan) sebagai sulit atas sebab keselamatan dan operasi.'
+                      : 'Exact total figures for Sarawak\'s Premier, Deputy Premiers, Cabinet Ministers, and Deputy Ministers (including all allowances) are not publicly itemized in detail, as the state government discloses basic salaries more transparently while treating certain perks (e.g., housing, travel, entertainment) as confidential for security and operational reasons.'}
+                  </p>
+                </div>
+              </div>
+
+              <div>
+                <h3 className="font-semibold text-base mb-3 flex items-center gap-2">
+                  <Wallet className="h-4 w-4 text-primary" />
+                  {language === 'ms' ? 'Pecahan Jumlah Imbuhan Bulanan' : 'Monthly Total Remuneration Breakdown'}
+                </h3>
+                <div className="border rounded-md overflow-hidden">
+                  <table className="w-full text-xs">
+                    <thead className="bg-muted">
+                      <tr>
+                        <th className="text-left p-2 font-medium">{language === 'ms' ? 'Jawatan' : 'Position'}</th>
+                        <th className="text-left p-2 font-medium">{language === 'ms' ? 'Gaji Asas (RM)' : 'Basic Salary (RM)'}</th>
+                        <th className="text-left p-2 font-medium">{language === 'ms' ? 'Anggaran Jumlah Bulanan (RM)' : 'Est. Total Monthly (RM)'}</th>
+                        <th className="text-left p-2 font-medium">{language === 'ms' ? 'Setara Tahunan (RM)' : 'Annual Equivalent (RM)'}</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y">
+                      <tr className="bg-amber-50/50 dark:bg-amber-900/10">
+                        <td className="p-2">
+                          <div className="font-medium">{language === 'ms' ? 'Premier' : 'Premier'}</div>
+                          <div className="text-muted-foreground text-xs">{language === 'ms' ? '(Datuk Patinggi Tan Sri Abang Johari Tun Openg)' : '(Datuk Patinggi Tan Sri Abang Johari Tun Openg)'}</div>
+                        </td>
+                        <td className="p-2 font-semibold">30,000</td>
+                        <td className="p-2 font-semibold text-amber-700 dark:text-amber-400">55,000 - 65,000</td>
+                        <td className="p-2">660,000 - 780,000</td>
+                      </tr>
+                      <tr className="bg-orange-50/50 dark:bg-orange-900/10">
+                        <td className="p-2">
+                          <div className="font-medium">{language === 'ms' ? 'Timbalan Premier' : 'Deputy Premiers'}</div>
+                          <div className="text-muted-foreground text-xs">(2 {language === 'ms' ? 'jawatan' : 'positions'})</div>
+                        </td>
+                        <td className="p-2 font-semibold">25,000 - 28,000</td>
+                        <td className="p-2 font-semibold text-orange-700 dark:text-orange-400">45,000 - 55,000</td>
+                        <td className="p-2">540,000 - 660,000</td>
+                      </tr>
+                      <tr className="bg-purple-50/50 dark:bg-purple-900/10">
+                        <td className="p-2">
+                          <div className="font-medium">{language === 'ms' ? 'Menteri Kabinet' : 'Cabinet Ministers'}</div>
+                          <div className="text-muted-foreground text-xs">(14 {language === 'ms' ? 'menteri penuh' : 'full ministers'})</div>
+                        </td>
+                        <td className="p-2 font-semibold">20,000 - 25,000</td>
+                        <td className="p-2 font-semibold text-purple-700 dark:text-purple-400">35,000 - 50,000</td>
+                        <td className="p-2">420,000 - 600,000</td>
+                      </tr>
+                      <tr className="bg-indigo-50/50 dark:bg-indigo-900/10">
+                        <td className="p-2">
+                          <div className="font-medium">{language === 'ms' ? 'Timbalan Menteri' : 'Deputy Ministers'}</div>
+                          <div className="text-muted-foreground text-xs">({language === 'ms' ? 'dahulunya Pembantu Menteri' : 'formerly Assistant Ministers'})</div>
+                        </td>
+                        <td className="p-2 font-semibold">15,000 - 18,000</td>
+                        <td className="p-2 font-semibold text-indigo-700 dark:text-indigo-400">25,000 - 35,000</td>
+                        <td className="p-2">300,000 - 420,000</td>
+                      </tr>
+                      <tr>
+                        <td className="p-2">
+                          <div className="font-medium">{language === 'ms' ? 'ADUN Biasa' : 'Ordinary ADUN'}</div>
+                          <div className="text-muted-foreground text-xs">({language === 'ms' ? 'bukan menteri' : 'non-ministers'})</div>
+                        </td>
+                        <td className="p-2 font-semibold">15,000</td>
+                        <td className="p-2 font-semibold">20,000 - 25,000</td>
+                        <td className="p-2">240,000 - 300,000</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <p className="text-xs text-muted-foreground mt-2">
+                  {language === 'ms'
+                    ? '* Elaun utama termasuk: Elaun Duduk/Kawasan, Elaun Hiburan/Perjalanan, Elaun Perubatan/Perumahan, dan Lain-lain (sokongan staf)'
+                    : '* Key allowances include: Sitting/Constituency, Entertainment/Travel, Medical/Housing, and Other (staff support)'}
+                </p>
+              </div>
+
+              <div>
+                <h3 className="font-semibold text-base mb-3">
+                  {language === 'ms' ? 'Penjelasan Utama dan Faedah Tambahan' : 'Key Explanations and Additional Perks'}
+                </h3>
+                <ul className="space-y-3 text-muted-foreground">
+                  <li className="flex gap-2">
+                    <span className="text-primary font-bold">1.</span>
+                    <div>
+                      <strong className="text-foreground">{language === 'ms' ? 'Cara Anggaran Jumlah' : 'How Totals Are Estimated'}:</strong>{' '}
+                      {language === 'ms'
+                        ? 'Gaji asas dari Ordinan Bab 68 (contoh: Premier RM30,000; Timbalan ~RM25,000+; Menteri ~RM20,000+; Timbalan Menteri ~RM15,000+ sebagai lanjutan gaji ADUN). Elaun diambil dari analog persekutuan dan pendedahan negeri.'
+                        : 'Basic salaries from Ordinance Chapter 68 (e.g., Premier RM30,000; Deputies ~RM25,000+; Ministers ~RM20,000+; Deputy Ministers ~RM15,000+ as extension of ADUN pay). Allowances drawn from federal analogs and state disclosures.'}
+                    </div>
+                  </li>
+                  <li className="flex gap-2">
+                    <span className="text-primary font-bold">2.</span>
+                    <div>
+                      <strong className="text-foreground">{language === 'ms' ? 'Faedah Bukan Tunai' : 'Non-Cash Benefits'} ({language === 'ms' ? 'tidak dalam jumlah tetapi bernilai tinggi' : 'not in totals but significant value'}):</strong>
+                      <ul className="mt-1 ml-4 space-y-1 list-disc">
+                        <li>{language === 'ms' ? 'Kediaman rasmi/kuarters (atau elaun perumahan)' : 'Official residence/quarters (or housing allowance)'}</li>
+                        <li>{language === 'ms' ? 'Kenderaan + bahan api/pemandu (~RM50,000-RM100,000 nilai tahunan)' : 'Vehicles + fuel/drivers (~RM50,000-RM100,000 annual value)'}</li>
+                        <li>{language === 'ms' ? 'Perlindungan perubatan untuk keluarga + staf' : 'Medical coverage for family + staff'}</li>
+                        <li>{language === 'ms' ? 'Ganjaran akhir penggal (contoh: 3-6 bulan gaji) + pencen selepas 5 tahun perkhidmatan' : 'End-of-term gratuity (e.g., 3-6 months\' salary) + contributory pension after 5 years\' service'}</li>
+                      </ul>
+                    </div>
+                  </li>
+                  <li className="flex gap-2">
+                    <span className="text-primary font-bold">3.</span>
+                    <div>
+                      <strong className="text-foreground">{language === 'ms' ? 'Tiada Perubahan Terkini' : 'No Recent Changes'}:</strong>{' '}
+                      {language === 'ms'
+                        ? 'Bajet 2026 memberi tumpuan kepada penjawat awam (kenaikan 7%, peruntukan RM56M) dan pemimpin komuniti (+RM400/bulan dari 2026). Hasil minyak/gas Sarawak mengekalkan gaji yang kompetitif, tetapi pengkritik menyatakan ketidaktelusan.'
+                        : '2026 Budget focused on civil servants (7% raise, RM56M allocation) and community leaders (+RM400/month from 2026). Sarawak\'s oil/gas revenues keep pay competitive, but critics note opacity.'}
+                    </div>
+                  </li>
+                  <li className="flex gap-2">
+                    <span className="text-primary font-bold">4.</span>
+                    <div>
+                      <strong className="text-foreground">{language === 'ms' ? 'Perbandingan' : 'Comparison'}:</strong>{' '}
+                      {language === 'ms'
+                        ? 'Pemimpin Sarawak memperoleh lebih daripada rakan sejawat persekutuan (PM asas RM22,827; menteri persekutuan RM14,907, selepas potongan 20%). Jumlah untuk Premier Sarawak menyaingi menteri Singapura (~SGD 55,000/bulan asas, tetapi dengan bonus).'
+                        : 'Sarawak leaders earn more than federal counterparts (PM basic RM22,827; federal ministers RM14,907, post-20% cut). Total for Sarawak Premier rivals Singapore ministers (~SGD 55,000/month basic, but with bonuses).'}
+                    </div>
+                  </li>
+                </ul>
+              </div>
+
+              <div className="p-4 rounded-md bg-muted/50 border">
+                <h3 className="font-semibold text-base mb-2">
+                  {language === 'ms' ? 'Sumber Undang-undang' : 'Legal Source'}
+                </h3>
+                <p className="text-muted-foreground leading-relaxed">
+                  {language === 'ms'
+                    ? 'Imbuhan ditadbir oleh Ordinan Ahli Pentadbiran dan Ahli Dewan Undangan Negeri (Imbuhan, Pencen dan Ganjaran) 2013 (Bab 68), yang menggariskan gaji asas dan mewajibkan elaun/faedah tambahan tetapi tidak menyatakan butiran tambahan yang tepat. Untuk pecahan tepat, PDF Ordinan penuh (melalui Sarawak LawNet) menyenaraikan struktur tetapi bukan kemas kini 2025.'
+                    : 'Remuneration is governed by the Members of the Administration and Members of Dewan Undangan Negeri (Remuneration, Pensions and Gratuities) Ordinance 2013 (Chapter 68), which outlines basic salaries and mandates additional allowances/benefits but doesn\'t specify exact add-ons. For precise breakdowns, the full Ordinance PDF (via Sarawak LawNet) lists structures but not 2025 updates.'}
+                </p>
+              </div>
+
+              <div className="flex flex-wrap gap-2 pt-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  asChild
+                >
+                  <a href={cabinetRemunerationPdf} target="_blank" rel="noopener noreferrer">
+                    <ExternalLink className="h-3 w-3 mr-1" />
+                    {language === 'ms' ? 'Lihat PDF Asal' : 'View Original PDF'}
+                  </a>
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  asChild
+                >
+                  <a href={cabinetRemunerationPdf} download="Sarawak_Cabinet_Remuneration.pdf">
                     <Download className="h-3 w-3 mr-1" />
                     {language === 'ms' ? 'Muat Turun PDF' : 'Download PDF'}
                   </a>
