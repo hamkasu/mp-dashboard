@@ -241,9 +241,9 @@ export default function MPProfile() {
   const monthlySalary = baseMpSalary + ministerialSalary;
   const yearlySalary = monthlySalary * 12;
 
-  // Use real attendance from Hansard records
-  const totalSessions = (mp as any).totalHansardSessions || mp.totalParliamentDays || 0;
-  const sessionsAttended = (mp as any).hansardSessionsAttended || mp.daysAttended || 0;
+  // Use daysAttended/totalParliamentDays for consistent attendance calculation across the app
+  const totalSessions = mp.totalParliamentDays || 0;
+  const sessionsAttended = mp.daysAttended || 0;
 
   const totalSalary = calculateTotalSalary(mp.swornInDate, monthlySalary, sessionsAttended, mp.parliamentSittingAllowance);
   const formattedSwornInDate = format(new Date(mp.swornInDate), "MMMM d, yyyy");
