@@ -1,0 +1,25 @@
+builder
+COPY . .
+665ms
+
+builder
+RUN npm run build
+4s
+> rest-express@1.0.0 build
+> vite build && esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist && esbuild scripts/import-poverty-data.ts --platform=node --packages=external --bundle --format=esm --outdir=dist/scripts && esbuild scripts/fix-hansard-speaker-ids.ts --platform=node --packages=external --bundle --format=esm --outdir=dist/scripts && esbuild scripts/aggregate-all-speeches.ts --platform=node --packages=external --bundle --format=esm --outdir=dist/scripts && esbuild scripts/aggregate-constituency-speeches.ts --platform=node --packages=external --bundle --format=esm --outdir=dist/scripts && esbuild scripts/run-migrations.ts --platform=node --packages=external --bundle --format=esm --outdir=dist/scripts && esbuild scripts/update-mp-social-media.ts --platform=node --packages=external --bundle --format=esm --outdir=dist/scripts && esbuild scripts/update-cabinet-roles.ts --platform=node --packages=external --bundle --format=esm --outdir=dist/scripts && esbuild scripts/import-parliamentary-answers.ts --platform=node --packages=external --bundle --format=esm --outdir=dist/scripts && esbuild scripts/download-parliamentary-pdfs.ts --platform=node --packages=external --bundle --format=esm --outdir=dist/scripts && esbuild scripts/extract-hansard-questions.ts --platform=node --packages=external --bundle --format=esm --outdir=dist/scripts && esbuild scripts/populate-sarawak-dun.ts --platform=node --packages=external --bundle --format=esm --outdir=dist/scripts && cp scripts/mp-social-media-scraped.json dist/scripts/ && npm run prerender
+vite v5.4.20 building for production...
+transforming...
+A PostCSS plugin did not pass the `from` option to `postcss.parse`. This may cause imported assets to be incorrectly transformed. If you've recently added a PostCSS plugin that raised this warning, please contact the package author to fix the issue.
+✓ 1903 modules transformed.
+x Build failed in 2.72s
+error during build:
+[vite:asset] Could not load /app/attached_assets/Availability_of_Sarawak_DUN_Hansard_1765044965736.pdf (imported by client/src/pages/DunSarawak.tsx): ENOENT: no such file or directory, open '/app/attached_assets/Availability_of_Sarawak_DUN_Hansard_1765044965736.pdf'
+
+    at async open (node:internal/fs/promises:639:25)
+    at async Object.readFile (node:internal/fs/promises:1246:14)
+    at async fileToBuiltUrl (file:///app/node_modules/vite/dist/node/chunks/dep-D_zLpgQd.js:20428:19)
+    at async Object.load (file:///app/node_modules/vite/dist/node/chunks/dep-D_zLpgQd.js:20328:17)
+    at async PluginDriver.hookFirstAndGetPlugin (file:///app/node_modules/rollup/dist/es/shared/node-entry.js:20689:28)
+    at async file:///app/node_modules/rollup/dist/es/shared/node-entry.js:19809:33
+    at async Queue.work (file:///app/node_modules/rollup/dist/es/shared/node-entry.js:20899:32)
+Build Failed: build daemon returned an error < failed to solve: process "/bin/sh -c npm run build" did not complete successfully: exit code: 1 >
