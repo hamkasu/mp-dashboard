@@ -277,8 +277,9 @@ export default function DunSarawak() {
     let total = 0;
     members.forEach(member => {
       const baseSalary = member.baseSalary || 25000;
-      const cabinetBaseSalary = member.cabinetRole && member.cabinetBaseSalary ? member.cabinetBaseSalary : 0;
-      total += baseSalary + cabinetBaseSalary;
+      // If cabinet_role exists, add cabinet_total_salary (default to 0 if null)
+      const cabinetTotalSalary = member.cabinetRole ? (member.cabinetTotalSalary || 0) : 0;
+      total += baseSalary + cabinetTotalSalary;
     });
     return total;
   };
@@ -752,8 +753,9 @@ export default function DunSarawak() {
                   <div className="mt-3 pt-3 border-t border-border space-y-2">
                     {(() => {
                       const baseSalary = member.baseSalary || 25000;
-                      const cabinetBaseSalary = member.cabinetRole && member.cabinetBaseSalary ? member.cabinetBaseSalary : 0;
-                      const totalSalary = baseSalary + cabinetBaseSalary;
+                      // If cabinet_role exists, add cabinet_total_salary (default to 0 if null)
+                      const cabinetTotalSalary = member.cabinetRole ? (member.cabinetTotalSalary || 0) : 0;
+                      const totalSalary = baseSalary + cabinetTotalSalary;
                       
                       return (
                         <Tooltip>
@@ -776,14 +778,14 @@ export default function DunSarawak() {
                                 <span>{formatCurrency(baseSalary)}</span>
                               </div>
                               
-                              {member.cabinetRole && cabinetBaseSalary > 0 && (
+                              {member.cabinetRole && cabinetTotalSalary > 0 && (
                                 <>
                                   <div className="flex justify-between gap-4 mt-2">
                                     <span className="flex items-center gap-1">
                                       <Crown className="h-3 w-3" />
-                                      {language === 'ms' ? 'Gaji Asas Kabinet' : 'Cabinet Basic Salary'}:
+                                      {language === 'ms' ? 'Elaun Kabinet' : 'Cabinet Allowance'}:
                                     </span>
-                                    <span>{formatCurrency(cabinetBaseSalary)}</span>
+                                    <span>{formatCurrency(cabinetTotalSalary)}</span>
                                   </div>
                                   <p className="text-muted-foreground text-[10px] italic">
                                     ({member.cabinetRole})
