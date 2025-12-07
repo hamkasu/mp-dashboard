@@ -112,10 +112,18 @@ export async function runHansardDownloadJob(
         const allMps = await storage.getAllMps();
         const nameMatcher = new MPNameMatcher(allMps);
         
-        const attendedMpIds = nameMatcher.matchNames(attendance.attendedNames);
-        const absentMpIds = nameMatcher.matchNames(attendance.absentNames);
+        // Use constituency-based matching as primary (more reliable), with name matching as fallback
+        const attendedByConstituency = nameMatcher.matchConstituencies(attendance.attendedConstituencies);
+        const attendedByName = nameMatcher.matchNames(attendance.attendedNames);
+        const attendedMpIds = Array.from(new Set([...attendedByConstituency, ...attendedByName]));
+        
+        const absentByConstituency = nameMatcher.matchConstituencies(attendance.absentConstituencies);
+        const absentByName = nameMatcher.matchNames(attendance.absentNames);
+        const absentMpIds = Array.from(new Set([...absentByConstituency, ...absentByName]));
+        
         const senatorsAttending = attendance.senatorsAttending || [];
         
+        console.log(`  Constituency matches: ${attendedByConstituency.length} present, ${absentByConstituency.length} absent`);
         console.log(`  Attendance: ${attendedMpIds.length} present, ${absentMpIds.length} absent, ${senatorsAttending.length} senators`);
         console.log(`  Constituencies: ${constituencyCounts.constituenciesPresent} present, ${constituencyCounts.constituenciesAbsent} absent, ${constituencyCounts.constituenciesAbsentRule91} absent (Rule 91)`);
         
