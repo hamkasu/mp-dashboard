@@ -10,14 +10,15 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { Users, MapPin, RefreshCw, Search, Building2, DollarSign, TrendingDown, Home, AlertTriangle, Briefcase, BarChart3, Wallet, Eye, ArrowUpDown, Crown, Award, FileText, Download, ExternalLink, Info, BookOpen } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import hansardAvailabilityPdf from "@assets/Availability_of_Sarawak_DUN_Hansard_1765044965736.pdf";
-import remunerationPdf from "@assets/Remuneration_and_Allowances_for_Members_of_the_Sarawak_State_L_1765044965737.pdf";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { useState, useEffect } from "react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { DunMember } from "@shared/schema";
+
+const hansardAvailabilityPdf = "/documents/sarawak-hansard-availability.pdf";
+const remunerationPdf = "/documents/sarawak-adun-remuneration.pdf";
 
 function getMemberInitials(name: string): string {
   const parts = name.split(' ').filter(p => 
