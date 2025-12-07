@@ -1349,30 +1349,53 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       // Get all Hansard records
       const allHansardRecords = await storage.getAllHansardRecords();
       
-      // Filter records after MP was sworn in
-      const mpSwornInDate = new Date(mp.swornInDate).toISOString().split('T')[0];
+      // Filter records after MP was sworn in - ALL records count as parliament sessions
+      const mpSwornInDate = new Date(mp.swornInDate);
       const relevantSessions = allHansardRecords.filter(record => {
-        const sessionDate = new Date(record.sessionDate).toISOString().split('T')[0];
+        const sessionDate = new Date(record.sessionDate);
         return sessionDate >= mpSwornInDate;
       });
       
-      // Find sessions where MP was absent
-      const absentSessions = relevantSessions.filter(record => {
-        // Check if MP is in the absentMpIds list
-        if (record.absentMpIds && record.absentMpIds.includes(mp.id)) {
-          return true;
-        }
-        // If attendedMpIds exists and MP is not in it, they were absent
-        if (record.attendedMpIds && record.attendedMpIds.length > 0) {
-          return !record.attendedMpIds.includes(mp.id);
-        }
-        return false;
-      });
+      // Categorize sessions into attended and absent
+      const attendedSessions: Array<{ date: Date | string; sessionNumber: string }> = [];
+      const absentSessions: Array<{ date: Date | string; sessionNumber: string }> = [];
       
-      // Return sorted list of absent session dates (newest first)
-      const absentSessionDates = absentSessions
+      for (const record of relevantSessions) {
+        const attendedMpIds = record.attendedMpIds || [];
+        const absentMpIds = record.absentMpIds || [];
+        const hasAttendanceData = attendedMpIds.length > 0;
+        
+        const sessionInfo = {
+          date: record.sessionDate,
+          sessionNumber: record.sessionNumber
+        };
+        
+        if (attendedMpIds.includes(mp.id)) {
+          // MP explicitly marked as attended
+          attendedSessions.push(sessionInfo);
+        } else if (absentMpIds.includes(mp.id)) {
+          // MP explicitly marked as absent
+          absentSessions.push(sessionInfo);
+        } else if (hasAttendanceData) {
+          // Attendance was recorded but MP is not in either list - count as absent
+          absentSessions.push(sessionInfo);
+        } else {
+          // No attendance data for this session - give benefit of doubt
+          attendedSessions.push(sessionInfo);
+        }
+      }
+      
+      // Return sorted list of session dates (newest first)
+      const sortedAbsentSessions = absentSessions
         .map(session => ({
-          date: session.sessionDate,
+          date: session.date,
+          sessionNumber: session.sessionNumber
+        }))
+        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      
+      const sortedAttendedSessions = attendedSessions
+        .map(session => ({
+          date: session.date,
           sessionNumber: session.sessionNumber
         }))
         .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
@@ -1380,7 +1403,9 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       res.json({
         totalSessions: relevantSessions.length,
         totalAbsent: absentSessions.length,
-        absentSessions: absentSessionDates
+        totalAttended: attendedSessions.length,
+        absentSessions: sortedAbsentSessions,
+        attendedSessions: sortedAttendedSessions
       });
     } catch (error) {
       console.error("Error fetching absent sessions:", error);
@@ -4586,27 +4611,46 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
 
       const attendedSessions: Array<{ sessionNumber: string; sessionDate: string }> = [];
       const absentSessions: Array<{ sessionNumber: string; sessionDate: string }> = [];
+      
+      // Get MP sworn-in date for filtering
+      const mpSwornInDate = new Date(mp.swornInDate);
+      
+      // Count ALL Hansard records after MP was sworn in as total sessions
+      // Each Hansard record represents one parliament sitting day
       let totalSessions = 0;
 
       for (const record of allRecords) {
+        const sessionDate = record.sessionDate ? new Date(record.sessionDate) : null;
+        
+        // Only count sessions after MP was sworn in
+        if (!sessionDate || sessionDate < mpSwornInDate) {
+          continue;
+        }
+        
+        // Every Hansard record after sworn-in counts as a session
+        totalSessions++;
+        
         const attendedMpIds = (record.attendedMpIds || []) as string[];
         const absentMpIds = (record.absentMpIds || []) as string[];
         
-        // Only count sessions where attendance was recorded
-        if (attendedMpIds.length > 0 || absentMpIds.length > 0) {
-          totalSessions++;
-          
-          const sessionInfo = {
-            sessionNumber: record.sessionNumber,
-            sessionDate: record.sessionDate ? new Date(record.sessionDate).toISOString().split('T')[0] : 'Unknown'
-          };
+        const sessionInfo = {
+          sessionNumber: record.sessionNumber,
+          sessionDate: sessionDate.toISOString().split('T')[0]
+        };
 
-          if (attendedMpIds.includes(mp.id)) {
-            attendedSessions.push(sessionInfo);
-          } else if (absentMpIds.includes(mp.id)) {
-            absentSessions.push(sessionInfo);
-          }
-          // If MP is in neither list, we don't count it (data may be incomplete)
+        if (attendedMpIds.includes(mp.id)) {
+          // MP explicitly marked as attended
+          attendedSessions.push(sessionInfo);
+        } else if (absentMpIds.includes(mp.id)) {
+          // MP explicitly marked as absent
+          absentSessions.push(sessionInfo);
+        } else if (attendedMpIds.length > 0) {
+          // If attendance was recorded but MP is not in either list, count as absent
+          // (they should have been recorded if present)
+          absentSessions.push(sessionInfo);
+        } else {
+          // No attendance data for this session - give benefit of doubt, count as attended
+          attendedSessions.push(sessionInfo);
         }
       }
 

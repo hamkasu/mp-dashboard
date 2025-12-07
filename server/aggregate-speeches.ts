@@ -158,23 +158,33 @@ export async function aggregateAttendanceForAllMps(): Promise<{
 
     const attendedSet = new Set(attendedMpIds);
     const absentSet = new Set(absentMpIds);
-
-    // Track MPs mentioned in this session
-    const totalMentioned = attendedSet.size + absentSet.size;
+    
+    // Check if this record has attendance data recorded
+    const hasAttendanceData = attendedMpIds.length > 0;
 
     // For each MP, check if they were sworn in before this session
     for (const [mpId, mpData] of Array.from(mpAttendanceData.entries())) {
       // Only count sessions after MP was sworn in
       if (sessionDate >= mpData.swornInDate) {
-        // Count this as a parliament day for this MP
+        // Count this as a parliament day for this MP (all Hansard records = parliament sitting days)
         mpData.totalParliamentDays++;
 
-        // Mark as attended if explicitly in attendedSet OR if not in either list
-        // (giving benefit of doubt for unlisted MPs, as they may have been missed in parsing)
-        if (attendedSet.has(mpId) || (!attendedSet.has(mpId) && !absentSet.has(mpId))) {
+        // Attendance logic:
+        // 1. If MP is explicitly in attendedSet -> attended
+        // 2. If MP is explicitly in absentSet -> absent
+        // 3. If attendance was recorded but MP is in neither list -> absent (should have been recorded if present)
+        // 4. If no attendance data for this session -> benefit of doubt, count as attended
+        if (attendedSet.has(mpId)) {
+          mpData.daysAttended++;
+        } else if (absentSet.has(mpId)) {
+          // Explicitly absent - don't increment daysAttended
+        } else if (hasAttendanceData) {
+          // Attendance was recorded but MP not in either list - count as absent
+          // (they should have been recorded if they were present)
+        } else {
+          // No attendance data for this session - give benefit of doubt
           mpData.daysAttended++;
         }
-        // If MP is in absentSet, totalParliamentDays is incremented but not daysAttended
       }
     }
   }
