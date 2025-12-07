@@ -43,6 +43,8 @@ export interface AttendanceData {
   attendedNames: string[];
   absentNames: string[];
   senatorsAttending: string[];
+  attendedConstituencies: string[];
+  absentConstituencies: string[];
 }
 
 export interface ConstituencyAttendanceData {
@@ -383,6 +385,8 @@ export class HansardScraper {
     const attendedNames: string[] = [];
     const absentNames: string[] = [];
     const senatorsAttending: string[] = [];
+    const attendedConstituencies: string[] = [];
+    const absentConstituencies: string[] = [];
 
     const normalizedText = pdfText.replace(/[ \t]+/g, ' ');
     
@@ -418,6 +422,10 @@ export class HansardScraper {
       const attendanceSection = normalizedText.substring(startIdx, endIdx);
       const extractedAttended = this.extractNamesFromSection(attendanceSection);
       attendedNames.push(...extractedAttended);
+      
+      // Also extract constituencies from the attendance section (more reliable matching)
+      const constituencies = this.extractConstituenciesFromSection(attendanceSection);
+      attendedConstituencies.push(...constituencies);
     }
 
     // Extract senators attending
@@ -461,9 +469,13 @@ export class HansardScraper {
       const absentSection = normalizedText.substring(startIdx, endIdx);
       const extractedAbsent = this.extractNamesFromSection(absentSection);
       absentNames.push(...extractedAbsent);
+      
+      // Also extract constituencies from absent section
+      const constituencies = this.extractConstituenciesFromSection(absentSection);
+      absentConstituencies.push(...constituencies);
     }
 
-    return { attendedNames, absentNames, senatorsAttending };
+    return { attendedNames, absentNames, senatorsAttending, attendedConstituencies, absentConstituencies };
   }
 
   private extractSenatorNames(sectionText: string): string[] {

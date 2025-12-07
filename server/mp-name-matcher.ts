@@ -218,4 +218,55 @@ export class MPNameMatcher {
       .sort((a, b) => b.score - a.score)
       .slice(0, limit);
   }
+
+  /**
+   * Match MP by constituency name - more reliable than name matching
+   * since constituencies are unique identifiers
+   */
+  matchByConstituency(constituency: string): string | null {
+    if (!constituency || constituency.length < 2) return null;
+    
+    const normalizedConstituency = constituency
+      .toLowerCase()
+      .replace(/[.\-]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    
+    // Direct match first
+    for (const mp of this.mps) {
+      const mpConstituency = mp.constituency.toLowerCase().trim();
+      if (mpConstituency === normalizedConstituency) {
+        return mp.id;
+      }
+    }
+    
+    // Partial match - handle variations like "Cameron Highlands" vs "Cameron"
+    for (const mp of this.mps) {
+      const mpConstituency = mp.constituency.toLowerCase().trim();
+      if (mpConstituency.includes(normalizedConstituency) || 
+          normalizedConstituency.includes(mpConstituency)) {
+        return mp.id;
+      }
+    }
+    
+    return null;
+  }
+
+  /**
+   * Match multiple constituencies to MP IDs
+   */
+  matchConstituencies(constituencies: string[]): string[] {
+    const matchedIds: string[] = [];
+    const uniqueIds = new Set<string>();
+
+    for (const constituency of constituencies) {
+      const mpId = this.matchByConstituency(constituency);
+      if (mpId && !uniqueIds.has(mpId)) {
+        matchedIds.push(mpId);
+        uniqueIds.add(mpId);
+      }
+    }
+
+    return matchedIds;
+  }
 }
