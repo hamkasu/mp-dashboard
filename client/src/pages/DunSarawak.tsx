@@ -86,21 +86,18 @@ function getCabinetRoleColor(role: string | null): string {
   if (lowerRole.includes('deputy chief') || lowerRole.includes('deputy premier')) {
     return "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400";
   }
-  if (lowerRole.includes('minister') && !lowerRole.includes('deputy') && !lowerRole.includes('assistant')) {
+  if (lowerRole.includes('minister') && !lowerRole.includes('deputy')) {
     return "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400";
   }
   if (lowerRole.includes('deputy minister')) {
     return "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-400";
-  }
-  if (lowerRole.includes('assistant')) {
-    return "bg-sky-100 text-sky-800 dark:bg-sky-900/30 dark:text-sky-400";
   }
   return "bg-muted text-muted-foreground";
 }
 
 
 type SortOption = 'code' | 'population-asc' | 'population-desc';
-type CabinetFilter = 'all' | 'cabinet' | 'premier' | 'deputy-premier' | 'minister' | 'assistant-minister' | 'backbencher';
+type CabinetFilter = 'all' | 'cabinet' | 'premier' | 'deputy-premier' | 'minister' | 'deputy-minister' | 'backbencher';
 
 export default function DunSarawak() {
   const { t, language } = useLanguage();
@@ -236,10 +233,10 @@ export default function DunSarawak() {
           if (!(role.includes('deputy premier') || role.includes('deputy chief'))) return false;
           break;
         case 'minister':
-          if (!(role.includes('minister') && !role.includes('deputy') && !role.includes('assistant'))) return false;
+          if (!(role.includes('minister') && !role.includes('deputy'))) return false;
           break;
-        case 'assistant-minister':
-          if (!role.includes('assistant')) return false;
+        case 'deputy-minister':
+          if (!role.includes('deputy minister')) return false;
           break;
         case 'backbencher':
           if (member.cabinetRole) return false;
@@ -291,7 +288,6 @@ export default function DunSarawak() {
       deputyPremier: { total: 0, count: 0 },
       minister: { total: 0, count: 0 },
       deputyMinister: { total: 0, count: 0 },
-      assistantMinister: { total: 0, count: 0 },
     };
     
     members.forEach(member => {
@@ -307,9 +303,6 @@ export default function DunSarawak() {
       } else if (lowerRole.includes('deputy minister')) {
         roleGroups.deputyMinister.total += member.cabinetTotalSalary;
         roleGroups.deputyMinister.count++;
-      } else if (lowerRole.includes('assistant minister') || lowerRole.includes('assistant')) {
-        roleGroups.assistantMinister.total += member.cabinetTotalSalary;
-        roleGroups.assistantMinister.count++;
       } else if (lowerRole.includes('minister')) {
         roleGroups.minister.total += member.cabinetTotalSalary;
         roleGroups.minister.count++;
@@ -321,7 +314,6 @@ export default function DunSarawak() {
       deputyPremier: roleGroups.deputyPremier.count > 0 ? Math.round(roleGroups.deputyPremier.total / roleGroups.deputyPremier.count) : 0,
       minister: roleGroups.minister.count > 0 ? Math.round(roleGroups.minister.total / roleGroups.minister.count) : 0,
       deputyMinister: roleGroups.deputyMinister.count > 0 ? Math.round(roleGroups.deputyMinister.total / roleGroups.deputyMinister.count) : 0,
-      assistantMinister: roleGroups.assistantMinister.count > 0 ? Math.round(roleGroups.assistantMinister.total / roleGroups.assistantMinister.count) : 0,
     };
   };
   
@@ -408,8 +400,8 @@ export default function DunSarawak() {
               <SelectItem value="minister">
                 {language === 'ms' ? 'Menteri' : 'Minister'}
               </SelectItem>
-              <SelectItem value="assistant-minister">
-                {language === 'ms' ? 'Pembantu Menteri' : 'Assistant Minister'}
+              <SelectItem value="deputy-minister">
+                {language === 'ms' ? 'Timbalan Menteri' : 'Deputy Minister'}
               </SelectItem>
               <SelectItem value="backbencher">
                 {language === 'ms' ? 'Ahli Biasa' : 'Backbencher'}
@@ -524,10 +516,10 @@ export default function DunSarawak() {
                       {cabinetSalaryByRole.minister > 0 ? `+${formatCurrency(cabinetSalaryByRole.minister)}` : 'N/A'}
                     </p>
                   </div>
-                  <div className="p-2 rounded-md bg-sky-50 dark:bg-sky-900/20">
-                    <p className="text-muted-foreground">{language === 'ms' ? 'Pembantu Menteri' : 'Assistant Minister'}</p>
-                    <p className="font-semibold text-sky-700 dark:text-sky-400">
-                      {cabinetSalaryByRole.assistantMinister > 0 ? `+${formatCurrency(cabinetSalaryByRole.assistantMinister)}` : 'N/A'}
+                  <div className="p-2 rounded-md bg-indigo-50 dark:bg-indigo-900/20">
+                    <p className="text-muted-foreground">{language === 'ms' ? 'Timbalan Menteri' : 'Deputy Minister'}</p>
+                    <p className="font-semibold text-indigo-700 dark:text-indigo-400">
+                      {cabinetSalaryByRole.deputyMinister > 0 ? `+${formatCurrency(cabinetSalaryByRole.deputyMinister)}` : 'N/A'}
                     </p>
                   </div>
                 </div>

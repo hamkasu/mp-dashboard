@@ -8,11 +8,10 @@
  * - Deputy Premier: RM 48,400/month
  * - Minister: RM 40,750/month
  * - Deputy Minister: RM 30,000/month
- * - Assistant Minister: N/A (0)
  */
 
 export interface CabinetPosition {
-  role: 'Premier' | 'Deputy Premier' | 'Minister' | 'Deputy Minister' | 'Assistant Minister';
+  role: 'Premier' | 'Deputy Premier' | 'Minister' | 'Deputy Minister';
   portfolio?: string;
   baseSalary: number;
   entertainment: number;
@@ -25,7 +24,6 @@ export const CABINET_ALLOWANCES: Record<CabinetPosition['role'], { baseSalary: n
   'Deputy Premier': { baseSalary: 26500, entertainment: 11000, specialAllowance: 10900, total: 48400 },
   'Minister': { baseSalary: 22500, entertainment: 9125, specialAllowance: 9125, total: 40750 },
   'Deputy Minister': { baseSalary: 17000, entertainment: 6500, specialAllowance: 6500, total: 30000 },
-  'Assistant Minister': { baseSalary: 0, entertainment: 0, specialAllowance: 0, total: 0 },
 };
 
 export interface CabinetMemberData {
@@ -42,8 +40,7 @@ export interface CabinetMemberData {
  * - 1 Premier
  * - 2 Deputy Premiers  
  * - 11 Ministers
- * - 8 Deputy Ministers
- * - 14 Assistant Ministers
+ * - 22 Deputy Ministers
  * Total: 36 cabinet members
  */
 export const SARAWAK_CABINET_MEMBERS: CabinetMemberData[] = [
@@ -186,90 +183,90 @@ export const SARAWAK_CABINET_MEMBERS: CabinetMemberData[] = [
     portfolio: 'Deputy Minister of Public Health, Housing and Local Government',
   },
   
-  // Assistant Ministers
+  // Deputy Ministers (Junior)
   // YB Jefferson Jamit Unyat (N60 Lubok Antu)
   {
     constituencyCode: 'N60',
-    role: 'Assistant Minister',
-    portfolio: 'Assistant Minister of Education, Innovation and Talent Development',
+    role: 'Deputy Minister',
+    portfolio: 'Deputy Minister of Education, Innovation and Talent Development',
   },
   // YB Dato Gerawat Gala (N65 Mulu)
   {
     constituencyCode: 'N65',
-    role: 'Assistant Minister',
-    portfolio: 'Assistant Minister of Tourism, Creative Industry and Performing Arts',
+    role: 'Deputy Minister',
+    portfolio: 'Deputy Minister of Tourism, Creative Industry and Performing Arts',
   },
   // YB Ripin Lamat (N64 Jepak)
   {
     constituencyCode: 'N64',
-    role: 'Assistant Minister',
-    portfolio: 'Assistant Minister of Utility and Telecommunication',
+    role: 'Deputy Minister',
+    portfolio: 'Deputy Minister of Utility and Telecommunication',
   },
   // YB Lo Khere Chiang (N73 Kudap)
   {
     constituencyCode: 'N73',
-    role: 'Assistant Minister',
-    portfolio: 'Assistant Minister of Infrastructure and Port Development',
+    role: 'Deputy Minister',
+    portfolio: 'Deputy Minister of Infrastructure and Port Development',
   },
   // YB Yussibnosh Balo (N62 Murum)
   {
     constituencyCode: 'N62',
-    role: 'Assistant Minister',
-    portfolio: 'Assistant Minister of Youth, Sports and Entrepreneur Development',
+    role: 'Deputy Minister',
+    portfolio: 'Deputy Minister of Youth, Sports and Entrepreneur Development',
   },
   // YB Datuk Wilson Nyabong Ijang (N50 Meluan)
   {
     constituencyCode: 'N50',
-    role: 'Assistant Minister',
-    portfolio: 'Assistant Minister of Modernisation of Agriculture and Regional Development',
+    role: 'Deputy Minister',
+    portfolio: 'Deputy Minister of Modernisation of Agriculture and Regional Development',
   },
   // YB Sharifah Hasidah Sayeed Aman Ghazali (N15 Kota Sentosa)
   {
     constituencyCode: 'N15',
-    role: 'Assistant Minister',
-    portfolio: 'Assistant Minister of Women, Childhood and Community Wellbeing Development',
+    role: 'Deputy Minister',
+    portfolio: 'Deputy Minister of Women, Childhood and Community Wellbeing Development',
   },
   // YB Datuk Abdullah Saidol (N35 Semop)
   {
     constituencyCode: 'N35',
-    role: 'Assistant Minister',
-    portfolio: 'Assistant Minister of Urban Development and Natural Resources',
+    role: 'Deputy Minister',
+    portfolio: 'Deputy Minister of Urban Development and Natural Resources',
   },
   // YB Datuk Aidel Lariwoo (N69 Limbang)
   {
     constituencyCode: 'N69',
-    role: 'Assistant Minister',
-    portfolio: 'Assistant Minister of Food Industry, Commodity and Regional Development',
+    role: 'Deputy Minister',
+    portfolio: 'Deputy Minister of Food Industry, Commodity and Regional Development',
   },
   // YB Datuk Mohd Chifu Semawi (N71 Bukit Kota)
   {
     constituencyCode: 'N71',
-    role: 'Assistant Minister',
-    portfolio: 'Assistant Minister of Energy and Environmental Sustainability',
+    role: 'Deputy Minister',
+    portfolio: 'Deputy Minister of Energy and Environmental Sustainability',
   },
   // YB Datuk Sebastian Ting Chiew Yew (N82 Piasau)
   {
     constituencyCode: 'N82',
-    role: 'Assistant Minister',
-    portfolio: 'Assistant Minister of International Trade, Industrial Terminal and Entrepreneur Development',
+    role: 'Deputy Minister',
+    portfolio: 'Deputy Minister of International Trade, Industrial Terminal and Entrepreneur Development',
   },
   // YB Dato Majang Renggi (N58 Simanggang)
   {
     constituencyCode: 'N58',
-    role: 'Assistant Minister',
-    portfolio: 'Assistant Minister of Transport',
+    role: 'Deputy Minister',
+    portfolio: 'Deputy Minister of Transport',
   },
   // YB Datuk Malcom Mussen Lamoh (N70 Batu Danau) - Second appointment
   {
     constituencyCode: 'N70',
-    role: 'Assistant Minister',
-    portfolio: 'Assistant Minister of Native Laws and Customs',
+    role: 'Deputy Minister',
+    portfolio: 'Deputy Minister of Native Laws and Customs',
   },
   // YB Datuk Len Talif Salleh (N33 Tanjong Datu)
   {
     constituencyCode: 'N33',
-    role: 'Assistant Minister',
-    portfolio: 'Assistant Minister of Finance and New Economy',
+    role: 'Deputy Minister',
+    portfolio: 'Deputy Minister of Finance and New Economy',
   },
 ];
 

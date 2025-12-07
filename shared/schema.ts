@@ -851,7 +851,7 @@ export const dunMembers = pgTable("dun_members", {
   housingAllowance: integer("housing_allowance").default(3000),
   totalMonthlyAllowance: integer("total_monthly_allowance").default(40000), // 25,000-40,000 for ordinary ADUN
   // Cabinet position and salary (for Premier, Deputy CM, Ministers, etc.)
-  cabinetRole: text("cabinet_role"), // Premier, Deputy Chief Minister, Minister, Deputy Minister, Assistant Minister
+  cabinetRole: text("cabinet_role"), // Premier, Deputy Chief Minister, Minister, Deputy Minister
   cabinetBaseSalary: integer("cabinet_base_salary"), // Base salary for cabinet position
   cabinetEntertainment: integer("cabinet_entertainment"), // Entertainment allowance
   cabinetSpecialAllowance: integer("cabinet_special_allowance"), // Special allowance
