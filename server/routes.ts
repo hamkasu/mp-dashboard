@@ -4554,6 +4554,91 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
+  // Constituency Attendance Audit - Get detailed attendance for a specific constituency
+  app.get("/api/admin/constituency-attendance-audit", requireAdmin, async (req, res) => {
+    try {
+      const { constituency } = req.query;
+      
+      if (!constituency || typeof constituency !== 'string') {
+        return res.status(400).json({ error: "Constituency parameter is required" });
+      }
+
+      console.log(`📊 Auditing attendance for constituency: ${constituency}`);
+
+      // Find the MP for this constituency
+      const mpResult = await db.select().from(mps).where(eq(mps.constituency, constituency)).limit(1);
+      
+      if (mpResult.length === 0) {
+        return res.status(404).json({ error: `No MP found for constituency: ${constituency}` });
+      }
+
+      const mp = mpResult[0];
+      console.log(`👤 Found MP: ${mp.name} (ID: ${mp.id})`);
+
+      // Get all Hansard records
+      const allRecords = await db.select({
+        id: hansardRecords.id,
+        sessionNumber: hansardRecords.sessionNumber,
+        sessionDate: hansardRecords.sessionDate,
+        attendedMpIds: hansardRecords.attendedMpIds,
+        absentMpIds: hansardRecords.absentMpIds,
+      }).from(hansardRecords).orderBy(sql`session_date DESC`);
+
+      const attendedSessions: Array<{ sessionNumber: string; sessionDate: string }> = [];
+      const absentSessions: Array<{ sessionNumber: string; sessionDate: string }> = [];
+      let totalSessions = 0;
+
+      for (const record of allRecords) {
+        const attendedMpIds = (record.attendedMpIds || []) as string[];
+        const absentMpIds = (record.absentMpIds || []) as string[];
+        
+        // Only count sessions where attendance was recorded
+        if (attendedMpIds.length > 0 || absentMpIds.length > 0) {
+          totalSessions++;
+          
+          const sessionInfo = {
+            sessionNumber: record.sessionNumber,
+            sessionDate: record.sessionDate ? new Date(record.sessionDate).toISOString().split('T')[0] : 'Unknown'
+          };
+
+          if (attendedMpIds.includes(mp.id)) {
+            attendedSessions.push(sessionInfo);
+          } else if (absentMpIds.includes(mp.id)) {
+            absentSessions.push(sessionInfo);
+          }
+          // If MP is in neither list, we don't count it (data may be incomplete)
+        }
+      }
+
+      const daysAttended = attendedSessions.length;
+      const daysAbsent = absentSessions.length;
+      const attendanceRate = totalSessions > 0 ? ((daysAttended / totalSessions) * 100).toFixed(1) : '0';
+
+      console.log(`✅ Audit complete: ${daysAttended} attended, ${daysAbsent} absent, ${totalSessions} total sessions`);
+
+      res.json({
+        mp: {
+          id: mp.id,
+          name: mp.name,
+          constituency: mp.constituency,
+          state: mp.state,
+          party: mp.party,
+        },
+        summary: {
+          daysAttended,
+          daysAbsent,
+          totalSessions,
+          attendanceRate: `${attendanceRate}%`,
+        },
+        attendedSessions,
+        absentSessions,
+      });
+    } catch (error) {
+      console.error("Error auditing constituency attendance:", error);
+      res.status(500).json({ error: "Failed to audit attendance", details: String(error) });
+    }
+  });
+
   // Track page view
   app.post("/api/track-view", async (req, res) => {
     try {

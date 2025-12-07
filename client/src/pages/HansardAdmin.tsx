@@ -104,6 +104,15 @@ export default function HansardAdmin() {
   const [byElectionDate, setByElectionDate] = useState("");
   const [byElectionNotes, setByElectionNotes] = useState("");
 
+  // Constituency Attendance Audit states
+  const [auditConstituency, setAuditConstituency] = useState("");
+  const [auditResult, setAuditResult] = useState<{
+    mp: { id: string; name: string; constituency: string; state: string; party: string };
+    summary: { daysAttended: number; daysAbsent: number; totalSessions: number; attendanceRate: string };
+    attendedSessions: Array<{ sessionNumber: string; sessionDate: string }>;
+    absentSessions: Array<{ sessionNumber: string; sessionDate: string }>;
+  } | null>(null);
+
   // Cleanup polling interval on unmount
   useEffect(() => {
     return () => {
@@ -581,6 +590,41 @@ export default function HansardAdmin() {
     if (confirm("This will rescan attendance data from ALL Hansard PDFs. This may take several minutes. Continue?")) {
       rescanAttendanceMutation.mutate();
     }
+  };
+
+  // Constituency Attendance Audit mutation
+  const auditAttendanceMutation = useMutation({
+    mutationFn: async (constituency: string) => {
+      const res = await apiRequest("GET", `/api/admin/constituency-attendance-audit?constituency=${encodeURIComponent(constituency)}`);
+      return await res.json();
+    },
+    onSuccess: (data) => {
+      setAuditResult(data);
+      toast({
+        title: "Audit Complete",
+        description: `Found ${data.summary.daysAttended} days attended, ${data.summary.daysAbsent} days absent`,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to audit attendance",
+        variant: "destructive",
+      });
+      setAuditResult(null);
+    },
+  });
+
+  const handleAuditAttendance = () => {
+    if (!auditConstituency) {
+      toast({
+        title: "Error",
+        description: "Please select a constituency",
+        variant: "destructive",
+      });
+      return;
+    }
+    auditAttendanceMutation.mutate(auditConstituency);
   };
 
   const uploadMutation = useMutation({
@@ -1405,6 +1449,112 @@ export default function HansardAdmin() {
                 </>
               )}
             </Button>
+          </CardContent>
+        </Card>
+
+        {/* Constituency Attendance Audit Card */}
+        <Card className="border-blue-500">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5" />
+              Constituency Attendance Audit
+            </CardTitle>
+            <CardDescription>
+              Audit attendance records for a specific constituency
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="audit-constituency">Select Constituency</Label>
+              <Select value={auditConstituency} onValueChange={setAuditConstituency}>
+                <SelectTrigger data-testid="select-audit-constituency">
+                  <SelectValue placeholder="Select a constituency..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {allMps
+                    .filter((mp) => !mp.termEndDate || new Date(mp.termEndDate) > new Date())
+                    .sort((a, b) => a.constituency.localeCompare(b.constituency))
+                    .map((mp) => (
+                      <SelectItem key={mp.id} value={mp.constituency}>
+                        {mp.constituency} - {mp.name}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <Button
+              onClick={handleAuditAttendance}
+              disabled={auditAttendanceMutation.isPending || !auditConstituency}
+              className="w-full"
+              data-testid="button-audit-attendance"
+            >
+              {auditAttendanceMutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Auditing...
+                </>
+              ) : (
+                <>
+                  <Users className="mr-2 h-4 w-4" />
+                  Audit Attendance
+                </>
+              )}
+            </Button>
+
+            {auditResult && (
+              <div className="mt-4 space-y-4">
+                <div className="p-4 bg-muted rounded-md">
+                  <h4 className="font-semibold mb-2">{auditResult.mp.name}</h4>
+                  <p className="text-sm text-muted-foreground">{auditResult.mp.constituency}, {auditResult.mp.state} ({auditResult.mp.party})</p>
+                  <div className="grid grid-cols-2 gap-4 mt-3">
+                    <div>
+                      <p className="text-2xl font-bold text-green-600">{auditResult.summary.daysAttended}</p>
+                      <p className="text-xs text-muted-foreground">Days Attended</p>
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold text-red-600">{auditResult.summary.daysAbsent}</p>
+                      <p className="text-xs text-muted-foreground">Days Absent</p>
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold">{auditResult.summary.totalSessions}</p>
+                      <p className="text-xs text-muted-foreground">Total Sessions</p>
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold">{auditResult.summary.attendanceRate}</p>
+                      <p className="text-xs text-muted-foreground">Attendance Rate</p>
+                    </div>
+                  </div>
+                </div>
+
+                {auditResult.absentSessions.length > 0 && (
+                  <div className="space-y-2">
+                    <h4 className="font-semibold text-red-600">Absent Dates ({auditResult.absentSessions.length})</h4>
+                    <div className="max-h-48 overflow-y-auto border rounded-md p-2">
+                      {auditResult.absentSessions.map((session, idx) => (
+                        <div key={idx} className="text-sm py-1 border-b last:border-0">
+                          <span className="font-medium">{session.sessionDate}</span>
+                          <span className="text-muted-foreground ml-2">({session.sessionNumber})</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {auditResult.attendedSessions.length > 0 && (
+                  <div className="space-y-2">
+                    <h4 className="font-semibold text-green-600">Attended Dates ({auditResult.attendedSessions.length})</h4>
+                    <div className="max-h-48 overflow-y-auto border rounded-md p-2">
+                      {auditResult.attendedSessions.map((session, idx) => (
+                        <div key={idx} className="text-sm py-1 border-b last:border-0">
+                          <span className="font-medium">{session.sessionDate}</span>
+                          <span className="text-muted-foreground ml-2">({session.sessionNumber})</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
 
