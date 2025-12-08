@@ -5,6 +5,20 @@ This web application provides a comprehensive dashboard for Malaysian Members of
 
 ## Recent Changes
 
+### December 8, 2025 - CORS Configuration Improvements
+Enhanced CORS middleware for better Railway deployment support:
+- Added `ALLOWED_ORIGINS` environment variable support (comma-separated list of domains)
+- Static assets (favicon.ico, robots.txt, sitemap.xml) now bypass CORS checks
+- Auto-generates www/non-www variants for custom domains
+- Improved rejection logging shows rejected origin and full allow-list for debugging
+- Key file: `server/middleware/cors.ts`
+
+### December 8, 2025 - Court Case Deletion Fix
+Fixed foreign key constraint violation when deleting court cases:
+- `deleteCourtCase` now unlinks related news articles before deletion
+- Delete endpoint returns JSON response instead of 204 empty
+- Key files: `server/storage.ts`, `server/routes.ts`
+
 ### December 6, 2025 - Resources & Documents Section for Sarawak DUN
 Added a Resources & Documents section to the Sarawak DUN landing page:
 - Two reference documents: "Availability of Sarawak DUN Hansard" and "ADUN Remuneration & Allowances"
