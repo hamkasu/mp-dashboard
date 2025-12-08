@@ -1,0 +1,53 @@
+📊 Returning cached language analysis results
+    '    at /app/node_modules/express/lib/router/index.js:286:9\n' +
+[Error Handler] {
+    '    at Function.process_params (/app/node_modules/express/lib/router/index.js:346:12)\n' +
+  status: 500,
+    '    at next (/app/node_modules/express/lib/router/index.js:280:10)\n' +
+  message: 'Not allowed by CORS',
+    '    at expressInit (/app/node_modules/express/lib/middleware/init.js:40:5)',
+  stack: 'Error: Not allowed by CORS\n' +
+  path: '/favicon.ico',
+    '    at origin (file:///app/dist/index.js:16465:14)\n' +
+  method: 'GET'
+    '    at /app/node_modules/cors/lib/index.js:219:13\n' +
+}
+    '    at optionsCallback (/app/node_modules/cors/lib/index.js:199:9)\n' +
+    '    at corsMiddleware (/app/node_modules/cors/lib/index.js:204:7)\n' +
+    '    at Layer.handle [as handle_request] (/app/node_modules/express/lib/router/layer.js:95:5)\n' +
+    '    at trim_prefix (/app/node_modules/express/lib/router/index.js:328:13)\n' +
+    '    at optionsCallback (/app/node_modules/cors/lib/index.js:199:9)\n' +
+    '    at corsMiddleware (/app/node_modules/cors/lib/index.js:204:7)\n' +
+    '    at Layer.handle [as handle_request] (/app/node_modules/express/lib/router/layer.js:95:5)\n' +
+    '    at trim_prefix (/app/node_modules/express/lib/router/index.js:328:13)\n' +
+    '    at /app/node_modules/express/lib/router/index.js:286:9\n' +
+    '    at Function.process_params (/app/node_modules/express/lib/router/index.js:346:12)\n' +
+    '    at next (/app/node_modules/express/lib/router/index.js:280:10)\n' +
+    '    at expressInit (/app/node_modules/express/lib/middleware/init.js:40:5)',
+  path: '/favicon.ico',
+  method: 'GET'
+}
+[Error Handler] {
+  status: 500,
+  message: 'Not allowed by CORS',
+  stack: 'Error: Not allowed by CORS\n' +
+    '    at origin (file:///app/dist/index.js:16465:14)\n' +
+    '    at /app/node_modules/cors/lib/index.js:219:13\n' +
+[Error Handler] {
+  status: 500,
+  message: 'Not allowed by CORS',
+  stack: 'Error: Not allowed by CORS\n' +
+    '    at origin (file:///app/dist/index.js:16465:14)\n' +
+    '    at /app/node_modules/cors/lib/index.js:219:13\n' +
+    '    at optionsCallback (/app/node_modules/cors/lib/index.js:199:9)\n' +
+    '    at corsMiddleware (/app/node_modules/cors/lib/index.js:204:7)\n' +
+    '    at Layer.handle [as handle_request] (/app/node_modules/express/lib/router/layer.js:95:5)\n' +
+    '    at trim_prefix (/app/node_modules/express/lib/router/index.js:328:13)\n' +
+    '    at /app/node_modules/express/lib/router/index.js:286:9\n' +
+    '    at Function.process_params (/app/node_modules/express/lib/router/index.js:346:12)\n' +
+    '    at next (/app/node_modules/express/lib/router/index.js:280:10)\n' +
+    '    at expressInit (/app/node_modules/express/lib/middleware/init.js:40:5)',
+  path: '/favicon.ico',
+  method: 'GET'
+}
+📊 /api/hansard-records/search: Memory +44MB → 94MB
