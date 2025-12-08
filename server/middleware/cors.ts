@@ -3,8 +3,8 @@
  */
 
 import cors from 'cors';
+import { Request, Response, NextFunction } from 'express';
 
-// Trusted domain suffixes for Replit and Railway
 const TRUSTED_DOMAIN_SUFFIXES = [
   '.replit.dev',
   '.replit.app',
@@ -13,60 +13,91 @@ const TRUSTED_DOMAIN_SUFFIXES = [
   '.up.railway.app',
 ];
 
-// Helper function to safely check if a hostname ends with a trusted domain suffix
+const STATIC_ASSET_PATHS = [
+  '/favicon.ico',
+  '/robots.txt',
+  '/sitemap.xml',
+  '/manifest.json',
+  '/apple-touch-icon.png',
+  '/assets/',
+  '/static/',
+];
+
 function isTrustedDomain(origin: string): boolean {
   try {
     const url = new URL(origin);
     const hostname = url.hostname;
     
-    // Check if hostname ends with any of the trusted suffixes
     return TRUSTED_DOMAIN_SUFFIXES.some(suffix => 
-      hostname === suffix.slice(1) || // Exact match (e.g., "replit.dev")
-      hostname.endsWith(suffix)        // Subdomain match (e.g., "myapp.replit.dev")
+      hostname === suffix.slice(1) ||
+      hostname.endsWith(suffix)
     );
   } catch {
-    // Invalid URL format
     return false;
   }
 }
 
-// Helper function to normalize origin URL (trim, lowercase, remove trailing slash)
 function normalizeOrigin(url: string): string {
   try {
     const normalized = new URL(url.trim());
     return normalized.origin.toLowerCase();
   } catch {
-    // If URL parsing fails, just trim and lowercase
     return url.trim().toLowerCase().replace(/\/+$/, '');
   }
 }
 
-// Dynamically determine allowed origins based on environment
+function generateWwwVariants(origin: string): string[] {
+  const variants: string[] = [origin];
+  try {
+    const url = new URL(origin);
+    const hostname = url.hostname;
+    
+    if (hostname.startsWith('www.')) {
+      const nonWww = `${url.protocol}//${hostname.slice(4)}${url.port ? ':' + url.port : ''}`;
+      variants.push(normalizeOrigin(nonWww));
+    } else if (!hostname.includes('.replit.') && !hostname.includes('.railway.') && !hostname.includes('localhost')) {
+      const withWww = `${url.protocol}//www.${hostname}${url.port ? ':' + url.port : ''}`;
+      variants.push(normalizeOrigin(withWww));
+    }
+  } catch {
+  }
+  return variants;
+}
+
 function getAllowedOrigins(): string[] {
   const origins: string[] = [];
   
-  // Add custom origin from environment variable (for Railway or custom domains)
-  if (process.env.FRONTEND_URL) {
-    origins.push(normalizeOrigin(process.env.FRONTEND_URL));
+  if (process.env.ALLOWED_ORIGINS) {
+    const customOrigins = process.env.ALLOWED_ORIGINS.split(',')
+      .map(o => o.trim())
+      .filter(o => o.length > 0);
+    
+    for (const origin of customOrigins) {
+      const normalized = normalizeOrigin(origin);
+      const variants = generateWwwVariants(normalized);
+      origins.push(...variants);
+    }
   }
   
-  // Add Replit domains (both .dev and .app)
+  if (process.env.FRONTEND_URL) {
+    const normalized = normalizeOrigin(process.env.FRONTEND_URL);
+    const variants = generateWwwVariants(normalized);
+    origins.push(...variants);
+  }
+  
   if (process.env.REPL_SLUG && process.env.REPL_OWNER) {
     origins.push(normalizeOrigin(`https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co`));
     origins.push(normalizeOrigin(`https://${process.env.REPL_SLUG}-${process.env.REPL_OWNER}.replit.app`));
   }
   
-  // Add Railway public domain if available
   if (process.env.RAILWAY_PUBLIC_DOMAIN) {
     origins.push(normalizeOrigin(`https://${process.env.RAILWAY_PUBLIC_DOMAIN}`));
   }
   
-  // Add Railway static URL if available
   if (process.env.RAILWAY_STATIC_URL) {
     origins.push(normalizeOrigin(process.env.RAILWAY_STATIC_URL));
   }
   
-  // For development, allow localhost
   if (process.env.NODE_ENV === 'development') {
     origins.push('http://localhost:5000');
     origins.push('http://localhost:3000');
@@ -74,42 +105,71 @@ function getAllowedOrigins(): string[] {
     origins.push('http://127.0.0.1:3000');
   }
   
-  return origins;
+  return Array.from(new Set(origins));
 }
 
-// CORS configuration
-export const corsConfig = cors({
-  origin: (origin, callback) => {
+function isStaticAssetPath(path: string): boolean {
+  return STATIC_ASSET_PATHS.some(staticPath => 
+    path === staticPath || path.startsWith(staticPath)
+  );
+}
+
+export function staticAssetCorsMiddleware(req: Request, res: Response, next: NextFunction) {
+  if (isStaticAssetPath(req.path)) {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
+    if (req.method === 'OPTIONS') {
+      return res.status(204).end();
+    }
+  }
+  next();
+}
+
+const baseCorsConfig = cors({
+  origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
     const allowedOrigins = getAllowedOrigins();
     
-    // Allow requests with no origin (like mobile apps, curl, Postman)
     if (!origin) {
       return callback(null, true);
     }
     
-    // Normalize origin for comparison
-    const normalizedOrigin = origin.trim().toLowerCase();
+    const normalizedOrigin = normalizeOrigin(origin);
     
-    // Check if origin is in the explicit allowed list with strict equality
     if (allowedOrigins.includes(normalizedOrigin)) {
       return callback(null, true);
     }
     
-    // Check if origin is from a trusted Replit or Railway domain using secure suffix validation
     if (isTrustedDomain(origin)) {
       return callback(null, true);
     }
     
-    // Log rejected origins in development for debugging
-    if (process.env.NODE_ENV === 'development') {
-      console.warn(`CORS: Origin "${origin}" not allowed. Allowed origins:`, allowedOrigins);
-    }
+    console.warn(`[CORS] Rejected origin: "${origin}"`);
+    console.warn(`[CORS] Normalized to: "${normalizedOrigin}"`);
+    console.warn(`[CORS] Allowed origins: ${JSON.stringify(allowedOrigins, null, 2)}`);
+    console.warn(`[CORS] Tip: Set ALLOWED_ORIGINS="${origin}" in your environment variables`);
     
     callback(new Error('Not allowed by CORS'));
   },
-  credentials: true, // Allow cookies and authentication headers
+  credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
   exposedHeaders: ['Content-Range', 'X-Content-Range'],
-  maxAge: 86400, // 24 hours
+  maxAge: 86400,
 });
+
+export function corsConfig(req: Request, res: Response, next: NextFunction) {
+  if (isStaticAssetPath(req.path)) {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
+    if (req.method === 'OPTIONS') {
+      return res.status(204).end();
+    }
+    return next();
+  }
+  
+  return baseCorsConfig(req, res, next);
+}
+
+export function isTrustedOriginForCsrf(origin: string): boolean {
+  return isTrustedDomain(origin);
+}

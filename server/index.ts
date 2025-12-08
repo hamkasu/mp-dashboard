@@ -50,7 +50,7 @@ app.get("/api/memory-status", (_req, res) => {
   res.status(statusCode).json(memoryStatus);
 });
 
-// CORS - must be before other middleware to handle preflight requests
+// CORS - handles static assets separately and validates API requests
 app.use(corsConfig);
 
 // Security headers
