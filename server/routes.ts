@@ -818,7 +818,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         return res.status(404).json({ error: "Court case not found" });
       }
       
-      res.status(204).send();
+      res.json({ success: true, message: "Court case deleted successfully" });
     } catch (error) {
       console.error("Error deleting court case:", error);
       res.status(500).json({ error: "Failed to delete court case" });
