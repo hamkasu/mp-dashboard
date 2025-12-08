@@ -5,7 +5,7 @@
 import { type Mp, type InsertMp, type CourtCase, type InsertCourtCase, type SprmInvestigation, type InsertSprmInvestigation, type LegislativeProposal, type InsertLegislativeProposal, type DebateParticipation, type InsertDebateParticipation, type ParliamentaryQuestion, type InsertParliamentaryQuestion, type HansardRecord, type InsertHansardRecord, type UpdateHansardRecord, type PageView, type UserActivityLog, type InsertUserActivityLog, type Constituency, type InsertConstituency, type DunMember, type InsertDunMember } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db, pool } from "./db";
-import { mps, courtCases, sprmInvestigations, legislativeProposals, debateParticipations, parliamentaryQuestions, hansardRecords, pageViews, userActivityLog, constituencies, dunMembers } from "@shared/schema";
+import { mps, courtCases, sprmInvestigations, legislativeProposals, debateParticipations, parliamentaryQuestions, hansardRecords, pageViews, userActivityLog, constituencies, dunMembers, courtCaseNewsArticles } from "@shared/schema";
 import { eq, sql, desc } from "drizzle-orm";
 import { MPNameMatcher } from "./mp-name-matcher";
 import { HansardScraper } from "./hansard-scraper";
@@ -1785,6 +1785,11 @@ export class DbStorage implements IStorage {
   }
 
   async deleteCourtCase(id: string): Promise<boolean> {
+    // First unlink any related news articles to avoid foreign key constraint violation
+    await db.update(courtCaseNewsArticles)
+      .set({ linkedCourtCaseId: null })
+      .where(eq(courtCaseNewsArticles.linkedCourtCaseId, id));
+    
     const result = await db.delete(courtCases).where(eq(courtCases.id, id)).returning();
     return result.length > 0;
   }
