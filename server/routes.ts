@@ -4354,6 +4354,103 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
+  // Get detailed summary status for all Hansard records
+  app.get("/api/admin/hansard-summary-status", requireAdmin, async (req, res) => {
+    try {
+      const status = await storage.getHansardSummaryStatus();
+      const missingEnglish = await storage.getHansardRecordsMissingSummaries("en");
+      const missingMalay = await storage.getHansardRecordsMissingSummaries("ms");
+      
+      res.json({
+        ...status,
+        missingEnglishCount: missingEnglish.length,
+        missingMalayCount: missingMalay.length,
+        missingEnglish: missingEnglish.slice(0, 20), // First 20
+        missingMalay: missingMalay.slice(0, 20), // First 20
+      });
+    } catch (error) {
+      console.error("Error getting Hansard summary status:", error);
+      res.status(500).json({ error: "Failed to get summary status", details: String(error) });
+    }
+  });
+
+  // Bulk generate detailed summaries for all Hansard records missing them
+  app.post("/api/admin/generate-all-summaries", requireAdmin, mutationRateLimit, auditMiddleware('hansard-bulk-summary'), async (req, res) => {
+    try {
+      const { language = "en", limit = 5 } = req.body;
+      
+      console.log(`🔄 Starting bulk summary generation for language: ${language}`);
+      
+      const missingSummaries = await storage.getHansardRecordsMissingSummaries(language);
+      
+      if (missingSummaries.length === 0) {
+        return res.json({
+          message: `All Hansard records already have ${language === "en" ? "English" : "Malay"} summaries`,
+          processed: 0,
+          remaining: 0,
+        });
+      }
+      
+      const toProcess = missingSummaries.slice(0, limit);
+      console.log(`📊 Processing ${toProcess.length} of ${missingSummaries.length} records`);
+      
+      const { generateDetailedSummary } = await import("./services/gemini.js");
+      
+      let successCount = 0;
+      let errorCount = 0;
+      const results: Array<{ id: string; sessionNumber: string; success: boolean; error?: string }> = [];
+      
+      for (const record of toProcess) {
+        try {
+          const hansard = await storage.getHansardById(record.id);
+          if (!hansard || !hansard.transcript) {
+            results.push({ id: record.id, sessionNumber: record.sessionNumber, success: false, error: "No transcript" });
+            errorCount++;
+            continue;
+          }
+          
+          // Generate detailed summary
+          const summaryResult = await generateDetailedSummary(hansard.transcript, language as "en" | "ms");
+          
+          // Save to database
+          await storage.saveDetailedSummary({
+            hansardRecordId: record.id,
+            language,
+            keyArguments: summaryResult.keyArguments,
+            decisions: summaryResult.decisions,
+            actionItems: summaryResult.actionItems,
+            controversialPoints: summaryResult.controversialPoints,
+            summary: summaryResult.summary,
+          });
+          
+          results.push({ id: record.id, sessionNumber: record.sessionNumber, success: true });
+          successCount++;
+          console.log(`✅ Generated summary for ${record.sessionNumber}`);
+          
+          // Add a small delay to avoid rate limiting
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          
+        } catch (error) {
+          results.push({ id: record.id, sessionNumber: record.sessionNumber, success: false, error: String(error) });
+          errorCount++;
+          console.error(`❌ Error processing ${record.sessionNumber}:`, error);
+        }
+      }
+      
+      res.json({
+        message: `Processed ${successCount + errorCount} records`,
+        language,
+        successCount,
+        errorCount,
+        remaining: missingSummaries.length - toProcess.length,
+        results,
+      });
+    } catch (error) {
+      console.error("Error in bulk summary generation:", error);
+      res.status(500).json({ error: "Failed to generate summaries", details: String(error) });
+    }
+  });
+
   // Endpoint to reprocess Hansard records without speaker stats
   app.post("/api/admin/reprocess-hansard-speakers", requireAdmin, async (req, res) => {
     try {

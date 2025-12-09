@@ -143,6 +143,8 @@ export interface IStorage {
   saveSpeakerAnalysis(data: any): Promise<any>;
   getDetailedSummary(hansardRecordId: string, language: string): Promise<any | undefined>;
   saveDetailedSummary(data: any): Promise<any>;
+  getHansardRecordsMissingSummaries(language?: string): Promise<{ id: string; sessionNumber: string; sessionDate: Date | null }[]>;
+  getHansardSummaryStatus(): Promise<{ total: number; withEnglish: number; withMalay: number; missing: number }>;
   getQaCache(hansardRecordId: string, question: string): Promise<any | undefined>;
   saveQaCache(data: any): Promise<any>;
   getHansardById(id: string): Promise<HansardRecord | undefined>;
@@ -1671,6 +1673,20 @@ export class MemStorage implements IStorage {
     return data;
   }
 
+  async getHansardRecordsMissingSummaries(language: string = "en"): Promise<{ id: string; sessionNumber: string; sessionDate: Date | null }[]> {
+    // In memory storage, return all records (no summaries tracked)
+    return Array.from(this.hansardRecords.values()).map(r => ({
+      id: r.id,
+      sessionNumber: r.sessionNumber,
+      sessionDate: r.sessionDate,
+    }));
+  }
+
+  async getHansardSummaryStatus(): Promise<{ total: number; withEnglish: number; withMalay: number; missing: number }> {
+    const total = this.hansardRecords.size;
+    return { total, withEnglish: 0, withMalay: 0, missing: total };
+  }
+
   async getQaCache(hansardRecordId: string, question: string): Promise<any | undefined> {
     return undefined;
   }
@@ -2872,6 +2888,51 @@ export class DbStorage implements IStorage {
     const { hansardDetailedSummary } = await import("@shared/schema");
     const result = await db.insert(hansardDetailedSummary).values(data).returning();
     return result[0];
+  }
+
+  async getHansardRecordsMissingSummaries(language: string = "en"): Promise<{ id: string; sessionNumber: string; sessionDate: Date | null }[]> {
+    const { hansardDetailedSummary } = await import("@shared/schema");
+    
+    // Get all Hansard record IDs that have a detailed summary for the specified language
+    const existingSummaries = await db.select({ hansardRecordId: hansardDetailedSummary.hansardRecordId })
+      .from(hansardDetailedSummary)
+      .where(eq(hansardDetailedSummary.language, language));
+    
+    const summaryIds = new Set(existingSummaries.map(s => s.hansardRecordId));
+    
+    // Get all Hansard records and filter out those with summaries
+    const allRecords = await db.select({
+      id: hansardRecords.id,
+      sessionNumber: hansardRecords.sessionNumber,
+      sessionDate: hansardRecords.sessionDate,
+    }).from(hansardRecords).orderBy(desc(hansardRecords.sessionDate));
+    
+    return allRecords.filter(r => !summaryIds.has(r.id));
+  }
+
+  async getHansardSummaryStatus(): Promise<{ total: number; withEnglish: number; withMalay: number; missing: number }> {
+    const { hansardDetailedSummary } = await import("@shared/schema");
+    
+    // Count total Hansard records
+    const totalResult = await db.select({ count: sql<number>`count(*)` }).from(hansardRecords);
+    const total = Number(totalResult[0]?.count || 0);
+    
+    // Count English summaries
+    const englishResult = await db.select({ count: sql<number>`count(DISTINCT ${hansardDetailedSummary.hansardRecordId})` })
+      .from(hansardDetailedSummary)
+      .where(eq(hansardDetailedSummary.language, "en"));
+    const withEnglish = Number(englishResult[0]?.count || 0);
+    
+    // Count Malay summaries
+    const malayResult = await db.select({ count: sql<number>`count(DISTINCT ${hansardDetailedSummary.hansardRecordId})` })
+      .from(hansardDetailedSummary)
+      .where(eq(hansardDetailedSummary.language, "ms"));
+    const withMalay = Number(malayResult[0]?.count || 0);
+    
+    // Records missing at least one language summary
+    const missing = total - Math.min(withEnglish, withMalay);
+    
+    return { total, withEnglish, withMalay, missing };
   }
 
   async getQaCache(hansardRecordId: string, question: string): Promise<any | undefined> {
