@@ -111,6 +111,10 @@ export const insertCourtCaseSchema = createInsertSchema(courtCases).omit({
   id: true,
 }).extend({
   documentLinks: z.array(z.string()).default([]),
+  filingDate: z.preprocess(
+    (val) => (typeof val === 'string' ? new Date(val) : val),
+    z.date()
+  ),
 });
 
 export type InsertCourtCase = z.infer<typeof insertCourtCaseSchema>;
@@ -133,6 +137,14 @@ export const insertSprmInvestigationSchema = createInsertSchema(sprmInvestigatio
   id: true,
 }).extend({
   documentLinks: z.array(z.string()).default([]),
+  startDate: z.preprocess(
+    (val) => (typeof val === 'string' ? new Date(val) : val),
+    z.date()
+  ),
+  endDate: z.preprocess(
+    (val) => (val === null || val === undefined || val === '' ? null : typeof val === 'string' ? new Date(val) : val),
+    z.date().nullable().optional()
+  ),
 });
 
 export const updateSprmInvestigationSchema = insertSprmInvestigationSchema.omit({ mpId: true }).partial();

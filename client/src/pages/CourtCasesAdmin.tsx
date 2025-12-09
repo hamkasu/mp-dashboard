@@ -342,6 +342,7 @@ export default function CourtCasesAdmin() {
       articleId: selectedArticle.id,
       courtCaseData: {
         ...formData,
+        filingDate: formData.filingDate ? new Date(formData.filingDate).toISOString() : "",
         documentLinks: [selectedArticle.sourceUrl, ...formData.documentLinks],
       },
     });
@@ -364,6 +365,18 @@ export default function CourtCasesAdmin() {
     }
   };
 
+  // Helper to normalize date strings to YYYY-MM-DD format for HTML date input
+  const normalizeDate = (dateStr: string | undefined | null): string => {
+    if (!dateStr) return "";
+    try {
+      const parsed = new Date(dateStr);
+      if (!isNaN(parsed.getTime())) {
+        return format(parsed, "yyyy-MM-dd");
+      }
+    } catch {}
+    return "";
+  };
+
   const openArticleReview = (article: NewsArticle) => {
     setSelectedArticle(article);
     // Pre-fill form with extracted data
@@ -375,7 +388,7 @@ export default function CourtCasesAdmin() {
         courtLevel: article.extractedData.courtLevel || "High Court",
         status: article.extractedData.status || "Ongoing",
         charges: article.extractedData.charges || "",
-        filingDate: article.extractedData.filingDate || "",
+        filingDate: normalizeDate(article.extractedData.filingDate),
         outcome: article.extractedData.outcome || "",
         documentLinks: [],
       });
