@@ -715,7 +715,7 @@ export default function CourtCasesAdmin() {
                         <SelectValue placeholder="Select MP" />
                       </SelectTrigger>
                       <SelectContent>
-                        {mpsList?.map((mp) => (
+                        {mpsList?.slice().sort((a, b) => a.name.localeCompare(b.name)).map((mp) => (
                           <SelectItem key={mp.id} value={mp.id}>
                             {mp.name} ({mp.constituency}) - {mp.party}
                           </SelectItem>
@@ -870,7 +870,7 @@ export default function CourtCasesAdmin() {
                     <SelectValue placeholder="Select MP" />
                   </SelectTrigger>
                   <SelectContent>
-                    {mpsList?.map((mp) => (
+                    {mpsList?.slice().sort((a, b) => a.name.localeCompare(b.name)).map((mp) => (
                       <SelectItem key={mp.id} value={mp.id}>
                         {mp.name} ({mp.constituency}) - {mp.party}
                       </SelectItem>
