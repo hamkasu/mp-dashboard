@@ -21,6 +21,7 @@ import {
   updateHansardRecordSchema,
   insertBlogPostSchema,
   updateBlogPostSchema,
+  insertUserFeedbackSchema,
   mps,
   hansardPdfFiles,
   hansardRecords,
@@ -7591,6 +7592,53 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         error: error.message || "Failed to scrape DOSM poverty data",
         details: error.stack
       });
+    }
+  });
+
+  // User Feedback routes
+  app.post("/api/feedback", mutationRateLimit, async (req, res) => {
+    try {
+      const validatedData = insertUserFeedbackSchema.parse(req.body);
+      const feedback = await storage.createUserFeedback(validatedData);
+      res.status(201).json(feedback);
+    } catch (error: any) {
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ error: "Invalid feedback data", details: error.errors });
+      }
+      console.error("Error submitting feedback:", error);
+      res.status(500).json({ error: "Failed to submit feedback" });
+    }
+  });
+
+  app.get("/api/feedback", requireAdmin, async (req, res) => {
+    try {
+      const status = req.query.status as string | undefined;
+      const limit = parseInt(req.query.limit as string) || undefined;
+      const feedback = await storage.getAllUserFeedback({ status, limit });
+      res.json(feedback);
+    } catch (error) {
+      console.error("Error fetching feedback:", error);
+      res.status(500).json({ error: "Failed to fetch feedback" });
+    }
+  });
+
+  app.patch("/api/feedback/:id/status", requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { status } = req.body;
+      const validStatuses = ["pending", "reviewed", "resolved"];
+      if (!status || !validStatuses.includes(status)) {
+        return res.status(400).json({ error: "Invalid status. Must be one of: pending, reviewed, resolved" });
+      }
+      const username = getCurrentUsername(req);
+      const updated = await storage.updateUserFeedbackStatus(id, status, username);
+      if (!updated) {
+        return res.status(404).json({ error: "Feedback not found" });
+      }
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating feedback status:", error);
+      res.status(500).json({ error: "Failed to update feedback status" });
     }
   });
 

@@ -891,3 +891,35 @@ export const updateDunMemberSchema = insertDunMemberSchema.partial();
 export type InsertDunMember = z.infer<typeof insertDunMemberSchema>;
 export type UpdateDunMember = z.infer<typeof updateDunMemberSchema>;
 export type DunMember = typeof dunMembers.$inferSelect;
+
+// ========== USER FEEDBACK ==========
+export const userFeedback = pgTable("user_feedback", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name"),
+  email: text("email"),
+  feedbackType: text("feedback_type").notNull().default("general"),
+  subject: text("subject"),
+  message: text("message").notNull(),
+  pageUrl: text("page_url"),
+  status: text("status").notNull().default("pending"),
+  reviewedBy: varchar("reviewed_by"),
+  reviewedAt: timestamp("reviewed_at"),
+  createdAt: timestamp("created_at").notNull().default(sql`NOW()`),
+});
+
+export const insertUserFeedbackSchema = createInsertSchema(userFeedback).omit({
+  id: true,
+  reviewedAt: true,
+  createdAt: true,
+}).extend({
+  feedbackType: z.enum(["general", "bug", "suggestion", "question", "compliment"]).optional().default("general"),
+  status: z.enum(["pending", "reviewed", "resolved"]).optional().default("pending"),
+  name: z.string().nullable().optional(),
+  email: z.string().email().nullable().optional(),
+  subject: z.string().nullable().optional(),
+  pageUrl: z.string().nullable().optional(),
+  reviewedBy: z.string().nullable().optional(),
+});
+
+export type InsertUserFeedback = z.infer<typeof insertUserFeedbackSchema>;
+export type UserFeedback = typeof userFeedback.$inferSelect;

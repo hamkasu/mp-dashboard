@@ -3,7 +3,8 @@
  * Updated: Parliamentary Answers Navigation (2025-12-02)
  */
 
-import { Search, Menu, Home, FileText, BookOpen, UserCheck, Calculator, BarChart3, ExternalLink, ChevronDown, AlertCircle, GraduationCap, TrendingUp, Scale, Shield, MessageSquare, Edit, Gavel, UserX, Building2 } from "lucide-react";
+import { Search, Menu, Home, FileText, BookOpen, UserCheck, Calculator, BarChart3, ExternalLink, ChevronDown, AlertCircle, GraduationCap, TrendingUp, Scale, Shield, MessageSquare, Edit, Gavel, UserX, Building2, MessageSquareText } from "lucide-react";
+import { FeedbackModal } from "@/components/FeedbackModal";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -404,6 +405,11 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
               <Search className="h-5 w-5" />
             </Button>
           )}
+          <FeedbackModal>
+            <Button variant="ghost" size="icon" className="h-9 w-9" data-testid="button-feedback">
+              <MessageSquareText className="h-5 w-5" />
+            </Button>
+          </FeedbackModal>
           <LanguageSwitcher />
         </div>
       </div>

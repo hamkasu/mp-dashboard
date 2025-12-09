@@ -2,10 +2,10 @@
  * Copyright by Calmic Sdn Bhd
  */
 
-import { type Mp, type InsertMp, type CourtCase, type InsertCourtCase, type SprmInvestigation, type InsertSprmInvestigation, type LegislativeProposal, type InsertLegislativeProposal, type DebateParticipation, type InsertDebateParticipation, type ParliamentaryQuestion, type InsertParliamentaryQuestion, type HansardRecord, type InsertHansardRecord, type UpdateHansardRecord, type PageView, type UserActivityLog, type InsertUserActivityLog, type Constituency, type InsertConstituency, type DunMember, type InsertDunMember } from "@shared/schema";
+import { type Mp, type InsertMp, type CourtCase, type InsertCourtCase, type SprmInvestigation, type InsertSprmInvestigation, type LegislativeProposal, type InsertLegislativeProposal, type DebateParticipation, type InsertDebateParticipation, type ParliamentaryQuestion, type InsertParliamentaryQuestion, type HansardRecord, type InsertHansardRecord, type UpdateHansardRecord, type PageView, type UserActivityLog, type InsertUserActivityLog, type Constituency, type InsertConstituency, type DunMember, type InsertDunMember, type UserFeedback, type InsertUserFeedback } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db, pool } from "./db";
-import { mps, courtCases, sprmInvestigations, legislativeProposals, debateParticipations, parliamentaryQuestions, hansardRecords, pageViews, userActivityLog, constituencies, dunMembers, courtCaseNewsArticles } from "@shared/schema";
+import { mps, courtCases, sprmInvestigations, legislativeProposals, debateParticipations, parliamentaryQuestions, hansardRecords, pageViews, userActivityLog, constituencies, dunMembers, courtCaseNewsArticles, userFeedback } from "@shared/schema";
 import { eq, sql, desc } from "drizzle-orm";
 import { MPNameMatcher } from "./mp-name-matcher";
 import { HansardScraper } from "./hansard-scraper";
@@ -155,6 +155,11 @@ export interface IStorage {
   updateDunMember(id: string, member: Partial<InsertDunMember>): Promise<DunMember | undefined>;
   deleteDunMember(id: string): Promise<boolean>;
   deleteAllDunMembersByState(state: string): Promise<number>;
+
+  // User Feedback methods
+  createUserFeedback(feedback: InsertUserFeedback): Promise<UserFeedback>;
+  getAllUserFeedback(options?: { status?: string; limit?: number }): Promise<UserFeedback[]>;
+  updateUserFeedbackStatus(id: string, status: string, reviewedBy?: string): Promise<UserFeedback | undefined>;
 }
 
 export class MemStorage implements IStorage {
@@ -1713,6 +1718,32 @@ export class MemStorage implements IStorage {
   async deleteAllDunMembersByState(state: string): Promise<number> {
     return 0;
   }
+
+  // User Feedback methods (stub implementations for MemStorage)
+  async createUserFeedback(feedback: InsertUserFeedback): Promise<UserFeedback> {
+    const id = randomUUID();
+    return {
+      ...feedback,
+      id,
+      name: feedback.name ?? null,
+      email: feedback.email ?? null,
+      feedbackType: feedback.feedbackType ?? "general",
+      subject: feedback.subject ?? null,
+      pageUrl: feedback.pageUrl ?? null,
+      status: feedback.status ?? "pending",
+      reviewedBy: feedback.reviewedBy ?? null,
+      reviewedAt: null,
+      createdAt: new Date(),
+    };
+  }
+
+  async getAllUserFeedback(options?: { status?: string; limit?: number }): Promise<UserFeedback[]> {
+    return [];
+  }
+
+  async updateUserFeedbackStatus(id: string, status: string, reviewedBy?: string): Promise<UserFeedback | undefined> {
+    return undefined;
+  }
 }
 
 // Database storage implementation using Drizzle ORM
@@ -2893,6 +2924,35 @@ export class DbStorage implements IStorage {
   async deleteAllDunMembersByState(state: string): Promise<number> {
     const result = await db.delete(dunMembers).where(eq(dunMembers.state, state)).returning();
     return result.length;
+  }
+
+  // User Feedback methods
+  async createUserFeedback(feedback: InsertUserFeedback): Promise<UserFeedback> {
+    const result = await db.insert(userFeedback).values(feedback).returning();
+    return result[0];
+  }
+
+  async getAllUserFeedback(options?: { status?: string; limit?: number }): Promise<UserFeedback[]> {
+    let query = db.select().from(userFeedback).orderBy(desc(userFeedback.createdAt));
+    
+    if (options?.status) {
+      query = query.where(eq(userFeedback.status, options.status)) as typeof query;
+    }
+    
+    if (options?.limit) {
+      query = query.limit(options.limit) as typeof query;
+    }
+    
+    return await query;
+  }
+
+  async updateUserFeedbackStatus(id: string, status: string, reviewedBy?: string): Promise<UserFeedback | undefined> {
+    const result = await db
+      .update(userFeedback)
+      .set({ status, reviewedBy, reviewedAt: new Date() })
+      .where(eq(userFeedback.id, id))
+      .returning();
+    return result[0];
   }
 }
 

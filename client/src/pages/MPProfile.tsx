@@ -432,6 +432,14 @@ export default function MPProfile() {
                       <a href={`mailto:${mp.email}`} className="text-lg font-semibold text-primary hover:underline">
                         {mp.email}
                       </a>
+                      <div className="mt-2">
+                        <a href={`mailto:${mp.email}?subject=Message for ${mp.title || ''} ${mp.name} - ${mp.constituency} Constituency`}>
+                          <Button size="sm" variant="outline" className="gap-2" data-testid="button-contact-mp-email">
+                            <Mail className="h-4 w-4" />
+                            {t('profile.emailMP')}
+                          </Button>
+                        </a>
+                      </div>
                     </div>
                   </div>
                 )}
