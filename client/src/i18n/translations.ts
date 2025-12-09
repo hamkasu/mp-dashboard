@@ -395,6 +395,7 @@ export const translations = {
       viewByConstituency: "View by Constituency",
       constituencyAttendance: "Constituency Attendance",
       loadingRecords: "Loading Hansard records...",
+      ready: "Ready",
     },
 
     // Hansard Analysis Page
@@ -1081,6 +1082,7 @@ export const translations = {
       viewByConstituency: "Lihat mengikut Kawasan",
       constituencyAttendance: "Kehadiran Kawasan",
       loadingRecords: "Memuatkan rekod Hansard...",
+      ready: "Sedia",
     },
 
     // Hansard Analysis Page / Halaman Analisis Hansard

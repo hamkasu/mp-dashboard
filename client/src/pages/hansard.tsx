@@ -322,11 +322,15 @@ export default function HansardPage() {
                     trigger={
                       <Button
                         data-testid={`button-ai-insights-${record.id}`}
-                        variant="outline"
+                        variant={record.summary ? "default" : "outline"}
                         size="sm"
+                        className="gap-2"
                       >
-                        <Sparkles className="w-4 h-4 mr-2" />
+                        <Sparkles className="w-4 h-4" />
                         AI Insights
+                        {record.summary && (
+                          <CheckCircle className="w-3.5 h-3.5 text-green-300" />
+                        )}
                       </Button>
                     }
                   />
