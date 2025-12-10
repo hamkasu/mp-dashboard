@@ -5,6 +5,11 @@
 import * as schema from "@shared/schema";
 import { drizzle, NodePgDatabase } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
+import pg from "pg";
+
+// Configure pg to parse JSONB as JSON automatically
+pg.types.setTypeParser(3802, (val) => JSON.parse(val)); // JSONB type OID = 3802
+pg.types.setTypeParser(114, (val) => JSON.parse(val));  // JSON type OID = 114
 
 // Allow optional database connection for build-time scenarios (like prerendering)
 // where DATABASE_URL may not be available
