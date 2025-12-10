@@ -107,6 +107,13 @@ export function HansardAIInsights({ hansardRecord, trigger }: HansardAIInsightsP
   const [activeTab, setActiveTab] = useState("topics");
   const [question, setQuestion] = useState("");
   const [qaHistory, setQaHistory] = useState<QAResult[]>([]);
+  const [selectedTopic, setSelectedTopic] = useState<string | null>(null);
+  const [topicSummary, setTopicSummary] = useState<{
+    summary: string;
+    keyPoints: string[];
+    speakers: string[];
+    quotes: string[];
+  } | null>(null);
 
   const { data: allAnalysis, isLoading: analysisLoading } = useQuery<{
     topics: TopicAnalysis | null;
@@ -215,6 +222,35 @@ export function HansardAIInsights({ hansardRecord, trigger }: HansardAIInsightsP
       });
     },
   });
+
+  const topicSummaryMutation = useMutation({
+    mutationFn: async (topicName: string) => {
+      const response = await apiRequest("POST", `/api/hansard/${hansardRecord.id}/topic-summary`, {
+        topicName,
+      });
+      return response as { summary: string; keyPoints: string[]; speakers: string[]; quotes: string[] };
+    },
+    onSuccess: (data) => {
+      setTopicSummary(data);
+      toast({
+        title: "Topic Summary Generated",
+        description: "AI has analyzed this specific topic",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to Generate Summary",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleTopicClick = (topicName: string) => {
+    setSelectedTopic(topicName);
+    setTopicSummary(null);
+    topicSummaryMutation.mutate(topicName);
+  };
 
   const handleAskQuestion = () => {
     if (!question.trim()) {
@@ -332,7 +368,12 @@ export function HansardAIInsights({ hansardRecord, trigger }: HansardAIInsightsP
                   </Button>
                 </div>
                 {allAnalysis.topics.topics.map((topic, idx) => (
-                  <Card key={idx} data-testid={`card-topic-${idx}`}>
+                  <Card
+                    key={idx}
+                    data-testid={`card-topic-${idx}`}
+                    className="cursor-pointer hover:shadow-md transition-shadow"
+                    onClick={() => handleTopicClick(topic.topic)}
+                  >
                     <CardHeader className="pb-3">
                       <div className="flex items-start justify-between gap-4">
                         <CardTitle className="text-base">{topic.topic}</CardTitle>
@@ -747,5 +788,104 @@ export function HansardAIInsights({ hansardRecord, trigger }: HansardAIInsightsP
         </Tabs>
       </DialogContent>
     </Dialog>
+
+      {/* Topic Summary Modal */}
+      <Dialog open={!!selectedTopic} onOpenChange={() => setSelectedTopic(null)}>
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Tags className="w-5 h-5 text-primary" />
+              {selectedTopic}
+            </DialogTitle>
+            <DialogDescription>
+              AI-powered deep dive into this specific topic
+            </DialogDescription>
+          </DialogHeader>
+
+          {topicSummaryMutation.isPending ? (
+            <div className="space-y-4 py-8">
+              <Loader2 className="w-8 h-8 mx-auto animate-spin text-primary" />
+              <p className="text-center text-sm text-muted-foreground">
+                Analyzing topic with AI...
+              </p>
+            </div>
+          ) : topicSummary ? (
+            <div className="space-y-6">
+              {/* Summary */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Summary</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm">{topicSummary.summary}</p>
+                </CardContent>
+              </Card>
+
+              {/* Key Points */}
+              {topicSummary.keyPoints && topicSummary.keyPoints.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base">Key Points</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <ul className="space-y-2">
+                      {topicSummary.keyPoints.map((point, idx) => (
+                        <li key={idx} className="flex gap-2 text-sm">
+                          <span className="text-primary">•</span>
+                          <span>{point}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Speakers */}
+              {topicSummary.speakers && topicSummary.speakers.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base">Speakers</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex flex-wrap gap-2">
+                      {topicSummary.speakers.map((speaker, idx) => (
+                        <Badge key={idx} variant="secondary">
+                          <Users className="w-3 h-3 mr-1" />
+                          {speaker}
+                        </Badge>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Notable Quotes */}
+              {topicSummary.quotes && topicSummary.quotes.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base">Notable Quotes</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {topicSummary.quotes.map((quote, idx) => (
+                        <blockquote key={idx} className="border-l-4 border-primary pl-4 italic text-sm text-muted-foreground">
+                          "{quote}"
+                        </blockquote>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          ) : (
+            <div className="py-8 text-center">
+              <AlertCircle className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">
+                Failed to load topic summary
+              </p>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
   );
 }

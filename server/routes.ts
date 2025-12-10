@@ -3907,6 +3907,51 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
+  // Get topic-specific summary
+  app.post("/api/hansard/:hansardId/topic-summary", mutationRateLimit, async (req, res) => {
+    try {
+      const { hansardId } = req.params;
+      const { topicName } = req.body;
+
+      if (!topicName) {
+        return res.status(400).json({ error: "Topic name is required" });
+      }
+
+      const hansard = await storage.getHansardById(hansardId);
+
+      if (!hansard) {
+        return res.status(404).json({ error: "Hansard record not found" });
+      }
+
+      // Generate topic summary using DeepSeek (or Gemini as fallback)
+      const deepseek = await import("./services/deepseek.js");
+      const gemini = await import("./services/gemini.js");
+
+      const useDeepSeek = deepseek.isDeepSeekConfigured();
+
+      if (!useDeepSeek && !process.env.GEMINI_API_KEY) {
+        throw new Error("No AI provider configured. Set OPENROUTER_API_KEY or GEMINI_API_KEY in .env file");
+      }
+
+      console.log(`[AI Topic Summary] Using ${useDeepSeek ? "DeepSeek" : "Gemini"} for topic: ${topicName}`);
+
+      // For now, use DeepSeek's generateTopicSummary
+      // TODO: Add Gemini fallback if needed
+      if (!useDeepSeek) {
+        return res.status(503).json({
+          error: "Topic summary requires OpenRouter. Please configure OPENROUTER_API_KEY"
+        });
+      }
+
+      const result = await deepseek.generateTopicSummary(topicName, hansard.transcript);
+
+      res.json(result);
+    } catch (error) {
+      console.error("Error in topic summary:", error);
+      res.status(500).json({ error: "Failed to generate topic summary", details: String(error) });
+    }
+  });
+
   // Get all analysis for a Hansard record
   app.get("/api/analyze/:hansardId", async (req, res) => {
     try {

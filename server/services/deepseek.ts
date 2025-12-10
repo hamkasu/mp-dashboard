@@ -6,8 +6,9 @@
 
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 const DEEPSEEK_BASE_URL = "https://openrouter.ai/api/v1";
-// Using DeepSeek R1 via OpenRouter - FREE model!
-const DEEPSEEK_MODEL = "deepseek/deepseek-r1-distill-llama-70b";
+// Using a FREE model via OpenRouter
+// Options: "meta-llama/llama-3.2-3b-instruct:free" or "qwen/qwen-2-7b-instruct:free"
+const DEEPSEEK_MODEL = "meta-llama/llama-3.2-3b-instruct:free";
 
 export interface TopicAnalysisResult {
   topic: string;
@@ -269,6 +270,43 @@ ${context.substring(0, 40000)}`;
   } catch (error) {
     console.error("[DeepSeek] Error in Q&A:", error);
     throw new Error(`Failed to answer question: ${error}`);
+  }
+}
+
+export async function generateTopicSummary(
+  topicName: string,
+  transcript: string
+): Promise<{
+  summary: string;
+  keyPoints: string[];
+  speakers: string[];
+  quotes: string[];
+}> {
+  try {
+    const systemPrompt = `You are an expert at analyzing Malaysian parliamentary debates (Hansard).
+Analyze what was discussed about a specific topic and provide a focused summary.
+
+You must respond with valid JSON matching this structure:
+{
+  "summary": "A 2-3 sentence summary of what was discussed about this topic",
+  "keyPoints": ["key point 1", "key point 2", "key point 3"],
+  "speakers": ["Name of MP 1", "Name of MP 2"],
+  "quotes": ["notable quote 1", "notable quote 2"]
+}`;
+
+    const userPrompt = `Topic: ${topicName}
+
+Analyze what was discussed about "${topicName}" in this parliamentary debate.
+Focus only on content related to this specific topic.
+
+Transcript:
+${transcript.substring(0, 50000)}`;
+
+    const result = await callDeepSeek(systemPrompt, userPrompt, null);
+    return result;
+  } catch (error) {
+    console.error("[DeepSeek] Error in topic summary:", error);
+    throw new Error(`Failed to generate topic summary: ${error}`);
   }
 }
 
