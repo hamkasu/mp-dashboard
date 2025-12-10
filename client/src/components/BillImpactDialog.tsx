@@ -77,7 +77,11 @@ export function BillImpactDialog({ bill, trigger }: BillImpactDialogProps) {
 
   const generateMutation = useMutation({
     mutationFn: async () => {
-      const response = await apiRequest("POST", `/api/bills/${bill.id}/generate-impact`);
+      const response = await apiRequest("POST", `/api/bills/${bill.id}/generate-impact`, {
+        title: bill.title,
+        billNumber: bill.billNumber,
+        status: bill.status,
+      });
       if (!response.ok) {
         const error = await response.json().catch(() => ({ error: "Unknown error" }));
         throw new Error(error.error || "Failed to generate impact");

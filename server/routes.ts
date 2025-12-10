@@ -6946,14 +6946,31 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   app.post("/api/bills/:id/generate-impact", async (req, res) => {
     try {
       const { id } = req.params;
+      const { title, billNumber, status } = req.body;
       
-      // Get the bill details
-      const bill = await db.query.bills.findFirst({
+      // First try to get bill from database
+      let bill = await db.query.bills.findFirst({
         where: eq(bills.id, id),
       });
       
-      if (!bill) {
-        return res.status(404).json({ error: "Bill not found" });
+      // If not in database, use data from request body (scraped bills that aren't stored yet)
+      if (!bill && title) {
+        bill = {
+          id,
+          title,
+          billNumber: billNumber || null,
+          status: status || "Unknown",
+          introductionDate: null,
+          fullTextUrl: null,
+          sourceUrl: null,
+          scrapedAt: null,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
+      }
+      
+      if (!bill || !bill.title) {
+        return res.status(404).json({ error: "Bill not found. Please provide bill details." });
       }
       
       // Generate impact analysis using Gemini
