@@ -1,14 +1,17 @@
 /**
  * AI Service for Hansard Analysis
- * Uses OpenRouter to access FREE AI models
- * Get your free API key at: https://openrouter.ai/
+ * Uses Google Gemini API for document analysis with retry logic
+ * Integration: javascript_gemini
  */
 
+import { GoogleGenAI } from "@google/genai";
+
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 const OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1";
-// Using Google Gemini 2.0 Flash - FREE with 1M+ context, excellent for document analysis
-// Note: Free tier requires data training consent in OpenRouter settings. Add credits at https://openrouter.ai/credits for unlimited access
 const AI_MODEL = "google/gemini-2.0-flash-exp:free";
+
+const ai = GEMINI_API_KEY ? new GoogleGenAI({ apiKey: GEMINI_API_KEY }) : null;
 
 export interface TopicAnalysisResult {
   topic: string;
@@ -39,57 +42,121 @@ export interface DetailedSummaryResult {
   summary: string;
 }
 
-/**
- * Generic function to call DeepSeek API with structured JSON output
- */
-async function callDeepSeek(
+async function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function callWithRetry<T>(
+  fn: () => Promise<T>,
+  maxRetries: number = 3,
+  baseDelay: number = 2000
+): Promise<T> {
+  let lastError: Error | null = null;
+  
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (error: any) {
+      lastError = error;
+      const isRateLimit = error.message?.includes('429') || error.message?.includes('rate limit');
+      
+      if (isRateLimit && attempt < maxRetries - 1) {
+        const delay = baseDelay * Math.pow(2, attempt);
+        console.log(`[AI] Rate limited, retrying in ${delay}ms (attempt ${attempt + 1}/${maxRetries})`);
+        await sleep(delay);
+      } else if (!isRateLimit) {
+        throw error;
+      }
+    }
+  }
+  
+  throw lastError;
+}
+
+async function callGemini(
   systemPrompt: string,
-  userPrompt: string,
-  responseSchema: any
+  userPrompt: string
+): Promise<any> {
+  if (!ai) {
+    throw new Error("GEMINI_API_KEY not configured");
+  }
+
+  const response = await ai.models.generateContent({
+    model: "gemini-2.5-flash",
+    config: {
+      systemInstruction: systemPrompt,
+      responseMimeType: "application/json",
+    },
+    contents: userPrompt,
+  });
+
+  const content = response.text;
+  if (!content) {
+    throw new Error("No content in Gemini response");
+  }
+
+  return JSON.parse(content);
+}
+
+async function callOpenRouter(
+  systemPrompt: string,
+  userPrompt: string
 ): Promise<any> {
   if (!OPENROUTER_API_KEY) {
-    throw new Error("OPENROUTER_API_KEY not configured. Get free credits at https://openrouter.ai/");
+    throw new Error("OPENROUTER_API_KEY not configured");
   }
 
-  try {
-    const response = await fetch(`${OPENROUTER_BASE_URL}/chat/completions`, {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
-        "Content-Type": "application/json",
-        "HTTP-Referer": "https://myparliament.my",
-        "X-Title": "MyParliament Dashboard",
-      },
-      body: JSON.stringify({
-        model: AI_MODEL,
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt }
-        ],
-        temperature: 0.3,
-        max_tokens: 4000,
-        response_format: { type: "json_object" }
-      }),
-    });
+  const response = await fetch(`${OPENROUTER_BASE_URL}/chat/completions`, {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
+      "Content-Type": "application/json",
+      "HTTP-Referer": "https://myparliament.my",
+      "X-Title": "MyParliament Dashboard",
+    },
+    body: JSON.stringify({
+      model: AI_MODEL,
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt }
+      ],
+      temperature: 0.3,
+      max_tokens: 4000,
+      response_format: { type: "json_object" }
+    }),
+  });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("[DeepSeek] API error:", errorText);
-      throw new Error(`DeepSeek API error: ${response.status}`);
-    }
-
-    const data = await response.json();
-    const content = data.choices?.[0]?.message?.content;
-
-    if (!content) {
-      throw new Error("No content in DeepSeek response");
-    }
-
-    return JSON.parse(content);
-  } catch (error: any) {
-    console.error("[DeepSeek] Error:", error.message);
-    throw error;
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error("[OpenRouter] API error:", errorText);
+    throw new Error(`OpenRouter API error: ${response.status}`);
   }
+
+  const data = await response.json();
+  const content = data.choices?.[0]?.message?.content;
+
+  if (!content) {
+    throw new Error("No content in OpenRouter response");
+  }
+
+  return JSON.parse(content);
+}
+
+async function callAI(
+  systemPrompt: string,
+  userPrompt: string
+): Promise<any> {
+  const useGemini = !!GEMINI_API_KEY;
+  
+  return callWithRetry(async () => {
+    if (useGemini) {
+      console.log("[AI] Using Gemini API");
+      return await callGemini(systemPrompt, userPrompt);
+    } else {
+      console.log("[AI] Using OpenRouter API");
+      return await callOpenRouter(systemPrompt, userPrompt);
+    }
+  });
 }
 
 export async function extractTopics(
@@ -118,10 +185,10 @@ Speakers involved: ${speakerNames.join(', ')}
 Transcript:
 ${transcript.substring(0, 50000)}`;
 
-    const result = await callDeepSeek(systemPrompt, userPrompt, null);
+    const result = await callAI(systemPrompt, userPrompt);
     return result.topics || [];
   } catch (error) {
-    console.error("[DeepSeek] Error in topic extraction:", error);
+    console.error("[AI] Error in topic extraction:", error);
     throw new Error(`Failed to extract topics: ${error}`);
   }
 }
@@ -151,10 +218,10 @@ You must respond with valid JSON matching this structure:
 
 ${transcript.substring(0, 50000)}`;
 
-    const result = await callDeepSeek(systemPrompt, userPrompt, null);
+    const result = await callAI(systemPrompt, userPrompt);
     return result;
   } catch (error) {
-    console.error("[DeepSeek] Error in sentiment analysis:", error);
+    console.error("[AI] Error in sentiment analysis:", error);
     throw new Error(`Failed to analyze sentiment: ${error}`);
   }
 }
@@ -194,10 +261,10 @@ ${speakerList}
 Transcript:
 ${transcript.substring(0, 50000)}`;
 
-    const result = await callDeepSeek(systemPrompt, userPrompt, null);
+    const result = await callAI(systemPrompt, userPrompt);
     return result.speakers || [];
   } catch (error) {
-    console.error("[DeepSeek] Error in speaker analysis:", error);
+    console.error("[AI] Error in speaker analysis:", error);
     throw new Error(`Failed to analyze speakers: ${error}`);
   }
 }
@@ -234,10 +301,10 @@ You must respond with valid JSON matching this structure:
 
 ${transcript.substring(0, 50000)}`;
 
-    const result = await callDeepSeek(systemPrompt, userPrompt, null);
+    const result = await callAI(systemPrompt, userPrompt);
     return result;
   } catch (error) {
-    console.error("[DeepSeek] Error in detailed summary:", error);
+    console.error("[AI] Error in detailed summary:", error);
     throw new Error(`Failed to generate detailed summary: ${error}`);
   }
 }
@@ -265,10 +332,10 @@ You must respond with valid JSON matching this structure:
 Context from parliamentary debate:
 ${context.substring(0, 40000)}`;
 
-    const result = await callDeepSeek(systemPrompt, userPrompt, null);
+    const result = await callAI(systemPrompt, userPrompt);
     return result;
   } catch (error) {
-    console.error("[DeepSeek] Error in Q&A:", error);
+    console.error("[AI] Error in Q&A:", error);
     throw new Error(`Failed to answer question: ${error}`);
   }
 }
@@ -302,14 +369,18 @@ Focus only on content related to this specific topic.
 Transcript:
 ${transcript.substring(0, 50000)}`;
 
-    const result = await callDeepSeek(systemPrompt, userPrompt, null);
+    const result = await callAI(systemPrompt, userPrompt);
     return result;
   } catch (error) {
-    console.error("[DeepSeek] Error in topic summary:", error);
+    console.error("[AI] Error in topic summary:", error);
     throw new Error(`Failed to generate topic summary: ${error}`);
   }
 }
 
 export function isDeepSeekConfigured(): boolean {
-  return !!OPENROUTER_API_KEY;
+  return !!(GEMINI_API_KEY || OPENROUTER_API_KEY);
+}
+
+export function isGeminiConfigured(): boolean {
+  return !!GEMINI_API_KEY;
 }

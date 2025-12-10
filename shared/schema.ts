@@ -892,6 +892,26 @@ export type InsertDunMember = z.infer<typeof insertDunMemberSchema>;
 export type UpdateDunMember = z.infer<typeof updateDunMemberSchema>;
 export type DunMember = typeof dunMembers.$inferSelect;
 
+// ========== TOPIC SUMMARY CACHE ==========
+export const topicSummaryCache = pgTable("topic_summary_cache", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  hansardRecordId: varchar("hansard_record_id").notNull().references(() => hansardRecords.id, { onDelete: "cascade" }),
+  topicName: text("topic_name").notNull(),
+  summary: text("summary").notNull(),
+  keyPoints: jsonb("key_points").$type<string[]>().notNull().default(sql`'[]'::jsonb`),
+  speakers: jsonb("speakers").$type<string[]>().notNull().default(sql`'[]'::jsonb`),
+  quotes: jsonb("quotes").$type<string[]>().notNull().default(sql`'[]'::jsonb`),
+  createdAt: timestamp("created_at").notNull().default(sql`NOW()`),
+});
+
+export const insertTopicSummaryCacheSchema = createInsertSchema(topicSummaryCache).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertTopicSummaryCache = z.infer<typeof insertTopicSummaryCacheSchema>;
+export type TopicSummaryCache = typeof topicSummaryCache.$inferSelect;
+
 // ========== USER FEEDBACK ==========
 export const userFeedback = pgTable("user_feedback", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),

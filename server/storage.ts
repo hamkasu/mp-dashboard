@@ -2,11 +2,11 @@
  * Copyright by Calmic Sdn Bhd
  */
 
-import { type Mp, type InsertMp, type CourtCase, type InsertCourtCase, type SprmInvestigation, type InsertSprmInvestigation, type LegislativeProposal, type InsertLegislativeProposal, type DebateParticipation, type InsertDebateParticipation, type ParliamentaryQuestion, type InsertParliamentaryQuestion, type HansardRecord, type InsertHansardRecord, type UpdateHansardRecord, type PageView, type UserActivityLog, type InsertUserActivityLog, type Constituency, type InsertConstituency, type DunMember, type InsertDunMember, type UserFeedback, type InsertUserFeedback } from "@shared/schema";
+import { type Mp, type InsertMp, type CourtCase, type InsertCourtCase, type SprmInvestigation, type InsertSprmInvestigation, type LegislativeProposal, type InsertLegislativeProposal, type DebateParticipation, type InsertDebateParticipation, type ParliamentaryQuestion, type InsertParliamentaryQuestion, type HansardRecord, type InsertHansardRecord, type UpdateHansardRecord, type PageView, type UserActivityLog, type InsertUserActivityLog, type Constituency, type InsertConstituency, type DunMember, type InsertDunMember, type UserFeedback, type InsertUserFeedback, type TopicSummaryCache, type InsertTopicSummaryCache } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db, pool } from "./db";
-import { mps, courtCases, sprmInvestigations, legislativeProposals, debateParticipations, parliamentaryQuestions, hansardRecords, pageViews, userActivityLog, constituencies, dunMembers, courtCaseNewsArticles, userFeedback } from "@shared/schema";
-import { eq, sql, desc } from "drizzle-orm";
+import { mps, courtCases, sprmInvestigations, legislativeProposals, debateParticipations, parliamentaryQuestions, hansardRecords, pageViews, userActivityLog, constituencies, dunMembers, courtCaseNewsArticles, userFeedback, topicSummaryCache } from "@shared/schema";
+import { eq, sql, desc, and } from "drizzle-orm";
 import { MPNameMatcher } from "./mp-name-matcher";
 import { HansardScraper } from "./hansard-scraper";
 import { ConstituencyMatcher } from "./constituency-matcher";
@@ -162,6 +162,10 @@ export interface IStorage {
   createUserFeedback(feedback: InsertUserFeedback): Promise<UserFeedback>;
   getAllUserFeedback(options?: { status?: string; limit?: number }): Promise<UserFeedback[]>;
   updateUserFeedbackStatus(id: string, status: string, reviewedBy?: string): Promise<UserFeedback | undefined>;
+
+  // Topic Summary Cache methods
+  getTopicSummaryCache(hansardRecordId: string, topicName: string): Promise<TopicSummaryCache | undefined>;
+  saveTopicSummaryCache(data: InsertTopicSummaryCache): Promise<TopicSummaryCache>;
 }
 
 export class MemStorage implements IStorage {
@@ -1760,6 +1764,22 @@ export class MemStorage implements IStorage {
   async updateUserFeedbackStatus(id: string, status: string, reviewedBy?: string): Promise<UserFeedback | undefined> {
     return undefined;
   }
+
+  // Topic Summary Cache methods (stub implementations for MemStorage)
+  async getTopicSummaryCache(hansardRecordId: string, topicName: string): Promise<TopicSummaryCache | undefined> {
+    return undefined;
+  }
+
+  async saveTopicSummaryCache(data: InsertTopicSummaryCache): Promise<TopicSummaryCache> {
+    return {
+      id: randomUUID(),
+      ...data,
+      keyPoints: data.keyPoints ?? [],
+      speakers: data.speakers ?? [],
+      quotes: data.quotes ?? [],
+      createdAt: new Date(),
+    };
+  }
 }
 
 // Database storage implementation using Drizzle ORM
@@ -3012,6 +3032,37 @@ export class DbStorage implements IStorage {
       .update(userFeedback)
       .set({ status, reviewedBy, reviewedAt: new Date() })
       .where(eq(userFeedback.id, id))
+      .returning();
+    return result[0];
+  }
+
+  // Topic Summary Cache methods
+  async getTopicSummaryCache(hansardRecordId: string, topicName: string): Promise<TopicSummaryCache | undefined> {
+    const result = await db
+      .select()
+      .from(topicSummaryCache)
+      .where(
+        and(
+          eq(topicSummaryCache.hansardRecordId, hansardRecordId),
+          eq(topicSummaryCache.topicName, topicName)
+        )
+      );
+    return result[0];
+  }
+
+  async saveTopicSummaryCache(data: InsertTopicSummaryCache): Promise<TopicSummaryCache> {
+    const result = await db
+      .insert(topicSummaryCache)
+      .values(data)
+      .onConflictDoUpdate({
+        target: [topicSummaryCache.hansardRecordId, topicSummaryCache.topicName],
+        set: {
+          summary: data.summary,
+          keyPoints: data.keyPoints,
+          speakers: data.speakers,
+          quotes: data.quotes,
+        },
+      })
       .returning();
     return result[0];
   }

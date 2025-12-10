@@ -3907,7 +3907,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
-  // Get topic-specific summary
+  // Get topic-specific summary with caching
   app.post("/api/hansard/:hansardId/topic-summary", mutationRateLimit, async (req, res) => {
     try {
       const { hansardId } = req.params;
@@ -3917,35 +3917,47 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         return res.status(400).json({ error: "Topic name is required" });
       }
 
+      // Check cache first
+      const cached = await storage.getTopicSummaryCache(hansardId, topicName);
+      if (cached) {
+        console.log(`[AI Topic Summary] Cache hit for topic: ${topicName}`);
+        return res.json({
+          summary: cached.summary,
+          keyPoints: cached.keyPoints,
+          speakers: cached.speakers,
+          quotes: cached.quotes,
+          cached: true,
+        });
+      }
+
       const hansard = await storage.getHansardById(hansardId);
 
       if (!hansard) {
         return res.status(404).json({ error: "Hansard record not found" });
       }
 
-      // Generate topic summary using DeepSeek (or Gemini as fallback)
+      // Generate topic summary using AI service (Gemini preferred, OpenRouter fallback)
       const deepseek = await import("./services/deepseek.js");
-      const gemini = await import("./services/gemini.js");
 
-      const useDeepSeek = deepseek.isDeepSeekConfigured();
-
-      if (!useDeepSeek && !process.env.GEMINI_API_KEY) {
-        throw new Error("No AI provider configured. Set OPENROUTER_API_KEY or GEMINI_API_KEY in .env file");
+      if (!deepseek.isDeepSeekConfigured()) {
+        throw new Error("No AI provider configured. Set GEMINI_API_KEY or OPENROUTER_API_KEY in .env file");
       }
 
-      console.log(`[AI Topic Summary] Using ${useDeepSeek ? "DeepSeek" : "Gemini"} for topic: ${topicName}`);
-
-      // For now, use DeepSeek's generateTopicSummary
-      // TODO: Add Gemini fallback if needed
-      if (!useDeepSeek) {
-        return res.status(503).json({
-          error: "Topic summary requires OpenRouter. Please configure OPENROUTER_API_KEY"
-        });
-      }
+      console.log(`[AI Topic Summary] Cache miss, generating summary for topic: ${topicName}`);
 
       const result = await deepseek.generateTopicSummary(topicName, hansard.transcript);
 
-      res.json(result);
+      // Save to cache
+      await storage.saveTopicSummaryCache({
+        hansardRecordId: hansardId,
+        topicName,
+        summary: result.summary,
+        keyPoints: result.keyPoints || [],
+        speakers: result.speakers || [],
+        quotes: result.quotes || [],
+      });
+
+      res.json({ ...result, cached: false });
     } catch (error) {
       console.error("Error in topic summary:", error);
       res.status(500).json({ error: "Failed to generate topic summary", details: String(error) });
