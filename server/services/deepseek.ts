@@ -370,7 +370,16 @@ Transcript:
 ${transcript.substring(0, 50000)}`;
 
     const result = await callAI(systemPrompt, userPrompt);
-    return result;
+
+    // Validate and sanitize the response
+    const sanitized = {
+      summary: typeof result.summary === 'string' ? result.summary : '',
+      keyPoints: Array.isArray(result.keyPoints) ? result.keyPoints.filter((p: any) => typeof p === 'string') : [],
+      speakers: Array.isArray(result.speakers) ? result.speakers.filter((s: any) => typeof s === 'string') : [],
+      quotes: Array.isArray(result.quotes) ? result.quotes.filter((q: any) => typeof q === 'string') : [],
+    };
+
+    return sanitized;
   } catch (error) {
     console.error("[AI] Error in topic summary:", error);
     throw new Error(`Failed to generate topic summary: ${error}`);
