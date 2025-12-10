@@ -782,6 +782,33 @@ export const insertBillPdfFileSchema = createInsertSchema(billPdfFiles).omit({
 export type InsertBillPdfFile = z.infer<typeof insertBillPdfFileSchema>;
 export type BillPdfFile = typeof billPdfFiles.$inferSelect;
 
+// Bill Impacts table for storing AI-generated impact analysis
+export const billImpacts = pgTable("bill_impacts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  billId: varchar("bill_id").notNull().references(() => bills.id, { onDelete: "cascade" }),
+  summary: text("summary").notNull(),
+  affectedGroups: text("affected_groups").array(),
+  impactType: text("impact_type"), // 'positive', 'negative', 'mixed', 'neutral'
+  keyPoints: text("key_points").array(),
+  generatedBy: text("generated_by").default("ai"),
+  generatedAt: timestamp("generated_at").notNull().default(sql`NOW()`),
+  createdAt: timestamp("created_at").notNull().default(sql`NOW()`),
+  updatedAt: timestamp("updated_at").notNull().default(sql`NOW()`),
+});
+
+export const insertBillImpactSchema = createInsertSchema(billImpacts).omit({
+  id: true,
+  generatedAt: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const updateBillImpactSchema = insertBillImpactSchema.partial();
+
+export type InsertBillImpact = z.infer<typeof insertBillImpactSchema>;
+export type UpdateBillImpact = z.infer<typeof updateBillImpactSchema>;
+export type BillImpact = typeof billImpacts.$inferSelect;
+
 // ========== PARLIAMENTARY ORAL ANSWERS ==========
 // Parliamentary oral answers table for storing scraped jawapan lisan from Parliament website
 export const parliamentaryOralAnswers = pgTable("parliamentary_oral_answers", {

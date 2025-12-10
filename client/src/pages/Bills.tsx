@@ -1,7 +1,8 @@
 /**
  * Copyright by Calmic Sdn Bhd
  *
- * Page to display Malaysian Parliament bills scraped live from parlimen.gov.my
+ * Page to display Malaysian Parliament bills with impact analysis for Malaysians
+ * Styled to match the Hansard page format
  */
 
 import { useState } from "react";
@@ -9,19 +10,30 @@ import { useQuery } from "@tanstack/react-query";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { Header } from "@/components/Header";
 import { SearchDialog } from "@/components/SearchDialog";
+import { BillImpactDialog } from "@/components/BillImpactDialog";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { FileText, Search, ExternalLink, RefreshCw, AlertCircle, Download, File } from "lucide-react";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { 
+  FileText, 
+  Search, 
+  ExternalLink, 
+  RefreshCw, 
+  AlertCircle, 
+  Download, 
+  Calendar,
+  Sparkles,
+  CheckCircle,
+  Filter,
+} from "lucide-react";
 import { format } from "date-fns";
 
 interface Bill {
@@ -32,6 +44,10 @@ interface Bill {
   status: string;
   fullTextUrl?: string | null;
   hasPdf?: boolean;
+  impact?: {
+    summary?: string;
+    impactType?: string;
+  } | null;
 }
 
 interface BillsResponse {
@@ -46,13 +62,16 @@ export default function Bills() {
   const { t } = useLanguage();
   const [searchQuery, setSearchQuery] = useState("");
   const [searchDialogOpen, setSearchDialogOpen] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
 
   const { data: billsData, isLoading, error, refetch, isFetching } = useQuery<BillsResponse>({
     queryKey: ["/api/bills"],
-    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+    staleTime: 5 * 60 * 1000,
     refetchOnWindowFocus: false,
-    retry: 2, // Retry failed requests twice before giving up
-    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000), // Exponential backoff
+    retry: 2,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000),
   });
 
   const bills = billsData?.bills || [];
@@ -61,15 +80,36 @@ export default function Bills() {
   const scrapeError = billsData?.error;
   const fromDatabase = billsData?.fromDatabase;
 
-  // Filter bills based on search query
   const filteredBills = bills.filter((bill) => {
-    if (!searchQuery) return true;
-    const query = searchQuery.toLowerCase();
-    return (
-      bill.title.toLowerCase().includes(query) ||
-      (bill.billNumber && bill.billNumber.toLowerCase().includes(query)) ||
-      bill.status.toLowerCase().includes(query)
-    );
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      const matchesSearch = 
+        bill.title.toLowerCase().includes(query) ||
+        (bill.billNumber && bill.billNumber.toLowerCase().includes(query)) ||
+        bill.status.toLowerCase().includes(query);
+      if (!matchesSearch) return false;
+    }
+    
+    if (statusFilter !== "all") {
+      const statusLower = bill.status.toLowerCase();
+      if (statusFilter === "passed" && !statusLower.includes("passed") && !statusLower.includes("lulus")) return false;
+      if (statusFilter === "pending" && !statusLower.includes("pending") && !statusLower.includes("menunggu") && !statusLower.includes("bacaan")) return false;
+      if (statusFilter === "rejected" && !statusLower.includes("rejected") && !statusLower.includes("ditolak")) return false;
+    }
+    
+    if (startDate || endDate) {
+      const introDate = bill.introductionDate;
+      if (introDate) {
+        const dateMatch = introDate.match(/(\d{2})\/(\d{2})\/(\d{4})/);
+        if (dateMatch) {
+          const billDate = new Date(`${dateMatch[3]}-${dateMatch[2]}-${dateMatch[1]}`);
+          if (startDate && billDate < new Date(startDate)) return false;
+          if (endDate && billDate > new Date(endDate)) return false;
+        }
+      }
+    }
+    
+    return true;
   });
 
   const getStatusColor = (status: string) => {
@@ -77,7 +117,7 @@ export default function Bills() {
     if (statusLower.includes("passed") || statusLower.includes("lulus")) {
       return "bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20";
     }
-    if (statusLower.includes("pending") || statusLower.includes("menunggu")) {
+    if (statusLower.includes("pending") || statusLower.includes("menunggu") || statusLower.includes("bacaan")) {
       return "bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 border-yellow-500/20";
     }
     if (statusLower.includes("rejected") || statusLower.includes("ditolak")) {
@@ -89,23 +129,26 @@ export default function Bills() {
     return "bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20";
   };
 
+  const clearFilters = () => {
+    setSearchQuery("");
+    setStatusFilter("all");
+    setStartDate("");
+    setEndDate("");
+  };
+
   return (
-    <div className="min-h-screen bg-background">
+    <>
       <Header onSearchClick={() => setSearchDialogOpen(true)} />
+      <SearchDialog open={searchDialogOpen} onOpenChange={setSearchDialogOpen} />
 
-      <SearchDialog
-        open={searchDialogOpen}
-        onOpenChange={setSearchDialogOpen}
-      />
-
-      <main className="container mx-auto px-4 py-8 max-w-7xl">
-        <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+      <div className="container mx-auto p-6 space-y-6">
+        <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold mb-2">
-              <FileText className="inline-block w-8 h-8 mr-2 mb-1" />
+            <h1 className="text-3xl font-bold flex items-center gap-2">
+              <FileText className="w-8 h-8" />
               {t('nav.bills')} - Dewan Rakyat
             </h1>
-            <p className="text-muted-foreground">
+            <p className="text-muted-foreground mt-2">
               Live data from the Malaysian Parliament - Rang Undang-Undang Dewan Rakyat
             </p>
           </div>
@@ -114,6 +157,7 @@ export default function Bills() {
               variant="outline"
               onClick={() => refetch()}
               disabled={isFetching}
+              data-testid="button-refresh-bills"
             >
               <RefreshCw className={`w-4 h-4 mr-2 ${isFetching ? 'animate-spin' : ''}`} />
               Refresh
@@ -123,7 +167,7 @@ export default function Bills() {
               target="_blank" 
               rel="noopener noreferrer"
             >
-              <Button variant="outline">
+              <Button variant="outline" data-testid="button-view-source">
                 <ExternalLink className="w-4 h-4 mr-2" />
                 View Official Source
               </Button>
@@ -131,9 +175,8 @@ export default function Bills() {
           </div>
         </div>
 
-        {/* Error Alert */}
         {(error || scrapeError) && (
-          <Card className="mb-6 border-yellow-500/50 bg-yellow-500/5">
+          <Card className="border-yellow-500/50 bg-yellow-500/5">
             <CardContent className="pt-6">
               <div className="flex items-start gap-3">
                 <AlertCircle className="w-5 h-5 text-yellow-600 mt-0.5" />
@@ -144,172 +187,205 @@ export default function Bills() {
                   <p className="text-sm text-muted-foreground mt-1">
                     {scrapeError || (error as Error)?.message || "Please try again later or visit the official source directly."}
                   </p>
-                  <a 
-                    href="https://www.parlimen.gov.my/bills-dewan-rakyat.html?uweb=dr&" 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="text-sm text-primary hover:underline mt-2 inline-block"
-                  >
-                    Visit parlimen.gov.my directly →
-                  </a>
                 </div>
               </div>
             </CardContent>
           </Card>
         )}
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardDescription>Total Bills</CardDescription>
-              <CardTitle className="text-3xl">{bills.length}</CardTitle>
-            </CardHeader>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardDescription>Last Updated</CardDescription>
-              <CardTitle className="text-lg">
-                {scrapedAt ? format(new Date(scrapedAt), 'dd MMM yyyy, HH:mm') : '-'}
-              </CardTitle>
-            </CardHeader>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardDescription>Showing</CardDescription>
-              <CardTitle className="text-3xl">{filteredBills.length}</CardTitle>
-            </CardHeader>
-          </Card>
-        </div>
-
-        {/* Search */}
-        <Card className="mb-6">
-          <CardContent className="pt-6">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                placeholder="Search bills by title, number, or status..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9"
-              />
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Search className="w-5 h-5" />
+              Search & Filter Bills
+            </CardTitle>
+            <CardDescription>
+              Search by title, bill number, or filter by status
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex gap-4 flex-wrap">
+              <div className="flex-1 min-w-[200px]">
+                <Input
+                  data-testid="input-bill-search"
+                  placeholder="Search bills by title or number..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </div>
+              <div className="flex gap-2 flex-wrap">
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="w-[150px]" data-testid="select-status-filter">
+                    <Filter className="w-4 h-4 mr-2" />
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Status</SelectItem>
+                    <SelectItem value="passed">Passed</SelectItem>
+                    <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="rejected">Rejected</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Input
+                  data-testid="input-start-date"
+                  type="date"
+                  placeholder="Start Date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="w-40"
+                />
+                <Input
+                  data-testid="input-end-date"
+                  type="date"
+                  placeholder="End Date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="w-40"
+                />
+              </div>
+              <Button
+                data-testid="button-clear-filters"
+                variant="outline"
+                onClick={clearFilters}
+              >
+                Clear
+              </Button>
             </div>
           </CardContent>
         </Card>
 
-        {/* Results Count */}
-        <div className="mb-4 text-sm text-muted-foreground">
-          Showing {filteredBills.length} bill{filteredBills.length !== 1 ? 's' : ''}
-          {searchQuery && ` matching "${searchQuery}"`}
+        <div className="space-y-4">
+          {!isLoading && (
+            <div className="flex items-center justify-between gap-4">
+              <h2 className="text-xl font-semibold">
+                {filteredBills.length} Bills Found
+              </h2>
+              {scrapedAt && (
+                <p className="text-sm text-muted-foreground">
+                  Last updated: {format(new Date(scrapedAt), 'dd MMM yyyy, HH:mm')}
+                  {fromDatabase && ' (cached)'}
+                </p>
+              )}
+            </div>
+          )}
+
+          {isLoading ? (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-4 text-muted-foreground" />
+                <p className="text-muted-foreground">Loading bills from Parliament website...</p>
+              </CardContent>
+            </Card>
+          ) : filteredBills.length === 0 ? (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <FileText className="w-12 h-12 mx-auto mb-4 opacity-50 text-muted-foreground" />
+                <h3 className="font-semibold text-lg mb-2">No Bills Found</h3>
+                <p className="text-muted-foreground mb-4">
+                  {searchQuery || statusFilter !== "all"
+                    ? 'Try adjusting your search or filters.'
+                    : 'No bills data available.'}
+                </p>
+                {!searchQuery && statusFilter === "all" && (
+                  <a 
+                    href="https://www.parlimen.gov.my/bills-dewan-rakyat.html?uweb=dr&" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-primary hover:underline"
+                  >
+                    View bills on the official Parliament website
+                  </a>
+                )}
+              </CardContent>
+            </Card>
+          ) : (
+            filteredBills.map((bill) => (
+              <Card key={bill.id} data-testid={`card-bill-${bill.id}`} className="hover-elevate">
+                <CardHeader>
+                  <div className="flex justify-between items-start gap-4">
+                    <div className="flex-1 min-w-0">
+                      <CardTitle className="flex items-center gap-2 text-lg">
+                        <FileText className="w-5 h-5 shrink-0" />
+                        <span className="font-mono">{bill.billNumber || 'Bill'}</span>
+                      </CardTitle>
+                      <CardDescription className="mt-2 line-clamp-2">
+                        {bill.title}
+                      </CardDescription>
+                      <div className="flex items-center gap-4 mt-3 flex-wrap">
+                        {bill.introductionDate && (
+                          <span className="flex items-center gap-1 text-sm text-muted-foreground">
+                            <Calendar className="w-4 h-4" />
+                            {bill.introductionDate}
+                          </span>
+                        )}
+                        <Badge variant="outline" className={getStatusColor(bill.status)}>
+                          {bill.status}
+                        </Badge>
+                      </div>
+                    </div>
+                    <div className="flex gap-2 shrink-0">
+                      {bill.hasPdf && (
+                        <Button
+                          data-testid={`button-pdf-${bill.id}`}
+                          variant="outline"
+                          size="sm"
+                          asChild
+                        >
+                          <a href={`/api/bills/${bill.id}/pdf`} target="_blank" rel="noopener noreferrer">
+                            <Download className="w-4 h-4 mr-2" />
+                            PDF
+                          </a>
+                        </Button>
+                      )}
+                      {bill.fullTextUrl && (
+                        <Button
+                          data-testid={`button-external-${bill.id}`}
+                          variant="outline"
+                          size="sm"
+                          asChild
+                        >
+                          <a href={bill.fullTextUrl} target="_blank" rel="noopener noreferrer">
+                            <ExternalLink className="w-4 h-4 mr-2" />
+                            Source
+                          </a>
+                        </Button>
+                      )}
+                      <BillImpactDialog
+                        bill={bill as any}
+                        trigger={
+                          <Button
+                            data-testid={`button-impact-${bill.id}`}
+                            variant={bill.impact ? "default" : "outline"}
+                            size="sm"
+                            className="gap-2"
+                          >
+                            <Sparkles className="w-4 h-4" />
+                            Impact
+                            {bill.impact && (
+                              <CheckCircle className="w-3.5 h-3.5 text-green-300" />
+                            )}
+                          </Button>
+                        }
+                      />
+                    </div>
+                  </div>
+                </CardHeader>
+                {bill.impact?.summary && (
+                  <CardContent className="pt-0">
+                    <div className="bg-muted/50 rounded-md p-3 mt-2">
+                      <p className="text-sm text-muted-foreground flex items-start gap-2">
+                        <Sparkles className="w-4 h-4 mt-0.5 shrink-0" />
+                        <span className="line-clamp-2">{bill.impact.summary}</span>
+                      </p>
+                    </div>
+                  </CardContent>
+                )}
+              </Card>
+            ))
+          )}
         </div>
 
-        {/* Bills Table */}
-        <Card>
-          <CardContent className="p-0">
-            {isLoading ? (
-              <div className="p-8 text-center text-muted-foreground">
-                <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-4" />
-                Loading bills from Parliament website...
-              </div>
-            ) : filteredBills.length === 0 ? (
-              <div className="p-8 text-center text-muted-foreground">
-                {searchQuery ? (
-                  'No bills found matching your search.'
-                ) : bills.length === 0 ? (
-                  <div>
-                    <p className="mb-4">No bills data available.</p>
-                    <a 
-                      href="https://www.parlimen.gov.my/bills-dewan-rakyat.html?uweb=dr&" 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="text-primary hover:underline"
-                    >
-                      View bills on the official Parliament website →
-                    </a>
-                  </div>
-                ) : (
-                  'No bills available.'
-                )}
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-[120px]">Bill No.</TableHead>
-                      <TableHead className="min-w-[300px]">Title</TableHead>
-                      <TableHead className="w-[150px]">Introduction Date</TableHead>
-                      <TableHead className="w-[120px]">Status</TableHead>
-                      <TableHead className="text-center w-[150px]">Documents</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredBills.map((bill) => (
-                      <TableRow key={bill.id} className="hover:bg-muted/50">
-                        <TableCell className="font-mono text-sm">
-                          {bill.billNumber || '-'}
-                        </TableCell>
-                        <TableCell>
-                          <p className="font-medium">{bill.title}</p>
-                        </TableCell>
-                        <TableCell className="text-sm">
-                          {bill.introductionDate || '-'}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className={getStatusColor(bill.status)}>
-                            {bill.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <div className="flex justify-center gap-1">
-                            {bill.hasPdf && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                asChild
-                                title="View stored PDF"
-                              >
-                                <a
-                                  href={`/api/bills/${bill.id}/pdf`}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                >
-                                  <File className="w-4 h-4 text-green-600" />
-                                </a>
-                              </Button>
-                            )}
-                            {bill.fullTextUrl && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                asChild
-                                title="View on Parliament website"
-                              >
-                                <a
-                                  href={bill.fullTextUrl}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                >
-                                  <ExternalLink className="w-4 h-4" />
-                                </a>
-                              </Button>
-                            )}
-                            {!bill.hasPdf && !bill.fullTextUrl && (
-                              <span className="text-muted-foreground">-</span>
-                            )}
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Source attribution */}
-        <div className="mt-6 text-center text-sm text-muted-foreground">
+        <div className="text-center text-sm text-muted-foreground pt-4">
           <p>
             Data sourced from{' '}
             <a 
@@ -323,7 +399,7 @@ export default function Bills() {
             {fromDatabase && ' (stored in database)'}
           </p>
         </div>
-      </main>
-    </div>
+      </div>
+    </>
   );
 }

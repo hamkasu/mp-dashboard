@@ -31,7 +31,9 @@ import {
   insertSpeakerMappingSchema,
   parliamentaryQuestions,
   legislativeProposals,
-  blogPosts
+  blogPosts,
+  bills,
+  billImpacts,
 } from "@shared/schema";
 import crypto from "crypto";
 import { HansardScraper, ConstituencyAttendanceCounts } from "./hansard-scraper";
@@ -6920,6 +6922,127 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     } catch (error: any) {
       console.error("Error getting PDF:", error);
       res.status(500).json({ error: "Failed to get PDF", details: error.message });
+    }
+  });
+
+  // Get bill impact analysis
+  app.get("/api/bills/:id/impact", async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      const impact = await db.query.billImpacts.findFirst({
+        where: eq(billImpacts.billId, id),
+        orderBy: (billImpacts, { desc }) => [desc(billImpacts.generatedAt)],
+      });
+      
+      res.json(impact || null);
+    } catch (error: any) {
+      console.error("Error getting bill impact:", error);
+      res.status(500).json({ error: "Failed to get bill impact", details: error.message });
+    }
+  });
+
+  // Generate bill impact analysis using AI
+  app.post("/api/bills/:id/generate-impact", async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      // Get the bill details
+      const bill = await db.query.bills.findFirst({
+        where: eq(bills.id, id),
+      });
+      
+      if (!bill) {
+        return res.status(404).json({ error: "Bill not found" });
+      }
+      
+      // Generate impact analysis using Gemini
+      const { GoogleGenAI } = await import("@google/genai");
+      
+      const genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || process.env.AI_INTEGRATIONS_GOOGLE_API_KEY || "" });
+      const prompt = `Analyze this Malaysian Parliament bill and explain its impact on Malaysian citizens in a clear, accessible way.
+
+Bill Number: ${bill.billNumber || "Unknown"}
+Title: ${bill.title}
+Status: ${bill.status}
+
+Please provide:
+1. A brief summary (2-3 sentences) explaining what this bill means for ordinary Malaysians
+2. The overall impact type: "positive", "negative", "mixed", or "neutral"
+3. 3-5 key points about how this bill affects citizens
+4. Which groups of Malaysians are most affected (e.g., workers, businesses, consumers, students, etc.)
+
+Respond in JSON format:
+{
+  "summary": "Brief explanation of impact...",
+  "impactType": "positive|negative|mixed|neutral",
+  "keyPoints": ["Point 1", "Point 2", "Point 3"],
+  "affectedGroups": ["Group 1", "Group 2"]
+}`;
+
+      const result = await genAI.models.generateContent({
+        model: "gemini-2.0-flash",
+        contents: prompt,
+      });
+      const responseText = result.text || "";
+      
+      // Parse the JSON response
+      let impactData;
+      try {
+        // Extract JSON from potential markdown code block
+        const jsonMatch = responseText.match(/```json\n?([\s\S]*?)\n?```/) || 
+                          responseText.match(/\{[\s\S]*\}/);
+        const jsonStr = jsonMatch ? (jsonMatch[1] || jsonMatch[0]) : responseText;
+        impactData = JSON.parse(jsonStr);
+      } catch (parseError) {
+        console.error("Failed to parse AI response:", responseText);
+        impactData = {
+          summary: "Unable to generate detailed impact analysis at this time.",
+          impactType: "neutral",
+          keyPoints: ["This bill is currently being reviewed."],
+          affectedGroups: ["All Malaysians"],
+        };
+      }
+      
+      // Save or update the impact in database
+      const existingImpact = await db.query.billImpacts.findFirst({
+        where: eq(billImpacts.billId, id),
+      });
+      
+      if (existingImpact) {
+        // Update existing
+        await db.update(billImpacts)
+          .set({
+            summary: impactData.summary,
+            impactType: impactData.impactType,
+            keyPoints: impactData.keyPoints,
+            affectedGroups: impactData.affectedGroups,
+            generatedAt: new Date(),
+            updatedAt: new Date(),
+          })
+          .where(eq(billImpacts.id, existingImpact.id));
+      } else {
+        // Create new
+        await db.insert(billImpacts).values({
+          billId: id,
+          summary: impactData.summary,
+          impactType: impactData.impactType,
+          keyPoints: impactData.keyPoints,
+          affectedGroups: impactData.affectedGroups,
+          generatedBy: "ai",
+        });
+      }
+      
+      // Return the newly generated impact
+      const newImpact = await db.query.billImpacts.findFirst({
+        where: eq(billImpacts.billId, id),
+        orderBy: (billImpacts, { desc }) => [desc(billImpacts.generatedAt)],
+      });
+      
+      res.json(newImpact);
+    } catch (error: any) {
+      console.error("Error generating bill impact:", error);
+      res.status(500).json({ error: "Failed to generate bill impact", details: error.message });
     }
   });
 
