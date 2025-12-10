@@ -141,6 +141,7 @@ export interface IStorage {
   saveSentimentAnalysis(data: any): Promise<any>;
   getSpeakerAnalysis(hansardRecordId: string): Promise<any | undefined>;
   saveSpeakerAnalysis(data: any): Promise<any>;
+  deleteSpeakerAnalysis(hansardRecordId: string): Promise<void>;
   getDetailedSummary(hansardRecordId: string, language: string): Promise<any | undefined>;
   saveDetailedSummary(data: any): Promise<any>;
   getHansardRecordsMissingSummaries(language?: string): Promise<{ id: string; sessionNumber: string; sessionDate: Date | null }[]>;
@@ -1669,6 +1670,10 @@ export class MemStorage implements IStorage {
     return data;
   }
 
+  async deleteSpeakerAnalysis(hansardRecordId: string): Promise<void> {
+    // No-op for in-memory storage
+  }
+
   async getDetailedSummary(hansardRecordId: string, language: string): Promise<any | undefined> {
     return undefined;
   }
@@ -2894,6 +2899,11 @@ export class DbStorage implements IStorage {
     const { hansardSpeakerAnalysis } = await import("@shared/schema");
     const result = await db.insert(hansardSpeakerAnalysis).values(data).returning();
     return result[0];
+  }
+
+  async deleteSpeakerAnalysis(hansardRecordId: string): Promise<void> {
+    const { hansardSpeakerAnalysis } = await import("@shared/schema");
+    await db.delete(hansardSpeakerAnalysis).where(eq(hansardSpeakerAnalysis.hansardRecordId, hansardRecordId));
   }
 
   async getDetailedSummary(hansardRecordId: string, language: string): Promise<any | undefined> {

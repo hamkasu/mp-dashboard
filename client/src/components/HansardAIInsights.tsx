@@ -33,6 +33,7 @@ import {
   TrendingUp,
   Send,
   AlertCircle,
+  RefreshCw,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { HansardRecordWithPdf } from "@shared/schema";
@@ -165,7 +166,7 @@ export function HansardAIInsights({ hansardRecord, trigger }: HansardAIInsightsP
   });
 
   const speakersMutation = useMutation({
-    mutationFn: () => apiRequest("POST", `/api/analyze/speakers/${hansardRecord.id}`),
+    mutationFn: () => apiRequest("POST", `/api/analyze/speakers/${hansardRecord.id}`, { force: true }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/analyze/${hansardRecord.id}`] });
       toast({
@@ -534,9 +535,25 @@ export function HansardAIInsights({ hansardRecord, trigger }: HansardAIInsightsP
               </Card>
             ) : (
               <div className="space-y-4">
-                <h3 className="text-lg font-semibold">
-                  {allAnalysis.speakers.speakerInsights.length} Speakers Analyzed
-                </h3>
+                <div className="flex items-center justify-between gap-4">
+                  <h3 className="text-lg font-semibold">
+                    {allAnalysis.speakers.speakerInsights.length} Speakers Analyzed
+                  </h3>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => speakersMutation.mutate()}
+                    disabled={speakersMutation.isPending}
+                    data-testid="button-reanalyze-speakers"
+                  >
+                    {speakersMutation.isPending ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <RefreshCw className="mr-2 h-4 w-4" />
+                    )}
+                    Re-analyze
+                  </Button>
+                </div>
                 <ScrollArea className="h-[500px] pr-4">
                   {allAnalysis.speakers.speakerInsights.map((speaker, idx) => (
                     <Card key={idx} className="mb-4" data-testid={`card-speaker-${idx}`}>

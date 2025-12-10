@@ -3751,16 +3751,23 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   app.post("/api/analyze/speakers/:hansardId", mutationRateLimit, async (req, res) => {
     try {
       const { hansardId } = req.params;
+      const { force = false } = req.body || {};
       const hansard = await storage.getHansardById(hansardId);
 
       if (!hansard) {
         return res.status(404).json({ error: "Hansard record not found" });
       }
 
-      // Check if analysis already exists
-      const existing = await storage.getSpeakerAnalysis(hansardId);
-      if (existing) {
-        return res.json(existing);
+      // Check if analysis already exists (unless force re-analysis)
+      if (!force) {
+        const existing = await storage.getSpeakerAnalysis(hansardId);
+        if (existing) {
+          return res.json(existing);
+        }
+      } else {
+        // Delete existing analysis if force is true
+        await storage.deleteSpeakerAnalysis(hansardId);
+        console.log(`[AI Speakers] Force re-analysis requested for ${hansardId}, deleted existing data`);
       }
 
       // Analyze speakers using DeepSeek (or Gemini as fallback)
