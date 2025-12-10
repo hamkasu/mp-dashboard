@@ -252,7 +252,7 @@ export function HansardAIInsights({ hansardRecord, trigger }: HansardAIInsightsP
             AI Analysis - {hansardRecord.sessionNumber}
           </DialogTitle>
           <DialogDescription>
-            Powered by Google Gemini AI - Comprehensive analysis of parliamentary debates
+            Powered by DeepSeek AI (with Gemini fallback) - Comprehensive analysis of parliamentary debates
           </DialogDescription>
         </DialogHeader>
 
