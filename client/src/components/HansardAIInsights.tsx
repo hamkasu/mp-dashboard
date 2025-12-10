@@ -228,7 +228,8 @@ export function HansardAIInsights({ hansardRecord, trigger }: HansardAIInsightsP
       const response = await apiRequest("POST", `/api/hansard/${hansardRecord.id}/topic-summary`, {
         topicName,
       });
-      return response as { summary: string; keyPoints: string[]; speakers: string[]; quotes: string[] };
+      const data = await response.json();
+      return data as { summary: string; keyPoints: string[]; speakers: string[]; quotes: string[] };
     },
     onSuccess: (data) => {
       setTopicSummary(data);
@@ -818,7 +819,7 @@ export function HansardAIInsights({ hansardRecord, trigger }: HansardAIInsightsP
                   <CardTitle className="text-base">Summary</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-sm">{topicSummary.summary}</p>
+                  <p className="text-sm leading-relaxed whitespace-pre-wrap">{topicSummary.summary || "No summary available"}</p>
                 </CardContent>
               </Card>
 
@@ -832,7 +833,7 @@ export function HansardAIInsights({ hansardRecord, trigger }: HansardAIInsightsP
                     <ul className="space-y-2">
                       {topicSummary.keyPoints.map((point, idx) => (
                         <li key={idx} className="flex gap-2 text-sm">
-                          <span className="text-primary">•</span>
+                          <span className="text-primary flex-shrink-0">•</span>
                           <span>{point}</span>
                         </li>
                       ))}
