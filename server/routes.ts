@@ -3920,7 +3920,12 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       // Check cache first
       const cached = await storage.getTopicSummaryCache(hansardId, topicName);
       if (cached) {
-        console.log(`[AI Topic Summary] Cache hit for topic: ${topicName}`);
+        console.log(`[AI Topic Summary] Cache hit for topic: ${topicName}`, JSON.stringify({
+          summaryLength: cached.summary?.length || 0,
+          keyPointsCount: cached.keyPoints?.length || 0,
+          speakersCount: cached.speakers?.length || 0,
+          quotesCount: cached.quotes?.length || 0,
+        }));
         return res.json({
           summary: cached.summary,
           keyPoints: cached.keyPoints,
@@ -3946,6 +3951,14 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       console.log(`[AI Topic Summary] Cache miss, generating summary for topic: ${topicName}`);
 
       const result = await deepseek.generateTopicSummary(topicName, hansard.transcript);
+
+      // Log the AI result for debugging
+      console.log(`[AI Topic Summary] Generated result:`, JSON.stringify({
+        summary: result.summary?.substring(0, 100) + '...',
+        keyPointsCount: result.keyPoints?.length || 0,
+        speakersCount: result.speakers?.length || 0,
+        quotesCount: result.quotes?.length || 0,
+      }));
 
       // Save to cache
       await storage.saveTopicSummaryCache({

@@ -247,7 +247,7 @@ You must respond with valid JSON matching this structure:
 Speakers involved: ${speakerNames.join(', ')}
 
 Transcript:
-${transcript.substring(0, 50000)}`;
+${transcript.substring(0, 20000)}`;
 
     const result = await callAI(systemPrompt, userPrompt);
     return result.topics || [];
@@ -280,7 +280,7 @@ You must respond with valid JSON matching this structure:
 
     const userPrompt = `Analyze the sentiment of this parliamentary debate:
 
-${transcript.substring(0, 50000)}`;
+${transcript.substring(0, 20000)}`;
 
     const result = await callAI(systemPrompt, userPrompt);
     return result;
@@ -323,7 +323,7 @@ Speakers:
 ${speakerList}
 
 Transcript:
-${transcript.substring(0, 50000)}`;
+${transcript.substring(0, 20000)}`;
 
     const result = await callAI(systemPrompt, userPrompt);
     return result.speakers || [];
@@ -363,7 +363,7 @@ You must respond with valid JSON matching this structure:
 
     const userPrompt = `Provide a detailed summary of this parliamentary debate:
 
-${transcript.substring(0, 50000)}`;
+${transcript.substring(0, 20000)}`;
 
     const result = await callAI(systemPrompt, userPrompt);
     return result;
@@ -431,7 +431,7 @@ Analyze what was discussed about "${topicName}" in this parliamentary debate.
 Focus only on content related to this specific topic.
 
 Transcript:
-${transcript.substring(0, 50000)}`;
+${transcript.substring(0, 20000)}`;
 
     const result = await callAI(systemPrompt, userPrompt);
 
