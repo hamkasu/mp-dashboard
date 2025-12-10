@@ -289,7 +289,7 @@ export function HansardAIInsights({ hansardRecord, trigger }: HansardAIInsightsP
             AI Analysis - {hansardRecord.sessionNumber}
           </DialogTitle>
           <DialogDescription>
-            Powered by DeepSeek Chat V3 via OpenRouter (FREE!) - Comprehensive analysis of parliamentary debates
+            Powered by DeepSeek V3.1 via OpenRouter (FREE!) - Comprehensive analysis of parliamentary debates
           </DialogDescription>
         </DialogHeader>
 

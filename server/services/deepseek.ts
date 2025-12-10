@@ -6,9 +6,9 @@
 
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 const DEEPSEEK_BASE_URL = "https://openrouter.ai/api/v1";
-// Using DeepSeek Chat V3 - FREE with 164K context, excellent for document analysis
+// Using DeepSeek V3.1 - FREE with 128K context, excellent for document analysis
 // Note: Free tier requires data training consent in OpenRouter settings. Add credits at https://openrouter.ai/credits for unlimited access
-const DEEPSEEK_MODEL = "deepseek/deepseek-chat-v3-0324:free";
+const DEEPSEEK_MODEL = "deepseek/deepseek-chat-v3.1:free";
 
 export interface TopicAnalysisResult {
   topic: string;
