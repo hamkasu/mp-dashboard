@@ -3926,13 +3926,24 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
           speakersCount: cached.speakers?.length || 0,
           quotesCount: cached.quotes?.length || 0,
         }));
-        return res.json({
+
+        const response = {
           summary: cached.summary,
           keyPoints: cached.keyPoints,
           speakers: cached.speakers,
           quotes: cached.quotes,
           cached: true,
-        });
+        };
+
+        // Debug: Log the actual response being sent
+        console.log(`[AI Topic Summary] Sending cached response:`, JSON.stringify({
+          summaryPreview: response.summary?.substring(0, 50),
+          keyPoints: response.keyPoints,
+          speakers: response.speakers,
+          quotes: response.quotes,
+        }));
+
+        return res.json(response);
       }
 
       const hansard = await storage.getHansardById(hansardId);
