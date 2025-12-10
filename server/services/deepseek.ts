@@ -31,15 +31,6 @@ const CLOUDFLARE_MODEL = "@cf/meta/llama-3.1-8b-instruct";
 let currentGeminiKeyIndex = 0;
 const geminiInstances: GoogleGenAI[] = GEMINI_API_KEYS.map(key => new GoogleGenAI({ apiKey: key }));
 
-function getNextGeminiInstance(): GoogleGenAI | null {
-  if (geminiInstances.length === 0) return null;
-  const keyIndex = currentGeminiKeyIndex;
-  const instance = geminiInstances[keyIndex];
-  console.log(`[AI] Using Gemini key ${keyIndex + 1}/${geminiInstances.length}`);
-  currentGeminiKeyIndex = (currentGeminiKeyIndex + 1) % geminiInstances.length;
-  return instance;
-}
-
 // AI Response Cache with LRU eviction
 interface CacheEntry {
   response: any;
@@ -147,6 +138,26 @@ async function sleep(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+function isRetryableError(error: any): { retryable: boolean; reason: string } {
+  const message = error.message || '';
+  const status = error.status;
+  
+  if (status === 429 || message.includes('429') || message.includes('rate limit')) {
+    return { retryable: true, reason: 'rate limited' };
+  }
+  if (status === 503 || message.includes('503') || message.includes('overloaded') || message.includes('UNAVAILABLE')) {
+    return { retryable: true, reason: 'overloaded' };
+  }
+  if (status === 502 || message.includes('502')) {
+    return { retryable: true, reason: 'bad gateway' };
+  }
+  if (status === 504 || message.includes('504') || message.includes('timeout')) {
+    return { retryable: true, reason: 'timeout' };
+  }
+  
+  return { retryable: false, reason: '' };
+}
+
 async function callWithRetry<T>(
   fn: () => Promise<T>,
   maxRetries: number = 3,
@@ -159,13 +170,13 @@ async function callWithRetry<T>(
       return await fn();
     } catch (error: any) {
       lastError = error;
-      const isRateLimit = error.message?.includes('429') || error.message?.includes('rate limit') || error.status === 429;
+      const { retryable, reason } = isRetryableError(error);
       
-      if (isRateLimit && attempt < maxRetries - 1) {
+      if (retryable && attempt < maxRetries - 1) {
         const delay = baseDelay * Math.pow(2, attempt);
-        console.log(`[AI] Rate limited, retrying in ${delay}ms (attempt ${attempt + 1}/${maxRetries})`);
+        console.log(`[AI] ${reason}, retrying in ${delay}ms (attempt ${attempt + 1}/${maxRetries})`);
         await sleep(delay);
-      } else if (!isRateLimit) {
+      } else if (!retryable) {
         throw error;
       }
     }
@@ -174,30 +185,62 @@ async function callWithRetry<T>(
   throw lastError;
 }
 
+async function callGeminiWithKeyRotation(
+  systemPrompt: string,
+  userPrompt: string
+): Promise<any> {
+  if (geminiInstances.length === 0) {
+    throw new Error("GEMINI_API_KEY not configured");
+  }
+
+  const keysToTry = geminiInstances.length;
+  let lastError: Error | null = null;
+
+  for (let keyAttempt = 0; keyAttempt < keysToTry; keyAttempt++) {
+    const keyIndex = currentGeminiKeyIndex;
+    const ai = geminiInstances[keyIndex];
+    console.log(`[AI] Using Gemini key ${keyIndex + 1}/${geminiInstances.length}`);
+    currentGeminiKeyIndex = (currentGeminiKeyIndex + 1) % geminiInstances.length;
+
+    try {
+      const response = await ai.models.generateContent({
+        model: "gemini-2.5-flash",
+        config: {
+          systemInstruction: systemPrompt,
+          responseMimeType: "application/json",
+        },
+        contents: userPrompt,
+      });
+
+      const content = response.text;
+      if (!content) {
+        throw new Error("No content in Gemini response");
+      }
+
+      return JSON.parse(content);
+    } catch (error: any) {
+      lastError = error;
+      const { retryable, reason } = isRetryableError(error);
+      
+      if (retryable && keyAttempt < keysToTry - 1) {
+        console.log(`[AI] Gemini key ${keyIndex + 1} ${reason}, trying next key...`);
+        await sleep(500); // Brief delay before trying next key
+        continue;
+      }
+      
+      // If not retryable or no more keys to try, throw the error
+      throw error;
+    }
+  }
+
+  throw lastError || new Error("All Gemini keys failed");
+}
+
 async function callGemini(
   systemPrompt: string,
   userPrompt: string
 ): Promise<any> {
-  const ai = getNextGeminiInstance();
-  if (!ai) {
-    throw new Error("GEMINI_API_KEY not configured");
-  }
-
-  const response = await ai.models.generateContent({
-    model: "gemini-2.5-flash",
-    config: {
-      systemInstruction: systemPrompt,
-      responseMimeType: "application/json",
-    },
-    contents: userPrompt,
-  });
-
-  const content = response.text;
-  if (!content) {
-    throw new Error("No content in Gemini response");
-  }
-
-  return JSON.parse(content);
+  return callGeminiWithKeyRotation(systemPrompt, userPrompt);
 }
 
 async function callOpenRouter(
