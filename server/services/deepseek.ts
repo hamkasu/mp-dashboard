@@ -6,9 +6,9 @@
 
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 const DEEPSEEK_BASE_URL = "https://openrouter.ai/api/v1";
-// Using Qwen 2.5 72B - FREE with better rate limits than Llama
-// Note: Free tier has rate limits. Add credits at https://openrouter.ai/credits for unlimited access
-const DEEPSEEK_MODEL = "qwen/qwen-2.5-72b-instruct:free";
+// Using DeepSeek Chat V3 - FREE with 164K context, excellent for document analysis
+// Note: Free tier requires data training consent in OpenRouter settings. Add credits at https://openrouter.ai/credits for unlimited access
+const DEEPSEEK_MODEL = "deepseek/deepseek-chat-v3-0324:free";
 
 export interface TopicAnalysisResult {
   topic: string;
