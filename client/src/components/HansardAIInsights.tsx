@@ -279,8 +279,9 @@ export function HansardAIInsights({ hansardRecord, trigger }: HansardAIInsightsP
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>{trigger}</DialogTrigger>
+    <>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogTrigger asChild>{trigger}</DialogTrigger>
       <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -789,8 +790,8 @@ export function HansardAIInsights({ hansardRecord, trigger }: HansardAIInsightsP
       </DialogContent>
     </Dialog>
 
-      {/* Topic Summary Modal */}
-      <Dialog open={!!selectedTopic} onOpenChange={() => setSelectedTopic(null)}>
+    {/* Topic Summary Modal */}
+    <Dialog open={!!selectedTopic} onOpenChange={() => setSelectedTopic(null)}>
         <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -887,5 +888,6 @@ export function HansardAIInsights({ hansardRecord, trigger }: HansardAIInsightsP
           )}
         </DialogContent>
       </Dialog>
+    </>
   );
 }
