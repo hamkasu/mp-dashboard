@@ -336,9 +336,9 @@ export function HansardAIInsights({ hansardRecord, trigger }: HansardAIInsightsP
                     <CardHeader className="pb-3">
                       <div className="flex items-start justify-between gap-4">
                         <CardTitle className="text-base">{topic.topic}</CardTitle>
-                        <Badge variant="secondary">{Math.round(topic.relevance * 100)}%</Badge>
+                        <Badge variant="secondary">{Math.round(topic.relevance)}%</Badge>
                       </div>
-                      <Progress value={topic.relevance * 100} className="h-2" />
+                      <Progress value={topic.relevance} className="h-2" />
                     </CardHeader>
                     <CardContent>
                       <div className="flex flex-wrap gap-2">
