@@ -1,20 +1,118 @@
 /**
  * AI Service for Hansard Analysis
- * Uses Google Gemini API for document analysis with retry logic
+ * Uses multiple AI providers with fallback, caching, and key rotation
  * Integration: javascript_gemini
  */
 
 import { GoogleGenAI } from "@google/genai";
+import crypto from "crypto";
 
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+// API Keys - Support multiple Gemini keys for rotation (comma-separated)
+const GEMINI_API_KEYS = (process.env.GEMINI_API_KEY || "").split(",").map(k => k.trim()).filter(Boolean);
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
+const TOGETHER_API_KEY = process.env.TOGETHER_API_KEY;
+const CLOUDFLARE_API_KEY = process.env.CLOUDFLARE_API_KEY;
+const CLOUDFLARE_ACCOUNT_ID = process.env.CLOUDFLARE_ACCOUNT_ID;
+
+// API Base URLs
 const OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1";
 const GROQ_BASE_URL = "https://api.groq.com/openai/v1";
-const AI_MODEL = "google/gemini-2.0-flash-exp:free";
-const GROQ_MODEL = "llama-3.3-70b-versatile"; // Free Groq model
+const TOGETHER_BASE_URL = "https://api.together.xyz/v1";
+const CLOUDFLARE_BASE_URL = "https://api.cloudflare.com/client/v4/accounts";
 
-const ai = GEMINI_API_KEY ? new GoogleGenAI({ apiKey: GEMINI_API_KEY }) : null;
+// Model configurations
+const AI_MODEL = "google/gemini-2.0-flash-exp:free";
+const GROQ_MODEL = "llama-3.3-70b-versatile";
+const TOGETHER_MODEL = "meta-llama/Llama-3.3-70B-Instruct-Turbo-Free";
+const CLOUDFLARE_MODEL = "@cf/meta/llama-3.1-8b-instruct";
+
+// Gemini key rotation state
+let currentGeminiKeyIndex = 0;
+const geminiInstances: GoogleGenAI[] = GEMINI_API_KEYS.map(key => new GoogleGenAI({ apiKey: key }));
+
+function getNextGeminiInstance(): GoogleGenAI | null {
+  if (geminiInstances.length === 0) return null;
+  const keyIndex = currentGeminiKeyIndex;
+  const instance = geminiInstances[keyIndex];
+  console.log(`[AI] Using Gemini key ${keyIndex + 1}/${geminiInstances.length}`);
+  currentGeminiKeyIndex = (currentGeminiKeyIndex + 1) % geminiInstances.length;
+  return instance;
+}
+
+// AI Response Cache with LRU eviction
+interface CacheEntry {
+  response: any;
+  createdAt: number;
+  lastAccessed: number;
+  ttl: number;
+}
+
+const aiCache = new Map<string, CacheEntry>();
+const DEFAULT_CACHE_TTL = 1000 * 60 * 60 * 24; // 24 hours
+const MAX_CACHE_SIZE = 1000;
+
+function generateCacheKey(systemPrompt: string, userPrompt: string): string {
+  const hash = crypto.createHash("sha256");
+  hash.update(systemPrompt + "||" + userPrompt);
+  return hash.digest("hex");
+}
+
+function getCachedResponse(cacheKey: string): any | null {
+  const entry = aiCache.get(cacheKey);
+  if (!entry) return null;
+  
+  if (Date.now() - entry.createdAt > entry.ttl) {
+    aiCache.delete(cacheKey);
+    return null;
+  }
+  
+  // Update last accessed time for LRU
+  entry.lastAccessed = Date.now();
+  
+  console.log(`[AI Cache] Hit for key ${cacheKey.substring(0, 8)}...`);
+  return entry.response;
+}
+
+function setCachedResponse(cacheKey: string, response: any, ttl: number = DEFAULT_CACHE_TTL): void {
+  // Evict least recently used entry if cache is full
+  if (aiCache.size >= MAX_CACHE_SIZE) {
+    let lruKey: string | null = null;
+    let lruTime = Infinity;
+    
+    const entries = Array.from(aiCache.entries());
+    for (let i = 0; i < entries.length; i++) {
+      const [key, entry] = entries[i];
+      if (entry.lastAccessed < lruTime) {
+        lruTime = entry.lastAccessed;
+        lruKey = key;
+      }
+    }
+    
+    if (lruKey) {
+      aiCache.delete(lruKey);
+      console.log(`[AI Cache] Evicted LRU entry ${lruKey.substring(0, 8)}...`);
+    }
+  }
+  
+  const now = Date.now();
+  aiCache.set(cacheKey, {
+    response,
+    createdAt: now,
+    lastAccessed: now,
+    ttl,
+  });
+  console.log(`[AI Cache] Stored response for key ${cacheKey.substring(0, 8)}...`);
+}
+
+export function clearAICache(): void {
+  aiCache.clear();
+  console.log("[AI Cache] Cleared all cached responses");
+}
+
+export function getAICacheStats(): { size: number; maxSize: number } {
+  return { size: aiCache.size, maxSize: MAX_CACHE_SIZE };
+}
 
 export interface TopicAnalysisResult {
   topic: string;
@@ -61,7 +159,7 @@ async function callWithRetry<T>(
       return await fn();
     } catch (error: any) {
       lastError = error;
-      const isRateLimit = error.message?.includes('429') || error.message?.includes('rate limit');
+      const isRateLimit = error.message?.includes('429') || error.message?.includes('rate limit') || error.status === 429;
       
       if (isRateLimit && attempt < maxRetries - 1) {
         const delay = baseDelay * Math.pow(2, attempt);
@@ -80,6 +178,7 @@ async function callGemini(
   systemPrompt: string,
   userPrompt: string
 ): Promise<any> {
+  const ai = getNextGeminiInstance();
   if (!ai) {
     throw new Error("GEMINI_API_KEY not configured");
   }
@@ -187,28 +286,136 @@ async function callGroq(
   return JSON.parse(content);
 }
 
-async function callAI(
+async function callTogether(
   systemPrompt: string,
   userPrompt: string
 ): Promise<any> {
-  // Try providers in order: Gemini -> OpenRouter -> Groq
+  if (!TOGETHER_API_KEY) {
+    throw new Error("TOGETHER_API_KEY not configured");
+  }
+
+  const response = await fetch(`${TOGETHER_BASE_URL}/chat/completions`, {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${TOGETHER_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: TOGETHER_MODEL,
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt }
+      ],
+      temperature: 0.3,
+      max_tokens: 4000,
+      response_format: { type: "json_object" }
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error("[Together] API error:", errorText);
+    throw new Error(`Together API error: ${response.status}`);
+  }
+
+  const data = await response.json();
+  const content = data.choices?.[0]?.message?.content;
+
+  if (!content) {
+    throw new Error("No content in Together response");
+  }
+
+  return JSON.parse(content);
+}
+
+async function callCloudflare(
+  systemPrompt: string,
+  userPrompt: string
+): Promise<any> {
+  if (!CLOUDFLARE_API_KEY || !CLOUDFLARE_ACCOUNT_ID) {
+    throw new Error("CLOUDFLARE_API_KEY or CLOUDFLARE_ACCOUNT_ID not configured");
+  }
+
+  const response = await fetch(
+    `${CLOUDFLARE_BASE_URL}/${CLOUDFLARE_ACCOUNT_ID}/ai/run/${CLOUDFLARE_MODEL}`,
+    {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${CLOUDFLARE_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        messages: [
+          { role: "system", content: systemPrompt + "\n\nYou must respond with valid JSON only." },
+          { role: "user", content: userPrompt }
+        ],
+      }),
+    }
+  );
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error("[Cloudflare] API error:", errorText);
+    throw new Error(`Cloudflare API error: ${response.status}`);
+  }
+
+  const data = await response.json();
+  const content = data.result?.response;
+
+  if (!content) {
+    throw new Error("No content in Cloudflare response");
+  }
+
+  // Cloudflare doesn't support JSON mode, so we need to extract JSON
+  const jsonMatch = content.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) {
+    throw new Error("No valid JSON found in Cloudflare response");
+  }
+
+  return JSON.parse(jsonMatch[0]);
+}
+
+async function callAI(
+  systemPrompt: string,
+  userPrompt: string,
+  useCache: boolean = true
+): Promise<any> {
+  // Check cache first
+  const cacheKey = generateCacheKey(systemPrompt, userPrompt);
+  if (useCache) {
+    const cachedResponse = getCachedResponse(cacheKey);
+    if (cachedResponse) {
+      return cachedResponse;
+    }
+  }
+
+  // Provider configuration with priority order
   const providers = [
-    { name: "Gemini", key: GEMINI_API_KEY, fn: callGemini },
-    { name: "OpenRouter", key: OPENROUTER_API_KEY, fn: callOpenRouter },
-    { name: "Groq", key: GROQ_API_KEY, fn: callGroq },
+    { name: "Gemini", key: GEMINI_API_KEYS.length > 0, fn: callGemini },
+    { name: "OpenRouter", key: !!OPENROUTER_API_KEY, fn: callOpenRouter },
+    { name: "Groq", key: !!GROQ_API_KEY, fn: callGroq },
+    { name: "Together", key: !!TOGETHER_API_KEY, fn: callTogether },
+    { name: "Cloudflare", key: !!(CLOUDFLARE_API_KEY && CLOUDFLARE_ACCOUNT_ID), fn: callCloudflare },
   ];
 
   const availableProviders = providers.filter(p => p.key);
 
   if (availableProviders.length === 0) {
-    throw new Error("No AI provider configured. Set GEMINI_API_KEY, OPENROUTER_API_KEY, or GROQ_API_KEY in .env file");
+    throw new Error("No AI provider configured. Set at least one of: GEMINI_API_KEY, OPENROUTER_API_KEY, GROQ_API_KEY, TOGETHER_API_KEY, or CLOUDFLARE_API_KEY");
   }
 
   // Try each provider in sequence until one succeeds
   for (const provider of availableProviders) {
     try {
       console.log(`[AI] Trying ${provider.name} API`);
-      return await callWithRetry(async () => provider.fn(systemPrompt, userPrompt));
+      const result = await callWithRetry(async () => provider.fn(systemPrompt, userPrompt));
+      
+      // Cache successful response
+      if (useCache) {
+        setCachedResponse(cacheKey, result);
+      }
+      
+      return result;
     } catch (error) {
       console.error(`[AI] ${provider.name} failed:`, error);
       // If this is the last provider, throw the error
@@ -451,9 +658,19 @@ ${transcript.substring(0, 20000)}`;
 }
 
 export function isDeepSeekConfigured(): boolean {
-  return !!(GEMINI_API_KEY || OPENROUTER_API_KEY || GROQ_API_KEY);
+  return !!(GEMINI_API_KEYS.length > 0 || OPENROUTER_API_KEY || GROQ_API_KEY || TOGETHER_API_KEY || (CLOUDFLARE_API_KEY && CLOUDFLARE_ACCOUNT_ID));
 }
 
 export function isGeminiConfigured(): boolean {
-  return !!GEMINI_API_KEY;
+  return GEMINI_API_KEYS.length > 0;
+}
+
+export function getConfiguredProviders(): string[] {
+  const providers: string[] = [];
+  if (GEMINI_API_KEYS.length > 0) providers.push(`Gemini (${GEMINI_API_KEYS.length} keys)`);
+  if (OPENROUTER_API_KEY) providers.push("OpenRouter");
+  if (GROQ_API_KEY) providers.push("Groq");
+  if (TOGETHER_API_KEY) providers.push("Together");
+  if (CLOUDFLARE_API_KEY && CLOUDFLARE_ACCOUNT_ID) providers.push("Cloudflare");
+  return providers;
 }
