@@ -8,8 +8,11 @@ import { GoogleGenAI } from "@google/genai";
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
+const GROQ_API_KEY = process.env.GROQ_API_KEY;
 const OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1";
+const GROQ_BASE_URL = "https://api.groq.com/openai/v1";
 const AI_MODEL = "google/gemini-2.0-flash-exp:free";
+const GROQ_MODEL = "llama-3.3-70b-versatile"; // Free Groq model
 
 const ai = GEMINI_API_KEY ? new GoogleGenAI({ apiKey: GEMINI_API_KEY }) : null;
 
@@ -142,21 +145,82 @@ async function callOpenRouter(
   return JSON.parse(content);
 }
 
+async function callGroq(
+  systemPrompt: string,
+  userPrompt: string
+): Promise<any> {
+  if (!GROQ_API_KEY) {
+    throw new Error("GROQ_API_KEY not configured");
+  }
+
+  const response = await fetch(`${GROQ_BASE_URL}/chat/completions`, {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${GROQ_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: GROQ_MODEL,
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt }
+      ],
+      temperature: 0.3,
+      max_tokens: 4000,
+      response_format: { type: "json_object" }
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error("[Groq] API error:", errorText);
+    throw new Error(`Groq API error: ${response.status}`);
+  }
+
+  const data = await response.json();
+  const content = data.choices?.[0]?.message?.content;
+
+  if (!content) {
+    throw new Error("No content in Groq response");
+  }
+
+  return JSON.parse(content);
+}
+
 async function callAI(
   systemPrompt: string,
   userPrompt: string
 ): Promise<any> {
-  const useGemini = !!GEMINI_API_KEY;
-  
-  return callWithRetry(async () => {
-    if (useGemini) {
-      console.log("[AI] Using Gemini API");
-      return await callGemini(systemPrompt, userPrompt);
-    } else {
-      console.log("[AI] Using OpenRouter API");
-      return await callOpenRouter(systemPrompt, userPrompt);
+  // Try providers in order: Gemini -> OpenRouter -> Groq
+  const providers = [
+    { name: "Gemini", key: GEMINI_API_KEY, fn: callGemini },
+    { name: "OpenRouter", key: OPENROUTER_API_KEY, fn: callOpenRouter },
+    { name: "Groq", key: GROQ_API_KEY, fn: callGroq },
+  ];
+
+  const availableProviders = providers.filter(p => p.key);
+
+  if (availableProviders.length === 0) {
+    throw new Error("No AI provider configured. Set GEMINI_API_KEY, OPENROUTER_API_KEY, or GROQ_API_KEY in .env file");
+  }
+
+  // Try each provider in sequence until one succeeds
+  for (const provider of availableProviders) {
+    try {
+      console.log(`[AI] Trying ${provider.name} API`);
+      return await callWithRetry(async () => provider.fn(systemPrompt, userPrompt));
+    } catch (error) {
+      console.error(`[AI] ${provider.name} failed:`, error);
+      // If this is the last provider, throw the error
+      if (provider === availableProviders[availableProviders.length - 1]) {
+        throw error;
+      }
+      // Otherwise, try the next provider
+      console.log(`[AI] Falling back to next provider...`);
     }
-  });
+  }
+
+  throw new Error("All AI providers failed");
 }
 
 export async function extractTopics(
@@ -387,7 +451,7 @@ ${transcript.substring(0, 50000)}`;
 }
 
 export function isDeepSeekConfigured(): boolean {
-  return !!(GEMINI_API_KEY || OPENROUTER_API_KEY);
+  return !!(GEMINI_API_KEY || OPENROUTER_API_KEY || GROQ_API_KEY);
 }
 
 export function isGeminiConfigured(): boolean {
