@@ -6,8 +6,9 @@
 
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 const DEEPSEEK_BASE_URL = "https://openrouter.ai/api/v1";
-// Using DeepSeek R1 via OpenRouter - FREE model!
-const DEEPSEEK_MODEL = "deepseek/deepseek-r1-distill-llama-70b";
+// Using a FREE model via OpenRouter
+// Options: "meta-llama/llama-3.2-3b-instruct:free" or "qwen/qwen-2-7b-instruct:free"
+const DEEPSEEK_MODEL = "meta-llama/llama-3.2-3b-instruct:free";
 
 export interface TopicAnalysisResult {
   topic: string;
