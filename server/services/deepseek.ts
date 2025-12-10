@@ -1,11 +1,13 @@
 /**
  * DeepSeek AI Service for Hansard Analysis
- * Uses DeepSeek API (OpenAI-compatible) for parliamentary debate analysis
+ * Uses OpenRouter to access DeepSeek models (FREE credits available!)
+ * Get your free API key at: https://openrouter.ai/
  */
 
-const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY;
-const DEEPSEEK_BASE_URL = "https://api.deepseek.com/v1";
-const DEEPSEEK_MODEL = "deepseek-chat"; // DeepSeek's flagship model
+const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
+const DEEPSEEK_BASE_URL = "https://openrouter.ai/api/v1";
+// Using DeepSeek R1 via OpenRouter - FREE model!
+const DEEPSEEK_MODEL = "deepseek/deepseek-r1-distill-llama-70b";
 
 export interface TopicAnalysisResult {
   topic: string;
@@ -44,16 +46,18 @@ async function callDeepSeek(
   userPrompt: string,
   responseSchema: any
 ): Promise<any> {
-  if (!DEEPSEEK_API_KEY) {
-    throw new Error("DEEPSEEK_API_KEY not configured");
+  if (!OPENROUTER_API_KEY) {
+    throw new Error("OPENROUTER_API_KEY not configured. Get free credits at https://openrouter.ai/");
   }
 
   try {
     const response = await fetch(`${DEEPSEEK_BASE_URL}/chat/completions`, {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${DEEPSEEK_API_KEY}`,
+        "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
         "Content-Type": "application/json",
+        "HTTP-Referer": "https://myparliament.my",
+        "X-Title": "MyParliament Dashboard",
       },
       body: JSON.stringify({
         model: DEEPSEEK_MODEL,
@@ -269,5 +273,5 @@ ${context.substring(0, 40000)}`;
 }
 
 export function isDeepSeekConfigured(): boolean {
-  return !!DEEPSEEK_API_KEY;
+  return !!OPENROUTER_API_KEY;
 }
