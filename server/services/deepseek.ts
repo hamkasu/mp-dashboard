@@ -6,9 +6,9 @@
 
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 const DEEPSEEK_BASE_URL = "https://openrouter.ai/api/v1";
-// Using a FREE model via OpenRouter
-// Options: "meta-llama/llama-3.2-3b-instruct:free" or "qwen/qwen-2-7b-instruct:free"
-const DEEPSEEK_MODEL = "meta-llama/llama-3.2-3b-instruct:free";
+// Using Qwen 2.5 72B - FREE with better rate limits than Llama
+// Note: Free tier has rate limits. Add credits at https://openrouter.ai/credits for unlimited access
+const DEEPSEEK_MODEL = "qwen/qwen-2.5-72b-instruct:free";
 
 export interface TopicAnalysisResult {
   topic: string;
