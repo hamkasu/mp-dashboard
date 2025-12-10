@@ -3651,12 +3651,12 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
-  // AI Analysis endpoints using Gemini
+  // AI Analysis endpoints using DeepSeek (fallback to Gemini if not configured)
   app.post("/api/analyze/topics/:hansardId", mutationRateLimit, async (req, res) => {
     try {
       const { hansardId } = req.params;
       const hansard = await storage.getHansardById(hansardId);
-      
+
       if (!hansard) {
         return res.status(404).json({ error: "Hansard record not found" });
       }
@@ -3667,8 +3667,14 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         return res.json(existing);
       }
 
-      // Extract topics using Gemini
-      const { extractTopics } = await import("./services/gemini.js");
+      // Extract topics using DeepSeek (or Gemini as fallback)
+      const deepseek = await import("./services/deepseek.js");
+      const gemini = await import("./services/gemini.js");
+
+      const extractTopics = deepseek.isDeepSeekConfigured()
+        ? deepseek.extractTopics
+        : gemini.extractTopics;
+
       const speakerNames = hansard.speakers?.map(s => s.mpName) || [];
       const topics = await extractTopics(hansard.transcript, speakerNames);
 
@@ -3689,7 +3695,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     try {
       const { hansardId } = req.params;
       const hansard = await storage.getHansardById(hansardId);
-      
+
       if (!hansard) {
         return res.status(404).json({ error: "Hansard record not found" });
       }
@@ -3700,8 +3706,14 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         return res.json(existing);
       }
 
-      // Analyze sentiment using Gemini
-      const { analyzeSentiment } = await import("./services/gemini.js");
+      // Analyze sentiment using DeepSeek (or Gemini as fallback)
+      const deepseek = await import("./services/deepseek.js");
+      const gemini = await import("./services/gemini.js");
+
+      const analyzeSentiment = deepseek.isDeepSeekConfigured()
+        ? deepseek.analyzeSentiment
+        : gemini.analyzeSentiment;
+
       const result = await analyzeSentiment(hansard.transcript);
 
       // Store in database
@@ -3724,7 +3736,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     try {
       const { hansardId } = req.params;
       const hansard = await storage.getHansardById(hansardId);
-      
+
       if (!hansard) {
         return res.status(404).json({ error: "Hansard record not found" });
       }
@@ -3735,13 +3747,19 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         return res.json(existing);
       }
 
-      // Analyze speakers using Gemini
-      const { analyzeSpeakers } = await import("./services/gemini.js");
+      // Analyze speakers using DeepSeek (or Gemini as fallback)
+      const deepseek = await import("./services/deepseek.js");
+      const gemini = await import("./services/gemini.js");
+
+      const analyzeSpeakers = deepseek.isDeepSeekConfigured()
+        ? deepseek.analyzeSpeakers
+        : gemini.analyzeSpeakers;
+
       const speakers = hansard.speakers?.map(s => ({
         mpId: s.mpId,
         mpName: s.mpName,
       })) || [];
-      
+
       const insights = await analyzeSpeakers(hansard.transcript, speakers);
 
       // Store in database
@@ -3761,9 +3779,9 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     try {
       const { hansardId } = req.params;
       const { language = "en" } = req.body;
-      
+
       const hansard = await storage.getHansardById(hansardId);
-      
+
       if (!hansard) {
         return res.status(404).json({ error: "Hansard record not found" });
       }
@@ -3774,8 +3792,14 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         return res.json(existing);
       }
 
-      // Generate detailed summary using Gemini
-      const { generateDetailedSummary } = await import("./services/gemini.js");
+      // Generate detailed summary using DeepSeek (or Gemini as fallback)
+      const deepseek = await import("./services/deepseek.js");
+      const gemini = await import("./services/gemini.js");
+
+      const generateDetailedSummary = deepseek.isDeepSeekConfigured()
+        ? deepseek.generateDetailedSummary
+        : gemini.generateDetailedSummary;
+
       const result = await generateDetailedSummary(hansard.transcript, language as "en" | "ms");
 
       // Store in database
@@ -3806,7 +3830,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       }
 
       const hansard = await storage.getHansardById(hansardId);
-      
+
       if (!hansard) {
         return res.status(404).json({ error: "Hansard record not found" });
       }
@@ -3817,8 +3841,14 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         return res.json(cached);
       }
 
-      // Answer question using Gemini
-      const { answerQuestion } = await import("./services/gemini.js");
+      // Answer question using DeepSeek (or Gemini as fallback)
+      const deepseek = await import("./services/deepseek.js");
+      const gemini = await import("./services/gemini.js");
+
+      const answerQuestion = deepseek.isDeepSeekConfigured()
+        ? deepseek.answerQuestion
+        : gemini.answerQuestion;
+
       const result = await answerQuestion(question, hansard.transcript);
 
       // Cache the result
@@ -4393,9 +4423,18 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       
       const toProcess = missingSummaries.slice(0, limit);
       console.log(`📊 Processing ${toProcess.length} of ${missingSummaries.length} records`);
-      
-      const { generateDetailedSummary } = await import("./services/gemini.js");
-      
+
+      // Use DeepSeek if configured, otherwise fallback to Gemini
+      const deepseek = await import("./services/deepseek.js");
+      const gemini = await import("./services/gemini.js");
+
+      const generateDetailedSummary = deepseek.isDeepSeekConfigured()
+        ? deepseek.generateDetailedSummary
+        : gemini.generateDetailedSummary;
+
+      const aiProvider = deepseek.isDeepSeekConfigured() ? "DeepSeek" : "Gemini";
+      console.log(`🤖 Using ${aiProvider} for summary generation`);
+
       let successCount = 0;
       let errorCount = 0;
       const results: Array<{ id: string; sessionNumber: string; success: boolean; error?: string }> = [];
