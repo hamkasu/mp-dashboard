@@ -1696,7 +1696,7 @@ export default function HansardAdmin() {
               AI Hansard Analysis
             </CardTitle>
             <CardDescription>
-              Use AI (DeepSeek V3.1 via OpenRouter) to analyze and summarize Hansard records
+              Use AI (Gemini 2.0 Flash via OpenRouter) to analyze and summarize Hansard records
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">

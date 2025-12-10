@@ -1,0 +1,40 @@
+📊 /api/hansard-records/search: Memory +136MB → 316MB
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async file:///app/dist/index.js:13762:22
+    at async Object.generateTopicSummary (file:///app/dist/index.js:6154:20)
+7:04:42 AM [express] POST /api/hansard/a29ed461-c200-4430-9ede-f7d7bbeb1a2f/topic-summary 500 in 364…
+    at async file:///app/dist/index.js:13762:22
+Error in topic summary: Error: Failed to generate topic summary: Error: DeepSeek API error: 404
+[AI Topic Summary] Using DeepSeek for topic: National Service Training Program (PLKN) and Territorial Army
+    at Object.generateTopicSummary (file:///app/dist/index.js:6158:11)
+[DeepSeek] API error: {"error":{"message":"No endpoints found for deepseek/deepseek-chat-v3.1:free.","code":404},"user_id":"user_35vegrezIbo5UVKay8mO8gnKSD1"}
+[DeepSeek] Error: DeepSeek API error: 404
+[DeepSeek] Error in topic summary: Error: DeepSeek API error: 404
+    at callDeepSeek (file:///app/dist/index.js:5973:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+[AI Sentiment] Using DeepSeek for a29ed461-c200-4430-9ede-f7d7bbeb1a2f
+    at async file:///app/dist/index.js:13615:22
+7:04:53 AM [express] POST /api/analyze/sentiment/a29ed461-c200-4430-9ede-f7d7bbeb1a2f 500 in 355ms
+[DeepSeek] API error: {"error":{"message":"No endpoints found for deepseek/deepseek-chat-v3.1:free.","code":404},"user_id":"user_35vegrezIbo5UVKay8mO8gnKSD1"}
+[DeepSeek] Error: DeepSeek API error: 404
+[DeepSeek] Error in sentiment analysis: Error: DeepSeek API error: 404
+    at callDeepSeek (file:///app/dist/index.js:5973:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async analyzeSentiment (file:///app/dist/index.js:6035:20)
+    at async file:///app/dist/index.js:13615:22
+Error in sentiment analysis: Error: Failed to analyze sentiment: Error: DeepSeek API error: 404
+    at analyzeSentiment (file:///app/dist/index.js:6039:11)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+[AI Summary] Using DeepSeek for a29ed461-c200-4430-9ede-f7d7bbeb1a2f (en)
+[DeepSeek] Error: DeepSeek API error: 404
+[DeepSeek] Error in detailed summary: Error: DeepSeek API error: 404
+    at callDeepSeek (file:///app/dist/index.js:5973:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async generateDetailedSummary (file:///app/dist/index.js:6103:20)
+    at async file:///app/dist/index.js:13685:22
+Error in detailed summary: Error: Failed to generate detailed summary: Error: DeepSeek API error: 404
+    at generateDetailedSummary (file:///app/dist/index.js:6107:11)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async file:///app/dist/index.js:13685:22
+7:04:59 AM [express] POST /api/analyze/detailed-summary/a29ed461-c200-4430-9ede-f7d7bbeb1a2f 500 in …
+[DeepSeek] API error: {"error":{"message":"No endpoints found for deepseek/deepseek-chat-v3.1:free.","code":404},"user_id":"user_35vegrezIbo5UVKay8mO8gnKSD1"}

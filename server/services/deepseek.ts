@@ -1,14 +1,14 @@
 /**
- * DeepSeek AI Service for Hansard Analysis
- * Uses OpenRouter to access DeepSeek models (FREE credits available!)
+ * AI Service for Hansard Analysis
+ * Uses OpenRouter to access FREE AI models
  * Get your free API key at: https://openrouter.ai/
  */
 
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
-const DEEPSEEK_BASE_URL = "https://openrouter.ai/api/v1";
-// Using DeepSeek V3.1 - FREE with 128K context, excellent for document analysis
+const OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1";
+// Using Google Gemini 2.0 Flash - FREE with 1M+ context, excellent for document analysis
 // Note: Free tier requires data training consent in OpenRouter settings. Add credits at https://openrouter.ai/credits for unlimited access
-const DEEPSEEK_MODEL = "deepseek/deepseek-chat-v3.1:free";
+const AI_MODEL = "google/gemini-2.0-flash-exp:free";
 
 export interface TopicAnalysisResult {
   topic: string;
@@ -52,7 +52,7 @@ async function callDeepSeek(
   }
 
   try {
-    const response = await fetch(`${DEEPSEEK_BASE_URL}/chat/completions`, {
+    const response = await fetch(`${OPENROUTER_BASE_URL}/chat/completions`, {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
@@ -61,7 +61,7 @@ async function callDeepSeek(
         "X-Title": "MyParliament Dashboard",
       },
       body: JSON.stringify({
-        model: DEEPSEEK_MODEL,
+        model: AI_MODEL,
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt }
