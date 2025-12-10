@@ -3671,9 +3671,17 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       const deepseek = await import("./services/deepseek.js");
       const gemini = await import("./services/gemini.js");
 
-      const extractTopics = deepseek.isDeepSeekConfigured()
+      const useDeepSeek = deepseek.isDeepSeekConfigured();
+      const extractTopics = useDeepSeek
         ? deepseek.extractTopics
         : gemini.extractTopics;
+
+      const aiProvider = useDeepSeek ? "DeepSeek" : "Gemini";
+      console.log(`[AI Topics] Using ${aiProvider} for ${hansardId}`);
+
+      if (!useDeepSeek && !process.env.GEMINI_API_KEY) {
+        throw new Error("No AI provider configured. Set DEEPSEEK_API_KEY or GEMINI_API_KEY in .env file");
+      }
 
       const speakerNames = hansard.speakers?.map(s => s.mpName) || [];
       const topics = await extractTopics(hansard.transcript, speakerNames);
@@ -3710,9 +3718,17 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       const deepseek = await import("./services/deepseek.js");
       const gemini = await import("./services/gemini.js");
 
-      const analyzeSentiment = deepseek.isDeepSeekConfigured()
+      const useDeepSeek = deepseek.isDeepSeekConfigured();
+      const analyzeSentiment = useDeepSeek
         ? deepseek.analyzeSentiment
         : gemini.analyzeSentiment;
+
+      const aiProvider = useDeepSeek ? "DeepSeek" : "Gemini";
+      console.log(`[AI Sentiment] Using ${aiProvider} for ${hansardId}`);
+
+      if (!useDeepSeek && !process.env.GEMINI_API_KEY) {
+        throw new Error("No AI provider configured. Set DEEPSEEK_API_KEY or GEMINI_API_KEY in .env file");
+      }
 
       const result = await analyzeSentiment(hansard.transcript);
 
@@ -3751,9 +3767,17 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       const deepseek = await import("./services/deepseek.js");
       const gemini = await import("./services/gemini.js");
 
-      const analyzeSpeakers = deepseek.isDeepSeekConfigured()
+      const useDeepSeek = deepseek.isDeepSeekConfigured();
+      const analyzeSpeakers = useDeepSeek
         ? deepseek.analyzeSpeakers
         : gemini.analyzeSpeakers;
+
+      const aiProvider = useDeepSeek ? "DeepSeek" : "Gemini";
+      console.log(`[AI Speakers] Using ${aiProvider} for ${hansardId}`);
+
+      if (!useDeepSeek && !process.env.GEMINI_API_KEY) {
+        throw new Error("No AI provider configured. Set DEEPSEEK_API_KEY or GEMINI_API_KEY in .env file");
+      }
 
       const speakers = hansard.speakers?.map(s => ({
         mpId: s.mpId,
@@ -3796,9 +3820,17 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       const deepseek = await import("./services/deepseek.js");
       const gemini = await import("./services/gemini.js");
 
-      const generateDetailedSummary = deepseek.isDeepSeekConfigured()
+      const useDeepSeek = deepseek.isDeepSeekConfigured();
+      const generateDetailedSummary = useDeepSeek
         ? deepseek.generateDetailedSummary
         : gemini.generateDetailedSummary;
+
+      const aiProvider = useDeepSeek ? "DeepSeek" : "Gemini";
+      console.log(`[AI Summary] Using ${aiProvider} for ${hansardId} (${language})`);
+
+      if (!useDeepSeek && !process.env.GEMINI_API_KEY) {
+        throw new Error("No AI provider configured. Set DEEPSEEK_API_KEY or GEMINI_API_KEY in .env file");
+      }
 
       const result = await generateDetailedSummary(hansard.transcript, language as "en" | "ms");
 
@@ -3845,9 +3877,17 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       const deepseek = await import("./services/deepseek.js");
       const gemini = await import("./services/gemini.js");
 
-      const answerQuestion = deepseek.isDeepSeekConfigured()
+      const useDeepSeek = deepseek.isDeepSeekConfigured();
+      const answerQuestion = useDeepSeek
         ? deepseek.answerQuestion
         : gemini.answerQuestion;
+
+      const aiProvider = useDeepSeek ? "DeepSeek" : "Gemini";
+      console.log(`[AI Q&A] Using ${aiProvider} for ${hansardId}`);
+
+      if (!useDeepSeek && !process.env.GEMINI_API_KEY) {
+        throw new Error("No AI provider configured. Set DEEPSEEK_API_KEY or GEMINI_API_KEY in .env file");
+      }
 
       const result = await answerQuestion(question, hansard.transcript);
 
