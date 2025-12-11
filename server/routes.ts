@@ -6953,9 +6953,10 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         where: eq(bills.id, id),
       });
 
-      // If not in database, use data from request body (scraped bills that aren't stored yet)
+      // If not in database, save it first (from request body data)
       if (!bill && title) {
-        bill = {
+        // Insert the bill into database first to satisfy foreign key constraint
+        await db.insert(bills).values({
           id,
           title,
           billNumber: billNumber || null,
@@ -6963,10 +6964,13 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
           introductionDate: null,
           fullTextUrl: null,
           sourceUrl: null,
-          scrapedAt: null,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        };
+          scrapedAt: new Date(),
+        });
+
+        // Now fetch it back
+        bill = await db.query.bills.findFirst({
+          where: eq(bills.id, id),
+        });
       }
 
       if (!bill || !bill.title) {
