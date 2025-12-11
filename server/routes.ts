@@ -6709,12 +6709,49 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     scrapeAndSaveBills 
   } = await import("./bills-scraper");
   
-  // Get bills - try database first, then scrape
+  // Get bills - try database first, scrape if data is sparse or stale
   app.get("/api/bills", async (_req, res) => {
     try {
       // First try to get bills from database
       const dbBills = await getBillsFromDatabase();
       
+      // Minimum threshold for "complete" data - if we have fewer bills, data is likely incomplete
+      const MIN_BILLS_THRESHOLD = 50;
+      
+      // Check if data is sparse (fewer than threshold bills suggests incomplete data)
+      const isDataSparse = dbBills.length < MIN_BILLS_THRESHOLD;
+      
+      // Check if data is stale (older than 24 hours)
+      const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+      const mostRecentScrape = dbBills[0]?.scrapedAt;
+      const isDataStale = !mostRecentScrape || new Date(mostRecentScrape) < oneDayAgo;
+      
+      // If data is sparse or stale, try to refresh from live source
+      if (isDataSparse || isDataStale) {
+        console.log(`[Bills API] Data needs refresh - sparse: ${isDataSparse} (${dbBills.length} bills), stale: ${isDataStale}`);
+        
+        try {
+          // Scrape and save to database
+          const scrapeStats = await scrapeAndSaveBills();
+          console.log(`[Bills API] Scraped ${scrapeStats.scraped} bills, saved ${scrapeStats.saved}, updated ${scrapeStats.updated}`);
+          
+          // Get fresh data from database after scrape
+          const freshBills = await getBillsFromDatabase();
+          
+          return res.json({
+            bills: freshBills,
+            scrapedAt: new Date().toISOString(),
+            sourceUrl: 'https://www.parlimen.gov.my/bills-dewan-rakyat.html?uweb=dr&',
+            fromDatabase: true,
+            refreshed: true,
+          });
+        } catch (scrapeError: any) {
+          console.warn("[Bills API] Scraping failed, returning cached data:", scrapeError.message);
+          // Fall through to return cached data
+        }
+      }
+      
+      // Return cached database data
       if (dbBills.length > 0) {
         return res.json({
           bills: dbBills,

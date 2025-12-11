@@ -308,7 +308,7 @@ export default function Bills() {
                         <FileText className="w-5 h-5 shrink-0" />
                         <span className="font-mono">{bill.billNumber || 'Bill'}</span>
                       </CardTitle>
-                      <CardDescription className="mt-2 line-clamp-2">
+                      <CardDescription className="mt-2">
                         {bill.title}
                       </CardDescription>
                       <div className="flex items-center gap-4 mt-3 flex-wrap">
@@ -318,10 +318,8 @@ export default function Bills() {
                             {bill.introductionDate}
                           </span>
                         )}
-                        <Badge variant="outline" className={`${getStatusColor(bill.status)} max-w-[300px]`} title={bill.status}>
-                          <span className="overflow-hidden text-ellipsis whitespace-nowrap block">
-                            {bill.status}
-                          </span>
+                        <Badge variant="outline" className={getStatusColor(bill.status)}>
+                          {bill.status}
                         </Badge>
                       </div>
                     </div>
