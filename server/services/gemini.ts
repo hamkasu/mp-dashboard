@@ -388,3 +388,77 @@ ${context.substring(0, 40000)}`;
     throw new Error(`Failed to answer question: ${error}`);
   }
 }
+
+export interface BillImpactResult {
+  summary: string;
+  impactType: string;
+  keyPoints: string[];
+  affectedGroups: string[];
+}
+
+export async function analyzeBillImpact(
+  billTitle: string,
+  billNumber: string | null,
+  status: string
+): Promise<BillImpactResult> {
+  try {
+    const systemPrompt = `You are an expert at analyzing Malaysian parliamentary bills and legislation.
+Analyze bills and explain their impact on Malaysian citizens in a clear, accessible way.
+
+Provide:
+1. A brief summary (2-3 sentences) explaining what this bill means for ordinary Malaysians
+2. The overall impact type: "positive", "negative", "mixed", or "neutral"
+3. 3-5 key points about how this bill affects citizens
+4. Which groups of Malaysians are most affected (e.g., workers, businesses, consumers, students, etc.)
+
+Respond with JSON in this format:
+{
+  "summary": "string",
+  "impactType": "string",
+  "keyPoints": ["string"],
+  "affectedGroups": ["string"]
+}`;
+
+    const prompt = `Analyze this Malaysian Parliament bill:
+
+Bill Number: ${billNumber || "Unknown"}
+Title: ${billTitle}
+Status: ${status}
+
+Provide a comprehensive impact analysis for Malaysian citizens.`;
+
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      config: {
+        systemInstruction: systemPrompt,
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: "object",
+          properties: {
+            summary: { type: "string" },
+            impactType: { type: "string" },
+            keyPoints: { type: "array", items: { type: "string" } },
+            affectedGroups: { type: "array", items: { type: "string" } },
+          },
+          required: ["summary", "impactType", "keyPoints", "affectedGroups"],
+        },
+      },
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+    });
+
+    const rawJson = response.text;
+    if (!rawJson) {
+      throw new Error("Empty response from Gemini API for bill impact analysis");
+    }
+
+    try {
+      return JSON.parse(rawJson);
+    } catch (parseError) {
+      console.error("Failed to parse bill impact JSON:", parseError, "Raw:", rawJson);
+      throw new Error(`Failed to parse bill impact response: ${parseError}`);
+    }
+  } catch (error) {
+    console.error("Error in bill impact analysis:", error);
+    throw new Error(`Failed to analyze bill impact: ${error}`);
+  }
+}
