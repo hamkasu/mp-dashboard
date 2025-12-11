@@ -6946,56 +6946,76 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   app.post("/api/bills/:id/generate-impact", async (req, res) => {
     try {
       const { id } = req.params;
-      
+
       // Get the bill details
       const bill = await db.query.bills.findFirst({
         where: eq(bills.id, id),
       });
-      
+
       if (!bill) {
         return res.status(404).json({ error: "Bill not found" });
       }
-      
-      // Generate impact analysis using Gemini
+
+      // Generate impact analysis using Gemini (same pattern as Hansard)
       const { GoogleGenAI } = await import("@google/genai");
-      
+
       const genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || process.env.AI_INTEGRATIONS_GOOGLE_API_KEY || "" });
-      const prompt = `Analyze this Malaysian Parliament bill and explain its impact on Malaysian citizens in a clear, accessible way.
 
-Bill Number: ${bill.billNumber || "Unknown"}
-Title: ${bill.title}
-Status: ${bill.status}
+      const systemPrompt = `You are an expert at analyzing Malaysian parliamentary bills and legislation.
+Analyze bills and explain their impact on Malaysian citizens in a clear, accessible way.
 
-Please provide:
+Provide:
 1. A brief summary (2-3 sentences) explaining what this bill means for ordinary Malaysians
 2. The overall impact type: "positive", "negative", "mixed", or "neutral"
 3. 3-5 key points about how this bill affects citizens
 4. Which groups of Malaysians are most affected (e.g., workers, businesses, consumers, students, etc.)
 
-Respond in JSON format:
+Respond with JSON in this format:
 {
-  "summary": "Brief explanation of impact...",
-  "impactType": "positive|negative|mixed|neutral",
-  "keyPoints": ["Point 1", "Point 2", "Point 3"],
-  "affectedGroups": ["Group 1", "Group 2"]
+  "summary": "string",
+  "impactType": "string",
+  "keyPoints": ["string"],
+  "affectedGroups": ["string"]
 }`;
 
+      const prompt = `Analyze this Malaysian Parliament bill:
+
+Bill Number: ${bill.billNumber || "Unknown"}
+Title: ${bill.title}
+Status: ${bill.status}
+
+Provide a comprehensive impact analysis for Malaysian citizens.`;
+
       const result = await genAI.models.generateContent({
-        model: "gemini-1.5-flash",
-        contents: prompt,
+        model: "gemini-2.5-flash",
+        config: {
+          systemInstruction: systemPrompt,
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: "object",
+            properties: {
+              summary: { type: "string" },
+              impactType: { type: "string" },
+              keyPoints: { type: "array", items: { type: "string" } },
+              affectedGroups: { type: "array", items: { type: "string" } },
+            },
+            required: ["summary", "impactType", "keyPoints", "affectedGroups"],
+          },
+        },
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
       });
-      const responseText = result.text || "";
-      
+
+      const rawJson = result.text;
+      if (!rawJson) {
+        throw new Error("Empty response from Gemini API for bill impact analysis");
+      }
+
       // Parse the JSON response
       let impactData;
       try {
-        // Extract JSON from potential markdown code block
-        const jsonMatch = responseText.match(/```json\n?([\s\S]*?)\n?```/) || 
-                          responseText.match(/\{[\s\S]*\}/);
-        const jsonStr = jsonMatch ? (jsonMatch[1] || jsonMatch[0]) : responseText;
-        impactData = JSON.parse(jsonStr);
+        impactData = JSON.parse(rawJson);
       } catch (parseError) {
-        console.error("Failed to parse AI response:", responseText);
+        console.error("Failed to parse AI response:", parseError, "Raw:", rawJson);
         impactData = {
           summary: "Unable to generate detailed impact analysis at this time.",
           impactType: "neutral",
