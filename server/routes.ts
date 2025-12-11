@@ -6998,7 +6998,7 @@ Respond in JSON format:
 }`;
 
       const result = await genAI.models.generateContent({
-        model: "gemini-2.0-flash",
+        model: "gemini-1.5-flash",
         contents: prompt,
       });
       const responseText = result.text || "";
