@@ -318,8 +318,10 @@ export default function Bills() {
                             {bill.introductionDate}
                           </span>
                         )}
-                        <Badge variant="outline" className={getStatusColor(bill.status)}>
-                          {bill.status}
+                        <Badge variant="outline" className={`${getStatusColor(bill.status)} max-w-[300px]`} title={bill.status}>
+                          <span className="overflow-hidden text-ellipsis whitespace-nowrap block">
+                            {bill.status}
+                          </span>
                         </Badge>
                       </div>
                     </div>
