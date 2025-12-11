@@ -83,20 +83,20 @@ export default function Bills() {
   const filteredBills = bills.filter((bill) => {
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
-      const matchesSearch = 
+      const matchesSearch =
         bill.title.toLowerCase().includes(query) ||
         (bill.billNumber && bill.billNumber.toLowerCase().includes(query)) ||
         bill.status.toLowerCase().includes(query);
       if (!matchesSearch) return false;
     }
-    
+
     if (statusFilter !== "all") {
       const statusLower = bill.status.toLowerCase();
       if (statusFilter === "passed" && !statusLower.includes("passed") && !statusLower.includes("lulus")) return false;
       if (statusFilter === "pending" && !statusLower.includes("pending") && !statusLower.includes("menunggu") && !statusLower.includes("bacaan")) return false;
       if (statusFilter === "rejected" && !statusLower.includes("rejected") && !statusLower.includes("ditolak")) return false;
     }
-    
+
     if (startDate || endDate) {
       const introDate = bill.introductionDate;
       if (introDate) {
@@ -108,8 +108,26 @@ export default function Bills() {
         }
       }
     }
-    
+
     return true;
+  }).sort((a, b) => {
+    // Sort bills in ascending order by bill number
+    // Extract number and year from format like "D.R.43/2025"
+    const parseBillNumber = (billNumber: string | null | undefined): { num: number, year: number } => {
+      if (!billNumber) return { num: Infinity, year: Infinity };
+      const match = billNumber.match(/(\d+)\/(\d{4})/);
+      if (!match) return { num: Infinity, year: Infinity };
+      return { num: parseInt(match[1], 10), year: parseInt(match[2], 10) };
+    };
+
+    const aData = parseBillNumber(a.billNumber);
+    const bData = parseBillNumber(b.billNumber);
+
+    // Sort by year first (ascending), then by number (ascending)
+    if (aData.year !== bData.year) {
+      return aData.year - bData.year;
+    }
+    return aData.num - bData.num;
   });
 
   const getStatusColor = (status: string) => {
