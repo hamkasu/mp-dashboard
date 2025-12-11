@@ -6973,73 +6973,13 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         return res.status(404).json({ error: "Bill not found. Please provide bill details." });
       }
 
-      // Generate impact analysis using Gemini (same pattern as Hansard)
-      const { GoogleGenAI } = await import("@google/genai");
-
-      const genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || process.env.AI_INTEGRATIONS_GOOGLE_API_KEY || "" });
-
-      const systemPrompt = `You are an expert at analyzing Malaysian parliamentary bills and legislation.
-Analyze bills and explain their impact on Malaysian citizens in a clear, accessible way.
-
-Provide:
-1. A brief summary (2-3 sentences) explaining what this bill means for ordinary Malaysians
-2. The overall impact type: "positive", "negative", "mixed", or "neutral"
-3. 3-5 key points about how this bill affects citizens
-4. Which groups of Malaysians are most affected (e.g., workers, businesses, consumers, students, etc.)
-
-Respond with JSON in this format:
-{
-  "summary": "string",
-  "impactType": "string",
-  "keyPoints": ["string"],
-  "affectedGroups": ["string"]
-}`;
-
-      const prompt = `Analyze this Malaysian Parliament bill:
-
-Bill Number: ${bill.billNumber || "Unknown"}
-Title: ${bill.title}
-Status: ${bill.status}
-
-Provide a comprehensive impact analysis for Malaysian citizens.`;
-
-      const result = await genAI.models.generateContent({
-        model: "gemini-2.5-flash",
-        config: {
-          systemInstruction: systemPrompt,
-          responseMimeType: "application/json",
-          responseSchema: {
-            type: "object",
-            properties: {
-              summary: { type: "string" },
-              impactType: { type: "string" },
-              keyPoints: { type: "array", items: { type: "string" } },
-              affectedGroups: { type: "array", items: { type: "string" } },
-            },
-            required: ["summary", "impactType", "keyPoints", "affectedGroups"],
-          },
-        },
-        contents: [{ role: 'user', parts: [{ text: prompt }] }],
-      });
-
-      const rawJson = result.text;
-      if (!rawJson) {
-        throw new Error("Empty response from Gemini API for bill impact analysis");
-      }
-
-      // Parse the JSON response
-      let impactData;
-      try {
-        impactData = JSON.parse(rawJson);
-      } catch (parseError) {
-        console.error("Failed to parse AI response:", parseError, "Raw:", rawJson);
-        impactData = {
-          summary: "Unable to generate detailed impact analysis at this time.",
-          impactType: "neutral",
-          keyPoints: ["This bill is currently being reviewed."],
-          affectedGroups: ["All Malaysians"],
-        };
-      }
+      // Generate impact analysis using the same Gemini service as Hansard
+      const geminiService = await import("./services/gemini.js");
+      const impactData = await geminiService.analyzeBillImpact(
+        bill.title,
+        bill.billNumber,
+        bill.status
+      );
       
       // Save or update the impact in database
       const existingImpact = await db.query.billImpacts.findFirst({
