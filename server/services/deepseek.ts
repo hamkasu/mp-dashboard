@@ -700,6 +700,61 @@ ${transcript.substring(0, 20000)}`;
   }
 }
 
+export interface BillImpactResult {
+  summary: string;
+  impactType: string;
+  keyPoints: string[];
+  affectedGroups: string[];
+}
+
+export async function analyzeBillImpact(
+  billTitle: string,
+  billNumber: string | null,
+  status: string
+): Promise<BillImpactResult> {
+  try {
+    const systemPrompt = `You are an expert at analyzing Malaysian parliamentary bills and legislation.
+Analyze bills and explain their impact on Malaysian citizens in a clear, accessible way.
+
+Provide:
+1. A brief summary (2-3 sentences) explaining what this bill means for ordinary Malaysians
+2. The overall impact type: "positive", "negative", "mixed", or "neutral"
+3. 3-5 key points about how this bill affects citizens
+4. Which groups of Malaysians are most affected (e.g., workers, businesses, consumers, students, etc.)
+
+You must respond with valid JSON matching this structure:
+{
+  "summary": "string",
+  "impactType": "string",
+  "keyPoints": ["string"],
+  "affectedGroups": ["string"]
+}`;
+
+    const userPrompt = `Analyze this Malaysian Parliament bill:
+
+Bill Number: ${billNumber || "Unknown"}
+Title: ${billTitle}
+Status: ${status}
+
+Provide a comprehensive impact analysis for Malaysian citizens.`;
+
+    const result = await callAI(systemPrompt, userPrompt);
+    
+    // Validate and sanitize the response
+    const sanitized: BillImpactResult = {
+      summary: typeof result.summary === 'string' ? result.summary : 'Unable to generate summary',
+      impactType: typeof result.impactType === 'string' ? result.impactType : 'neutral',
+      keyPoints: Array.isArray(result.keyPoints) ? result.keyPoints.filter((p: any) => typeof p === 'string') : [],
+      affectedGroups: Array.isArray(result.affectedGroups) ? result.affectedGroups.filter((g: any) => typeof g === 'string') : [],
+    };
+
+    return sanitized;
+  } catch (error) {
+    console.error("[AI] Error in bill impact analysis:", error);
+    throw new Error(`Failed to analyze bill impact: ${error}`);
+  }
+}
+
 export function isDeepSeekConfigured(): boolean {
   return !!(GEMINI_API_KEYS.length > 0 || OPENROUTER_API_KEY || GROQ_API_KEY || TOGETHER_API_KEY || (CLOUDFLARE_API_KEY && CLOUDFLARE_ACCOUNT_ID));
 }

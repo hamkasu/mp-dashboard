@@ -6973,9 +6973,9 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         return res.status(404).json({ error: "Bill not found. Please provide bill details." });
       }
 
-      // Generate impact analysis using the same Gemini service as Hansard
-      const geminiService = await import("./services/gemini.js");
-      const impactData = await geminiService.analyzeBillImpact(
+      // Generate impact analysis using the multi-provider AI service (same as Hansard)
+      const deepseekService = await import("./services/deepseek.js");
+      const impactData = await deepseekService.analyzeBillImpact(
         bill.title,
         bill.billNumber,
         bill.status
