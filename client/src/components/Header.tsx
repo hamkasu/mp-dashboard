@@ -133,17 +133,6 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
               <span>{t('nav.courts')}</span>
             </Button>
           </Link>
-          <Link href="/parliamentary-answers">
-            <Button
-              variant={location === "/parliamentary-answers" ? "secondary" : "ghost"}
-              size="sm"
-              data-testid="nav-parliamentary-answers"
-              className="gap-2"
-            >
-              <MessageSquare className="w-4 h-4" />
-              <span>{t('nav.parliamentaryAnswers')}</span>
-            </Button>
-          </Link>
           <Link href="/bills">
             <Button
               variant={location === "/bills" ? "secondary" : "ghost"}
@@ -322,7 +311,7 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
-                variant={location === "/activity" || location === "/unpassed-bills" || location === "/attendance" || location === "/hansard-analysis" || location === "/hansard-questions" || location === "/allowances" || location === "/disclaimer" || location === "/analytics" ? "secondary" : "ghost"}
+                variant={location === "/activity" || location === "/unpassed-bills" || location === "/attendance" || location === "/hansard-analysis" || location === "/hansard-questions" || location === "/parliamentary-answers" || location === "/allowances" || location === "/disclaimer" || location === "/analytics" ? "secondary" : "ghost"}
                 size="sm"
                 data-testid="nav-analysis-dropdown"
                 className="gap-2"
@@ -367,6 +356,13 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
               >
                 <MessageSquare className="w-4 h-4 mr-2" />
                 <span>{t('nav.hansardQuestions')}</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={() => setLocation("/parliamentary-answers")}
+                data-testid="nav-parliamentary-answers"
+              >
+                <MessageSquare className="w-4 h-4 mr-2" />
+                <span>{t('nav.parliamentaryAnswers')}</span>
               </DropdownMenuItem>
               <DropdownMenuItem
                 onSelect={() => setLocation("/analytics")}
