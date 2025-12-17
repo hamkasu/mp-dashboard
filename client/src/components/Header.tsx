@@ -155,6 +155,17 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
               <span>{t('nav.bills')}</span>
             </Button>
           </Link>
+          <a href="/Penal_Code_ACT_574.pdf" target="_blank" rel="noopener noreferrer">
+            <Button
+              variant="ghost"
+              size="sm"
+              data-testid="nav-penal-code"
+              className="gap-2"
+            >
+              <Scale className="w-4 h-4" />
+              <span>Penal Code</span>
+            </Button>
+          </a>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
