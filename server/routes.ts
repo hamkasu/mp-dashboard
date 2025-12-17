@@ -5097,7 +5097,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
 
       // Validate and sanitize days parameter
       const daysParam = req.query.days as string;
-      let days = 7; // default
+      let days = 14; // default
       if (daysParam) {
         const parsed = parseInt(daysParam, 10);
         if (!isNaN(parsed) && parsed > 0 && parsed <= 365) {
