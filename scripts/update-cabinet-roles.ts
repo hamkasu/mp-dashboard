@@ -7,11 +7,11 @@ import { db } from '../server/db';
 import { mps } from '../shared/schema';
 import { ilike, or } from 'drizzle-orm';
 
-// Cabinet Ministers (as of December 2023 reshuffle, updated November 2024)
-// NOTE: Ewon Benedick resigned as Minister of Entrepreneur Development & Cooperatives in November 2024
-// NOTE: 5 Cabinet members are Senators (Dewan Negara), not MPs, and are excluded from this update:
+// Cabinet Ministers (as of December 2025 reshuffle)
+// NOTE: Major reshuffle announced on December 16, 2025
+// NOTE: Dropped ministers - Mohd Rafizi Ramli (resigned May 2025), Zaliha Mustafa, Mohd Na'im Mokhtar
+// NOTE: 4 Cabinet members are Senators (Dewan Negara), not MPs, and are excluded from this update:
 // Ministers (Senators):
-// - Tengku Zafrul (Minister of Investment, Trade & Industry)
 // - Zambry Abd Kadir (Minister of Higher Education)
 // - Amir Hamzah Azizan (Minister of Finance II)
 // Deputy Ministers (Senators):
@@ -20,9 +20,9 @@ import { ilike, or } from 'drizzle-orm';
 const ministers = [
   { name: "Anwar Ibrahim", role: "Prime Minister & Minister of Finance" },
   { name: "Ahmad Zahid Hamidi", role: "Deputy Prime Minister, Minister of Rural & Regional Development" },
-  { name: "Fadillah Yusof", role: "Deputy Prime Minister, Minister of Energy Transition & Renewable Energy" },
-  { name: "Mohd Rafizi Ramli", role: "Minister of Economy" },
-  { name: "Nik Nazmi Nik Ahmad", role: "Minister of Natural Resources & Sustainability" },
+  { name: "Fadillah Yusof", role: "Deputy Prime Minister, Minister of Energy Transition & Water Transformation" },
+  { name: "Akmal Nasrullah Mohd Nasir", role: "Minister of Economy" },
+  { name: "Arthur Joseph Kurup", role: "Minister of Natural Resources & Environmental Sustainability" },
   { name: "Mohamad Hasan", role: "Minister of Foreign Affairs" },
   { name: "Mohamed Khaled Nordin", role: "Minister of Defence" },
   { name: "Saifuddin Nasution Ismail", role: "Minister of Home Affairs" },
@@ -30,52 +30,53 @@ const ministers = [
   { name: "Fadhlina Sidek", role: "Minister of Education" },
   { name: "Loke Siew Fook", role: "Minister of Transport" },
   { name: "Alexander Nanta Linggi", role: "Minister of Works" },
-  { name: "Nga Kor Ming", role: "Minister of Local Government Development" },
-  { name: "Mohamad Sabu", role: "Minister of Agriculture & Food Securities" },
-  { name: "Hannah Yeoh Tseow Suan", role: "Minister of Youth & Sports" },
+  { name: "Nga Kor Ming", role: "Minister of Housing & Local Government" },
+  { name: "Mohamad Sabu", role: "Minister of Agriculture & Food Security" },
+  { name: "Mohammed Taufiq Johari", role: "Minister of Youth & Sports" },
   { name: "Nancy Shukri", role: "Minister of Women, Family & Community Development" },
   { name: "Gobind Singh Deo", role: "Minister of Digital" },
   { name: "Ahmad Fahmi Mohamed Fadzil", role: "Minister of Communications" },
-  { name: "Steven Sim Chee Keong", role: "Minister of Human Resources" },
+  { name: "Ramanan Ramakrishnan", role: "Minister of Human Resources" },
   { name: "Chang Lih Kang", role: "Minister of Science, Technology & Innovation" },
   { name: "Tiong King Sing", role: "Minister of Tourism, Arts & Culture" },
-  { name: "Johari Abdul Ghani", role: "Minister of Plantation & Commodities" },
+  { name: "Noraini Ahmad", role: "Minister of Plantation & Commodities" },
+  { name: "Johari Abdul Ghani", role: "Minister of Investment, Trade & Industry" },
   { name: "Armizan Mohd Ali", role: "Minister of Domestic Trade & Cost of Living" },
+  { name: "Steven Sim Chee Keong", role: "Minister of Entrepreneur Development & Cooperatives" },
   { name: "Azalina Othman", role: "Minister in PM's Department (Law & Institutional Reform)" },
-  { name: "Mohd Na'im Mokhtar", role: "Minister in PM's Department (Religious Affairs)" },
-  { name: "Zaliha Mustafa", role: "Minister in PM's Department (Federal Territories)" },
+  { name: "Hannah Yeoh Tseow Suan", role: "Minister in PM's Department (Federal Territories)" },
   { name: "Aaron Ago Anak Dagang", role: "Minister of Unity" },
 ];
 
 // Deputy Ministers
 const deputyMinisters = [
-  { name: "Lim Hui Ying", role: "Deputy Minister of Finance" },
+  { name: "Liew Chin Tong", role: "Deputy Minister of Finance" },
   { name: "Rubiah Wang", role: "Deputy Minister of Rural & Regional Development" },
-  { name: "Akmal Nasrullah Mohd Nasir", role: "Deputy Minister of Energy Transition & Renewable Energy" },
+  { name: "Abdul Rahman Haji Mohamad", role: "Deputy Minister of Energy Transition & Water Transformation" },
   { name: "Hasbi Haji Habibollah", role: "Deputy Minister of Transport" },
-  { name: "Arthur Joseph Kurup", role: "Deputy Minister of Agriculture & Food Securities" },
-  { name: "Hanifah Hajar Taib", role: "Deputy Minister of Economy" },
-  { name: "Aiman Athirah Sabu", role: "Deputy Minister of Local Government Development" },
-  { name: "Mohamad Alamin", role: "Deputy Minister of Foreign Affairs" },
+  { name: "Chan Foong Hin", role: "Deputy Minister of Agriculture & Food Security" },
+  { name: "Shahar Abdullah", role: "Deputy Minister of Economy" },
+  { name: "Aiman Athirah Sabu", role: "Deputy Minister of Housing & Local Government" },
+  { name: "Lukanisman Awang Sauni", role: "Deputy Minister of Foreign Affairs" },
   { name: "Ahmad Haji Maslan", role: "Deputy Minister of Works" },
   { name: "Shamsul Anuar Haji Nasarah", role: "Deputy Minister of Home Affairs" },
-  { name: "Liew Chin Tong", role: "Deputy Minister of Investment, Trade & Industry" },
+  { name: "Sim Tze Tzin", role: "Deputy Minister of Investment, Trade & Industry" },
   { name: "Adly Zahari", role: "Deputy Minister of Defence" },
   { name: "Mohammad Yusof Apdal", role: "Deputy Minister of Science, Technology & Innovation" },
   { name: "Noraini Ahman", role: "Deputy Minister of Women, Family & Community Development" },
   { name: "M. Kulasegaran", role: "Deputy Minister in PM's Department (Law & Institutional Reform)" },
-  { name: "Huang Tiong Sii", role: "Deputy Minister of Natural Resources & Sustainability" },
-  { name: "Ramanan Ramakrishnan", role: "Deputy Minister of Entrepreneur Development & Cooperatives" },
-  { name: "Mustapha Mohd Yunus Sakmud", role: "Deputy Minister of Higher Education" },
-  { name: "Khairul Firdaus Akbar Khan", role: "Deputy Minister of Tourism, Arts & Culture" },
+  { name: "Syed Ibrahim Syed Noh", role: "Deputy Minister of Natural Resources & Environmental Sustainability" },
+  { name: "Mohamad Alamin", role: "Deputy Minister of Entrepreneur Development & Cooperatives" },
+  { name: "Adam Adli Abd Halim", role: "Deputy Minister of Higher Education" },
+  { name: "Chiew Choon Man", role: "Deputy Minister of Tourism, Arts & Culture" },
   { name: "Teo Nie Ching", role: "Deputy Minister of Communications" },
   { name: "Wong Kah Woh", role: "Deputy Minister of Education" },
-  { name: "Saraswathy Kandasami", role: "Deputy Minister of Unity" },
-  { name: "Adam Adli Abd Halim", role: "Deputy Minister of Youth & Sports" },
-  { name: "Chan Foong Hin", role: "Deputy Minister of Plantation & Commodities" },
-  { name: "Lukanisman Awang Sauni", role: "Deputy Minister of Health" },
+  { name: "Yuneswaran Ramaraj", role: "Deputy Minister of Unity" },
+  { name: "Mordi Bimol", role: "Deputy Minister of Youth & Sports" },
+  { name: "Huang Tiong Sii", role: "Deputy Minister of Plantation & Commodities" },
+  { name: "Hanifah Hajar Taib", role: "Deputy Minister of Health" },
   { name: "Ugak Anak Kumbong", role: "Deputy Minister of Digital" },
-  { name: "Abdul Rahman Haji Mohamad", role: "Deputy Minister of Human Resources" },
+  { name: "Khairul Firdaus Akbar Khan", role: "Deputy Minister of Human Resources" },
 ];
 
 async function updateCabinetRoles() {
@@ -179,15 +180,17 @@ async function updateCabinetRoles() {
   console.log(`   Updated: ${updated}`);
   console.log(`   Not found: ${notFound}`);
   console.log(`   Total attempted: ${allCabinet.length}`);
-  console.log(`\n   Note: 5 cabinet members are Senators (not MPs) and excluded from this update:`);
+  console.log(`\n   Note: 4 cabinet members are Senators (not MPs) and excluded from this update:`);
   console.log(`   Ministers:`);
-  console.log(`   - Tengku Zafrul (Minister of Investment, Trade & Industry)`);
   console.log(`   - Zambry Abd Kadir (Minister of Higher Education)`);
   console.log(`   - Amir Hamzah Azizan (Minister of Finance II)`);
   console.log(`   Deputy Ministers:`);
   console.log(`   - Zulkifli Hasan (Deputy Minister in PM's Department - Religious Affairs)`);
   console.log(`   - Fuziah Salleh (Deputy Minister of Domestic Trade & Cost of Living)`);
-  console.log(`\n   Note: Ewon Benedick resigned in November 2024 and is no longer included.`);
+  console.log(`\n   Note: December 2025 reshuffle dropped 3 positions:`);
+  console.log(`   - Mohd Rafizi Ramli (resigned May 2025)`);
+  console.log(`   - Zaliha Mustafa (dropped December 2025)`);
+  console.log(`   - Saraswathy Kandasami (dropped December 2025)`);
 
   process.exit(0);
 }
