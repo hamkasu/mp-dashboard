@@ -11,6 +11,7 @@ import { PageMeta } from "@/components/PageMeta";
 import { StatisticsCards } from "@/components/StatisticsCards";
 import { FilterSidebar } from "@/components/FilterSidebar";
 import { MPGrid } from "@/components/MPGrid";
+import { DonateButton } from "@/components/DonateButton";
 import { Footer } from "@/components/Footer";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -565,6 +566,9 @@ export default function Home() {
               isLoading={statsLoading || (hasActiveFilter && filteredStatsLoading)} 
               hasPartyFilter={selectedParties.length > 0} 
             />
+
+            {/* Donate Section */}
+            <DonateButton />
 
             {/* MP Grid */}
             {sortBy === "inappropriate-language" && languageAnalysisLoading ? (
