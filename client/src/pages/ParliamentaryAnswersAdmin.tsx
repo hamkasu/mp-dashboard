@@ -8,6 +8,7 @@ import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Header } from "@/components/Header";
+import { PageMeta } from "@/components/PageMeta";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -268,6 +269,12 @@ export default function ParliamentaryAnswersAdmin() {
 
   return (
     <div className="min-h-screen bg-background">
+      <PageMeta
+        title="Parliamentary Answers Admin"
+        description="Admin page for managing parliamentary answers."
+        keywords="admin, parliamentary answers"
+        url="https://myparliament.calmic.com.my/admin/parliamentary-answers"
+      />
       <Header onSearchClick={() => {}} />
 
       <main className="container mx-auto px-4 py-8 max-w-7xl">

@@ -3,6 +3,7 @@
  */
 
 import { ConstituencyHansardAnalysis } from "@/components/ConstituencyHansardAnalysis";
+import { PageMeta } from "@/components/PageMeta";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
@@ -12,6 +13,12 @@ export default function ConstituencyAnalysis() {
 
   return (
     <div className="min-h-screen bg-background">
+      <PageMeta
+        title="Constituency Analysis"
+        description="Comprehensive analysis of parliamentary speaking participation across all Malaysian constituencies in the 15th Parliament."
+        keywords="constituency analysis, Hansard analysis, parliamentary participation, Malaysian constituencies"
+        url="https://myparliament.calmic.com.my/constituency-analysis"
+      />
       <div className="container mx-auto px-4 py-8">
         <div className="mb-6">
           <Button

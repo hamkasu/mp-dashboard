@@ -4,6 +4,7 @@
 
 import { useEffect } from "react";
 import { Header } from "@/components/Header";
+import { PageMeta } from "@/components/PageMeta";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -112,6 +113,13 @@ export default function BlogPost() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
+      <PageMeta
+        title={post?.title || "Blog Post"}
+        description={post?.excerpt || "Read the latest blog post about Malaysian Parliament."}
+        keywords={`Malaysian Parliament, ${post?.title || 'blog'}`}
+        url={`https://myparliament.calmic.com.my/blog/${post?.slug || ''}`}
+        image={post?.imageUrl || undefined}
+      />
       <Header />
 
       <main className="flex-1 container mx-auto px-4 py-6 md:py-8 max-w-4xl">

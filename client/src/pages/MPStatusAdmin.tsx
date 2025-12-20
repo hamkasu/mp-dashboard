@@ -7,6 +7,7 @@ import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Header } from "@/components/Header";
+import { PageMeta } from "@/components/PageMeta";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -120,6 +121,12 @@ export default function MPStatusAdmin() {
 
   return (
     <div className="min-h-screen bg-background">
+      <PageMeta
+        title="MP Status Admin"
+        description="Admin page for updating MP status."
+        keywords="admin, MP status"
+        url="https://myparliament.calmic.com.my/admin/mp-status"
+      />
       <Header onMenuClick={() => {}} onSearchClick={() => {}} />
 
       <div className="max-w-4xl mx-auto px-4 md:px-6 lg:px-8 py-8">

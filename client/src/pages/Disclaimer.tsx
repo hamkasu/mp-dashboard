@@ -3,6 +3,7 @@
  */
 
 import { Header } from "@/components/Header";
+import { PageMeta } from "@/components/PageMeta";
 import { Card } from "@/components/ui/card";
 import { AlertCircle } from "lucide-react";
 import { useLanguage } from "@/i18n/LanguageContext";
@@ -12,6 +13,12 @@ export default function Disclaimer() {
 
   return (
     <div className="min-h-screen bg-background">
+      <PageMeta
+        title="Disclaimer"
+        description="Important legal disclaimer and terms of use for the Malaysian Parliament Dashboard."
+        keywords="disclaimer, terms of use, legal notice"
+        url="https://myparliament.calmic.com.my/disclaimer"
+      />
       <Header />
       <main className="container max-w-5xl mx-auto px-4 py-8">
         <div className="flex items-center gap-3 mb-6">

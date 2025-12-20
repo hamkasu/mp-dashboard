@@ -6,6 +6,7 @@ import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useRoute, Link } from "wouter";
 import { useLanguage } from "@/i18n/LanguageContext";
+import { PageMeta } from "@/components/PageMeta";
 import { ArrowLeft, MapPin, UserCircle, Flag, FileText, Wallet, Calendar, Scale, ExternalLink, AlertTriangle, Info, MessageSquare, HelpCircle, Gavel, FileQuestion, ScrollText, Phone, Mail, MapPinned, Printer, Share2, TrendingDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -293,7 +294,14 @@ export default function MPProfile() {
 
   return (
     <div className="min-h-screen bg-background">
-      <script 
+      <PageMeta
+        title={mp ? `${mp.name} - ${mp.constituency}` : "MP Profile"}
+        description={mp ? `View the profile, voting record, and parliamentary activities of ${mp.name}, representing ${mp.constituency} (${mp.party}). Track attendance, court cases, and legislative proposals.` : "View MP profile and parliamentary activities."}
+        keywords={mp ? `${mp.name}, ${mp.constituency}, ${mp.party}, Malaysian MP, parliament` : "Malaysian Parliament, MP profile"}
+        url={mp ? `https://myparliament.calmic.com.my/mp/${mp.id}` : "https://myparliament.calmic.com.my"}
+        image={mp?.photoUrl || "https://myparliament.calmic.com.my/android-chrome-512x512.png"}
+      />
+      <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(schemaData) }}
       />

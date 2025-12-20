@@ -7,6 +7,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { Header } from "@/components/Header";
 import { SearchDialog } from "@/components/SearchDialog";
+import { PageMeta } from "@/components/PageMeta";
 import { StatisticsCards } from "@/components/StatisticsCards";
 import { FilterSidebar } from "@/components/FilterSidebar";
 import { MPGrid } from "@/components/MPGrid";
@@ -400,6 +401,12 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-background">
+      <PageMeta
+        title={t("dashboard.title")}
+        description="Track Malaysian Parliament MPs, voting records, and parliamentary activities. Comprehensive Dewan Rakyat dashboard with attendance tracking, court cases, and SPRM investigations."
+        keywords="Malaysian Parliament, MP dashboard, Dewan Rakyat, voting records, parliamentary activities, MP attendance, court cases, SPRM investigations, Malaysia MPs"
+        url="https://myparliament.calmic.com.my"
+      />
       <Header
         onMenuClick={() => setMobileFiltersOpen(true)}
         onSearchClick={() => setSearchDialogOpen(true)}

@@ -5,6 +5,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { Header } from "@/components/Header";
+import { PageMeta } from "@/components/PageMeta";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -114,6 +115,12 @@ export default function Courts() {
 
   return (
     <div className="min-h-screen bg-background">
+      <PageMeta
+        title="Court Cases & SPRM Investigations"
+        description="Track court cases and SPRM investigations involving Malaysian Parliament MPs. View legal proceedings, outcomes, and investigation statuses."
+        keywords="court cases, SPRM investigations, Malaysian MPs, legal proceedings, corruption cases, anti-corruption"
+        url="https://myparliament.calmic.com.my/courts"
+      />
       <Header />
       
       <main className="container max-w-6xl mx-auto px-4 py-8">

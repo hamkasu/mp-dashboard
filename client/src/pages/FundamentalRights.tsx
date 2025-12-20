@@ -5,6 +5,7 @@
 import { useState } from "react";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { Header } from "@/components/Header";
+import { PageMeta } from "@/components/PageMeta";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Scale, Shield, Home, MessageCircle, Globe, GraduationCap, Wallet, Printer } from "lucide-react";
@@ -556,6 +557,12 @@ export default function FundamentalRights() {
 
   return (
     <>
+      <PageMeta
+        title="Fundamental Rights"
+        description="Learn about the fundamental rights and liberties guaranteed to Malaysian citizens under the Federal Constitution. Part II Articles 5-13 explained."
+        keywords="fundamental rights, Malaysian Constitution, civil liberties, human rights, Malaysian law, constitutional rights"
+        url="https://myparliament.calmic.com.my/fundamental-rights"
+      />
       <style>{`
         @media print {
           @page {

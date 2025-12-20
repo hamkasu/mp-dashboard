@@ -4,6 +4,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { Header } from "@/components/Header";
+import { PageMeta } from "@/components/PageMeta";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, Globe, FileText, TrendingUp } from "lucide-react";
 import { format } from "date-fns";
@@ -73,6 +74,12 @@ export default function Analytics() {
 
   return (
     <div className="min-h-screen bg-background">
+      <PageMeta
+        title="Visitor Analytics"
+        description="View visitor statistics and analytics for the Malaysian Parliament Dashboard. Track visits, unique visitors, and top pages."
+        keywords="analytics, visitor statistics, web analytics, dashboard metrics"
+        url="https://myparliament.calmic.com.my/analytics"
+      />
       <Header />
       <div className="container mx-auto p-6 space-y-6">
         <div>

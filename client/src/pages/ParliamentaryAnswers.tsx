@@ -9,6 +9,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { Header } from "@/components/Header";
 import { SearchDialog } from "@/components/SearchDialog";
+import { PageMeta } from "@/components/PageMeta";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -95,6 +96,12 @@ export default function ParliamentaryAnswers() {
 
   return (
     <div className="min-h-screen bg-background">
+      <PageMeta
+        title="Oral Answers"
+        description="Browse oral answers (Jawapan Lisan) from Malaysian Parliament. Track ministerial responses to questions from MPs."
+        keywords="oral answers, jawapan lisan, parliamentary answers, ministerial responses, Malaysian Parliament"
+        url="https://myparliament.calmic.com.my/parliamentary-answers"
+      />
       <Header onSearchClick={() => setSearchDialogOpen(true)} />
 
       <SearchDialog

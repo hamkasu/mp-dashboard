@@ -6,6 +6,7 @@ import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Header } from "@/components/Header";
+import { PageMeta } from "@/components/PageMeta";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -769,6 +770,12 @@ export default function HansardAdmin() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
+      <PageMeta
+        title="Hansard Admin"
+        description="Admin page for managing Hansard records."
+        keywords="admin, hansard"
+        url="https://myparliament.calmic.com.my/admin/hansard"
+      />
       <Header />
       <div className="container mx-auto p-6 space-y-6" data-testid="page-hansard-admin">
         <div className="flex flex-wrap items-center justify-between gap-4">

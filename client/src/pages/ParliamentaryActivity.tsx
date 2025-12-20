@@ -7,6 +7,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { Header } from "@/components/Header";
 import { SearchDialog } from "@/components/SearchDialog";
+import { PageMeta } from "@/components/PageMeta";
 import { AddActivityDialog } from "@/components/AddActivityDialog";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -124,6 +125,12 @@ export default function ParliamentaryActivity() {
 
   return (
     <div className="min-h-screen bg-background">
+      <PageMeta
+        title="Parliamentary Activity"
+        description="Track legislative proposals, debates, and parliamentary questions from Malaysian MPs. Monitor bills, motions, and questions in the Dewan Rakyat."
+        keywords="Parliamentary activity, legislative proposals, debates, parliamentary questions, bills, motions, Malaysian Parliament"
+        url="https://myparliament.calmic.com.my/activity"
+      />
       <Header onSearchClick={() => setSearchDialogOpen(true)} />
       
       <SearchDialog 

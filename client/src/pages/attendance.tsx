@@ -7,6 +7,7 @@ import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { Link } from "wouter";
 import { Header } from "@/components/Header";
+import { PageMeta } from "@/components/PageMeta";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -119,6 +120,12 @@ export default function AttendancePage() {
 
   return (
     <>
+      <PageMeta
+        title="MP Attendance"
+        description="Track MP attendance at Malaysian Parliament sessions. View attendance records, absent MPs, and participation rates in the Dewan Rakyat."
+        keywords="MP attendance, parliamentary attendance, absent MPs, attendance records, Dewan Rakyat sessions"
+        url="https://myparliament.calmic.com.my/attendance"
+      />
       <Header />
       <div className="container mx-auto p-6 space-y-6">
       <div>

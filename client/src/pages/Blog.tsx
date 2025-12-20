@@ -3,6 +3,7 @@
  */
 
 import { Header } from "@/components/Header";
+import { PageMeta } from "@/components/PageMeta";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -47,6 +48,12 @@ export default function Blog() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
+      <PageMeta
+        title="Blog"
+        description="Read the latest news and insights about Malaysian Parliament, MPs, and parliamentary activities."
+        keywords="Malaysian Parliament blog, parliamentary news, MP insights, political analysis"
+        url="https://myparliament.calmic.com.my/blog"
+      />
       <Header />
 
       <main className="flex-1 container mx-auto px-4 py-6 md:py-8 max-w-7xl">

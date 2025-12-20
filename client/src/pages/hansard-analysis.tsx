@@ -6,6 +6,7 @@ import { useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Header } from "@/components/Header";
+import { PageMeta } from "@/components/PageMeta";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -236,6 +237,12 @@ export default function HansardAnalysis() {
 
   return (
     <div className="min-h-screen bg-background">
+      <PageMeta
+        title="Hansard Analysis"
+        description="Analyze Malaysian Parliament Hansard records with AI insights. Track language usage, speaking patterns, and parliamentary discourse."
+        keywords="Hansard analysis, parliamentary analysis, AI insights, language analysis, Malaysian Parliament"
+        url="https://myparliament.calmic.com.my/hansard-analysis"
+      />
       <Header />
       <div className="container mx-auto p-6 max-w-7xl">
         <div className="mb-6">
