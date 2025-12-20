@@ -100,61 +100,57 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
               <span>{t('nav.parliamentGuide')}</span>
             </Button>
           </Link>
-          <Link href="/constitution">
-            <Button
-              variant={location === "/constitution" ? "secondary" : "ghost"}
-              size="sm"
-              data-testid="nav-constitution"
-              className="gap-2"
-            >
-              <Scale className="w-4 h-4" />
-              <span>{t('nav.constitution')}</span>
-            </Button>
-          </Link>
-          <Link href="/fundamental-rights">
-            <Button
-              variant={location === "/fundamental-rights" ? "secondary" : "ghost"}
-              size="sm"
-              data-testid="nav-fundamental-rights"
-              className="gap-2"
-            >
-              <Shield className="w-4 h-4" />
-              <span>{t('nav.fundamentalRights')}</span>
-            </Button>
-          </Link>
-          <Link href="/courts">
-            <Button
-              variant={location === "/courts" ? "secondary" : "ghost"}
-              size="sm"
-              data-testid="nav-courts"
-              className="gap-2"
-            >
-              <Gavel className="w-4 h-4" />
-              <span>{t('nav.courts')}</span>
-            </Button>
-          </Link>
-          <Link href="/bills">
-            <Button
-              variant={location === "/bills" ? "secondary" : "ghost"}
-              size="sm"
-              data-testid="nav-bills"
-              className="gap-2"
-            >
-              <FileText className="w-4 h-4" />
-              <span>{t('nav.bills')}</span>
-            </Button>
-          </Link>
-          <a href="/Penal_Code_ACT_574.pdf" target="_blank" rel="noopener noreferrer">
-            <Button
-              variant="ghost"
-              size="sm"
-              data-testid="nav-penal-code"
-              className="gap-2"
-            >
-              <Scale className="w-4 h-4" />
-              <span>Penal Code</span>
-            </Button>
-          </a>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant={location === "/constitution" || location === "/fundamental-rights" || location === "/courts" || location === "/bills" ? "secondary" : "ghost"}
+                size="sm"
+                data-testid="nav-legal-dropdown"
+                className="gap-2"
+              >
+                <Scale className="w-4 h-4" />
+                <span>{t('nav.legal')}</span>
+                <ChevronDown className="w-3 h-3 ml-1" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start">
+              <DropdownMenuItem
+                onSelect={() => setLocation("/constitution")}
+                data-testid="nav-constitution"
+              >
+                <Scale className="w-4 h-4 mr-2" />
+                <span>{t('nav.constitution')}</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={() => setLocation("/fundamental-rights")}
+                data-testid="nav-fundamental-rights"
+              >
+                <Shield className="w-4 h-4 mr-2" />
+                <span>{t('nav.fundamentalRights')}</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={() => setLocation("/courts")}
+                data-testid="nav-courts"
+              >
+                <Gavel className="w-4 h-4 mr-2" />
+                <span>{t('nav.courts')}</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={() => setLocation("/bills")}
+                data-testid="nav-bills"
+              >
+                <FileText className="w-4 h-4 mr-2" />
+                <span>{t('nav.bills')}</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={() => window.open("/Penal_Code_ACT_574.pdf", "_blank")}
+                data-testid="nav-penal-code"
+              >
+                <Scale className="w-4 h-4 mr-2" />
+                <span>Penal Code</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
