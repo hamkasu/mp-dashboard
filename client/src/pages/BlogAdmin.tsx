@@ -6,6 +6,7 @@ import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Header } from "@/components/Header";
+import { PageMeta } from "@/components/PageMeta";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -211,6 +212,12 @@ export default function BlogAdmin() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
+      <PageMeta
+        title="Blog Admin"
+        description="Admin page for managing blog posts."
+        keywords="admin, blog"
+        url="https://myparliament.calmic.com.my/admin/blog"
+      />
       <Header />
 
       <main className="flex-1 container mx-auto px-4 py-6 md:py-8 max-w-7xl">

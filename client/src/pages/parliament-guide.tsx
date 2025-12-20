@@ -5,6 +5,7 @@
 import { useState } from "react";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { Header } from "@/components/Header";
+import { PageMeta } from "@/components/PageMeta";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -145,6 +146,12 @@ export default function ParliamentGuide() {
 
   return (
     <div className="min-h-screen bg-background">
+      <PageMeta
+        title="How Parliament Works"
+        description="Learn how the Malaysian Parliament works. A comprehensive guide to understanding Dewan Rakyat, Dewan Negara, and the legislative process."
+        keywords="Malaysian Parliament, how parliament works, Dewan Rakyat, Dewan Negara, legislative process, Malaysian government"
+        url="https://myparliament.calmic.com.my/parliament-guide"
+      />
       <Header />
       <main className="max-w-5xl mx-auto px-4 py-8 md:px-6 lg:px-8">
         <div className="flex flex-col gap-6">

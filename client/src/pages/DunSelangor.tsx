@@ -1,5 +1,6 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Header } from "@/components/Header";
+import { PageMeta } from "@/components/PageMeta";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -147,8 +148,14 @@ export default function DunSelangor() {
 
   return (
     <div className="min-h-screen bg-background">
+      <PageMeta
+        title="Selangor DUN (State Legislative Assembly)"
+        description="View Selangor State Legislative Assembly (Dewan Undangan Negeri) members, their roles, constituencies, and information."
+        keywords="Selangor DUN, Selangor State Assembly, ADUN Selangor, Selangor legislators, state government"
+        url="https://myparliament.calmic.com.my/dun-selangor"
+      />
       <Header />
-      
+
       <main className="container max-w-7xl mx-auto px-4 py-8">
         <div className="space-y-2 mb-8">
           <div className="flex items-center gap-3">

@@ -5,6 +5,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Header } from "@/components/Header";
+import { PageMeta } from "@/components/PageMeta";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -111,6 +112,12 @@ export default function Allowances() {
 
   return (
     <div className="min-h-screen bg-background">
+      <PageMeta
+        title="MP Salaries & Allowances"
+        description="View salaries and allowances for Malaysian Parliament MPs. Track ministerial salaries, constituency allowances, and total compensation."
+        keywords="MP salaries, MP allowances, ministerial salaries, parliamentary compensation, Malaysian Parliament, constituency allowances"
+        url="https://myparliament.calmic.com.my/allowances"
+      />
       <Header />
       <main className="container mx-auto px-4 py-8">
         <div className="mb-8">

@@ -7,6 +7,7 @@ import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Header } from "@/components/Header";
+import { PageMeta } from "@/components/PageMeta";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -426,6 +427,12 @@ export default function CourtCasesAdmin() {
 
   return (
     <div className="min-h-screen bg-background">
+      <PageMeta
+        title="Court Cases Admin"
+        description="Admin page for managing court cases."
+        keywords="admin, court cases"
+        url="https://myparliament.calmic.com.my/admin/court-cases"
+      />
       <Header />
       <main className="container mx-auto px-4 py-8">
         <div className="flex items-center justify-between gap-4 mb-6 flex-wrap">

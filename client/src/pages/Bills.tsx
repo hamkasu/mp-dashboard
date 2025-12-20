@@ -10,6 +10,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { Header } from "@/components/Header";
 import { SearchDialog } from "@/components/SearchDialog";
+import { PageMeta } from "@/components/PageMeta";
 import { BillImpactDialog } from "@/components/BillImpactDialog";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -156,6 +157,12 @@ export default function Bills() {
 
   return (
     <>
+      <PageMeta
+        title="Parliamentary Bills"
+        description="Browse and track Malaysian Parliament bills. View bill status, impact analysis, and legislative proposals in the Dewan Rakyat."
+        keywords="Parliamentary bills, legislation, laws, Malaysian Parliament, legislative proposals, bill status"
+        url="https://myparliament.calmic.com.my/bills"
+      />
       <Header onSearchClick={() => setSearchDialogOpen(true)} />
       <SearchDialog open={searchDialogOpen} onOpenChange={setSearchDialogOpen} />
 

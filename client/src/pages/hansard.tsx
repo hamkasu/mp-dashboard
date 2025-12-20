@@ -7,6 +7,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { Link } from "wouter";
 import { Header } from "@/components/Header";
+import { PageMeta } from "@/components/PageMeta";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -169,6 +170,12 @@ export default function HansardPage() {
 
   return (
     <>
+      <PageMeta
+        title="Hansard Records"
+        description="Browse and search Malaysian Parliament Hansard records. View parliamentary debates, speeches, and voting records from the Dewan Rakyat."
+        keywords="Hansard, Malaysian Parliament, parliamentary debates, Dewan Rakyat, parliamentary records, speeches"
+        url="https://myparliament.calmic.com.my/hansard"
+      />
       <Header />
       <div className="container mx-auto p-6 space-y-6">
       <div>

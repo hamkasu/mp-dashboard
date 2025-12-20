@@ -9,6 +9,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { Header } from "@/components/Header";
 import { SearchDialog } from "@/components/SearchDialog";
+import { PageMeta } from "@/components/PageMeta";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -133,6 +134,12 @@ export default function UnpassedBills() {
 
   return (
     <div className="min-h-screen bg-background">
+      <PageMeta
+        title="Unpassed Bills"
+        description="Review bills that have not been passed yet in the Malaysian Parliament. Track pending legislation and legislative proposals."
+        keywords="unpassed bills, pending legislation, Malaysian Parliament, legislative proposals, bill status"
+        url="https://myparliament.calmic.com.my/unpassed-bills"
+      />
       <Header onSearchClick={() => setSearchDialogOpen(true)} />
 
       <SearchDialog
