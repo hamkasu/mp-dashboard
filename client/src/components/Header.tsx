@@ -48,18 +48,18 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
         )}
         
         <Link href="/">
-          <div className="flex items-center gap-4 cursor-pointer hover-elevate px-2 py-1 rounded-md">
+          <div className="flex items-center gap-2 md:gap-4 cursor-pointer hover-elevate px-1 md:px-2 py-1 rounded-md">
             <img
               src="/calmic-logo.png"
               alt="Calmic Logo"
-              className="h-12 w-12 md:h-14 md:w-14 rounded-full object-cover"
+              className="h-10 w-10 md:h-14 md:w-14 rounded-full object-cover shrink-0"
               data-testid="img-calmic-logo"
             />
-            <div className="flex flex-col">
-              <h1 className="text-base md:text-lg font-bold tracking-tight">
+            <div className="flex flex-col min-w-0 flex-1">
+              <h1 className="text-sm md:text-lg font-bold tracking-tight whitespace-nowrap overflow-hidden text-ellipsis">
                 {t('nav.malayParliament')}
               </h1>
-              <p className="text-xs text-muted-foreground hidden sm:block">
+              <p className="text-xs text-muted-foreground hidden sm:block whitespace-nowrap overflow-hidden text-ellipsis">
                 {t('nav.dewanRakyatDashboard')}
               </p>
             </div>
