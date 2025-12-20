@@ -60,7 +60,7 @@ export function DonateButton() {
               {currentContent.buttonText}
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-lg">
+          <DialogContent className="sm:max-w-2xl">
             <DialogHeader>
               <DialogTitle className="text-center text-xl">
                 {currentContent.modalTitle}
@@ -75,7 +75,7 @@ export function DonateButton() {
                 <img
                   src="/duitnow-qr.png"
                   alt="DuitNow QR Code - CALMIC SDN. BHD."
-                  className="w-96 h-96 object-contain"
+                  className="w-[36rem] h-[36rem] object-contain"
                 />
               </div>
               <p className="text-sm text-center text-muted-foreground font-medium">
