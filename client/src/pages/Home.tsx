@@ -11,6 +11,7 @@ import { PageMeta } from "@/components/PageMeta";
 import { StatisticsCards } from "@/components/StatisticsCards";
 import { FilterSidebar } from "@/components/FilterSidebar";
 import { MPGrid } from "@/components/MPGrid";
+import { Footer } from "@/components/Footer";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -613,6 +614,7 @@ export default function Home() {
           </div>
         </main>
       </div>
+      <Footer />
     </div>
   );
 }
