@@ -24,6 +24,12 @@ import {
   TableRow
 } from "@/components/ui/table";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
   Search,
   TrendingUp,
   TrendingDown,
@@ -357,7 +363,20 @@ export default function ReportCard() {
                       <TableHead className="w-12 text-center font-semibold text-foreground">Rank</TableHead>
                       <TableHead className="font-semibold text-foreground">Name</TableHead>
                       <TableHead className="hidden sm:table-cell font-semibold text-foreground">Constituency</TableHead>
-                      <TableHead className="text-right font-semibold text-foreground w-16">Score</TableHead>
+                      <TableHead className="text-right font-semibold text-foreground w-16">
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span className="cursor-help underline decoration-dotted">Score</span>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Overall performance score (0-100) based on:</p>
+                            <p className="text-xs mt-1">• Attendance (25%)</p>
+                            <p className="text-xs">• Participation (25%)</p>
+                            <p className="text-xs">• Conduct (25%)</p>
+                            <p className="text-xs">• Constituency Impact (25%)</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -401,7 +420,20 @@ export default function ReportCard() {
                       <TableHead className="w-12 text-center font-semibold text-foreground">Rank</TableHead>
                       <TableHead className="font-semibold text-foreground">Name</TableHead>
                       <TableHead className="hidden sm:table-cell font-semibold text-foreground">Constituency</TableHead>
-                      <TableHead className="text-right font-semibold text-foreground w-16">Score</TableHead>
+                      <TableHead className="text-right font-semibold text-foreground w-16">
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span className="cursor-help underline decoration-dotted">Score</span>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Overall performance score (0-100) based on:</p>
+                            <p className="text-xs mt-1">• Attendance (25%)</p>
+                            <p className="text-xs">• Participation (25%)</p>
+                            <p className="text-xs">• Conduct (25%)</p>
+                            <p className="text-xs">• Constituency Impact (25%)</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -540,10 +572,30 @@ export default function ReportCard() {
                           Constituency <SortIcon field="constituency" />
                         </TableHead>
                         <TableHead className="cursor-pointer text-center" onClick={() => handleSort('grade')}>
-                          Grade <SortIcon field="grade" />
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span className="cursor-help underline decoration-dotted">Grade <SortIcon field="grade" /></span>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Overall letter grade from performance score:</p>
+                              <p className="text-xs mt-1">A: 90-100 | B: 80-89 | C: 70-79</p>
+                              <p className="text-xs">D: 60-69 | F: Below 60</p>
+                            </TooltipContent>
+                          </Tooltip>
                         </TableHead>
                         <TableHead className="cursor-pointer text-center" onClick={() => handleSort('overallScore')}>
-                          Score <SortIcon field="overallScore" />
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span className="cursor-help underline decoration-dotted">Score <SortIcon field="overallScore" /></span>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Overall performance score (0-100) based on:</p>
+                              <p className="text-xs mt-1">• Attendance (25%)</p>
+                              <p className="text-xs">• Participation (25%)</p>
+                              <p className="text-xs">• Conduct (25%)</p>
+                              <p className="text-xs">• Constituency Impact (25%)</p>
+                            </TooltipContent>
+                          </Tooltip>
                         </TableHead>
                         <TableHead className="cursor-pointer text-center" onClick={() => handleSort('attendance')}>
                           Attendance <SortIcon field="attendance" />
