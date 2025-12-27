@@ -3,7 +3,7 @@
  * Updated: Parliamentary Answers Navigation (2025-12-02)
  */
 
-import { Search, Menu, Home, FileText, BookOpen, UserCheck, Calculator, BarChart3, ExternalLink, ChevronDown, AlertCircle, GraduationCap, TrendingUp, Scale, Shield, MessageSquare, Edit, Gavel, UserX, Building2, MessageSquareText } from "lucide-react";
+import { Search, Menu, Home, FileText, BookOpen, UserCheck, Calculator, BarChart3, ExternalLink, ChevronDown, AlertCircle, GraduationCap, TrendingUp, Scale, Shield, MessageSquare, Edit, Gavel, UserX, Building2, MessageSquareText, Award } from "lucide-react";
 import { FeedbackModal } from "@/components/FeedbackModal";
 import { Button } from "@/components/ui/button";
 import {
@@ -98,6 +98,17 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
             >
               <GraduationCap className="w-4 h-4" />
               <span>{t('nav.parliamentGuide')}</span>
+            </Button>
+          </Link>
+          <Link href="/report-card">
+            <Button
+              variant={location === "/report-card" ? "secondary" : "ghost"}
+              size="sm"
+              data-testid="nav-report-card"
+              className="gap-2"
+            >
+              <Award className="w-4 h-4" />
+              <span>Report Card</span>
             </Button>
           </Link>
           <DropdownMenu>
@@ -286,6 +297,13 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
                 >
                   <MessageSquare className="w-4 h-4 mr-2" />
                   <span>Parliamentary Answers Admin</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onSelect={() => setLocation("/report-card-admin")}
+                  data-testid="nav-report-card-admin"
+                >
+                  <Award className="w-4 h-4 mr-2" />
+                  <span>Report Card Admin</span>
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onSelect={() => setLocation("/blog-admin")}

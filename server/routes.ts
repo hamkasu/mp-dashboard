@@ -8047,5 +8047,91 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
+  // ============================================================================
+  // MP Report Card Routes
+  // ============================================================================
+
+  // Get all report cards with MP details
+  app.get("/api/report-cards", async (req, res) => {
+    try {
+      const { getReportCardsWithDetails } = await import("./services/report-card-service");
+      const reportCards = await getReportCardsWithDetails();
+      res.json(reportCards);
+    } catch (error) {
+      console.error("Error fetching report cards:", error);
+      res.status(500).json({ error: "Failed to fetch report cards" });
+    }
+  });
+
+  // Get aggregate statistics
+  app.get("/api/report-cards/stats", async (req, res) => {
+    try {
+      const { getAggregateStats } = await import("./services/report-card-service");
+      const stats = await getAggregateStats();
+      res.json(stats);
+    } catch (error) {
+      console.error("Error fetching report card stats:", error);
+      res.status(500).json({ error: "Failed to fetch report card statistics" });
+    }
+  });
+
+  // Get report card for specific MP
+  app.get("/api/report-cards/:mpId", async (req, res) => {
+    try {
+      const { mpId } = req.params;
+      const { getReportCardsWithDetails } = await import("./services/report-card-service");
+      const allCards = await getReportCardsWithDetails();
+      const reportCard = allCards.find(card => card.mpId === mpId);
+
+      if (!reportCard) {
+        return res.status(404).json({ error: "Report card not found for this MP" });
+      }
+
+      res.json(reportCard);
+    } catch (error) {
+      console.error("Error fetching MP report card:", error);
+      res.status(500).json({ error: "Failed to fetch MP report card" });
+    }
+  });
+
+  // Admin: Trigger manual report card update
+  app.post("/api/admin/report-cards/update", requireAdmin, mutationRateLimit, auditMiddleware('report-card-update'), async (req, res) => {
+    try {
+      const { updateAllReportCards } = await import("./services/report-card-service");
+
+      console.log("[Report Cards] Manual update triggered by admin");
+      const result = await updateAllReportCards();
+
+      console.log(`[Report Cards] Update complete: ${result.created} created, ${result.updated} updated`);
+
+      res.json({
+        success: true,
+        message: "Report cards updated successfully",
+        created: result.created,
+        updated: result.updated,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error("Error updating report cards:", error);
+      res.status(500).json({ error: "Failed to update report cards" });
+    }
+  });
+
+  // Admin: Get last update time
+  app.get("/api/admin/report-cards/last-update", requireAdmin, async (req, res) => {
+    try {
+      const lastUpdate = await db
+        .select({ updatedAt: sql<Date>`MAX(${sql.identifier('updated_at')})` })
+        .from(sql.identifier('mp_report_cards'));
+
+      res.json({
+        lastUpdate: lastUpdate[0]?.updatedAt || null,
+      });
+    } catch (error) {
+      console.error("Error fetching last update time:", error);
+      res.status(500).json({ error: "Failed to fetch last update time" });
+    }
+  });
+
   // Server is now passed in from index.ts, no need to create it here
 }
