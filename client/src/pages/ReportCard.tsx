@@ -39,7 +39,11 @@ import {
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
-  Eye
+  Eye,
+  Calendar,
+  MessageSquare,
+  Shield,
+  MapPin
 } from "lucide-react";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
@@ -345,6 +349,75 @@ export default function ReportCard() {
               </Card>
             </div>
           )}
+
+          {/* Scoring Legend */}
+          <Card className="mb-8 bg-muted/30">
+            <CardHeader>
+              <CardTitle>Scoring Methodology</CardTitle>
+              <CardDescription>How we calculate overall performance scores</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="flex gap-3 items-start">
+                  <Calendar className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <p className="font-semibold text-sm">Attendance</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">25% of overall score</p>
+                    <p className="text-xs text-muted-foreground">Parliamentary session participation</p>
+                  </div>
+                </div>
+                <div className="flex gap-3 items-start">
+                  <MessageSquare className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <p className="font-semibold text-sm">Participation</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">25% of overall score</p>
+                    <p className="text-xs text-muted-foreground">Speeches and questions asked</p>
+                  </div>
+                </div>
+                <div className="flex gap-3 items-start">
+                  <Shield className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <p className="font-semibold text-sm">Conduct</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">25% of overall score</p>
+                    <p className="text-xs text-muted-foreground">Behavior and language usage</p>
+                  </div>
+                </div>
+                <div className="flex gap-3 items-start">
+                  <MapPin className="h-5 w-5 text-red-600 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <p className="font-semibold text-sm">Constituency Impact</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">25% of overall score</p>
+                    <p className="text-xs text-muted-foreground">Development activities & responsiveness</p>
+                  </div>
+                </div>
+              </div>
+              <div className="mt-4 pt-4 border-t">
+                <p className="text-sm font-semibold mb-2">Grade Scale</p>
+                <div className="flex flex-wrap gap-3">
+                  <div className="flex items-center gap-2">
+                    <Badge className="bg-green-500">A</Badge>
+                    <span className="text-xs">90-100</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge className="bg-blue-500">B</Badge>
+                    <span className="text-xs">80-89</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge className="bg-yellow-500">C</Badge>
+                    <span className="text-xs">70-79</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge className="bg-orange-500">D</Badge>
+                    <span className="text-xs">60-69</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge className="bg-red-500">F</Badge>
+                    <span className="text-xs">Below 60</span>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
           {/* Top and Bottom Performers */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-8">
