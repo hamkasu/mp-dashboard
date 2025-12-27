@@ -14,7 +14,7 @@
  * - Attendance: 40%
  * - Participation: 40% (speeches 40%, bills 30%, questions 30%)
  * - Conduct: 15% (inappropriate language 70%, court cases 30%)
- * - Constituency Impact: 5% (poverty rate, inverted)
+ * - Constituency Impact: 5% (currently neutral - poverty data not available for federal MPs)
  */
 
 import { db } from "../db";
@@ -76,7 +76,6 @@ export async function fetchAllMPMetrics(): Promise<MPMetrics[]> {
     totalParliamentDays: mps.totalParliamentDays,
     totalSpeechInstances: mps.totalSpeechInstances,
     hansardSessionsSpoke: mps.hansardSessionsSpoke,
-    povertyRate: mps.povertyRate, // Get poverty rate from mps table
   }).from(mps);
 
   const metrics: MPMetrics[] = [];
@@ -113,9 +112,10 @@ export async function fetchAllMPMetrics(): Promise<MPMetrics[]> {
       .where(eq(courtCases.mpId, mp.mpId));
     const courtCasesCount = courtCasesResult[0]?.count || 0;
 
-    // Get poverty rate (stored as integer * 10, e.g., 125 = 12.5%)
-    // Convert to actual percentage
-    const povertyRate = mp.povertyRate ? mp.povertyRate / 10 : 0;
+    // Poverty rate data is not available in mps table (only in dunMembers for state assembly)
+    // Using neutral value (0) for all MPs
+    // TODO: If federal constituency poverty data becomes available, fetch it here
+    const povertyRate = 0;
 
     // Count inappropriate language instances from hansard records
     // For now, this needs to be tracked separately - using 0 as default
@@ -271,7 +271,7 @@ export async function updateAllReportCards(): Promise<{ updated: number; created
       billsRaised: metric.billsRaised,
       questionsAsked: metric.questionsAsked,
       inappropriateLanguageCount: metric.inappropriateLanguageCount,
-      povertyRate: Math.round(metric.povertyRate * 10), // Store as integer * 10
+      povertyRate: 0, // Poverty rate not available for federal MPs (only for state DUN members)
       updatedAt: new Date(),
     };
 
