@@ -34,8 +34,8 @@ import {
   ArrowUp,
   ArrowDown
 } from "lucide-react";
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
+import { Header } from "@/components/Header";
+import { Footer } from "@/components/Footer";
 import { PageMeta } from "@/components/PageMeta";
 
 interface Mp {
