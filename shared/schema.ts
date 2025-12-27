@@ -970,3 +970,48 @@ export const insertUserFeedbackSchema = createInsertSchema(userFeedback).omit({
 
 export type InsertUserFeedback = z.infer<typeof insertUserFeedbackSchema>;
 export type UserFeedback = typeof userFeedback.$inferSelect;
+
+// MP Report Cards - Performance grading and evaluation
+export const mpReportCards = pgTable("mp_report_cards", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  mpId: varchar("mp_id").notNull().references(() => mps.id, { onDelete: "cascade" }),
+
+  // Calculated scores (0-100)
+  attendanceScore: integer("attendance_score").notNull().default(0),
+  participationScore: integer("participation_score").notNull().default(0),
+  conductScore: integer("conduct_score").notNull().default(0),
+  constituencyImpactScore: integer("constituency_impact_score").notNull().default(0),
+  overallScore: integer("overall_score").notNull().default(0),
+
+  // Letter grade (A-F)
+  grade: text("grade").notNull().default("F"),
+
+  // Metadata for calculations
+  totalSpeeches: integer("total_speeches").notNull().default(0),
+  averageSpeeches: integer("average_speeches").notNull().default(0),
+  billsRaised: integer("bills_raised").notNull().default(0),
+  questionsAsked: integer("questions_asked").notNull().default(0),
+  inappropriateLanguageCount: integer("inappropriate_language_count").notNull().default(0),
+  povertyRate: integer("poverty_rate").default(0),
+
+  // Timestamps
+  calculatedAt: timestamp("calculated_at").notNull().default(sql`NOW()`),
+  updatedAt: timestamp("updated_at").notNull().default(sql`NOW()`),
+});
+
+export const insertMpReportCardSchema = createInsertSchema(mpReportCards).omit({
+  id: true,
+  calculatedAt: true,
+  updatedAt: true,
+});
+
+export const updateMpReportCardSchema = insertMpReportCardSchema.partial();
+
+export type InsertMpReportCard = z.infer<typeof insertMpReportCardSchema>;
+export type UpdateMpReportCard = z.infer<typeof updateMpReportCardSchema>;
+export type MpReportCard = typeof mpReportCards.$inferSelect;
+
+// Extended type with MP details
+export type MpReportCardWithDetails = MpReportCard & {
+  mp: Mp;
+};

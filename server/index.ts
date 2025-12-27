@@ -9,6 +9,7 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { startHansardCron } from "./hansard-cron";
 import { scheduleParliamentaryAnswersSync } from "./parliamentary-answers-cron";
+import { startReportCardCron } from "./report-card-cron";
 import { trackVisitorAnalytics } from "./analytics-middleware";
 import { helmetConfig, readRateLimit } from "./middleware/security";
 import { corsConfig } from "./middleware/cors";
@@ -202,6 +203,9 @@ server.listen({
 
   // Start the daily Parliamentary Answers sync cron job
   scheduleParliamentaryAnswersSync();
+
+  // Start the monthly Report Card update cron job
+  startReportCardCron();
 
   // Start memory monitoring (log every 10 minutes in production)
   if (process.env.NODE_ENV === "production") {
