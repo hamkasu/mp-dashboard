@@ -5122,6 +5122,32 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
+  // Public endpoint for page-specific visitor count
+  app.get("/api/analytics/page-views", async (req, res) => {
+    try {
+      const { visitorAnalytics } = await import("@shared/schema");
+      const { eq, count } = await import("drizzle-orm");
+
+      const path = req.query.path as string;
+      if (!path) {
+        return res.status(400).json({ error: "Path parameter is required" });
+      }
+
+      const [result] = await db
+        .select({ count: count() })
+        .from(visitorAnalytics)
+        .where(eq(visitorAnalytics.path, path));
+
+      res.json({
+        path,
+        views: result?.count || 0
+      });
+    } catch (error) {
+      console.error("Page views error:", error);
+      res.status(500).json({ error: "Failed to fetch page views" });
+    }
+  });
+
 // Hansard Question Analyzer Routes
 
   // Upload and parse Hansard PDF for questions

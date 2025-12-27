@@ -32,7 +32,8 @@ import {
   BarChart3,
   ArrowUpDown,
   ArrowUp,
-  ArrowDown
+  ArrowDown,
+  Eye
 } from "lucide-react";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
@@ -121,6 +122,11 @@ export default function ReportCard() {
   // Fetch aggregate stats
   const { data: stats, isLoading: statsLoading } = useQuery<AggregateStats>({
     queryKey: ["/api/report-cards/stats"],
+  });
+
+  // Fetch visitor count for this page
+  const { data: visitorData } = useQuery<{ path: string; views: number }>({
+    queryKey: ["/api/analytics/page-views?path=/report-card"],
   });
 
   // Get unique states and coalitions for filters
@@ -248,6 +254,12 @@ export default function ReportCard() {
             <p className="text-muted-foreground">
               Performance evaluation and grading for all Members of Parliament
             </p>
+            {visitorData && (
+              <div className="flex items-center gap-2 mt-3 text-sm text-muted-foreground">
+                <Eye className="h-4 w-4" />
+                <span>{visitorData.views.toLocaleString()} visitors to this page</span>
+              </div>
+            )}
           </div>
 
           {/* Aggregate Statistics */}
