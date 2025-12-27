@@ -23,7 +23,7 @@ import {
 } from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import PageMeta from "@/components/PageMeta";
+import { PageMeta } from "@/components/PageMeta";
 import { useToast } from "@/hooks/use-toast";
 
 interface UpdateResult {
