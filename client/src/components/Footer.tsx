@@ -4,7 +4,6 @@
 
 import { Link } from "wouter";
 import { Github, Twitter, Mail } from "lucide-react";
-import { DonateButton } from "@/components/DonateButton";
 import { useLanguage } from "@/i18n/LanguageContext";
 
 export function Footer() {
@@ -37,11 +36,6 @@ export function Footer() {
   return (
     <footer className="w-full border-t bg-background mt-12">
       <div className="container mx-auto px-4 py-8">
-        {/* Donate Button Section */}
-        <div className="mb-8">
-          <DonateButton />
-        </div>
-
         {/* Footer Links and Info */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-6">
           {/* About Section */}
