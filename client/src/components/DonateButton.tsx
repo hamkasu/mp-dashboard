@@ -41,22 +41,23 @@ export function DonateButton() {
   const currentContent = content[language as keyof typeof content] || content.en;
 
   return (
-    <div className="w-full max-w-3xl mx-auto p-6 bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/20 rounded-lg border border-amber-200 dark:border-amber-800 shadow-sm">
-      <div className="text-center space-y-4">
-        <h3 className="text-xl font-semibold text-amber-900 dark:text-amber-100 flex items-center justify-center gap-2">
-          <Coffee className="h-6 w-6" />
+    <div className="w-full max-w-2xl mx-auto p-3 bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30 rounded-md border border-amber-200 dark:border-amber-800 shadow-sm">
+      <div className="text-center space-y-2">
+        <h3 className="text-base font-semibold text-amber-900 dark:text-amber-100 flex items-center justify-center gap-1.5">
+          <Coffee className="h-5 w-5" />
           {currentContent.title}
         </h3>
-        <p className="text-sm text-amber-800 dark:text-amber-200 leading-relaxed">
+        <p className="text-xs text-amber-800 dark:text-amber-200 leading-relaxed">
           {currentContent.subtitle}
         </p>
 
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
             <Button
-              className="bg-amber-600 hover:bg-amber-700 text-white font-medium px-6 py-2 rounded-full shadow-md hover:shadow-lg transition-all duration-200"
+              size="sm"
+              className="bg-amber-600 hover:bg-amber-700 text-white font-medium rounded-full shadow-md hover:shadow-lg transition-all duration-200"
             >
-              <Coffee className="mr-2 h-4 w-4" />
+              <Coffee className="mr-1.5 h-3.5 w-3.5" />
               {currentContent.buttonText}
             </Button>
           </DialogTrigger>
