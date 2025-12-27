@@ -1,26 +1,46 @@
 /**
  * Copyright by Calmic Sdn Bhd
  *
- * MP Report Card Grading Service
- * Calculates performance grades for MPs based on weighted metrics
+ * MP Report Card Grading Service - PERCENTILE-BASED GRADING
+ * Calculates performance grades for MPs using fair, relative ranking system
+ *
+ * GRADING METHODOLOGY:
+ * - Uses percentile ranking instead of absolute thresholds
+ * - Each metric is ranked relative to all 221 MPs
+ * - Composite score from weighted percentiles
+ * - Letter grades: A (90+), B (80-90), C (70-80), D (60-70), F (<60)
+ *
+ * WEIGHTS:
+ * - Attendance: 40%
+ * - Participation: 40% (speeches 40%, bills 30%, questions 30%)
+ * - Conduct: 15% (inappropriate language 70%, court cases 30%)
+ * - Constituency Impact: 5% (poverty rate, inverted)
  */
 
 import { db } from "../db";
 import { mps, mpReportCards, legislativeProposals, parliamentaryQuestions, courtCases } from "../../shared/schema";
-import { eq, count, sql, and, desc } from "drizzle-orm";
+import { eq, count, desc } from "drizzle-orm";
+import {
+  calculatePercentiles,
+  calculateParticipationPercentiles,
+  calculateConductPercentiles,
+  calculateFinalScores,
+  getLetterGrade,
+  type RankableMetric,
+} from "../utils/percentile-grading";
 
 export interface GradingWeights {
   attendance: number;      // 40%
-  participation: number;   // 30%
-  conduct: number;         // 20%
-  constituencyImpact: number; // 10%
+  participation: number;   // 40%
+  conduct: number;         // 15%
+  constituencyImpact: number; // 5%
 }
 
 export const DEFAULT_WEIGHTS: GradingWeights = {
   attendance: 0.40,
-  participation: 0.30,
-  conduct: 0.20,
-  constituencyImpact: 0.10,
+  participation: 0.40,
+  conduct: 0.15,
+  constituencyImpact: 0.05,
 };
 
 export interface MPMetrics {
@@ -46,89 +66,6 @@ export interface CalculatedGrade {
 }
 
 /**
- * Calculate letter grade from numerical score
- */
-export function getLetterGrade(score: number): string {
-  if (score >= 90) return 'A';
-  if (score >= 80) return 'B';
-  if (score >= 70) return 'C';
-  if (score >= 60) return 'D';
-  return 'F';
-}
-
-/**
- * Normalize a value to 0-100 scale
- */
-function normalize(value: number, min: number, max: number): number {
-  if (max === min) return 100;
-  const normalized = ((value - min) / (max - min)) * 100;
-  return Math.max(0, Math.min(100, normalized));
-}
-
-/**
- * Calculate attendance score (0-100)
- * Based on attendance percentage
- */
-function calculateAttendanceScore(attendancePercentage: number): number {
-  return Math.min(100, attendancePercentage);
-}
-
-/**
- * Calculate participation score (0-100)
- * Based on speeches, bills raised, and questions asked
- */
-function calculateParticipationScore(
-  totalSpeeches: number,
-  billsRaised: number,
-  questionsAsked: number,
-  maxSpeeches: number,
-  maxBills: number,
-  maxQuestions: number
-): number {
-  const speechScore = normalize(totalSpeeches, 0, maxSpeeches);
-  const billScore = normalize(billsRaised, 0, maxBills);
-  const questionScore = normalize(questionsAsked, 0, maxQuestions);
-
-  // Weighted average within participation
-  return (speechScore * 0.4) + (billScore * 0.3) + (questionScore * 0.3);
-}
-
-/**
- * Calculate conduct score (0-100)
- * Lower inappropriate language count = higher score
- * Court cases also reduce score
- */
-function calculateConductScore(
-  inappropriateLanguageCount: number,
-  courtCasesCount: number,
-  maxInappropriate: number,
-  maxCourtCases: number
-): number {
-  // Inverse scoring - fewer incidents = better score
-  const inappropriateScore = inappropriateLanguageCount === 0
-    ? 100
-    : 100 - normalize(inappropriateLanguageCount, 0, maxInappropriate);
-
-  const courtCaseScore = courtCasesCount === 0
-    ? 100
-    : 100 - normalize(courtCasesCount, 0, maxCourtCases);
-
-  // Weighted average
-  return (inappropriateScore * 0.7) + (courtCaseScore * 0.3);
-}
-
-/**
- * Calculate constituency impact score (0-100)
- * Lower poverty rate = higher score
- */
-function calculateConstituencyImpactScore(povertyRate: number, maxPoverty: number): number {
-  if (povertyRate === 0 || maxPoverty === 0) return 50; // Neutral if no data
-
-  // Inverse scoring - lower poverty = better score
-  return 100 - normalize(povertyRate, 0, maxPoverty);
-}
-
-/**
  * Fetch all MP metrics from database
  */
 export async function fetchAllMPMetrics(): Promise<MPMetrics[]> {
@@ -139,6 +76,7 @@ export async function fetchAllMPMetrics(): Promise<MPMetrics[]> {
     totalParliamentDays: mps.totalParliamentDays,
     totalSpeechInstances: mps.totalSpeechInstances,
     hansardSessionsSpoke: mps.hansardSessionsSpoke,
+    povertyRate: mps.povertyRate, // Get poverty rate from mps table
   }).from(mps);
 
   const metrics: MPMetrics[] = [];
@@ -175,8 +113,14 @@ export async function fetchAllMPMetrics(): Promise<MPMetrics[]> {
       .where(eq(courtCases.mpId, mp.mpId));
     const courtCasesCount = courtCasesResult[0]?.count || 0;
 
-    // Get poverty rate (placeholder - would need to be from constituency data)
-    const povertyRate = 0; // TODO: Implement poverty rate lookup
+    // Get poverty rate (stored as integer * 10, e.g., 125 = 12.5%)
+    // Convert to actual percentage
+    const povertyRate = mp.povertyRate ? mp.povertyRate / 10 : 0;
+
+    // Count inappropriate language instances from hansard records
+    // For now, this needs to be tracked separately - using 0 as default
+    // TODO: Implement inappropriate language tracking from hansard analysis
+    const inappropriateLanguageCount = 0;
 
     metrics.push({
       mpId: mp.mpId,
@@ -185,7 +129,7 @@ export async function fetchAllMPMetrics(): Promise<MPMetrics[]> {
       averageSpeeches,
       billsRaised,
       questionsAsked,
-      inappropriateLanguageCount: 0, // TODO: Implement inappropriate language tracking
+      inappropriateLanguageCount,
       povertyRate,
       courtCases: courtCasesCount,
     });
@@ -195,7 +139,8 @@ export async function fetchAllMPMetrics(): Promise<MPMetrics[]> {
 }
 
 /**
- * Calculate grades for all MPs
+ * Calculate grades for all MPs using PERCENTILE-BASED RANKING
+ * This ensures a fair distribution of grades based on relative performance
  */
 export async function calculateAllGrades(
   weights: GradingWeights = DEFAULT_WEIGHTS
@@ -206,55 +151,84 @@ export async function calculateAllGrades(
     return [];
   }
 
-  // Find max values for normalization
-  const maxSpeeches = Math.max(...metrics.map(m => m.totalSpeeches), 1);
-  const maxBills = Math.max(...metrics.map(m => m.billsRaised), 1);
-  const maxQuestions = Math.max(...metrics.map(m => m.questionsAsked), 1);
-  const maxInappropriate = Math.max(...metrics.map(m => m.inappropriateLanguageCount), 1);
-  const maxPoverty = Math.max(...metrics.map(m => m.povertyRate), 1);
-  const maxCourtCases = Math.max(...metrics.map(m => m.courtCases), 1);
+  // Prepare data for percentile calculations
+  const attendanceMetrics: RankableMetric[] = metrics.map(m => ({
+    mpId: m.mpId,
+    value: m.attendancePercentage,
+  }));
 
-  // Calculate grades for each MP
+  const speechMetrics: RankableMetric[] = metrics.map(m => ({
+    mpId: m.mpId,
+    value: m.averageSpeeches, // Use average speeches per session
+  }));
+
+  const billMetrics: RankableMetric[] = metrics.map(m => ({
+    mpId: m.mpId,
+    value: m.billsRaised,
+  }));
+
+  const questionMetrics: RankableMetric[] = metrics.map(m => ({
+    mpId: m.mpId,
+    value: m.questionsAsked,
+  }));
+
+  const inappropriateMetrics: RankableMetric[] = metrics.map(m => ({
+    mpId: m.mpId,
+    value: m.inappropriateLanguageCount,
+  }));
+
+  const courtCaseMetrics: RankableMetric[] = metrics.map(m => ({
+    mpId: m.mpId,
+    value: m.courtCases,
+  }));
+
+  const povertyMetrics: RankableMetric[] = metrics.map(m => ({
+    mpId: m.mpId,
+    value: m.povertyRate,
+  }));
+
+  // Calculate percentile scores for each category
+  const attendancePercentiles = calculatePercentiles(attendanceMetrics, false);
+
+  const participationPercentiles = calculateParticipationPercentiles(
+    speechMetrics,
+    billMetrics,
+    questionMetrics,
+    { speeches: 0.4, bills: 0.3, questions: 0.3 }
+  );
+
+  const conductPercentiles = calculateConductPercentiles(
+    inappropriateMetrics,
+    courtCaseMetrics,
+    { inappropriateLanguage: 0.7, courtCases: 0.3 }
+  );
+
+  const constituencyPercentiles = calculatePercentiles(povertyMetrics, true); // Inverted: lower poverty = better
+
+  // Calculate final composite scores
+  const finalScores = calculateFinalScores(
+    attendancePercentiles,
+    participationPercentiles,
+    conductPercentiles,
+    constituencyPercentiles,
+    weights
+  );
+
+  // Build result array with all scores
   const grades: CalculatedGrade[] = metrics.map(metric => {
-    const attendanceScore = calculateAttendanceScore(metric.attendancePercentage);
-
-    const participationScore = calculateParticipationScore(
-      metric.totalSpeeches,
-      metric.billsRaised,
-      metric.questionsAsked,
-      maxSpeeches,
-      maxBills,
-      maxQuestions
-    );
-
-    const conductScore = calculateConductScore(
-      metric.inappropriateLanguageCount,
-      metric.courtCases,
-      maxInappropriate,
-      maxCourtCases
-    );
-
-    const constituencyImpactScore = calculateConstituencyImpactScore(
-      metric.povertyRate,
-      maxPoverty
-    );
-
-    // Calculate weighted overall score
-    const overallScore = Math.round(
-      (attendanceScore * weights.attendance) +
-      (participationScore * weights.participation) +
-      (conductScore * weights.conduct) +
-      (constituencyImpactScore * weights.constituencyImpact)
-    );
-
+    const attendanceScore = Math.round(attendancePercentiles.get(metric.mpId) || 0);
+    const participationScore = Math.round(participationPercentiles.get(metric.mpId) || 0);
+    const conductScore = Math.round(conductPercentiles.get(metric.mpId) || 0);
+    const constituencyImpactScore = Math.round(constituencyPercentiles.get(metric.mpId) || 50);
+    const overallScore = finalScores.get(metric.mpId) || 0;
     const grade = getLetterGrade(overallScore);
 
     return {
       mpId: metric.mpId,
-      attendanceScore: Math.round(attendanceScore),
-      participationScore: Math.round(participationScore),
-      conductScore: Math.round(conductScore),
-      constituencyImpactScore: Math.round(constituencyImpactScore),
+      attendanceScore,
+      participationScore,
+      conductScore,
+      constituencyImpactScore,
       overallScore,
       grade,
     };
@@ -297,7 +271,7 @@ export async function updateAllReportCards(): Promise<{ updated: number; created
       billsRaised: metric.billsRaised,
       questionsAsked: metric.questionsAsked,
       inappropriateLanguageCount: metric.inappropriateLanguageCount,
-      povertyRate: metric.povertyRate,
+      povertyRate: Math.round(metric.povertyRate * 10), // Store as integer * 10
       updatedAt: new Date(),
     };
 

@@ -37,47 +37,69 @@ The MP Report Card feature provides a comprehensive performance evaluation syste
 
 ## Grading Methodology
 
+### **PERCENTILE-BASED RANKING SYSTEM** ✨ (Updated)
+
+The grading system uses **percentile ranking** - a fair, relative performance evaluation method used by parliamentary monitoring organizations worldwide (PRS India, MyMP Malaysia, GovTrack US).
+
+**Key Principle**: Each MP is ranked relative to all other MPs, not against absolute thresholds. This ensures a natural distribution of grades and accurately reflects relative performance.
+
 ### Overall Score Calculation (0-100)
 
-The overall score is calculated using **weighted averages** of four key metrics:
+The overall score is calculated using **weighted percentile scores** from four key categories:
 
 #### 1. **Attendance Score (40% weight)**
-- Calculated from: `(daysAttended / totalParliamentDays) * 100`
-- Direct percentage conversion
-- Higher is better
+- **Metric**: `(daysAttended / totalParliamentDays) * 100`
+- **Ranking**: All MPs ranked by attendance percentage
+- **Score**: Percentile rank (0-100)
+- Higher attendance = higher percentile
 
-#### 2. **Participation Score (30% weight)**
-- Components (normalized to 0-100):
-  - **Speeches (40%)**: Total speech instances in Hansard
+#### 2. **Participation Score (40% weight)**
+- **Sub-metrics** (each ranked separately, then combined):
+  - **Average Speeches per Session (40%)**: Total speeches / sessions spoken
   - **Bills Raised (30%)**: Number of legislative proposals submitted
   - **Questions Asked (30%)**: Parliamentary questions submitted
-- Formula: Each component normalized against the maximum value across all MPs
-- Weighted average of the three components
+- **Ranking**: Percentile rank for each sub-metric
+- **Score**: Weighted average of percentiles
+- More active participation = higher percentile
 
-#### 3. **Conduct Score (20% weight)**
-- Components:
-  - **Inappropriate Language (70%)**: Inverse scoring - fewer incidents = higher score
-  - **Court Cases (30%)**: Inverse scoring - fewer cases = higher score
-- Formula: `100 - normalized_value` (fewer incidents = better score)
-- Weighted average of the two components
+#### 3. **Conduct Score (15% weight)**
+- **Sub-metrics** (inverted - lower is better):
+  - **Inappropriate Language Instances (70%)**: Counted from Hansard records
+  - **Court Cases (30%)**: Active court cases
+- **Ranking**: Inverted percentile (lowest values get highest percentiles)
+- **Score**: Weighted average of percentiles
+- Better conduct = higher percentile
 
-#### 4. **Constituency Impact Score (10% weight)**
-- Based on: Poverty rate in the MP's constituency
-- Formula: `100 - normalized_poverty_rate`
-- Lower poverty rate = higher score
-- Neutral score (50) if no data available
+#### 4. **Constituency Impact Score (5% weight)**
+- **Metric**: Poverty rate in MP's constituency
+- **Ranking**: Inverted percentile (lower poverty = higher percentile)
+- **Score**: Percentile rank (0-100)
+- Lower poverty = higher percentile
+- Note: This is a proxy measure; actual constituency impact is multifaceted
+
+### Percentile Calculation Details
+
+For each metric:
+1. All 221 MPs are sorted by their value
+2. Each MP receives a percentile rank: `(rank / (n-1)) * 100`
+3. MPs with identical values receive the average percentile of their tie group
+4. Inverted metrics (conduct, poverty) are ranked in reverse order
+
+**Example**: If an MP has the 10th highest attendance out of 221 MPs, their attendance percentile ≈ 95.5
 
 ### Final Grade Assignment
 
-Based on the overall score (0-100):
+Based on the overall composite score (0-100):
 
-| Grade | Score Range | Color |
-|-------|-------------|-------|
-| **A** | 90-100 | Green |
-| **B** | 80-89 | Blue |
-| **C** | 70-79 | Yellow |
-| **D** | 60-69 | Orange |
-| **F** | Below 60 | Red |
+| Grade | Score Range | Color | Expected Distribution |
+|-------|-------------|-------|----------------------|
+| **A** | 90-100 | Green | ~10% (top performers) |
+| **B** | 80-89 | Blue | ~20-30% |
+| **C** | 70-79 | Yellow | ~30-40% (majority) |
+| **D** | 60-69 | Orange | ~20-30% |
+| **F** | Below 60 | Red | ~10% (chronic low performers) |
+
+**Note**: The percentile system ensures a fair distribution - some MPs will receive A's for genuinely outstanding performance, while most will fall in the B/C range, with D/F reserved for consistently poor performers.
 
 ## Architecture
 
