@@ -350,25 +350,39 @@ export default function ReportCard() {
                 </CardTitle>
                 <CardDescription>Highest overall scores</CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  {top10.map((card, index) => (
-                    <div
-                      key={card.id}
-                      className="flex items-center justify-between p-2 rounded hover:bg-accent cursor-pointer"
-                      onClick={() => navigate(`/mp/${card.mpId}`)}
-                    >
-                      <div className="flex items-center gap-3">
-                        <span className="font-bold text-muted-foreground w-6">#{index + 1}</span>
-                        <div>
-                          <div className="font-medium">{card.mp.name}</div>
-                          <div className="text-sm text-muted-foreground">{card.mp.constituency}</div>
-                        </div>
-                      </div>
-                      <Badge className={getGradeColor(card.grade)}>{card.grade}</Badge>
-                    </div>
-                  ))}
-                </div>
+              <CardContent className="p-0">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="hover:bg-transparent border-b">
+                      <TableHead className="w-12 text-center font-semibold text-foreground">Rank</TableHead>
+                      <TableHead className="font-semibold text-foreground">Name</TableHead>
+                      <TableHead className="hidden sm:table-cell font-semibold text-foreground">Constituency</TableHead>
+                      <TableHead className="text-right font-semibold text-foreground w-16">Score</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {top10.map((card, index) => (
+                      <TableRow
+                        key={card.id}
+                        className="cursor-pointer hover:bg-accent/50 transition-colors"
+                        onClick={() => navigate(`/mp/${card.mpId}`)}
+                        data-testid={`row-top-performer-${index}`}
+                      >
+                        <TableCell className="text-center font-bold text-green-600">#{index + 1}</TableCell>
+                        <TableCell>
+                          <div className="flex flex-col gap-0.5">
+                            <span className="font-semibold text-foreground">{card.mp.name}</span>
+                            <span className="text-xs text-muted-foreground sm:hidden">{card.mp.constituency}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="hidden sm:table-cell text-sm text-muted-foreground">{card.mp.constituency}</TableCell>
+                        <TableCell className="text-right">
+                          <Badge className={`${getGradeColor(card.grade)} font-bold`}>{card.grade}</Badge>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
               </CardContent>
             </Card>
 
@@ -380,25 +394,39 @@ export default function ReportCard() {
                 </CardTitle>
                 <CardDescription>Lowest overall scores</CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  {bottom10.map((card, index) => (
-                    <div
-                      key={card.id}
-                      className="flex items-center justify-between p-2 rounded hover:bg-accent cursor-pointer"
-                      onClick={() => navigate(`/mp/${card.mpId}`)}
-                    >
-                      <div className="flex items-center gap-3">
-                        <span className="font-bold text-muted-foreground w-6">#{reportCards.length - index}</span>
-                        <div>
-                          <div className="font-medium">{card.mp.name}</div>
-                          <div className="text-sm text-muted-foreground">{card.mp.constituency}</div>
-                        </div>
-                      </div>
-                      <Badge className={getGradeColor(card.grade)}>{card.grade}</Badge>
-                    </div>
-                  ))}
-                </div>
+              <CardContent className="p-0">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="hover:bg-transparent border-b">
+                      <TableHead className="w-12 text-center font-semibold text-foreground">Rank</TableHead>
+                      <TableHead className="font-semibold text-foreground">Name</TableHead>
+                      <TableHead className="hidden sm:table-cell font-semibold text-foreground">Constituency</TableHead>
+                      <TableHead className="text-right font-semibold text-foreground w-16">Score</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {bottom10.map((card, index) => (
+                      <TableRow
+                        key={card.id}
+                        className="cursor-pointer hover:bg-accent/50 transition-colors"
+                        onClick={() => navigate(`/mp/${card.mpId}`)}
+                        data-testid={`row-bottom-performer-${index}`}
+                      >
+                        <TableCell className="text-center font-bold text-red-600">#{reportCards.length - index}</TableCell>
+                        <TableCell>
+                          <div className="flex flex-col gap-0.5">
+                            <span className="font-semibold text-foreground">{card.mp.name}</span>
+                            <span className="text-xs text-muted-foreground sm:hidden">{card.mp.constituency}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="hidden sm:table-cell text-sm text-muted-foreground">{card.mp.constituency}</TableCell>
+                        <TableCell className="text-right">
+                          <Badge className={`${getGradeColor(card.grade)} font-bold`}>{card.grade}</Badge>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
               </CardContent>
             </Card>
           </div>
