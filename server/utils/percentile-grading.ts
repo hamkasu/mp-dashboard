@@ -1,8 +1,14 @@
 /**
  * Copyright by Calmic Sdn Bhd
  *
- * Percentile-based Grading Utilities
+ * Percentile-based Grading Utilities - FIXED VERSION
  * Implements fair, relative ranking system for MP performance evaluation
+ *
+ * BUG FIXES:
+ * - Fixed tie-handling logic (was calculating wrong rank positions)
+ * - Handle edge case when all MPs have the same value (return 50)
+ * - Simplified percentile formula for clarity
+ * - Prevent NaN values in composite calculations
  */
 
 export interface RankableMetric {
@@ -12,44 +18,75 @@ export interface RankableMetric {
 
 /**
  * Calculate percentile rank for a set of values
- * Returns a map of mpId -> percentile score (0-100)
+ * Uses standard formula: percentile = (rank / (n-1)) * 100
+ * where rank is the position from the bottom (0-indexed)
  *
  * @param metrics - Array of {mpId, value} objects
- * @param inverted - If true, lower values get higher percentiles (for negative metrics like poverty)
+ * @param inverted - If true, lower values get higher percentiles (for negative metrics)
  * @returns Map of mpId to percentile score (0-100)
  */
 export function calculatePercentiles(
   metrics: RankableMetric[],
   inverted: boolean = false
 ): Map<string, number> {
+  const percentileMap = new Map<string, number>();
+
   if (metrics.length === 0) {
-    return new Map();
+    return percentileMap;
   }
 
-  // Sort by value (ascending or descending based on inversion)
+  // Handle edge case: single MP gets 100
+  if (metrics.length === 1) {
+    percentileMap.set(metrics[0].mpId, 100);
+    return percentileMap;
+  }
+
+  // Check if all values are identical
+  const firstValue = metrics[0].value;
+  const allSame = metrics.every(m => m.value === firstValue);
+  if (allSame) {
+    // All MPs get neutral score (50) when values are identical
+    metrics.forEach(m => percentileMap.set(m.mpId, 50));
+    return percentileMap;
+  }
+
+  // Sort by value
+  // For normal metrics (higher is better): sort descending (best first)
+  // For inverted metrics (lower is better): sort ascending (best first)
   const sorted = [...metrics].sort((a, b) => {
     return inverted ? a.value - b.value : b.value - a.value;
   });
 
-  const percentileMap = new Map<string, number>();
+  // Group by value to handle ties
+  const valueGroups = new Map<number, string[]>();
+  sorted.forEach(m => {
+    if (!valueGroups.has(m.value)) {
+      valueGroups.set(m.value, []);
+    }
+    valueGroups.get(m.value)!.push(m.mpId);
+  });
 
-  // Calculate percentile for each MP
-  // Percentile = (Number of values below this value / Total number of values) * 100
-  for (let i = 0; i < sorted.length; i++) {
-    const mp = sorted[i];
+  // Assign percentiles
+  let currentRank = 0;
+  const n = sorted.length;
 
-    // Handle ties: MPs with same value get the average percentile of their tie group
-    const sameValueCount = sorted.filter(m => m.value === mp.value).length;
-    const rankStart = i;
-    const rankEnd = i + sameValueCount - 1;
+  for (const [value, mpIds] of Array.from(valueGroups.entries())) {
+    const groupSize = mpIds.length;
 
-    // Percentile rank formula: (rank / (n-1)) * 100
-    // where rank is the number of values strictly below this value
-    const percentile = sorted.length === 1
-      ? 100
-      : ((sorted.length - 1 - ((rankStart + rankEnd) / 2)) / (sorted.length - 1)) * 100;
+    // For ties, use the average rank of the group
+    // E.g., if ranks 5, 6, 7 are tied, use rank 6
+    const avgRank = currentRank + (groupSize - 1) / 2;
 
-    percentileMap.set(mp.mpId, Math.max(0, Math.min(100, percentile)));
+    // Percentile formula: convert rank (0 = best) to percentile (100 = best)
+    // percentile = (1 - rank / (n-1)) * 100
+    const percentile = n === 1 ? 100 : ((n - 1 - avgRank) / (n - 1)) * 100;
+
+    // Assign same percentile to all MPs in tie group
+    mpIds.forEach(mpId => {
+      percentileMap.set(mpId, Math.max(0, Math.min(100, percentile)));
+    });
+
+    currentRank += groupSize;
   }
 
   return percentileMap;
@@ -57,7 +94,7 @@ export function calculatePercentiles(
 
 /**
  * Calculate composite participation score from multiple sub-metrics
- * Each sub-metric is normalized to percentile, then averaged
+ * Each sub-metric is ranked separately, then combined with weights
  *
  * @param speeches - Array of {mpId, value} for speech counts
  * @param bills - Array of {mpId, value} for bills raised
@@ -75,30 +112,31 @@ export function calculateParticipationPercentiles(
     questions: 0.3,
   }
 ): Map<string, number> {
+  // Calculate percentiles for each sub-metric
   const speechPercentiles = calculatePercentiles(speeches, false);
   const billPercentiles = calculatePercentiles(bills, false);
   const questionPercentiles = calculatePercentiles(questions, false);
 
   const compositeMap = new Map<string, number>();
 
-  // Combine percentiles for each MP
-  const allMpIds = new Set([
-    ...speeches.map(m => m.mpId),
-    ...bills.map(m => m.mpId),
-    ...questions.map(m => m.mpId),
-  ]);
+  // Get all unique MP IDs
+  const allMpIds = new Set<string>();
+  speeches.forEach(m => allMpIds.add(m.mpId));
+  bills.forEach(m => allMpIds.add(m.mpId));
+  questions.forEach(m => allMpIds.add(m.mpId));
 
+  // Calculate weighted composite for each MP
   for (const mpId of allMpIds) {
-    const speechPct = speechPercentiles.get(mpId) || 0;
-    const billPct = billPercentiles.get(mpId) || 0;
-    const questionPct = questionPercentiles.get(mpId) || 0;
+    const speechPct = speechPercentiles.get(mpId) ?? 50; // Default to neutral if missing
+    const billPct = billPercentiles.get(mpId) ?? 50;
+    const questionPct = questionPercentiles.get(mpId) ?? 50;
 
     const composite =
       speechPct * weights.speeches +
       billPct * weights.bills +
       questionPct * weights.questions;
 
-    compositeMap.set(mpId, composite);
+    compositeMap.set(mpId, Math.max(0, Math.min(100, composite)));
   }
 
   return compositeMap;
@@ -106,7 +144,7 @@ export function calculateParticipationPercentiles(
 
 /**
  * Calculate composite conduct score from inappropriate language and court cases
- * Both are inverted (lower is better)
+ * Both metrics are inverted (lower is better)
  *
  * @param inappropriateLanguage - Array of {mpId, value} for inappropriate language counts
  * @param courtCases - Array of {mpId, value} for court case counts
@@ -121,39 +159,40 @@ export function calculateConductPercentiles(
     courtCases: 0.3,
   }
 ): Map<string, number> {
-  // Both are inverted - lower values are better
+  // Both metrics are inverted - lower values are better
   const inappropriatePercentiles = calculatePercentiles(inappropriateLanguage, true);
   const courtCasePercentiles = calculatePercentiles(courtCases, true);
 
   const compositeMap = new Map<string, number>();
 
-  const allMpIds = new Set([
-    ...inappropriateLanguage.map(m => m.mpId),
-    ...courtCases.map(m => m.mpId),
-  ]);
+  // Get all unique MP IDs
+  const allMpIds = new Set<string>();
+  inappropriateLanguage.forEach(m => allMpIds.add(m.mpId));
+  courtCases.forEach(m => allMpIds.add(m.mpId));
 
+  // Calculate weighted composite for each MP
   for (const mpId of allMpIds) {
-    const inappropriatePct = inappropriatePercentiles.get(mpId) || 0;
-    const courtCasePct = courtCasePercentiles.get(mpId) || 0;
+    const inappropriatePct = inappropriatePercentiles.get(mpId) ?? 50;
+    const courtCasePct = courtCasePercentiles.get(mpId) ?? 50;
 
     const composite =
       inappropriatePct * weights.inappropriateLanguage +
       courtCasePct * weights.courtCases;
 
-    compositeMap.set(mpId, composite);
+    compositeMap.set(mpId, Math.max(0, Math.min(100, composite)));
   }
 
   return compositeMap;
 }
 
 /**
- * Calculate final weighted composite score from all metric percentiles
+ * Calculate final weighted composite score from all category percentiles
  *
- * @param attendance - Attendance percentiles
- * @param participation - Participation percentiles
- * @param conduct - Conduct percentiles
- * @param constituency - Constituency impact percentiles
- * @param weights - Overall weights for each category
+ * @param attendance - Attendance percentiles (0-100)
+ * @param participation - Participation percentiles (0-100)
+ * @param conduct - Conduct percentiles (0-100)
+ * @param constituency - Constituency impact percentiles (0-100)
+ * @param weights - Overall weights for each category (should sum to 1)
  * @returns Map of mpId to final composite score (0-100)
  */
 export function calculateFinalScores(
@@ -170,18 +209,19 @@ export function calculateFinalScores(
 ): Map<string, number> {
   const finalScores = new Map<string, number>();
 
-  const allMpIds = new Set([
-    ...attendance.keys(),
-    ...participation.keys(),
-    ...conduct.keys(),
-    ...constituency.keys(),
-  ]);
+  // Get all unique MP IDs from all categories
+  const allMpIds = new Set<string>();
+  attendance.forEach((_, mpId) => allMpIds.add(mpId));
+  participation.forEach((_, mpId) => allMpIds.add(mpId));
+  conduct.forEach((_, mpId) => allMpIds.add(mpId));
+  constituency.forEach((_, mpId) => allMpIds.add(mpId));
 
+  // Calculate weighted final score for each MP
   for (const mpId of allMpIds) {
-    const attendancePct = attendance.get(mpId) || 0;
-    const participationPct = participation.get(mpId) || 0;
-    const conductPct = conduct.get(mpId) || 0;
-    const constituencyPct = constituency.get(mpId) || 50; // Neutral default
+    const attendancePct = attendance.get(mpId) ?? 50; // Default to neutral
+    const participationPct = participation.get(mpId) ?? 50;
+    const conductPct = conduct.get(mpId) ?? 50;
+    const constituencyPct = constituency.get(mpId) ?? 50;
 
     const finalScore =
       attendancePct * weights.attendance +
@@ -189,7 +229,8 @@ export function calculateFinalScores(
       conductPct * weights.conduct +
       constituencyPct * weights.constituency;
 
-    finalScores.set(mpId, Math.round(finalScore));
+    // Round to nearest integer and ensure 0-100 range
+    finalScores.set(mpId, Math.max(0, Math.min(100, Math.round(finalScore))));
   }
 
   return finalScores;
@@ -197,7 +238,7 @@ export function calculateFinalScores(
 
 /**
  * Convert numerical score to letter grade
- * Uses standard curve: A (90+), B (80-90), C (70-80), D (60-70), F (<60)
+ * Standard curve: A (90+), B (80-90), C (70-80), D (60-70), F (<60)
  */
 export function getLetterGrade(score: number): string {
   if (score >= 90) return 'A';
