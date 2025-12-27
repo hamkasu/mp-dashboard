@@ -1,39 +1,20 @@
 /**
  * Copyright by Calmic Sdn Bhd
  *
- * MP Report Card Grading Service - PERCENTILE-BASED GRADING
- * Calculates performance grades for MPs using fair, relative ranking system
- *
- * GRADING METHODOLOGY:
- * - Uses percentile ranking instead of absolute thresholds
- * - Each metric is ranked relative to all 221 MPs
- * - Composite score from weighted percentiles
- * - Letter grades: A (90+), B (80-90), C (70-80), D (60-70), F (<60)
- *
- * WEIGHTS:
- * - Attendance: 40%
- * - Participation: 40% (speeches 40%, bills 30%, questions 30%)
- * - Conduct: 15% (inappropriate language 70%, court cases 30%)
- * - Constituency Impact: 5% (currently neutral - poverty data not available for federal MPs)
+ * MP Report Card Grading Service - SIMPLIFIED ROBUST VERSION
+ * Calculates performance grades using simple, debuggable percentile ranking
  */
 
 import { db } from "../db";
 import { mps, mpReportCards, legislativeProposals, parliamentaryQuestions, courtCases } from "../../shared/schema";
 import { eq, count, desc } from "drizzle-orm";
-import {
-  calculatePercentiles,
-  calculateParticipationPercentiles,
-  calculateConductPercentiles,
-  calculateFinalScores,
-  getLetterGrade,
-  type RankableMetric,
-} from "../utils/percentile-grading";
+import { calculateGrades, type MPGradeData } from "../utils/percentile-grading-v2";
 
 export interface GradingWeights {
-  attendance: number;      // 40%
-  participation: number;   // 40%
-  conduct: number;         // 15%
-  constituencyImpact: number; // 5%
+  attendance: number;
+  participation: number;
+  conduct: number;
+  constituencyImpact: number;
 }
 
 export const DEFAULT_WEIGHTS: GradingWeights = {
@@ -43,32 +24,12 @@ export const DEFAULT_WEIGHTS: GradingWeights = {
   constituencyImpact: 0.05,
 };
 
-export interface MPMetrics {
-  mpId: string;
-  attendancePercentage: number;
-  totalSpeeches: number;
-  averageSpeeches: number;
-  billsRaised: number;
-  questionsAsked: number;
-  inappropriateLanguageCount: number;
-  povertyRate: number;
-  courtCases: number;
-}
-
-export interface CalculatedGrade {
-  mpId: string;
-  attendanceScore: number;
-  participationScore: number;
-  conductScore: number;
-  constituencyImpactScore: number;
-  overallScore: number;
-  grade: string;
-}
-
 /**
  * Fetch all MP metrics from database
  */
-export async function fetchAllMPMetrics(): Promise<MPMetrics[]> {
+export async function fetchAllMPMetrics() {
+  console.log("[Report Cards] Fetching MP data from database...");
+
   const allMps = await db.select({
     mpId: mps.id,
     name: mps.name,
@@ -78,7 +39,19 @@ export async function fetchAllMPMetrics(): Promise<MPMetrics[]> {
     hansardSessionsSpoke: mps.hansardSessionsSpoke,
   }).from(mps);
 
-  const metrics: MPMetrics[] = [];
+  console.log(`[Report Cards] Found ${allMps.length} MPs`);
+
+  const mpsData: Array<{
+    mpId: string;
+    name: string;
+    attendancePercentage: number;
+    totalSpeeches: number;
+    averageSpeeches: number;
+    billsRaised: number;
+    questionsAsked: number;
+    courtCases: number;
+    inappropriateLanguage: number;
+  }> = [];
 
   for (const mp of allMps) {
     // Calculate attendance percentage
@@ -88,7 +61,7 @@ export async function fetchAllMPMetrics(): Promise<MPMetrics[]> {
 
     // Calculate average speeches per session
     const averageSpeeches = mp.hansardSessionsSpoke > 0
-      ? Math.round(mp.totalSpeechInstances / mp.hansardSessionsSpoke)
+      ? mp.totalSpeechInstances / mp.hansardSessionsSpoke
       : 0;
 
     // Count bills raised
@@ -112,127 +85,38 @@ export async function fetchAllMPMetrics(): Promise<MPMetrics[]> {
       .where(eq(courtCases.mpId, mp.mpId));
     const courtCasesCount = courtCasesResult[0]?.count || 0;
 
-    // Poverty rate data is not available in mps table (only in dunMembers for state assembly)
-    // Using neutral value (0) for all MPs
-    // TODO: If federal constituency poverty data becomes available, fetch it here
-    const povertyRate = 0;
+    // Inappropriate language count (not yet tracked)
+    const inappropriateLanguage = 0;
 
-    // Count inappropriate language instances from hansard records
-    // For now, this needs to be tracked separately - using 0 as default
-    // TODO: Implement inappropriate language tracking from hansard analysis
-    const inappropriateLanguageCount = 0;
-
-    metrics.push({
+    mpsData.push({
       mpId: mp.mpId,
+      name: mp.name,
       attendancePercentage,
       totalSpeeches: mp.totalSpeechInstances,
       averageSpeeches,
       billsRaised,
       questionsAsked,
-      inappropriateLanguageCount,
-      povertyRate,
       courtCases: courtCasesCount,
+      inappropriateLanguage,
     });
   }
 
-  return metrics;
+  console.log("[Report Cards] Calculated metrics for all MPs");
+  console.log(`[Report Cards] Sample: ${mpsData[0].name} - ${mpsData[0].attendancePercentage.toFixed(1)}% attendance, ${mpsData[0].averageSpeeches.toFixed(1)} avg speeches`);
+
+  return mpsData;
 }
 
 /**
- * Calculate grades for all MPs using PERCENTILE-BASED RANKING
- * This ensures a fair distribution of grades based on relative performance
+ * Calculate grades for all MPs
  */
-export async function calculateAllGrades(
-  weights: GradingWeights = DEFAULT_WEIGHTS
-): Promise<CalculatedGrade[]> {
-  const metrics = await fetchAllMPMetrics();
+export async function calculateAllGrades(): Promise<MPGradeData[]> {
+  console.log("[Report Cards] Starting grade calculation...");
 
-  if (metrics.length === 0) {
-    return [];
-  }
+  const mpsData = await fetchAllMPMetrics();
+  const grades = calculateGrades(mpsData);
 
-  // Prepare data for percentile calculations
-  const attendanceMetrics: RankableMetric[] = metrics.map(m => ({
-    mpId: m.mpId,
-    value: m.attendancePercentage,
-  }));
-
-  const speechMetrics: RankableMetric[] = metrics.map(m => ({
-    mpId: m.mpId,
-    value: m.averageSpeeches, // Use average speeches per session
-  }));
-
-  const billMetrics: RankableMetric[] = metrics.map(m => ({
-    mpId: m.mpId,
-    value: m.billsRaised,
-  }));
-
-  const questionMetrics: RankableMetric[] = metrics.map(m => ({
-    mpId: m.mpId,
-    value: m.questionsAsked,
-  }));
-
-  const inappropriateMetrics: RankableMetric[] = metrics.map(m => ({
-    mpId: m.mpId,
-    value: m.inappropriateLanguageCount,
-  }));
-
-  const courtCaseMetrics: RankableMetric[] = metrics.map(m => ({
-    mpId: m.mpId,
-    value: m.courtCases,
-  }));
-
-  const povertyMetrics: RankableMetric[] = metrics.map(m => ({
-    mpId: m.mpId,
-    value: m.povertyRate,
-  }));
-
-  // Calculate percentile scores for each category
-  const attendancePercentiles = calculatePercentiles(attendanceMetrics, false);
-
-  const participationPercentiles = calculateParticipationPercentiles(
-    speechMetrics,
-    billMetrics,
-    questionMetrics,
-    { speeches: 0.4, bills: 0.3, questions: 0.3 }
-  );
-
-  const conductPercentiles = calculateConductPercentiles(
-    inappropriateMetrics,
-    courtCaseMetrics,
-    { inappropriateLanguage: 0.7, courtCases: 0.3 }
-  );
-
-  const constituencyPercentiles = calculatePercentiles(povertyMetrics, true); // Inverted: lower poverty = better
-
-  // Calculate final composite scores
-  const finalScores = calculateFinalScores(
-    attendancePercentiles,
-    participationPercentiles,
-    conductPercentiles,
-    constituencyPercentiles,
-    weights
-  );
-
-  // Build result array with all scores
-  const grades: CalculatedGrade[] = metrics.map(metric => {
-    const attendanceScore = Math.round(attendancePercentiles.get(metric.mpId) || 0);
-    const participationScore = Math.round(participationPercentiles.get(metric.mpId) || 0);
-    const conductScore = Math.round(conductPercentiles.get(metric.mpId) || 0);
-    const constituencyImpactScore = Math.round(constituencyPercentiles.get(metric.mpId) || 50);
-    const overallScore = finalScores.get(metric.mpId) || 0;
-    const grade = getLetterGrade(overallScore);
-
-    return {
-      mpId: metric.mpId,
-      attendanceScore,
-      participationScore,
-      conductScore,
-      constituencyImpactScore,
-      overallScore,
-      grade,
-    };
-  });
+  console.log(`[Report Cards] Calculated grades for ${grades.length} MPs`);
 
   return grades;
 }
@@ -241,15 +125,25 @@ export async function calculateAllGrades(
  * Update or insert report cards for all MPs
  */
 export async function updateAllReportCards(): Promise<{ updated: number; created: number }> {
-  const metrics = await fetchAllMPMetrics();
-  const grades = await calculateAllGrades();
+  console.log("[Report Cards] Updating report cards in database...");
+
+  const mpsData = await fetchAllMPMetrics();
+  const grades = calculateGrades(mpsData);
 
   let updated = 0;
   let created = 0;
 
   for (let i = 0; i < grades.length; i++) {
     const grade = grades[i];
-    const metric = metrics[i];
+    const mpData = mpsData[i];
+
+    // Verify mpId matches
+    if (grade.mpId !== mpData.mpId) {
+      console.error(`[Report Cards] ERROR: MP ID mismatch at index ${i}!`);
+      console.error(`  Grade mpId: ${grade.mpId}`);
+      console.error(`  MP Data mpId: ${mpData.mpId}`);
+      continue;
+    }
 
     // Check if report card exists
     const existing = await db
@@ -260,34 +154,45 @@ export async function updateAllReportCards(): Promise<{ updated: number; created
 
     const reportCardData = {
       mpId: grade.mpId,
-      attendanceScore: grade.attendanceScore,
-      participationScore: grade.participationScore,
-      conductScore: grade.conductScore,
-      constituencyImpactScore: grade.constituencyImpactScore,
+      attendanceScore: grade.attendancePercentile,
+      participationScore: grade.participationPercentile,
+      conductScore: grade.conductPercentile,
+      constituencyImpactScore: grade.constituencyPercentile,
       overallScore: grade.overallScore,
       grade: grade.grade,
-      totalSpeeches: metric.totalSpeeches,
-      averageSpeeches: metric.averageSpeeches,
-      billsRaised: metric.billsRaised,
-      questionsAsked: metric.questionsAsked,
-      inappropriateLanguageCount: metric.inappropriateLanguageCount,
-      povertyRate: 0, // Poverty rate not available for federal MPs (only for state DUN members)
+      totalSpeeches: mpData.totalSpeeches,
+      averageSpeeches: Math.round(mpData.averageSpeeches),
+      billsRaised: mpData.billsRaised,
+      questionsAsked: mpData.questionsAsked,
+      inappropriateLanguageCount: mpData.inappropriateLanguage,
+      povertyRate: 0,
       updatedAt: new Date(),
     };
 
+    // Debug first few records
+    if (i < 3) {
+      console.log(`[Report Cards] Saving MP ${i + 1}:`, {
+        name: mpData.name.substring(0, 20),
+        overallScore: grade.overallScore,
+        grade: grade.grade,
+        attendance: grade.attendancePercentile,
+        participation: grade.participationPercentile
+      });
+    }
+
     if (existing.length > 0) {
-      // Update existing
       await db
         .update(mpReportCards)
         .set(reportCardData)
         .where(eq(mpReportCards.mpId, grade.mpId));
       updated++;
     } else {
-      // Insert new
       await db.insert(mpReportCards).values(reportCardData);
       created++;
     }
   }
+
+  console.log(`[Report Cards] Update complete: ${updated} updated, ${created} created`);
 
   return { updated, created };
 }
@@ -332,16 +237,13 @@ export async function getAggregateStats() {
     };
   }
 
-  // Calculate average score
   const averageScore = allCards.reduce((sum, card) => sum + card.overallScore, 0) / allCards.length;
 
-  // Count grade distribution
   const gradeDistribution = allCards.reduce((dist, card) => {
     dist[card.grade as keyof typeof dist] = (dist[card.grade as keyof typeof dist] || 0) + 1;
     return dist;
   }, { A: 0, B: 0, C: 0, D: 0, F: 0 });
 
-  // Calculate average scores
   const averageScores = {
     attendance: Math.round(allCards.reduce((sum, card) => sum + card.attendanceScore, 0) / allCards.length),
     participation: Math.round(allCards.reduce((sum, card) => sum + card.participationScore, 0) / allCards.length),
