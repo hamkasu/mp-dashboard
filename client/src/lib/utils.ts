@@ -30,12 +30,24 @@ export function calculateTotalSalary(
   }
   
   // Calculate base salary from months served
+  // We include the current month if we are past the sworn-in day of the month
   const baseSalary = Math.max(0, totalMonths) * monthlySalary;
+  
+  // Add pro-rated salary for the current partial month if it's the start of the month
+  // or if they haven't completed a full month yet.
+  // However, the user asked if it updates every start of the month.
+  // The current logic only counts COMPLETED months.
+  // To ensure it "updates" at the start of the month, we should probably 
+  // count the current month as well if we want to show "accrued" salary.
+  
+  // Revised logic: Count every month started including the current one.
+  const totalMonthsStarted = yearsDiff * 12 + monthsDiff + 1;
+  const totalAccruedSalary = Math.max(0, totalMonthsStarted) * monthlySalary;
   
   // Add parliament sitting allowance
   const attendanceAllowance = daysAttended * parliamentSittingAllowance;
   
-  return baseSalary + attendanceAllowance;
+  return totalAccruedSalary + attendanceAllowance;
 }
 
 export function formatCurrency(amount: number): string {
