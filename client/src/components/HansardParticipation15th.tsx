@@ -36,6 +36,8 @@ export function HansardParticipation15th({ mpId, mpName }: HansardParticipation1
     enabled: !!mpId,
   });
 
+  const isValidDate = (date: any) => !!date && !isNaN(new Date(date).getTime());
+
   if (isLoading) {
     return (
       <Card data-testid="card-hansard-participation">
@@ -140,7 +142,7 @@ export function HansardParticipation15th({ mpId, mpName }: HansardParticipation1
                       <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
                         <Calendar className="h-4 w-4" />
                         <span data-testid={`text-date-${session.id}`}>
-                          {format(new Date(session.sessionDate), "MMMM d, yyyy")}
+                          {session.sessionDate && isValidDate(session.sessionDate) ? format(new Date(session.sessionDate), "MMMM d, yyyy") : "N/A"}
                         </span>
                         <span className="text-muted-foreground/50">•</span>
                         <span data-testid={`text-sitting-${session.id}`}>{session.sitting}</span>

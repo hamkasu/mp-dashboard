@@ -33,6 +33,8 @@ export function HansardSpeakingRecord({ mpId }: HansardSpeakingRecordProps) {
     enabled: !!mpId,
   });
 
+  const isValidDate = (date: any) => !!date && !isNaN(new Date(date).getTime());
+
   if (isLoading) {
     return (
       <Card data-testid="card-hansard-speaking-record">
@@ -111,7 +113,7 @@ export function HansardSpeakingRecord({ mpId }: HansardSpeakingRecordProps) {
                     {session.sessionNumber}
                   </p>
                   <p className="text-sm text-muted-foreground" data-testid={`session-date-${session.id}`}>
-                    {format(new Date(session.sessionDate), "MMM d, yyyy")}
+                    {session.sessionDate && isValidDate(session.sessionDate) ? format(new Date(session.sessionDate), "MMM d, yyyy") : "N/A"}
                   </p>
                 </div>
               ))}

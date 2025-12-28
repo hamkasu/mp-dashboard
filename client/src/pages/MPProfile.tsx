@@ -657,7 +657,7 @@ export default function MPProfile() {
                         {absentSessionsData.absentSessions.map((session, index) => (
                           <div key={index} className="flex items-center justify-between text-sm" data-testid={`absent-date-${index}`}>
                             <span className="text-red-600 dark:text-red-400">
-                              {session.date ? format(new Date(session.date), "MMM d, yyyy") : "N/A"}
+                              {session.date && isValidDate(session.date) ? format(new Date(session.date), "MMM d, yyyy") : "N/A"}
                             </span>
                             <span className="text-xs text-muted-foreground">
                               {session.sessionNumber}
@@ -728,7 +728,7 @@ export default function MPProfile() {
                                   {session.sessionNumber}
                                 </p>
                                 <p className="text-xs text-muted-foreground">
-                                  {session.sessionDate ? format(new Date(session.sessionDate), "MMM d, yyyy") : "N/A"}
+                                  {session.sessionDate && isValidDate(session.sessionDate) ? format(new Date(session.sessionDate), "MMM d, yyyy") : "N/A"}
                                   {session.topics && session.topics.length > 0 && (
                                     <span> • {session.topics[0]}</span>
                                   )}
@@ -1471,7 +1471,7 @@ export default function MPProfile() {
                                   </p>
                                   <div className="text-xs text-muted-foreground mb-2">
                                     <span data-testid={`text-filing-date-${courtCase.id}`}>
-                                      {t('profile.filed')}: {courtCase.filingDate ? format(new Date(courtCase.filingDate), "MMM d, yyyy") : "N/A"}
+                                      {t('profile.filed')}: {courtCase.filingDate && isValidDate(courtCase.filingDate) ? format(new Date(courtCase.filingDate), "MMM d, yyyy") : "N/A"}
                                     </span>
                                   </div>
                                   {courtCase.documentLinks && courtCase.documentLinks.length > 0 && (
@@ -1550,7 +1550,7 @@ export default function MPProfile() {
                                   )}
                                   <div className="text-xs text-muted-foreground mb-2">
                                     <span data-testid={`text-filing-date-${courtCase.id}`}>
-                                      {t('profile.filed')}: {courtCase.filingDate ? format(new Date(courtCase.filingDate), "MMM d, yyyy") : "N/A"}
+                                      {t('profile.filed')}: {courtCase.filingDate && isValidDate(courtCase.filingDate) ? format(new Date(courtCase.filingDate), "MMM d, yyyy") : "N/A"}
                                     </span>
                                   </div>
                                   {courtCase.documentLinks && courtCase.documentLinks.length > 0 && (
@@ -1648,7 +1648,7 @@ export default function MPProfile() {
                                   </p>
                                   <div className="text-xs text-muted-foreground mb-2">
                                     <span data-testid={`text-start-date-${investigation.id}`}>
-                                      {t('profile.started')}: {investigation.startDate ? format(new Date(investigation.startDate), "MMM d, yyyy") : "N/A"}
+                                      {t('profile.started')}: {investigation.startDate && isValidDate(investigation.startDate) ? format(new Date(investigation.startDate), "MMM d, yyyy") : "N/A"}
                                     </span>
                                   </div>
                                   {investigation.documentLinks && investigation.documentLinks.length > 0 && (
@@ -1727,11 +1727,11 @@ export default function MPProfile() {
                                   <div className="text-xs text-muted-foreground mb-2">
                                     <div className="flex items-center justify-between">
                                       <span data-testid={`text-start-date-${investigation.id}`}>
-                                        {t('profile.started')}: {investigation.startDate ? format(new Date(investigation.startDate), "MMM d, yyyy") : "N/A"}
+                                        {t('profile.started')}: {investigation.startDate && isValidDate(investigation.startDate) ? format(new Date(investigation.startDate), "MMM d, yyyy") : "N/A"}
                                       </span>
                                       {investigation.endDate && (
                                         <span data-testid={`text-end-date-${investigation.id}`}>
-                                          {t('profile.completed')}: {investigation.endDate ? format(new Date(investigation.endDate), "MMM d, yyyy") : "N/A"}
+                                          {t('profile.completed')}: {investigation.endDate && isValidDate(investigation.endDate) ? format(new Date(investigation.endDate), "MMM d, yyyy") : "N/A"}
                                         </span>
                                       )}
                                     </div>
@@ -1851,7 +1851,7 @@ export default function MPProfile() {
                                   </div>
                                 </div>
                                 <div className="text-xs text-muted-foreground mb-2">
-                                  <span>Proposed: {bill.dateProposed ? format(new Date(bill.dateProposed), "MMM d, yyyy") : "N/A"}</span>
+                                  <span>Proposed: {bill.dateProposed && isValidDate(bill.dateProposed) ? format(new Date(bill.dateProposed), "MMM d, yyyy") : "N/A"}</span>
                                 </div>
                                 {bill.outcome && (
                                   <p className="text-sm mb-2">
@@ -1908,7 +1908,7 @@ export default function MPProfile() {
                                   </div>
                                 </div>
                                 <div className="text-xs text-muted-foreground mb-2">
-                                  <span>Proposed: {motion.dateProposed ? format(new Date(motion.dateProposed), "MMM d, yyyy") : "N/A"}</span>
+                                  <span>Proposed: {motion.dateProposed && isValidDate(motion.dateProposed) ? format(new Date(motion.dateProposed), "MMM d, yyyy") : "N/A"}</span>
                                 </div>
                                 {motion.outcome && (
                                   <p className="text-sm mb-2">
@@ -1942,7 +1942,7 @@ export default function MPProfile() {
                             >
                               <h5 className="font-semibold mb-1">{debate.topic}</h5>
                               <div className="text-xs text-muted-foreground mb-2">
-                                <span>{debate.date ? format(new Date(debate.date), "MMM d, yyyy") : "N/A"}</span>
+                                <span>{debate.date && isValidDate(debate.date) ? format(new Date(debate.date), "MMM d, yyyy") : "N/A"}</span>
                               </div>
                               <p className="text-sm text-muted-foreground mb-2">
                                 {debate.contribution}
@@ -2034,7 +2034,7 @@ export default function MPProfile() {
                                     {question.questionText}
                                   </h5>
                                   <div className="text-xs text-muted-foreground mb-2">
-                                    <span>Asked: {question.dateAsked ? format(new Date(question.dateAsked), "MMM d, yyyy") : "N/A"}</span>
+                                    <span>Asked: {question.dateAsked && isValidDate(question.dateAsked) ? format(new Date(question.dateAsked), "MMM d, yyyy") : "N/A"}</span>
                                   </div>
                                   {question.fullTextUrl && (
                                     <a
