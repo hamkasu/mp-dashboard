@@ -36,15 +36,52 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shadow-sm">
       <div className="flex h-16 md:h-20 items-center gap-4 px-4 md:px-6 lg:px-8 max-w-7xl mx-auto">
         {onMenuClick && (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="md:hidden"
-            onClick={onMenuClick}
-            data-testid="button-menu-toggle"
-          >
-            <Menu className="h-5 w-5" />
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="md:hidden"
+                data-testid="button-menu-toggle"
+              >
+                <Menu className="h-5 w-5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-[240px]">
+              <DropdownMenuItem onSelect={() => setLocation("/")}>
+                <Home className="w-4 h-4 mr-2" />
+                <span>{t('nav.mps')}</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => setLocation("/hansard")}>
+                <BookOpen className="w-4 h-4 mr-2" />
+                <span>{t('nav.hansard')}</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => setLocation("/parliament-guide")}>
+                <GraduationCap className="w-4 h-4 mr-2" />
+                <span>{t('nav.parliamentGuide')}</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => setLocation("/report-card")}>
+                <Award className="w-4 h-4 mr-2" />
+                <span>Report Card</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => setLocation("/activity")}>
+                <FileText className="w-4 h-4 mr-2" />
+                <span>{t('nav.activity')}</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => setLocation("/attendance")}>
+                <UserCheck className="w-4 h-4 mr-2" />
+                <span>{t('nav.attendance')}</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => setLocation("/parliamentary-answers")}>
+                <MessageSquare className="w-4 h-4 mr-2" />
+                <span>{t('nav.parliamentaryAnswers')}</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => setLocation("/allowances")}>
+                <Calculator className="w-4 h-4 mr-2" />
+                <span>{t('nav.allowances')}</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         )}
         
         <Link href="/">
