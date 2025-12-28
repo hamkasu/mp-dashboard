@@ -250,7 +250,7 @@ export default function MPProfile() {
     : (mp.daysAttended ?? 0);
 
   const totalSalary = calculateTotalSalary(mp.swornInDate, monthlySalary, sessionsAttended, mp.parliamentSittingAllowance);
-  const formattedSwornInDate = format(new Date(mp.swornInDate), "MMMM d, yyyy");
+  const formattedSwornInDate = mp.swornInDate ? format(new Date(mp.swornInDate), "MMMM d, yyyy") : "Date not available";
   const yearlyBreakdown = calculateYearlyBreakdown(mp.swornInDate, monthlySalary);
   
   const attendanceRate = totalSessions > 0 
@@ -653,7 +653,7 @@ export default function MPProfile() {
                         {absentSessionsData.absentSessions.map((session, index) => (
                           <div key={index} className="flex items-center justify-between text-sm" data-testid={`absent-date-${index}`}>
                             <span className="text-red-600 dark:text-red-400">
-                              {format(new Date(session.date), "MMM d, yyyy")}
+                              {session.date ? format(new Date(session.date), "MMM d, yyyy") : "N/A"}
                             </span>
                             <span className="text-xs text-muted-foreground">
                               {session.sessionNumber}
@@ -724,7 +724,7 @@ export default function MPProfile() {
                                   {session.sessionNumber}
                                 </p>
                                 <p className="text-xs text-muted-foreground">
-                                  {format(new Date(session.sessionDate), "MMM d, yyyy")}
+                                  {session.sessionDate ? format(new Date(session.sessionDate), "MMM d, yyyy") : "N/A"}
                                   {session.topics && session.topics.length > 0 && (
                                     <span> • {session.topics[0]}</span>
                                   )}
@@ -1467,7 +1467,7 @@ export default function MPProfile() {
                                   </p>
                                   <div className="text-xs text-muted-foreground mb-2">
                                     <span data-testid={`text-filing-date-${courtCase.id}`}>
-                                      {t('profile.filed')}: {format(new Date(courtCase.filingDate), "MMM d, yyyy")}
+                                      {t('profile.filed')}: {courtCase.filingDate ? format(new Date(courtCase.filingDate), "MMM d, yyyy") : "N/A"}
                                     </span>
                                   </div>
                                   {courtCase.documentLinks && courtCase.documentLinks.length > 0 && (
@@ -1546,7 +1546,7 @@ export default function MPProfile() {
                                   )}
                                   <div className="text-xs text-muted-foreground mb-2">
                                     <span data-testid={`text-filing-date-${courtCase.id}`}>
-                                      {t('profile.filed')}: {format(new Date(courtCase.filingDate), "MMM d, yyyy")}
+                                      {t('profile.filed')}: {courtCase.filingDate ? format(new Date(courtCase.filingDate), "MMM d, yyyy") : "N/A"}
                                     </span>
                                   </div>
                                   {courtCase.documentLinks && courtCase.documentLinks.length > 0 && (
@@ -1644,7 +1644,7 @@ export default function MPProfile() {
                                   </p>
                                   <div className="text-xs text-muted-foreground mb-2">
                                     <span data-testid={`text-start-date-${investigation.id}`}>
-                                      {t('profile.started')}: {format(new Date(investigation.startDate), "MMM d, yyyy")}
+                                      {t('profile.started')}: {investigation.startDate ? format(new Date(investigation.startDate), "MMM d, yyyy") : "N/A"}
                                     </span>
                                   </div>
                                   {investigation.documentLinks && investigation.documentLinks.length > 0 && (
@@ -1723,11 +1723,11 @@ export default function MPProfile() {
                                   <div className="text-xs text-muted-foreground mb-2">
                                     <div className="flex items-center justify-between">
                                       <span data-testid={`text-start-date-${investigation.id}`}>
-                                        {t('profile.started')}: {format(new Date(investigation.startDate), "MMM d, yyyy")}
+                                        {t('profile.started')}: {investigation.startDate ? format(new Date(investigation.startDate), "MMM d, yyyy") : "N/A"}
                                       </span>
                                       {investigation.endDate && (
                                         <span data-testid={`text-end-date-${investigation.id}`}>
-                                          {t('profile.completed')}: {format(new Date(investigation.endDate), "MMM d, yyyy")}
+                                          {t('profile.completed')}: {investigation.endDate ? format(new Date(investigation.endDate), "MMM d, yyyy") : "N/A"}
                                         </span>
                                       )}
                                     </div>
@@ -1847,7 +1847,7 @@ export default function MPProfile() {
                                   </div>
                                 </div>
                                 <div className="text-xs text-muted-foreground mb-2">
-                                  <span>Proposed: {format(new Date(bill.dateProposed), "MMM d, yyyy")}</span>
+                                  <span>Proposed: {bill.dateProposed ? format(new Date(bill.dateProposed), "MMM d, yyyy") : "N/A"}</span>
                                 </div>
                                 {bill.outcome && (
                                   <p className="text-sm mb-2">
@@ -1904,7 +1904,7 @@ export default function MPProfile() {
                                   </div>
                                 </div>
                                 <div className="text-xs text-muted-foreground mb-2">
-                                  <span>Proposed: {format(new Date(motion.dateProposed), "MMM d, yyyy")}</span>
+                                  <span>Proposed: {motion.dateProposed ? format(new Date(motion.dateProposed), "MMM d, yyyy") : "N/A"}</span>
                                 </div>
                                 {motion.outcome && (
                                   <p className="text-sm mb-2">
@@ -1938,7 +1938,7 @@ export default function MPProfile() {
                             >
                               <h5 className="font-semibold mb-1">{debate.topic}</h5>
                               <div className="text-xs text-muted-foreground mb-2">
-                                <span>{format(new Date(debate.date), "MMM d, yyyy")}</span>
+                                <span>{debate.date ? format(new Date(debate.date), "MMM d, yyyy") : "N/A"}</span>
                               </div>
                               <p className="text-sm text-muted-foreground mb-2">
                                 {debate.contribution}
@@ -2030,7 +2030,7 @@ export default function MPProfile() {
                                     {question.questionText}
                                   </h5>
                                   <div className="text-xs text-muted-foreground mb-2">
-                                    <span>Asked: {format(new Date(question.dateAsked), "MMM d, yyyy")}</span>
+                                    <span>Asked: {question.dateAsked ? format(new Date(question.dateAsked), "MMM d, yyyy") : "N/A"}</span>
                                   </div>
                                   {question.fullTextUrl && (
                                     <a
