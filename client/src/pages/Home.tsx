@@ -18,7 +18,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { ExternalLink, AlertTriangle, Eye, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { ExternalLink, AlertTriangle, Eye, ChevronLeft, ChevronRight, ChevronDown, Shield, UserX, TrendingUp } from "lucide-react";
 import { Link } from "wouter";
 import type { Mp, SprmInvestigation, LegislativeProposal, ParliamentaryQuestion } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
@@ -494,21 +500,109 @@ export default function Home() {
             </div>
 
             {/* Page Title */}
-            <div>
-              <div className="flex flex-wrap items-center gap-3 mb-2">
-                <h2 className="text-2xl md:text-3xl font-bold tracking-tight">
-                  {t('nav.mps')}
-                </h2>
-                {analyticsData && (
-                  <div className="flex items-center gap-1.5 text-sm text-muted-foreground" data-testid="page-view-count">
-                    <Eye className="w-4 h-4" />
-                    <span>{analyticsData.totalVisits.toLocaleString()} visits</span>
-                  </div>
-                )}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <div className="flex flex-wrap items-center gap-3 mb-2">
+                  <h2 className="text-2xl md:text-3xl font-bold tracking-tight">
+                    {t('nav.mps')}
+                  </h2>
+                  {analyticsData && (
+                    <div className="flex items-center gap-1.5 text-sm text-muted-foreground" data-testid="page-view-count">
+                      <Eye className="w-4 h-4" />
+                      <span>{analyticsData.totalVisits.toLocaleString()} visits</span>
+                    </div>
+                  )}
+                </div>
+                <p className="text-muted-foreground">
+                  {(stats || defaultStats).totalMps} {t('nav.mps')}
+                </p>
               </div>
-              <p className="text-muted-foreground">
-                {(stats || defaultStats).totalMps} {t('nav.mps')}
-              </p>
+
+              {/* Mobile Quick Sort/Filter */}
+              <div className="flex md:hidden items-center gap-2 overflow-x-auto pb-2 -mx-1 px-1 no-scrollbar">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" className="shrink-0 gap-2">
+                      <TrendingUp className="w-4 h-4" />
+                      <span>{t('filters.sortBy')}</span>
+                      <ChevronDown className="w-3 h-3" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-[200px] max-h-[300px] overflow-y-auto">
+                    {[
+                      { value: "name", label: t('filters.sortName') },
+                      { value: "attendance-best", label: t('filters.sortBestAttendance') },
+                      { value: "attendance-worst", label: t('filters.sortWorstAttendance') },
+                      { value: "speeches-most", label: t('filters.sortMostSpeeches') },
+                      { value: "speeches-fewest", label: t('filters.sortFewestSpeeches') },
+                      { value: "poverty-highest", label: t('filters.sortHighestPoverty') },
+                      { value: "poverty-lowest", label: t('filters.sortLowestPoverty') },
+                      { value: "bills-raised", label: t('filters.sortBillsRaised') },
+                      { value: "oral-questions", label: t('filters.sortOralQuestions') },
+                      { value: "inappropriate-language", label: t('filters.sortInappropriateLanguage') }
+                    ].map((opt) => (
+                      <DropdownMenuItem 
+                        key={opt.value} 
+                        onSelect={() => setSortBy(opt.value as SortOption)}
+                        className={sortBy === opt.value ? "bg-accent" : ""}
+                      >
+                        {opt.label}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" className="shrink-0 gap-2">
+                      <Shield className="w-4 h-4" />
+                      <span>{t('filters.cabinetPosition')}</span>
+                      <ChevronDown className="w-3 h-3" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    {[
+                      { value: "all", label: t('filters.allMPs') },
+                      { value: "cabinet", label: t('filters.cabinetMembers') },
+                      { value: "ministers", label: t('filters.ministersOnly') },
+                      { value: "deputy-ministers", label: t('filters.deputyMinistersOnly') }
+                    ].map((opt) => (
+                      <DropdownMenuItem 
+                        key={opt.value} 
+                        onSelect={() => handleCabinetFilterChange(opt.value as CabinetFilter)}
+                        className={cabinetFilter === opt.value ? "bg-accent" : ""}
+                      >
+                        {opt.label}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" className="shrink-0 gap-2">
+                      <UserX className="w-4 h-4" />
+                      <span>Status</span>
+                      <ChevronDown className="w-3 h-3" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    {[
+                      { value: "active", label: t('filters.activeMPs') },
+                      { value: "all", label: t('filters.allMPs') },
+                      { value: "former", label: t('filters.formerMPs') }
+                    ].map((opt) => (
+                      <DropdownMenuItem 
+                        key={opt.value} 
+                        onSelect={() => handleStatusFilterChange(opt.value as StatusFilter)}
+                        className={statusFilter === opt.value ? "bg-accent" : ""}
+                      >
+                        {opt.label}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
             </div>
 
             {/* Cumulative Costs Section */}
