@@ -362,32 +362,32 @@ export default function ReportCard() {
                   <Calendar className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
                   <div>
                     <p className="font-semibold text-sm">Attendance</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">25% of overall score</p>
-                    <p className="text-xs text-muted-foreground">Parliamentary session participation</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">40% of overall score</p>
+                    <p className="text-xs text-muted-foreground">Parliament session attendance percentage</p>
                   </div>
                 </div>
                 <div className="flex gap-3 items-start">
                   <MessageSquare className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
                   <div>
                     <p className="font-semibold text-sm">Participation</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">25% of overall score</p>
-                    <p className="text-xs text-muted-foreground">Speeches and questions asked</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">30% of overall score</p>
+                    <p className="text-xs text-muted-foreground">Speeches, bills raised, and questions asked</p>
                   </div>
                 </div>
                 <div className="flex gap-3 items-start">
                   <Shield className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" />
                   <div>
                     <p className="font-semibold text-sm">Conduct</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">25% of overall score</p>
-                    <p className="text-xs text-muted-foreground">Behavior and language usage</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">20% of overall score</p>
+                    <p className="text-xs text-muted-foreground">Inappropriate language incidents and court cases</p>
                   </div>
                 </div>
                 <div className="flex gap-3 items-start">
                   <MapPin className="h-5 w-5 text-red-600 mt-0.5 flex-shrink-0" />
                   <div>
                     <p className="font-semibold text-sm">Constituency Impact</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">25% of overall score</p>
-                    <p className="text-xs text-muted-foreground">Development activities & responsiveness</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">10% of overall score</p>
+                    <p className="text-xs text-muted-foreground">Poverty rate in constituency</p>
                   </div>
                 </div>
               </div>
@@ -443,10 +443,10 @@ export default function ReportCard() {
                           </TooltipTrigger>
                           <TooltipContent>
                             <p>Overall performance score (0-100) based on:</p>
-                            <p className="text-xs mt-1">• Attendance (25%)</p>
-                            <p className="text-xs">• Participation (25%)</p>
-                            <p className="text-xs">• Conduct (25%)</p>
-                            <p className="text-xs">• Constituency Impact (25%)</p>
+                            <p className="text-xs mt-1">• Attendance (40%)</p>
+                            <p className="text-xs">• Participation (30%)</p>
+                            <p className="text-xs">• Conduct (20%)</p>
+                            <p className="text-xs">• Constituency Impact (10%)</p>
                           </TooltipContent>
                         </Tooltip>
                       </TableHead>
@@ -500,10 +500,10 @@ export default function ReportCard() {
                           </TooltipTrigger>
                           <TooltipContent>
                             <p>Overall performance score (0-100) based on:</p>
-                            <p className="text-xs mt-1">• Attendance (25%)</p>
-                            <p className="text-xs">• Participation (25%)</p>
-                            <p className="text-xs">• Conduct (25%)</p>
-                            <p className="text-xs">• Constituency Impact (25%)</p>
+                            <p className="text-xs mt-1">• Attendance (40%)</p>
+                            <p className="text-xs">• Participation (30%)</p>
+                            <p className="text-xs">• Conduct (20%)</p>
+                            <p className="text-xs">• Constituency Impact (10%)</p>
                           </TooltipContent>
                         </Tooltip>
                       </TableHead>

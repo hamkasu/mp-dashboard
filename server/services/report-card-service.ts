@@ -180,10 +180,10 @@ function calculateGrades(metrics: MPMetrics[]): (MPGrade & MPMetrics)[] {
 
   // Calculate grades for each MP
   const results = metrics.map((mp, index) => {
-    // 1. Attendance Score (37.5% weight)
+    // 1. Attendance Score (40% weight)
     const attendanceScore = Math.round(calculatePercentile(allAttendance, mp.attendancePercentage));
 
-    // 2. Participation Score (37.5% weight)
+    // 2. Participation Score (30% weight)
     // Weighted average of: speeches (40%), bills (30%), questions (30%)
     const speechPercentile = calculatePercentile(allSpeeches, mp.averageSpeeches);
     const billPercentile = calculatePercentile(allBills, mp.billsRaised);
@@ -195,7 +195,7 @@ function calculateGrades(metrics: MPMetrics[]): (MPGrade & MPMetrics)[] {
       (questionPercentile * 0.3)
     );
 
-    // 3. Conduct Score (15% weight)
+    // 3. Conduct Score (20% weight)
     // Fewer court cases is better
     const courtCasePercentile = calculatePercentile(allCourtCases, mp.courtCases, true);
     const conductScore = Math.round(courtCasePercentile);
@@ -204,11 +204,11 @@ function calculateGrades(metrics: MPMetrics[]): (MPGrade & MPMetrics)[] {
     // No data available yet, use neutral 50
     const constituencyScore = 50;
 
-    // 5. Overall Score (weighted average)
+    // 5. Overall Score (weighted average: 40, 30, 20, 10)
     const overallScore = Math.round(
-      (attendanceScore * 0.375) +
-      (participationScore * 0.375) +
-      (conductScore * 0.15) +
+      (attendanceScore * 0.40) +
+      (participationScore * 0.30) +
+      (conductScore * 0.20) +
       (constituencyScore * 0.10)
     );
 

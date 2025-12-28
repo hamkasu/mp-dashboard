@@ -262,7 +262,7 @@ export default function ReportCardAdmin() {
                       <div>
                         <div className="font-medium">Participation Score</div>
                         <div className="text-muted-foreground">
-                          Normalized score based on speeches (40%), bills raised (30%), and questions asked (30%)
+                          Normalized score based on speeches, bills raised, and questions asked
                         </div>
                       </div>
                     </div>
@@ -271,7 +271,7 @@ export default function ReportCardAdmin() {
                       <div>
                         <div className="font-medium">Conduct Score</div>
                         <div className="text-muted-foreground">
-                          Inverse score based on inappropriate language (70%) and court cases (30%) - fewer is better
+                          Inverse score based on inappropriate language and court cases - fewer is better
                         </div>
                       </div>
                     </div>
