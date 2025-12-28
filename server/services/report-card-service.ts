@@ -10,7 +10,7 @@
  */
 
 import { db } from "../db";
-import { mps, mpReportCards, legislativeProposals, parliamentaryQuestions, courtCases } from "../../shared/schema";
+import { mps, mpReportCards, legislativeProposals, parliamentaryQuestions, courtCases, constituencies } from "../../shared/schema";
 import { eq, desc, sql } from "drizzle-orm";
 
 // ============================================================================
@@ -26,6 +26,7 @@ interface MPMetrics {
   billsRaised: number;
   questionsAsked: number;
   courtCases: number;
+  povertyRate: number; // Poverty incidence * 10 (e.g., 57 = 5.7%)
 }
 
 interface MPGrade {
@@ -79,7 +80,7 @@ function calculatePercentile(
 
 /**
  * Fetch all MP metrics using batch queries
- * 4 total queries instead of 663+
+ * 5 total queries instead of 663+
  */
 async function fetchAllMPMetrics(): Promise<MPMetrics[]> {
   console.log("[Report Cards] Fetching all MP data...");
@@ -88,6 +89,7 @@ async function fetchAllMPMetrics(): Promise<MPMetrics[]> {
   const allMps = await db.select({
     mpId: mps.id,
     name: mps.name,
+    parliamentCode: mps.parliamentCode,
     daysAttended: mps.daysAttended,
     totalParliamentDays: mps.totalParliamentDays,
     totalSpeechInstances: mps.totalSpeechInstances,
@@ -96,7 +98,20 @@ async function fetchAllMPMetrics(): Promise<MPMetrics[]> {
 
   console.log(`[Report Cards] Found ${allMps.length} MPs`);
 
-  // Query 2: Count bills per MP (batch)
+  // Query 2: Get all constituencies with poverty data
+  const allConstituencies = await db
+    .select({
+      parliamentCode: constituencies.parliamentCode,
+      povertyIncidence: constituencies.povertyIncidence,
+    })
+    .from(constituencies);
+
+  const povertyMap = new Map(
+    allConstituencies.map(c => [c.parliamentCode, c.povertyIncidence || 0])
+  );
+  console.log(`[Report Cards] Found poverty data for ${allConstituencies.filter(c => c.povertyIncidence).length}/${allConstituencies.length} constituencies`);
+
+  // Query 3: Count bills per MP (batch)
   const billCounts = await db
     .select({
       mpId: legislativeProposals.mpId,
@@ -107,7 +122,7 @@ async function fetchAllMPMetrics(): Promise<MPMetrics[]> {
 
   const billsMap = new Map(billCounts.map(b => [b.mpId, b.count]));
 
-  // Query 3: Count questions per MP (batch)
+  // Query 4: Count questions per MP (batch)
   const questionCounts = await db
     .select({
       mpId: parliamentaryQuestions.mpId,
@@ -118,7 +133,7 @@ async function fetchAllMPMetrics(): Promise<MPMetrics[]> {
 
   const questionsMap = new Map(questionCounts.map(q => [q.mpId, q.count]));
 
-  // Query 4: Count court cases per MP (batch)
+  // Query 5: Count court cases per MP (batch)
   const courtCaseCounts = await db
     .select({
       mpId: courtCases.mpId,
@@ -150,6 +165,7 @@ async function fetchAllMPMetrics(): Promise<MPMetrics[]> {
       billsRaised: billsMap.get(mp.mpId) || 0,
       questionsAsked: questionsMap.get(mp.mpId) || 0,
       courtCases: courtCasesMap.get(mp.mpId) || 0,
+      povertyRate: povertyMap.get(mp.parliamentCode) || 0,
     };
   });
 
@@ -177,6 +193,7 @@ function calculateGrades(metrics: MPMetrics[]): (MPGrade & MPMetrics)[] {
   const allBills = metrics.map(m => m.billsRaised);
   const allQuestions = metrics.map(m => m.questionsAsked);
   const allCourtCases = metrics.map(m => m.courtCases);
+  const allPovertyRates = metrics.map(m => m.povertyRate);
 
   // Calculate grades for each MP
   const results = metrics.map((mp, index) => {
@@ -201,8 +218,9 @@ function calculateGrades(metrics: MPMetrics[]): (MPGrade & MPMetrics)[] {
     const conductScore = Math.round(courtCasePercentile);
 
     // 4. Constituency Score (10% weight)
-    // No data available yet, use neutral 50
-    const constituencyScore = 50;
+    // Lower poverty rate is better (inverted scoring)
+    const povertyPercentile = calculatePercentile(allPovertyRates, mp.povertyRate, true);
+    const constituencyScore = Math.round(povertyPercentile);
 
     // 5. Overall Score (weighted average: 40, 30, 20, 10)
     const overallScore = Math.round(
@@ -283,7 +301,7 @@ export async function updateAllReportCards(): Promise<{ updated: number; created
         billsRaised: grade.billsRaised,
         questionsAsked: grade.questionsAsked,
         inappropriateLanguageCount: 0,
-        povertyRate: 0,
+        povertyRate: grade.povertyRate,
         updatedAt: new Date(),
       };
 
