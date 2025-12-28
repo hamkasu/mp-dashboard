@@ -10,12 +10,14 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function calculateTotalSalary(
-  swornInDate: Date | string, 
+  swornInDate: Date | string | null | undefined,
   monthlySalary: number,
   daysAttended: number = 0,
   parliamentSittingAllowance: number = 400
 ): number {
+  if (!swornInDate) return 0;
   const swornIn = new Date(swornInDate);
+  if (isNaN(swornIn.getTime())) return 0;
   const now = new Date();
   
   const yearsDiff = now.getFullYear() - swornIn.getFullYear();
@@ -51,8 +53,10 @@ export interface YearlyBreakdown {
   amount: number;
 }
 
-export function calculateYearlyBreakdown(swornInDate: Date | string, monthlySalary: number): YearlyBreakdown[] {
+export function calculateYearlyBreakdown(swornInDate: Date | string | null | undefined, monthlySalary: number): YearlyBreakdown[] {
+  if (!swornInDate) return [];
   const swornIn = new Date(swornInDate);
+  if (isNaN(swornIn.getTime())) return [];
   const now = new Date();
   
   // First, calculate the total months served using the same logic as calculateTotalSalary

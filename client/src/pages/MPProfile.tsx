@@ -178,6 +178,7 @@ export default function MPProfile() {
 
     // Sort by date (newest first)
     return combined.sort((a, b) => {
+      if (!a.dateAsked || !b.dateAsked) return 0;
       const dateA = new Date(a.dateAsked);
       const dateB = new Date(b.dateAsked);
       return dateB.getTime() - dateA.getTime();
