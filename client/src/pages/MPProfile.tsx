@@ -251,7 +251,7 @@ export default function MPProfile() {
     ? (absentSessionsData.totalSessions - absentSessionsData.totalAbsent) 
     : (mp.daysAttended ?? 0);
 
-  const isValidDate = (date: any) => date && !isNaN(new Date(date).getTime());
+  const isValidDate = (date: any) => !!date && !isNaN(new Date(date).getTime());
 
   const totalSalary = calculateTotalSalary(mp.swornInDate, monthlySalary, sessionsAttended, mp.parliamentSittingAllowance);
   const formattedSwornInDate = isValidDate(mp.swornInDate) ? format(new Date(mp.swornInDate), "MMMM d, yyyy") : "Date not available";

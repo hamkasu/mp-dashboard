@@ -91,7 +91,7 @@ export function MPCard({ mp, bills, oralQuestions, languageStats }: MPCardProps)
     : 0;
   const speakingColor = getSpeakingColor(speakingRate);
 
-  const isValidDate = (date: any) => date && !isNaN(new Date(date).getTime());
+  const isValidDate = (date: any) => !!date && !isNaN(new Date(date).getTime());
 
   // Check if MP has passed away
   const isDeceased = isValidDate(mp.termEndDate) && new Date(mp.termEndDate) <= new Date();
