@@ -18,10 +18,10 @@ export interface GradingWeights {
 }
 
 export const DEFAULT_WEIGHTS: GradingWeights = {
-  attendance: 0.40,
-  participation: 0.40,
+  attendance: 0.375,
+  participation: 0.375,
   conduct: 0.15,
-  constituencyImpact: 0.05,
+  constituencyImpact: 0.10,
 };
 
 /**

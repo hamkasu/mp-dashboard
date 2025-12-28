@@ -151,10 +151,10 @@ export function calculateGrades(mpsData: Array<{
 
     // Calculate overall score: weighted average of all categories
     const overallScore = Math.round(
-      (attendancePercentile * 0.40) +      // 40% weight
-      (participationPercentile * 0.40) +   // 40% weight
-      (conductPercentile * 0.15) +         // 15% weight
-      (constituencyPercentile * 0.05)      // 5% weight
+      (attendancePercentile * 0.375) +      // 37.5% weight
+      (participationPercentile * 0.375) +   // 37.5% weight
+      (conductPercentile * 0.15) +          // 15% weight
+      (constituencyPercentile * 0.10)       // 10% weight
     );
 
     // Assign letter grade
