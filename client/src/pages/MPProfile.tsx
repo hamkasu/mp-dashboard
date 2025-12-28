@@ -178,7 +178,8 @@ export default function MPProfile() {
 
     // Sort by date (newest first)
     return combined.sort((a, b) => {
-      if (!a.dateAsked || !b.dateAsked) return 0;
+      if (!a.dateAsked || isNaN(new Date(a.dateAsked).getTime())) return 1;
+      if (!b.dateAsked || isNaN(new Date(b.dateAsked).getTime())) return -1;
       const dateA = new Date(a.dateAsked);
       const dateB = new Date(b.dateAsked);
       return dateB.getTime() - dateA.getTime();
@@ -250,8 +251,10 @@ export default function MPProfile() {
     ? (absentSessionsData.totalSessions - absentSessionsData.totalAbsent) 
     : (mp.daysAttended ?? 0);
 
+  const isValidDate = (date: any) => date && !isNaN(new Date(date).getTime());
+
   const totalSalary = calculateTotalSalary(mp.swornInDate, monthlySalary, sessionsAttended, mp.parliamentSittingAllowance);
-  const formattedSwornInDate = mp.swornInDate ? format(new Date(mp.swornInDate), "MMMM d, yyyy") : "Date not available";
+  const formattedSwornInDate = isValidDate(mp.swornInDate) ? format(new Date(mp.swornInDate), "MMMM d, yyyy") : "Date not available";
   const yearlyBreakdown = calculateYearlyBreakdown(mp.swornInDate, monthlySalary);
   
   const attendanceRate = totalSessions > 0 
