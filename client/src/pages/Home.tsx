@@ -486,8 +486,14 @@ export default function Home() {
                 </h1>
                 <Dialog>
                   <DialogTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" data-testid="button-mp-role-info">
-                      <Info className="h-5 w-5 text-muted-foreground" />
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="h-8 gap-2 rounded-full border-primary/20 hover:border-primary/50 hover:bg-primary/5 transition-colors" 
+                      data-testid="button-mp-role-info"
+                    >
+                      <Info className="h-4 w-4 text-primary" />
+                      <span className="text-xs font-medium text-foreground">MP Role Guide</span>
                     </Button>
                   </DialogTrigger>
                   <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
