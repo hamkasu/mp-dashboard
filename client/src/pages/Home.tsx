@@ -24,7 +24,14 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ExternalLink, AlertTriangle, Eye, ChevronLeft, ChevronRight, ChevronDown, Shield, UserX, TrendingUp } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { ExternalLink, AlertTriangle, Eye, ChevronLeft, ChevronRight, ChevronDown, Shield, UserX, TrendingUp, Info } from "lucide-react";
 import { Link } from "wouter";
 import type { Mp, SprmInvestigation, LegislativeProposal, ParliamentaryQuestion } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
@@ -473,9 +480,55 @@ export default function Home() {
           <div className="space-y-6 md:space-y-8">
             {/* SEO Landing Section */}
             <div className="space-y-3" data-testid="landing-section">
-              <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
-                {t('home.title')}
-              </h1>
+              <div className="flex items-center gap-2">
+                <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
+                  {t('home.title')}
+                </h1>
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" data-testid="button-mp-role-info">
+                      <Info className="h-5 w-5 text-muted-foreground" />
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+                    <DialogHeader>
+                      <DialogTitle className="text-2xl font-bold mb-4">The Role of an MP in Malaysia</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 text-sm md:text-base text-muted-foreground leading-relaxed">
+                      <p>
+                        In Malaysia's parliamentary system, the Cabinet (part of the executive branch) typically initiates and drafts most bills, but Members of Parliament (MPs)—primarily referring to those in the Dewan Rakyat (House of Representatives)—play a multifaceted role beyond just approval. They are elected to represent their constituencies and contribute to the governance process in several key ways:
+                      </p>
+                      
+                      <div className="space-y-3">
+                        <div>
+                          <h4 className="font-bold text-foreground">Legislative functions</h4>
+                          <p>MPs debate, propose amendments to, and vote on proposed laws (bills) during parliamentary sessions. While the Cabinet formulates many bills, Parliament has the authority to pass, amend, or even repeal them, ensuring they align with public interest. This includes participating in readings and committee stages where bills are scrutinized.</p>
+                        </div>
+                        
+                        <div>
+                          <h4 className="font-bold text-foreground">Representation of constituents</h4>
+                          <p>Each MP acts as the voice for their specific electoral area, raising local issues, concerns, and needs in Parliament through questions, motions, or speeches to influence policy and resource allocation.</p>
+                        </div>
+                        
+                        <div>
+                          <h4 className="font-bold text-foreground">Oversight and accountability</h4>
+                          <p>MPs monitor the government's actions by questioning ministers, debating policies, and serving on parliamentary committees that investigate executive performance, corruption, or inefficiencies. This helps ensure transparency and good governance.</p>
+                        </div>
+                        
+                        <div>
+                          <h4 className="font-bold text-foreground">Financial control</h4>
+                          <p>Parliament, through MPs, approves the national budget, audits public spending, and authorizes taxation or loans, preventing unchecked executive expenditure.</p>
+                        </div>
+                        
+                        <div>
+                          <h4 className="font-bold text-foreground">Policy influence and national discourse</h4>
+                          <p>MPs contribute to discussions on broader issues like economic development, social welfare, and international relations, shaping Malaysia's direction through motions, adjournment debates, or private member's bills (though these are less common).</p>
+                        </div>
+                      </div>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              </div>
               <p className="text-lg text-muted-foreground max-w-3xl">
                 {t('home.subtitle')} {t('home.description')}
               </p>
