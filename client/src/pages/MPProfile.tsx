@@ -264,14 +264,33 @@ export default function MPProfile() {
   const attendanceLabel = getAttendanceLabel(attendanceRate);
 
   const baseUrl = window.location.origin;
-  
-  const schemaData = {
+
+  // Enhanced SEO: Rich meta description with key performance metrics
+  const hansardCount = hansardParticipation?.count || 0;
+  const oralQuestionsCount = allOralQuestions.length;
+  const legislativeProposalsCount = legislativeProposals.length;
+
+  const metaDescription = mp
+    ? `${mp.name} - ${mp.party} MP for ${mp.constituency}, ${mp.state}. Parliament attendance: ${attendanceRate.toFixed(1)}% (${sessionsAttended}/${totalSessions} sessions). Yearly salary: RM ${formatCurrency(yearlySalary)}. Hansard speeches: ${hansardCount}. ${oralQuestionsCount > 0 ? `Parliamentary questions: ${oralQuestionsCount}.` : ''} ${courtCases.length > 0 ? `Court cases: ${courtCases.length}.` : ''} ${sprmInvestigations.length > 0 ? `SPRM investigations: ${sprmInvestigations.length}.` : ''} Track voting records, legislative proposals, and parliamentary performance.`
+    : "View MP profile and parliamentary activities.";
+
+  const metaKeywords = mp
+    ? `${mp.name}, ${mp.name} MP, ${mp.constituency} MP, ${mp.constituency}, ${mp.state}, ${mp.party}, ${mp.party} MP, Malaysian Parliament, Dewan Rakyat, MP attendance, MP salary, ${mp.name} attendance, ${mp.name} salary, ${mp.name} performance, ${mp.constituency} representative, parliament Malaysia, voting record, Hansard, legislative proposals, parliamentary questions, MP accountability, Malaysia government`
+    : "Malaysian Parliament, MP profile";
+
+  const metaTitle = mp
+    ? `${mp.name} (${mp.party}) - ${mp.constituency}, ${mp.state} MP | Attendance ${attendanceRate.toFixed(0)}% | Salary RM ${formatCurrency(yearlySalary)}`
+    : "MP Profile";
+
+  // Structured Data: Person Schema
+  const personSchema = {
     "@context": "https://schema.org",
     "@type": "Person",
     "name": `${mp.title || ''} ${mp.name}`.trim(),
     "jobTitle": mp.role || "Member of Parliament",
+    "description": `${mp.party} Member of Parliament representing ${mp.constituency}, ${mp.state}. Parliament attendance rate: ${attendanceRate.toFixed(1)}%.`,
     "image": mp.photoUrl || undefined,
-    "url": `${baseUrl}/mp/${mp.id}`,
+    "url": `https://myparliament.calmic.com.my/mp/${mp.id}`,
     "identifier": mp.parliamentCode,
     "gender": mp.gender === "M" ? "Male" : mp.gender === "F" ? "Female" : undefined,
     "worksFor": {
@@ -293,21 +312,71 @@ export default function MPProfile() {
       "addressRegion": mp.state,
       "addressCountry": "MY"
     },
-    "knowsAbout": mp.role ? [mp.role] : ["Parliamentary Affairs", "Malaysian Politics"]
+    "knowsAbout": mp.role ? [mp.role, "Parliamentary Affairs", "Malaysian Politics"] : ["Parliamentary Affairs", "Malaysian Politics"],
+    "award": attendanceRate >= 85 ? "Excellent Attendance Record" : undefined,
+  };
+
+  // Structured Data: BreadcrumbList Schema
+  const breadcrumbSchema = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      {
+        "@type": "ListItem",
+        "position": 1,
+        "name": "Malaysian Parliament Dashboard",
+        "item": "https://myparliament.calmic.com.my"
+      },
+      {
+        "@type": "ListItem",
+        "position": 2,
+        "name": `${mp.state} MPs`,
+        "item": `https://myparliament.calmic.com.my?state=${encodeURIComponent(mp.state)}`
+      },
+      {
+        "@type": "ListItem",
+        "position": 3,
+        "name": `${mp.name} - ${mp.constituency}`,
+        "item": `https://myparliament.calmic.com.my/mp/${mp.id}`
+      }
+    ]
+  };
+
+  // Structured Data: GovernmentService Schema (optional, for MP's constituency service)
+  const governmentServiceSchema = {
+    "@context": "https://schema.org",
+    "@type": "GovernmentService",
+    "name": `${mp.constituency} Parliamentary Services`,
+    "description": `Parliamentary representation services for ${mp.constituency}, ${mp.state} provided by ${mp.name} (${mp.party}).`,
+    "provider": {
+      "@type": "Person",
+      "name": mp.name,
+      "jobTitle": mp.role || "Member of Parliament"
+    },
+    "areaServed": {
+      "@type": "AdministrativeArea",
+      "name": mp.constituency,
+      "containedInPlace": {
+        "@type": "State",
+        "name": mp.state
+      }
+    },
+    "audience": {
+      "@type": "Audience",
+      "audienceType": "Residents of " + mp.constituency
+    }
   };
 
   return (
     <div className="min-h-screen bg-background">
       <PageMeta
-        title={mp ? `${mp.name} - ${mp.constituency}` : "MP Profile"}
-        description={mp ? `View the profile, voting record, and parliamentary activities of ${mp.name}, representing ${mp.constituency} (${mp.party}). Track attendance, court cases, and legislative proposals.` : "View MP profile and parliamentary activities."}
-        keywords={mp ? `${mp.name}, ${mp.constituency}, ${mp.party}, Malaysian MP, parliament` : "Malaysian Parliament, MP profile"}
-        url={mp ? `https://myparliament.calmic.com.my/mp/${mp.id}` : "https://myparliament.calmic.com.my"}
+        title={metaTitle}
+        description={metaDescription}
+        keywords={metaKeywords}
+        url={`https://myparliament.calmic.com.my/mp/${mp.id}`}
         image={mp?.photoUrl || "https://myparliament.calmic.com.my/android-chrome-512x512.png"}
-      />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(schemaData) }}
+        type="profile"
+        structuredData={[personSchema, breadcrumbSchema, governmentServiceSchema]}
       />
         <div className="max-w-5xl mx-auto px-4 md:px-6 lg:px-8 py-6 md:py-8">
           <div className="space-y-6 md:space-y-8">

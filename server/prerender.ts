@@ -52,12 +52,13 @@ function generateMetaTags(metadata: PageMetadata): string {
   `.trim();
 }
 
-function generateMpStructuredData(mp: Mp): any {
-  return {
+function generateMpStructuredData(mp: Mp, attendanceRate: string): any[] {
+  const personSchema = {
     "@context": "https://schema.org",
     "@type": "Person",
     "name": mp.name,
     "jobTitle": mp.role || "Member of Parliament",
+    "description": `${mp.party} Member of Parliament representing ${mp.constituency}, ${mp.state}. Parliament attendance rate: ${attendanceRate}%.`,
     "affiliation": {
       "@type": "Organization",
       "name": mp.party
@@ -65,7 +66,15 @@ function generateMpStructuredData(mp: Mp): any {
     "worksFor": {
       "@type": "GovernmentOrganization",
       "name": "Malaysian Parliament - Dewan Rakyat",
-      "url": "https://myparliament.calmic.com.my"
+      "url": "https://www.parlimen.gov.my",
+      "department": {
+        "@type": "GovernmentOrganization",
+        "name": mp.party
+      }
+    },
+    "memberOf": {
+      "@type": "Organization",
+      "name": mp.party
     },
     "address": {
       "@type": "PostalAddress",
@@ -73,8 +82,63 @@ function generateMpStructuredData(mp: Mp): any {
       "addressRegion": mp.state,
       "addressCountry": "MY"
     },
-    ...(mp.photoUrl && { "image": mp.photoUrl })
+    "knowsAbout": mp.role ? [mp.role, "Parliamentary Affairs", "Malaysian Politics"] : ["Parliamentary Affairs", "Malaysian Politics"],
+    ...(mp.photoUrl && { "image": mp.photoUrl }),
+    "url": `https://myparliament.calmic.com.my/mp/${mp.id}`,
+    "identifier": mp.parliamentCode,
+    "gender": mp.gender === "M" ? "Male" : mp.gender === "F" ? "Female" : undefined,
   };
+
+  const breadcrumbSchema = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      {
+        "@type": "ListItem",
+        "position": 1,
+        "name": "Malaysian Parliament Dashboard",
+        "item": "https://myparliament.calmic.com.my"
+      },
+      {
+        "@type": "ListItem",
+        "position": 2,
+        "name": `${mp.state} MPs`,
+        "item": `https://myparliament.calmic.com.my?state=${encodeURIComponent(mp.state)}`
+      },
+      {
+        "@type": "ListItem",
+        "position": 3,
+        "name": `${mp.name} - ${mp.constituency}`,
+        "item": `https://myparliament.calmic.com.my/mp/${mp.id}`
+      }
+    ]
+  };
+
+  const governmentServiceSchema = {
+    "@context": "https://schema.org",
+    "@type": "GovernmentService",
+    "name": `${mp.constituency} Parliamentary Services`,
+    "description": `Parliamentary representation services for ${mp.constituency}, ${mp.state} provided by ${mp.name} (${mp.party}).`,
+    "provider": {
+      "@type": "Person",
+      "name": mp.name,
+      "jobTitle": mp.role || "Member of Parliament"
+    },
+    "areaServed": {
+      "@type": "AdministrativeArea",
+      "name": mp.constituency,
+      "containedInPlace": {
+        "@type": "State",
+        "name": mp.state
+      }
+    },
+    "audience": {
+      "@type": "Audience",
+      "audienceType": "Residents of " + mp.constituency
+    }
+  };
+
+  return [personSchema, breadcrumbSchema, governmentServiceSchema];
 }
 
 function generateOrganizationStructuredData(): any {
@@ -278,20 +342,33 @@ export async function generatePrerenderedPages() {
   }
   
   for (const mp of allMps) {
-    const attendanceRate = mp.totalParliamentDays > 0 
+    const attendanceRate = mp.totalParliamentDays > 0
       ? ((mp.daysAttended / mp.totalParliamentDays) * 100).toFixed(1)
       : '0';
-    
+
+    // Calculate MP salary for SEO-rich description
+    const baseMpSalary = mp.mpAllowance || 0;
+    const ministerialSalary = 0; // We don't have role salary calculation here, but basic MP salary is still informative
+    const monthlySalary = baseMpSalary + ministerialSalary;
+    const yearlySalary = monthlySalary * 12;
+
     const mpUrl = `/mp/${mp.id}`;
+
+    // Enhanced meta title with key metrics
+    const mpTitle = `${mp.name} (${mp.party}) - ${mp.constituency}, ${mp.state} MP | Attendance ${attendanceRate}%`;
+
+    // Enhanced meta description with specific performance data
+    const mpDescription = `${mp.name} - ${mp.party} MP for ${mp.constituency}, ${mp.state}. Parliament attendance: ${attendanceRate}% (${mp.daysAttended}/${mp.totalParliamentDays} sessions). Track voting records, Hansard speeches, parliamentary questions, legislative proposals, and performance metrics.`;
+
     const mpHtml = await prerenderPage(htmlTemplate, {
-      title: `${mp.name} - ${mp.constituency} MP | ${mp.party}`,
-      description: `Track ${mp.name}, ${mp.party} MP for ${mp.constituency}, ${mp.state}. View attendance (${attendanceRate}%), voting records, parliamentary activities, court cases, and SPRM investigations.`,
+      title: mpTitle,
+      description: mpDescription,
       url: mpUrl,
       image: mp.photoUrl || undefined,
       type: 'profile',
-      structuredData: generateMpStructuredData(mp)
+      structuredData: generateMpStructuredData(mp, attendanceRate)
     });
-    
+
     const filename = pathToFilename(mpUrl);
     pages.push({ filename, html: mpHtml, url: mpUrl });
     urlMap.set(mpUrl, filename);
