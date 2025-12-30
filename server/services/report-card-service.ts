@@ -10,8 +10,8 @@
  */
 
 import { db } from "../db";
-import { mps, mpReportCards, legislativeProposals, parliamentaryQuestions, courtCases, constituencies } from "../../shared/schema";
-import { eq, desc, sql } from "drizzle-orm";
+import { mps, mpReportCards, legislativeProposals, parliamentaryQuestions, courtCases, constituencies, hansardRecords } from "../../shared/schema";
+import { eq, desc, sql, gte } from "drizzle-orm";
 
 // ============================================================================
 // TYPES
@@ -80,7 +80,7 @@ function calculatePercentile(
 
 /**
  * Fetch all MP metrics using batch queries
- * 5 total queries instead of 663+
+ * 6 total queries instead of 663+
  */
 async function fetchAllMPMetrics(): Promise<MPMetrics[]> {
   console.log("[Report Cards] Fetching all MP data...");
@@ -90,6 +90,7 @@ async function fetchAllMPMetrics(): Promise<MPMetrics[]> {
     mpId: mps.id,
     name: mps.name,
     parliamentCode: mps.parliamentCode,
+    swornInDate: mps.swornInDate,
     daysAttended: mps.daysAttended,
     totalParliamentDays: mps.totalParliamentDays,
     totalSpeechInstances: mps.totalSpeechInstances,
@@ -97,6 +98,56 @@ async function fetchAllMPMetrics(): Promise<MPMetrics[]> {
   }).from(mps);
 
   console.log(`[Report Cards] Found ${allMps.length} MPs`);
+
+  // Query 1.5: Get all Hansard records for accurate attendance calculation
+  const allHansardRecords = await db.select({
+    id: hansardRecords.id,
+    sessionDate: hansardRecords.sessionDate,
+    attendedMpIds: hansardRecords.attendedMpIds,
+    absentMpIds: hansardRecords.absentMpIds,
+  }).from(hansardRecords);
+
+  console.log(`[Report Cards] Found ${allHansardRecords.length} Hansard records`);
+
+  // Calculate attendance for each MP from Hansard records
+  const attendanceMap = new Map<string, { attended: number; total: number }>();
+
+  for (const mp of allMps) {
+    const mpSwornInDate = new Date(mp.swornInDate);
+
+    // Filter sessions after MP was sworn in
+    const relevantSessions = allHansardRecords.filter(record => {
+      const sessionDate = new Date(record.sessionDate);
+      return sessionDate >= mpSwornInDate;
+    });
+
+    let attendedCount = 0;
+
+    for (const record of relevantSessions) {
+      const attendedMpIds = record.attendedMpIds || [];
+      const absentMpIds = record.absentMpIds || [];
+      const hasAttendanceData = attendedMpIds.length > 0;
+
+      if (attendedMpIds.includes(mp.mpId)) {
+        // MP explicitly marked as attended
+        attendedCount++;
+      } else if (absentMpIds.includes(mp.mpId)) {
+        // MP explicitly marked as absent - don't increment attendedCount
+      } else if (hasAttendanceData) {
+        // Attendance was recorded but MP is not in either list - count as absent
+      } else {
+        // No attendance data for this session - give benefit of doubt
+        attendedCount++;
+      }
+    }
+
+    attendanceMap.set(mp.mpId, {
+      attended: attendedCount,
+      total: relevantSessions.length
+    });
+  }
+
+  console.log(`[Report Cards] Calculated attendance from Hansard for ${attendanceMap.size} MPs`);
 
   // Query 2: Get all constituencies with poverty data
   const allConstituencies = await db
@@ -148,8 +199,10 @@ async function fetchAllMPMetrics(): Promise<MPMetrics[]> {
 
   // Combine all data
   const metrics: MPMetrics[] = allMps.map(mp => {
-    const attendancePercentage = mp.totalParliamentDays > 0
-      ? (mp.daysAttended / mp.totalParliamentDays) * 100
+    // Use Hansard-based attendance data (matches profile page calculation)
+    const attendance = attendanceMap.get(mp.mpId);
+    const attendancePercentage = attendance && attendance.total > 0
+      ? (attendance.attended / attendance.total) * 100
       : 0;
 
     const averageSpeeches = mp.hansardSessionsSpoke > 0
