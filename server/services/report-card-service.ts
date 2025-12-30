@@ -99,55 +99,61 @@ async function fetchAllMPMetrics(): Promise<MPMetrics[]> {
 
   console.log(`[Report Cards] Found ${allMps.length} MPs`);
 
-  // Query 1.5: Get all Hansard records for accurate attendance calculation
-  const allHansardRecords = await db.select({
-    id: hansardRecords.id,
-    sessionDate: hansardRecords.sessionDate,
-    attendedMpIds: hansardRecords.attendedMpIds,
-    absentMpIds: hansardRecords.absentMpIds,
-  }).from(hansardRecords);
+  // Query 1.5: Fetch all Hansard records for attendance calculation
+  const allHansardRecords = await db
+    .select({
+      sessionDate: hansardRecords.sessionDate,
+      attendedMpIds: hansardRecords.attendedMpIds,
+      absentMpIds: hansardRecords.absentMpIds,
+    })
+    .from(hansardRecords)
+    .orderBy(hansardRecords.sessionDate);
 
-  console.log(`[Report Cards] Found ${allHansardRecords.length} Hansard records`);
+  console.log(`[Report Cards] Found ${allHansardRecords.length} Hansard sessions`);
 
-  // Calculate attendance for each MP from Hansard records
-  const attendanceMap = new Map<string, { attended: number; total: number }>();
+  // NEW APPROACH: Calculate attendance for all MPs efficiently
+  const attendanceMap = new Map<string, { attended: number; absent: number; total: number }>();
 
+  // Initialize attendance for all MPs
   for (const mp of allMps) {
-    const mpSwornInDate = new Date(mp.swornInDate);
-
-    // Filter sessions after MP was sworn in
-    const relevantSessions = allHansardRecords.filter(record => {
-      const sessionDate = new Date(record.sessionDate);
-      return sessionDate >= mpSwornInDate;
-    });
-
-    let attendedCount = 0;
-
-    for (const record of relevantSessions) {
-      const attendedMpIds = record.attendedMpIds || [];
-      const absentMpIds = record.absentMpIds || [];
-      const hasAttendanceData = attendedMpIds.length > 0;
-
-      if (attendedMpIds.includes(mp.mpId)) {
-        // MP explicitly marked as attended
-        attendedCount++;
-      } else if (absentMpIds.includes(mp.mpId)) {
-        // MP explicitly marked as absent - don't increment attendedCount
-      } else if (hasAttendanceData) {
-        // Attendance was recorded but MP is not in either list - count as absent
-      } else {
-        // No attendance data for this session - give benefit of doubt
-        attendedCount++;
-      }
-    }
-
-    attendanceMap.set(mp.mpId, {
-      attended: attendedCount,
-      total: relevantSessions.length
-    });
+    attendanceMap.set(mp.mpId, { attended: 0, absent: 0, total: 0 });
   }
 
-  console.log(`[Report Cards] Calculated attendance from Hansard for ${attendanceMap.size} MPs`);
+  // Process each Hansard session
+  for (const session of allHansardRecords) {
+    const sessionDate = new Date(session.sessionDate);
+    const attendedIds = (session.attendedMpIds as string[]) || [];
+    const absentIds = (session.absentMpIds as string[]) || [];
+    const hasAttendanceData = attendedIds.length > 0 || absentIds.length > 0;
+
+    // For each MP, check if this session counts for them
+    for (const mp of allMps) {
+      const swornInDate = new Date(mp.swornInDate);
+
+      // Skip sessions before MP was sworn in
+      if (sessionDate < swornInDate) {
+        continue;
+      }
+
+      const stats = attendanceMap.get(mp.mpId)!;
+      stats.total++;
+
+      // Determine if MP attended this session
+      if (attendedIds.includes(mp.mpId)) {
+        stats.attended++;
+      } else if (absentIds.includes(mp.mpId)) {
+        stats.absent++;
+      } else if (!hasAttendanceData) {
+        // No attendance data for this session - assume attended (benefit of doubt)
+        stats.attended++;
+      } else {
+        // Has attendance data but MP not in either list - count as absent
+        stats.absent++;
+      }
+    }
+  }
+
+  console.log(`[Report Cards] Calculated attendance for ${attendanceMap.size} MPs`);
 
   // Query 2: Get all constituencies with poverty data
   const allConstituencies = await db
@@ -197,10 +203,16 @@ async function fetchAllMPMetrics(): Promise<MPMetrics[]> {
 
   console.log(`[Report Cards] Fetched aggregates: ${billCounts.length} bill authors, ${questionCounts.length} questioners, ${courtCaseCounts.length} with court cases`);
 
-  // Combine all data
+  // Combine all data into metrics
   const metrics: MPMetrics[] = allMps.map(mp => {
-    // Use Hansard-based attendance data (matches profile page calculation)
+    // Get attendance from map
     const attendance = attendanceMap.get(mp.mpId);
+
+    if (!attendance) {
+      console.warn(`[Report Cards] WARNING: No attendance data for MP ${mp.name} (${mp.mpId})`);
+    }
+
+    // Calculate attendance percentage
     const attendancePercentage = attendance && attendance.total > 0
       ? (attendance.attended / attendance.total) * 100
       : 0;
@@ -221,6 +233,17 @@ async function fetchAllMPMetrics(): Promise<MPMetrics[]> {
       povertyRate: povertyMap.get(mp.parliamentCode) || 0,
     };
   });
+
+  // Log sample attendance data for verification
+  const sampleMps = ['Ahmad Zahid', 'Abdul Hadi', 'Anwar Ibrahim'];
+  console.log('[Report Cards] Sample attendance data:');
+  for (const sampleName of sampleMps) {
+    const metric = metrics.find(m => m.name.includes(sampleName));
+    if (metric) {
+      const attendance = attendanceMap.get(metric.mpId);
+      console.log(`  ${metric.name}: ${attendance?.attended}/${attendance?.total} (${metric.attendancePercentage.toFixed(1)}%)`);
+    }
+  }
 
   return metrics;
 }
