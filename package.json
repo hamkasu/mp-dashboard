@@ -33,7 +33,8 @@
     "list-all-questioners": "tsx scripts/list-all-questioners.ts",
     "extract-all-questions": "tsx scripts/extract-all-questions.ts",
     "count-questions-by-mp": "tsx scripts/count-questions-by-mp.ts",
-    "update-deceased-mp": "tsx scripts/update-deceased-mp.ts"
+    "update-deceased-mp": "tsx scripts/update-deceased-mp.ts",
+    "regenerate-report-cards": "tsx scripts/regenerate-report-cards.ts"
   },
   "dependencies": {
     "@google/genai": "^1.30.0",
