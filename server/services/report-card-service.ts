@@ -124,7 +124,6 @@ async function fetchAllMPMetrics(): Promise<MPMetrics[]> {
     const sessionDate = new Date(session.sessionDate);
     const attendedIds = (session.attendedMpIds as string[]) || [];
     const absentIds = (session.absentMpIds as string[]) || [];
-    const hasAttendanceData = attendedIds.length > 0 || absentIds.length > 0;
 
     // For each MP, check if this session counts for them
     for (const mp of allMps) {
@@ -138,17 +137,22 @@ async function fetchAllMPMetrics(): Promise<MPMetrics[]> {
       const stats = attendanceMap.get(mp.mpId)!;
       stats.total++;
 
-      // Determine if MP attended this session
-      if (attendedIds.includes(mp.mpId)) {
-        stats.attended++;
-      } else if (absentIds.includes(mp.mpId)) {
-        stats.absent++;
-      } else if (!hasAttendanceData) {
-        // No attendance data for this session - assume attended (benefit of doubt)
-        stats.attended++;
+      // CORRECT LOGIC (matching getMpAttendanceStats in routes.ts:237-243)
+      // If attendedMpIds has data, use it. Otherwise, assume attended unless in absentMpIds.
+      if (attendedIds.length > 0) {
+        // Has attendance data - MP must be explicitly in attendedMpIds to count as attended
+        if (attendedIds.includes(mp.mpId)) {
+          stats.attended++;
+        } else {
+          stats.absent++;
+        }
       } else {
-        // Has attendance data but MP not in either list - count as absent
-        stats.absent++;
+        // No attendance data - assume attended unless explicitly in absentMpIds
+        if (!absentIds || !absentIds.includes(mp.mpId)) {
+          stats.attended++;
+        } else {
+          stats.absent++;
+        }
       }
     }
   }
