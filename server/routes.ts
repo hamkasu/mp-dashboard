@@ -325,7 +325,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         // State filter
         if (states.length > 0 && !states.includes(mp.state)) return false;
 
-        // Cabinet position filter (multi-select)
+        // Cabinet position filter (multi-select takes precedence)
         if (cabinetPositions.length > 0) {
           const matchesPosition = cabinetPositions.some(position => {
             if (position === 'ministers') return mp.isMinister;
@@ -333,10 +333,8 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
             return false;
           });
           if (!matchesPosition) return false;
-        }
-
-        // Old cabinet filter (kept for backward compatibility)
-        if (cabinetFilter !== 'all') {
+        } else if (cabinetFilter !== 'all') {
+          // Old cabinet filter (only used when no multi-select positions are chosen)
           const role = (mp.role || '').toLowerCase();
           if (cabinetFilter === 'ministers') {
             if (!role.includes('minister') || role.includes('deputy')) return false;
@@ -682,7 +680,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         filteredMps = filteredMps.filter(mp => states.includes(mp.state));
       }
 
-      // Cabinet position filter (multi-select)
+      // Cabinet position filter (multi-select takes precedence)
       if (cabinetPositions.length > 0) {
         filteredMps = filteredMps.filter(mp => {
           return cabinetPositions.some(position => {
@@ -691,10 +689,8 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
             return false;
           });
         });
-      }
-
-      // Old cabinet filter (kept for backward compatibility)
-      if (cabinetFilter) {
+      } else if (cabinetFilter) {
+        // Old cabinet filter (only used when no multi-select positions are chosen)
         if (cabinetFilter === 'cabinet') {
           filteredMps = filteredMps.filter(mp => mp.isMinister || mp.isDeputyMinister);
         } else if (cabinetFilter === 'ministers') {
