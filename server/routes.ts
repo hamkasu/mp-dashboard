@@ -8082,6 +8082,17 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     try {
       const { getReportCardsWithDetails } = await import("./services/report-card-service");
       const reportCards = await getReportCardsWithDetails();
+
+      // Debug: Log specific MPs
+      const zahid = reportCards.find((card: any) => card.mp.name.includes('Zahid'));
+      const hadi = reportCards.find((card: any) => card.mp.name.includes('Abdul Hadi'));
+      if (zahid) {
+        console.log(`[API] Ahmad Zahid - attendanceScore: ${zahid.attendanceScore}, overallScore: ${zahid.overallScore}`);
+      }
+      if (hadi) {
+        console.log(`[API] Abdul Hadi - attendanceScore: ${hadi.attendanceScore}, overallScore: ${hadi.overallScore}`);
+      }
+
       res.json(reportCards);
     } catch (error) {
       console.error("Error fetching report cards:", error);
