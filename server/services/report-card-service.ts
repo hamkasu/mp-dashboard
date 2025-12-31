@@ -120,10 +120,19 @@ async function fetchAllMPMetrics(): Promise<MPMetrics[]> {
   }
 
   // Process each Hansard session
+  let sessionsWithAttendance = 0;
+  let sessionsWithoutAttendance = 0;
+
   for (const session of allHansardRecords) {
     const sessionDate = new Date(session.sessionDate);
-    const attendedIds = (session.attendedMpIds as string[]) || [];
-    const absentIds = (session.absentMpIds as string[]) || [];
+
+    // Handle JSONB arrays properly - they might be null, undefined, or actual arrays
+    const attendedIds = Array.isArray(session.attendedMpIds) ? session.attendedMpIds : [];
+    const absentIds = Array.isArray(session.absentMpIds) ? session.absentMpIds : [];
+    const hasAttendanceData = attendedIds.length > 0;
+
+    if (hasAttendanceData) sessionsWithAttendance++;
+    else sessionsWithoutAttendance++;
 
     // For each MP, check if this session counts for them
     for (const mp of allMps) {
@@ -138,17 +147,16 @@ async function fetchAllMPMetrics(): Promise<MPMetrics[]> {
       stats.total++;
 
       // CORRECT LOGIC (matching getMpAttendanceStats in routes.ts:237-243)
-      // If attendedMpIds has data, use it. Otherwise, assume attended unless in absentMpIds.
-      if (attendedIds.length > 0) {
-        // Has attendance data - MP must be explicitly in attendedMpIds to count as attended
+      if (hasAttendanceData) {
+        // Has attendedMpIds data - MP must be explicitly in list to count as attended
         if (attendedIds.includes(mp.mpId)) {
           stats.attended++;
         } else {
           stats.absent++;
         }
       } else {
-        // No attendance data - assume attended unless explicitly in absentMpIds
-        if (!absentIds || !absentIds.includes(mp.mpId)) {
+        // No attendedMpIds data - assume attended unless explicitly in absentMpIds
+        if (absentIds.length === 0 || !absentIds.includes(mp.mpId)) {
           stats.attended++;
         } else {
           stats.absent++;
@@ -156,6 +164,9 @@ async function fetchAllMPMetrics(): Promise<MPMetrics[]> {
       }
     }
   }
+
+  console.log(`[Report Cards] Sessions with attendance data: ${sessionsWithAttendance}`);
+  console.log(`[Report Cards] Sessions without attendance data: ${sessionsWithoutAttendance}`);
 
   console.log(`[Report Cards] Calculated attendance for ${attendanceMap.size} MPs`);
 
