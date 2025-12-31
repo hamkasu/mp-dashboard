@@ -178,11 +178,11 @@ async function updateCabinetRoles() {
         if (roleLower.includes("prime minister") && !roleLower.includes("deputy")) {
           ministerSalary = 0; // PM takes no salary
         } else if (roleLower.includes("deputy prime minister")) {
-          ministerSalary = 18168.15;
+          ministerSalary = 18168; // Rounded from 18168.15
         } else if (roleLower.includes("deputy minister")) {
-          ministerSalary = 10847.65;
+          ministerSalary = 10848; // Rounded from 10847.65
         } else if (roleLower.includes("minister")) {
-          ministerSalary = 14907.20;
+          ministerSalary = 14907; // Rounded from 14907.20
         }
 
         await db
