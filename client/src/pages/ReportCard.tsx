@@ -64,6 +64,7 @@ interface MpReportCard {
   id: string;
   mpId: string;
   attendanceScore: number;
+  attendancePercentage: number; // Raw attendance %
   participationScore: number;
   conductScore: number;
   constituencyImpactScore: number;
@@ -189,8 +190,8 @@ export default function ReportCard() {
           bVal = b.overallScore;
           break;
         case 'attendance':
-          aVal = a.attendanceScore;
-          bVal = b.attendanceScore;
+          aVal = a.attendancePercentage;
+          bVal = b.attendancePercentage;
           break;
         case 'participation':
           aVal = a.participationScore;
@@ -711,8 +712,8 @@ export default function ReportCard() {
                           </TableCell>
                           <TableCell className="text-center">
                             <div className="flex items-center gap-2">
-                              <Progress value={card.attendanceScore} className="w-16 h-2" />
-                              <span className="text-xs w-8">{card.attendanceScore}</span>
+                              <Progress value={card.attendancePercentage} className="w-16 h-2" />
+                              <span className="text-xs w-8">{card.attendancePercentage}%</span>
                             </div>
                           </TableCell>
                           <TableCell className="text-center">

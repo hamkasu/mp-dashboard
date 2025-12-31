@@ -411,6 +411,7 @@ export async function updateAllReportCards(): Promise<{ updated: number; created
       const data = {
         mpId: grade.mpId,
         attendanceScore: grade.attendanceScore,
+        attendancePercentage: Math.round(grade.attendancePercentage), // Raw attendance %
         participationScore: grade.participationScore,
         conductScore: grade.conductScore,
         constituencyImpactScore: grade.constituencyScore,
