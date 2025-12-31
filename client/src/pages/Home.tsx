@@ -31,7 +31,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { ExternalLink, AlertTriangle, Eye, ChevronLeft, ChevronRight, ChevronDown, Shield, UserX, TrendingUp, Info } from "lucide-react";
+import { ExternalLink, AlertTriangle, Eye, ChevronLeft, ChevronRight, ChevronDown, UserX, TrendingUp, Info } from "lucide-react";
 import { Link } from "wouter";
 import type { Mp, SprmInvestigation, LegislativeProposal, ParliamentaryQuestion } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
@@ -49,7 +49,6 @@ interface PaginatedMpsResponse {
 }
 
 type SortOption = "name" | "attendance-best" | "attendance-worst" | "speeches-most" | "speeches-fewest" | "poverty-highest" | "poverty-lowest" | "bills-raised" | "oral-questions" | "inappropriate-language";
-type CabinetFilter = "all" | "ministers" | "deputy-ministers" | "cabinet";
 type StatusFilter = "all" | "active" | "former";
 
 interface LanguageAnalysisMpStat {
@@ -608,32 +607,6 @@ export default function Home() {
                         key={opt.value} 
                         onSelect={() => setSortBy(opt.value as SortOption)}
                         className={sortBy === opt.value ? "bg-accent" : ""}
-                      >
-                        {opt.label}
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className="shrink-0 gap-2">
-                      <Shield className="w-4 h-4" />
-                      <span>{t('filters.cabinetPosition')}</span>
-                      <ChevronDown className="w-3 h-3" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    {[
-                      { value: "all", label: t('filters.allMPs') },
-                      { value: "cabinet", label: t('filters.cabinetMembers') },
-                      { value: "ministers", label: t('filters.ministersOnly') },
-                      { value: "deputy-ministers", label: t('filters.deputyMinistersOnly') }
-                    ].map((opt) => (
-                      <DropdownMenuItem 
-                        key={opt.value} 
-                        onSelect={() => handleCabinetFilterChange(opt.value as CabinetFilter)}
-                        className={cabinetFilter === opt.value ? "bg-accent" : ""}
                       >
                         {opt.label}
                       </DropdownMenuItem>
