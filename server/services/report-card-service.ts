@@ -64,14 +64,26 @@ function calculatePercentile(
     ? [...allValues].sort((a, b) => a - b)
     : [...allValues].sort((a, b) => b - a);
 
-  // Find position (first occurrence)
-  const position = sorted.indexOf(targetValue);
+  // Count how many values are better than targetValue
+  // This avoids floating-point indexOf issues
+  let betterCount = 0;
+  for (const value of sorted) {
+    if (lowerIsBetter) {
+      if (value < targetValue) betterCount++;
+      else if (value === targetValue) break; // Found our value
+    } else {
+      if (value > targetValue) betterCount++;
+      else if (value === targetValue) break; // Found our value
+    }
+  }
 
-  // Calculate percentile: ((n-1-pos) / (n-1)) * 100
-  const n = sorted.length;
-  const percentile = ((n - 1 - position) / (n - 1)) * 100;
+  // Calculate percentile based on how many are better
+  // If 0 are better, we're at the top (100%)
+  // If all are better, we're at the bottom (0%)
+  const n = allValues.length;
+  const percentile = ((n - 1 - betterCount) / (n - 1)) * 100;
 
-  return Math.max(0, Math.min(100, percentile));
+  return Math.max(0, Math.min(100, Math.round(percentile)));
 }
 
 // ============================================================================
