@@ -50,7 +50,8 @@ interface MPGrade {
 function calculatePercentile(
   allValues: number[],
   targetValue: number,
-  lowerIsBetter: boolean = false
+  lowerIsBetter: boolean = false,
+  debugLabel?: string
 ): number {
   if (allValues.length === 0) return 50;
   if (allValues.length === 1) return 100;
@@ -88,6 +89,16 @@ function calculatePercentile(
   // Calculate percentile based on how many are better
   const n = allValues.length;
   const percentile = ((n - 1 - betterCount) / (n - 1)) * 100;
+
+  // Debug logging for specific values
+  if (debugLabel && (targetValue < 35 || !foundMatch)) {
+    console.log(`[Percentile DEBUG] ${debugLabel}:`);
+    console.log(`  Target: ${targetValue.toFixed(2)}`);
+    console.log(`  Found match: ${foundMatch}`);
+    console.log(`  Better count: ${betterCount}/${n}`);
+    console.log(`  Percentile: ${percentile.toFixed(1)}`);
+    console.log(`  First 5 sorted: ${sorted.slice(0, 5).map(v => v.toFixed(2)).join(', ')}`);
+  }
 
   return Math.max(0, Math.min(100, Math.round(percentile)));
 }
@@ -307,7 +318,7 @@ function calculateGrades(metrics: MPMetrics[]): (MPGrade & MPMetrics)[] {
   // Calculate grades for each MP
   const results = metrics.map((mp, index) => {
     // 1. Attendance Score (40% weight)
-    const attendanceScore = Math.round(calculatePercentile(allAttendance, mp.attendancePercentage));
+    const attendanceScore = Math.round(calculatePercentile(allAttendance, mp.attendancePercentage, false, mp.name));
 
     // 2. Participation Score (30% weight)
     // Weighted average of: speeches (40%), bills (30%), questions (30%)
