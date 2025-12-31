@@ -324,14 +324,11 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         // State filter
         if (states.length > 0 && !states.includes(mp.state)) return false;
 
-        // Cabinet position filter
+        // Cabinet position filter - simple OR logic
         if (cabinetPositions.length > 0) {
-          const matchesPosition = cabinetPositions.some(position => {
-            if (position === 'ministers') return mp.isMinister;
-            if (position === 'deputy-ministers') return mp.isDeputyMinister;
-            return false;
-          });
-          if (!matchesPosition) return false;
+          const isMinister = cabinetPositions.includes('ministers') && mp.isMinister;
+          const isDeputyMinister = cabinetPositions.includes('deputy-ministers') && mp.isDeputyMinister;
+          if (!isMinister && !isDeputyMinister) return false;
         }
 
         // Status filter (active vs former/deceased MPs)
@@ -669,14 +666,12 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         filteredMps = filteredMps.filter(mp => states.includes(mp.state));
       }
 
-      // Cabinet position filter
+      // Cabinet position filter - simple OR logic
       if (cabinetPositions.length > 0) {
         filteredMps = filteredMps.filter(mp => {
-          return cabinetPositions.some(position => {
-            if (position === 'ministers') return mp.isMinister;
-            if (position === 'deputy-ministers') return mp.isDeputyMinister;
-            return false;
-          });
+          const isMinister = cabinetPositions.includes('ministers') && mp.isMinister;
+          const isDeputyMinister = cabinetPositions.includes('deputy-ministers') && mp.isDeputyMinister;
+          return isMinister || isDeputyMinister;
         });
       }
 

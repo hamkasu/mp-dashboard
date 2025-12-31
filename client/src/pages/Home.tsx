@@ -278,90 +278,70 @@ export default function Home() {
 
   const isLoading = mpsLoading || statsLoading;
 
-  // For special sort options (poverty, bills, oral questions, inappropriate language)
-  // that require additional data not available in the paginated API,
-  // apply client-side filtering and sorting to all MPs
+  // Simple client-side filtering for special sort modes
   const filteredMps = useMemo(() => {
-    let filtered = [...mps];
+    // For standard sorts, server already filtered and sorted
+    if (!isSpecialSortMode) return mps;
 
-    // For special sort modes, apply client-side filtering since we're using /api/mps (all MPs)
-    if (isSpecialSortMode) {
-      // Apply search filter
-      if (searchQuery) {
-        const query = searchQuery.toLowerCase();
-        filtered = filtered.filter(mp => 
-          mp.name.toLowerCase().includes(query) ||
-          mp.constituency.toLowerCase().includes(query) ||
-          mp.party.toLowerCase().includes(query) ||
-          mp.state.toLowerCase().includes(query)
-        );
-      }
+    // For special sorts, start with all MPs and apply filters
+    let result = [...mps];
 
-      // Apply party filter
-      if (selectedParties.length > 0) {
-        filtered = filtered.filter(mp => selectedParties.includes(mp.party));
-      }
-
-      // Apply state filter
-      if (selectedStates.length > 0) {
-        filtered = filtered.filter(mp => selectedStates.includes(mp.state));
-      }
-
-      // Apply cabinet position filter
-      if (selectedCabinetPositions.length > 0) {
-        filtered = filtered.filter(mp => {
-          return selectedCabinetPositions.some(position => {
-            if (position === "ministers") return mp.isMinister;
-            if (position === "deputy-ministers") return mp.isDeputyMinister;
-            return false;
-          });
-        });
-      }
+    // Filter by search query
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      result = result.filter(mp =>
+        mp.name.toLowerCase().includes(query) ||
+        mp.constituency.toLowerCase().includes(query) ||
+        mp.party.toLowerCase().includes(query) ||
+        mp.state.toLowerCase().includes(query)
+      );
     }
 
-    // Special sort options that require additional client-side data
-    if (sortBy === "poverty-highest") {
-      filtered = [...filtered].sort((a, b) => {
-        const codeA = a.parliamentCode.replace(/^P(\d+)$/, (_, num: string) => `P.${num.padStart(3, '0')}`);
-        const codeB = b.parliamentCode.replace(/^P(\d+)$/, (_, num: string) => `P.${num.padStart(3, '0')}`);
-        const povertyA = povertyByCode.get(codeA) ?? -1;
-        const povertyB = povertyByCode.get(codeB) ?? -1;
-        return povertyB - povertyA;
+    // Filter by party
+    if (selectedParties.length > 0) {
+      result = result.filter(mp => selectedParties.includes(mp.party));
+    }
+
+    // Filter by state
+    if (selectedStates.length > 0) {
+      result = result.filter(mp => selectedStates.includes(mp.state));
+    }
+
+    // Filter by cabinet position - simple OR logic
+    if (selectedCabinetPositions.length > 0) {
+      result = result.filter(mp => {
+        if (selectedCabinetPositions.includes("ministers") && mp.isMinister) return true;
+        if (selectedCabinetPositions.includes("deputy-ministers") && mp.isDeputyMinister) return true;
+        return false;
       });
-    } else if (sortBy === "poverty-lowest") {
-      filtered = [...filtered].sort((a, b) => {
-        const codeA = a.parliamentCode.replace(/^P(\d+)$/, (_, num: string) => `P.${num.padStart(3, '0')}`);
-        const codeB = b.parliamentCode.replace(/^P(\d+)$/, (_, num: string) => `P.${num.padStart(3, '0')}`);
-        const povertyA = povertyByCode.get(codeA) ?? Infinity;
-        const povertyB = povertyByCode.get(codeB) ?? Infinity;
-        return povertyA - povertyB;
+    }
+
+    // Apply special sorts
+    if (sortBy === "poverty-highest" || sortBy === "poverty-lowest") {
+      result.sort((a, b) => {
+        const codeA = a.parliamentCode.replace(/^P(\d+)$/, (_, n: string) => `P.${n.padStart(3, '0')}`);
+        const codeB = b.parliamentCode.replace(/^P(\d+)$/, (_, n: string) => `P.${n.padStart(3, '0')}`);
+        const povertyA = povertyByCode.get(codeA) ?? (sortBy === "poverty-highest" ? -1 : Infinity);
+        const povertyB = povertyByCode.get(codeB) ?? (sortBy === "poverty-highest" ? -1 : Infinity);
+        return sortBy === "poverty-highest" ? povertyB - povertyA : povertyA - povertyB;
       });
     } else if (sortBy === "bills-raised") {
-      filtered = filtered.filter(mp => (billsCountByMpId.get(mp.id) ?? 0) > 0);
-      filtered = [...filtered].sort((a, b) => {
-        const billsA = billsCountByMpId.get(a.id) ?? 0;
-        const billsB = billsCountByMpId.get(b.id) ?? 0;
-        return billsB - billsA;
-      });
+      result = result.filter(mp => (billsCountByMpId.get(mp.id) ?? 0) > 0);
+      result.sort((a, b) => (billsCountByMpId.get(b.id) ?? 0) - (billsCountByMpId.get(a.id) ?? 0));
     } else if (sortBy === "oral-questions") {
-      filtered = filtered.filter(mp => (oralQuestionsCountByMpId.get(mp.id) ?? 0) > 0);
-      filtered = [...filtered].sort((a, b) => {
-        const countA = oralQuestionsCountByMpId.get(a.id) ?? 0;
-        const countB = oralQuestionsCountByMpId.get(b.id) ?? 0;
-        return countB - countA;
-      });
+      result = result.filter(mp => (oralQuestionsCountByMpId.get(mp.id) ?? 0) > 0);
+      result.sort((a, b) => (oralQuestionsCountByMpId.get(b.id) ?? 0) - (oralQuestionsCountByMpId.get(a.id) ?? 0));
     } else if (sortBy === "inappropriate-language") {
-      filtered = filtered.filter(mp => (inappropriateLanguageByMpId.get(mp.id)?.count ?? 0) > 0);
-      filtered = [...filtered].sort((a, b) => {
+      result = result.filter(mp => (inappropriateLanguageByMpId.get(mp.id)?.count ?? 0) > 0);
+      result.sort((a, b) => {
         const countA = inappropriateLanguageByMpId.get(a.id)?.count ?? 0;
         const countB = inappropriateLanguageByMpId.get(b.id)?.count ?? 0;
         return countB - countA;
       });
     }
-    // For name, attendance, and speeches sorts, the server already sorted the data
 
-    return filtered;
-  }, [mps, sortBy, povertyByCode, billsCountByMpId, oralQuestionsCountByMpId, inappropriateLanguageByMpId, isSpecialSortMode, searchQuery, selectedParties, selectedStates, selectedCabinetPositions]);
+    return result;
+  }, [mps, isSpecialSortMode, searchQuery, selectedParties, selectedStates, selectedCabinetPositions, sortBy, povertyByCode, billsCountByMpId, oralQuestionsCountByMpId, inappropriateLanguageByMpId]);
 
   const availableStates = useMemo(() => {
     const states = Array.from(new Set(mps.map((mp) => mp.state)));
