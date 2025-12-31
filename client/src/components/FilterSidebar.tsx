@@ -22,11 +22,13 @@ interface FilterSidebarProps {
   states: string[];
   selectedParties: string[];
   selectedStates: string[];
+  selectedCabinetPositions: string[];
   sortBy: SortOption;
   cabinetFilter: CabinetFilter;
   statusFilter: StatusFilter;
   onPartyToggle: (party: string) => void;
   onStateToggle: (state: string) => void;
+  onCabinetPositionToggle: (position: string) => void;
   onSortChange: (sort: SortOption) => void;
   onCabinetFilterChange: (filter: CabinetFilter) => void;
   onStatusFilterChange: (filter: StatusFilter) => void;
@@ -40,11 +42,13 @@ export function FilterSidebar({
   states,
   selectedParties,
   selectedStates,
+  selectedCabinetPositions,
   sortBy,
   cabinetFilter,
   statusFilter,
   onPartyToggle,
   onStateToggle,
+  onCabinetPositionToggle,
   onSortChange,
   onCabinetFilterChange,
   onStatusFilterChange,
@@ -53,7 +57,7 @@ export function FilterSidebar({
   onClose,
 }: FilterSidebarProps) {
   const { t } = useLanguage();
-  const hasActiveFilters = selectedParties.length > 0 || selectedStates.length > 0 || cabinetFilter !== "all" || statusFilter !== "active";
+  const hasActiveFilters = selectedParties.length > 0 || selectedStates.length > 0 || selectedCabinetPositions.length > 0 || cabinetFilter !== "all" || statusFilter !== "active";
 
   return (
     <div className="flex flex-col h-full">
@@ -144,35 +148,40 @@ export function FilterSidebar({
 
           {/* Cabinet Position Filter */}
           <div className="space-y-3">
-            <h3 className="text-sm font-medium uppercase tracking-wide">
-              {t('filters.cabinetPosition')}
-            </h3>
-            <RadioGroup value={cabinetFilter} onValueChange={(value) => onCabinetFilterChange(value as CabinetFilter)}>
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-medium uppercase tracking-wide">
+                {t('filters.cabinetPosition')}
+              </h3>
+              {selectedCabinetPositions.length > 0 && (
+                <span className="text-xs text-muted-foreground">
+                  {selectedCabinetPositions.length} {t('filters.selected')}
+                </span>
+              )}
+            </div>
+            <div className="space-y-2">
               <div className="flex items-center space-x-2">
-                <RadioGroupItem value="all" id="cabinet-all" data-testid="radio-cabinet-all" />
-                <Label htmlFor="cabinet-all" className="text-sm font-normal cursor-pointer">
-                  {t('filters.allMPs')}
-                </Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="cabinet" id="cabinet-cabinet" data-testid="radio-cabinet-cabinet" />
-                <Label htmlFor="cabinet-cabinet" className="text-sm font-normal cursor-pointer">
-                  {t('filters.cabinetMembers')}
-                </Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="ministers" id="cabinet-ministers" data-testid="radio-cabinet-ministers" />
+                <Checkbox
+                  id="cabinet-ministers"
+                  checked={selectedCabinetPositions.includes("ministers")}
+                  onCheckedChange={() => onCabinetPositionToggle("ministers")}
+                  data-testid="checkbox-cabinet-ministers"
+                />
                 <Label htmlFor="cabinet-ministers" className="text-sm font-normal cursor-pointer">
                   {t('filters.ministersOnly')}
                 </Label>
               </div>
               <div className="flex items-center space-x-2">
-                <RadioGroupItem value="deputy-ministers" id="cabinet-deputy" data-testid="radio-cabinet-deputy" />
+                <Checkbox
+                  id="cabinet-deputy"
+                  checked={selectedCabinetPositions.includes("deputy-ministers")}
+                  onCheckedChange={() => onCabinetPositionToggle("deputy-ministers")}
+                  data-testid="checkbox-cabinet-deputy"
+                />
                 <Label htmlFor="cabinet-deputy" className="text-sm font-normal cursor-pointer">
                   {t('filters.deputyMinistersOnly')}
                 </Label>
               </div>
-            </RadioGroup>
+            </div>
           </div>
 
           <Separator />

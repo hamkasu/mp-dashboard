@@ -296,6 +296,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       const search = (req.query.search as string) || '';
       const parties = req.query.parties ? (req.query.parties as string).split(',') : [];
       const states = req.query.states ? (req.query.states as string).split(',') : [];
+      const cabinetPositions = req.query.cabinetPositions ? (req.query.cabinetPositions as string).split(',') : [];
       const cabinetFilter = (req.query.cabinet as string) || 'all';
       const statusFilter = (req.query.status as string) || 'active';
 
@@ -323,8 +324,18 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         
         // State filter
         if (states.length > 0 && !states.includes(mp.state)) return false;
-        
-        // Cabinet filter
+
+        // Cabinet position filter (multi-select)
+        if (cabinetPositions.length > 0) {
+          const matchesPosition = cabinetPositions.some(position => {
+            if (position === 'ministers') return mp.isMinister;
+            if (position === 'deputy-ministers') return mp.isDeputyMinister;
+            return false;
+          });
+          if (!matchesPosition) return false;
+        }
+
+        // Old cabinet filter (kept for backward compatibility)
         if (cabinetFilter !== 'all') {
           const role = (mp.role || '').toLowerCase();
           if (cabinetFilter === 'ministers') {
@@ -657,19 +668,32 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       // Parse filter parameters
       const parties = req.query.parties ? (req.query.parties as string).split(',') : [];
       const states = req.query.states ? (req.query.states as string).split(',') : [];
+      const cabinetPositions = req.query.cabinetPositions ? (req.query.cabinetPositions as string).split(',') : [];
       const cabinetFilter = req.query.cabinet as string | undefined;
-      
+
       // Apply filters
       let filteredMps = allMps;
-      
+
       if (parties.length > 0) {
         filteredMps = filteredMps.filter(mp => parties.includes(mp.party));
       }
-      
+
       if (states.length > 0) {
         filteredMps = filteredMps.filter(mp => states.includes(mp.state));
       }
-      
+
+      // Cabinet position filter (multi-select)
+      if (cabinetPositions.length > 0) {
+        filteredMps = filteredMps.filter(mp => {
+          return cabinetPositions.some(position => {
+            if (position === 'ministers') return mp.isMinister;
+            if (position === 'deputy-ministers') return mp.isDeputyMinister;
+            return false;
+          });
+        });
+      }
+
+      // Old cabinet filter (kept for backward compatibility)
       if (cabinetFilter) {
         if (cabinetFilter === 'cabinet') {
           filteredMps = filteredMps.filter(mp => mp.isMinister || mp.isDeputyMinister);
