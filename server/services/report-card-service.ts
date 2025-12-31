@@ -65,21 +65,27 @@ function calculatePercentile(
     : [...allValues].sort((a, b) => b - a);
 
   // Count how many values are better than targetValue
-  // This avoids floating-point indexOf issues
+  // Use epsilon for floating-point comparison
+  const EPSILON = 0.0001;
   let betterCount = 0;
+  let foundMatch = false;
+
   for (const value of sorted) {
+    // Check if values are equal within epsilon
+    if (Math.abs(value - targetValue) < EPSILON) {
+      foundMatch = true;
+      break;
+    }
+
+    // Count better values
     if (lowerIsBetter) {
       if (value < targetValue) betterCount++;
-      else if (value === targetValue) break; // Found our value
     } else {
       if (value > targetValue) betterCount++;
-      else if (value === targetValue) break; // Found our value
     }
   }
 
   // Calculate percentile based on how many are better
-  // If 0 are better, we're at the top (100%)
-  // If all are better, we're at the bottom (0%)
   const n = allValues.length;
   const percentile = ((n - 1 - betterCount) / (n - 1)) * 100;
 
