@@ -13,8 +13,6 @@ import { useLanguage } from "@/i18n/LanguageContext";
 
 type SortOption = "name" | "attendance-best" | "attendance-worst" | "speeches-most" | "speeches-fewest" | "poverty-highest" | "poverty-lowest" | "bills-raised" | "oral-questions" | "inappropriate-language";
 
-type CabinetFilter = "all" | "ministers" | "deputy-ministers" | "cabinet";
-
 type StatusFilter = "all" | "active" | "former";
 
 interface FilterSidebarProps {
@@ -24,13 +22,11 @@ interface FilterSidebarProps {
   selectedStates: string[];
   selectedCabinetPositions: string[];
   sortBy: SortOption;
-  cabinetFilter: CabinetFilter;
   statusFilter: StatusFilter;
   onPartyToggle: (party: string) => void;
   onStateToggle: (state: string) => void;
   onCabinetPositionToggle: (position: string) => void;
   onSortChange: (sort: SortOption) => void;
-  onCabinetFilterChange: (filter: CabinetFilter) => void;
   onStatusFilterChange: (filter: StatusFilter) => void;
   onClearFilters: () => void;
   isMobile?: boolean;
@@ -44,20 +40,18 @@ export function FilterSidebar({
   selectedStates,
   selectedCabinetPositions,
   sortBy,
-  cabinetFilter,
   statusFilter,
   onPartyToggle,
   onStateToggle,
   onCabinetPositionToggle,
   onSortChange,
-  onCabinetFilterChange,
   onStatusFilterChange,
   onClearFilters,
   isMobile,
   onClose,
 }: FilterSidebarProps) {
   const { t } = useLanguage();
-  const hasActiveFilters = selectedParties.length > 0 || selectedStates.length > 0 || selectedCabinetPositions.length > 0 || cabinetFilter !== "all" || statusFilter !== "active";
+  const hasActiveFilters = selectedParties.length > 0 || selectedStates.length > 0 || selectedCabinetPositions.length > 0 || statusFilter !== "active";
 
   return (
     <div className="flex flex-col h-full">
