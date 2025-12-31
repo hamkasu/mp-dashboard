@@ -67,7 +67,6 @@ export default function Home() {
   const [selectedStates, setSelectedStates] = useState<string[]>([]);
   const [selectedCabinetPositions, setSelectedCabinetPositions] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState<SortOption>("name");
-  const [cabinetFilter, setCabinetFilter] = useState<CabinetFilter>("all");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("active");
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [searchDialogOpen, setSearchDialogOpen] = useState(false);
@@ -88,10 +87,9 @@ export default function Home() {
     if (selectedParties.length > 0) params.set('parties', selectedParties.join(','));
     if (selectedStates.length > 0) params.set('states', selectedStates.join(','));
     if (selectedCabinetPositions.length > 0) params.set('cabinetPositions', selectedCabinetPositions.join(','));
-    if (cabinetFilter !== 'all') params.set('cabinet', cabinetFilter);
     if (statusFilter !== 'all') params.set('status', statusFilter);
     return params.toString();
-  }, [currentPage, sortBy, searchQuery, selectedParties, selectedStates, selectedCabinetPositions, cabinetFilter, statusFilter]);
+  }, [currentPage, sortBy, searchQuery, selectedParties, selectedStates, selectedCabinetPositions, statusFilter]);
 
   // Use paginated API for standard sorts, non-paginated for special sorts
   const { data: paginatedData, isLoading: paginatedLoading } = useQuery<PaginatedMpsResponse>({
@@ -118,7 +116,7 @@ export default function Home() {
   // Reset to page 1 when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [sortBy, searchQuery, selectedParties, selectedStates, selectedCabinetPositions, cabinetFilter, statusFilter]);
+  }, [sortBy, searchQuery, selectedParties, selectedStates, selectedCabinetPositions, statusFilter]);
 
   const { data: stats, isLoading: statsLoading } = useQuery<{
     totalMps: number;
@@ -132,15 +130,14 @@ export default function Home() {
   });
 
   // Build query params for filtered stats
-  const hasActiveFilter = selectedParties.length > 0 || selectedStates.length > 0 || selectedCabinetPositions.length > 0 || cabinetFilter !== 'all';
+  const hasActiveFilter = selectedParties.length > 0 || selectedStates.length > 0 || selectedCabinetPositions.length > 0;
   const filteredStatsParams = useMemo(() => {
     const params = new URLSearchParams();
     if (selectedParties.length > 0) params.set('parties', selectedParties.join(','));
     if (selectedStates.length > 0) params.set('states', selectedStates.join(','));
     if (selectedCabinetPositions.length > 0) params.set('cabinetPositions', selectedCabinetPositions.join(','));
-    if (cabinetFilter !== 'all') params.set('cabinet', cabinetFilter);
     return params.toString();
-  }, [selectedParties, selectedStates, selectedCabinetPositions, cabinetFilter]);
+  }, [selectedParties, selectedStates, selectedCabinetPositions]);
 
   // Fetch filtered stats when party/state/cabinet filter is active
   const { data: filteredStats, isLoading: filteredStatsLoading } = useQuery<{
@@ -311,7 +308,7 @@ export default function Home() {
         filtered = filtered.filter(mp => selectedStates.includes(mp.state));
       }
 
-      // Apply cabinet position filter (multi-select takes precedence)
+      // Apply cabinet position filter
       if (selectedCabinetPositions.length > 0) {
         filtered = filtered.filter(mp => {
           return selectedCabinetPositions.some(position => {
@@ -320,15 +317,6 @@ export default function Home() {
             return false;
           });
         });
-      } else if (cabinetFilter !== "all") {
-        // Apply old cabinet filter (only used when no multi-select positions are chosen)
-        if (cabinetFilter === "cabinet") {
-          filtered = filtered.filter(mp => mp.isMinister || mp.isDeputyMinister);
-        } else if (cabinetFilter === "ministers") {
-          filtered = filtered.filter(mp => mp.isMinister);
-        } else if (cabinetFilter === "deputy-ministers") {
-          filtered = filtered.filter(mp => mp.isDeputyMinister);
-        }
       }
     }
 
@@ -374,7 +362,7 @@ export default function Home() {
     // For name, attendance, and speeches sorts, the server already sorted the data
 
     return filtered;
-  }, [mps, sortBy, povertyByCode, billsCountByMpId, oralQuestionsCountByMpId, inappropriateLanguageByMpId, isSpecialSortMode, searchQuery, selectedParties, selectedStates, selectedCabinetPositions, cabinetFilter]);
+  }, [mps, sortBy, povertyByCode, billsCountByMpId, oralQuestionsCountByMpId, inappropriateLanguageByMpId, isSpecialSortMode, searchQuery, selectedParties, selectedStates, selectedCabinetPositions]);
 
   const availableStates = useMemo(() => {
     const states = Array.from(new Set(mps.map((mp) => mp.state)));
@@ -423,12 +411,7 @@ export default function Home() {
     setSelectedParties([]);
     setSelectedStates([]);
     setSelectedCabinetPositions([]);
-    setCabinetFilter("all");
     setStatusFilter("active");
-  };
-
-  const handleCabinetFilterChange = (filter: CabinetFilter) => {
-    setCabinetFilter(filter);
   };
 
   const handleStatusFilterChange = (filter: StatusFilter) => {
@@ -463,13 +446,11 @@ export default function Home() {
             selectedStates={selectedStates}
             selectedCabinetPositions={selectedCabinetPositions}
             sortBy={sortBy}
-            cabinetFilter={cabinetFilter}
             statusFilter={statusFilter}
             onPartyToggle={handlePartyToggle}
             onStateToggle={handleStateToggle}
             onCabinetPositionToggle={handleCabinetPositionToggle}
             onSortChange={setSortBy}
-            onCabinetFilterChange={handleCabinetFilterChange}
             onStatusFilterChange={handleStatusFilterChange}
             onClearFilters={handleClearFilters}
           />
@@ -485,13 +466,11 @@ export default function Home() {
               selectedStates={selectedStates}
               selectedCabinetPositions={selectedCabinetPositions}
               sortBy={sortBy}
-              cabinetFilter={cabinetFilter}
               statusFilter={statusFilter}
               onPartyToggle={handlePartyToggle}
               onStateToggle={handleStateToggle}
               onCabinetPositionToggle={handleCabinetPositionToggle}
               onSortChange={setSortBy}
-              onCabinetFilterChange={handleCabinetFilterChange}
               onStatusFilterChange={handleStatusFilterChange}
               onClearFilters={handleClearFilters}
               isMobile
