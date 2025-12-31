@@ -67,6 +67,7 @@ export default function Home() {
   const [selectedCabinetPositions, setSelectedCabinetPositions] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState<SortOption>("name");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("active");
+  const [cabinetFilter, setCabinetFilter] = useState<CabinetFilter>("all");
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [searchDialogOpen, setSearchDialogOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
@@ -415,6 +416,10 @@ export default function Home() {
 
   const handleStatusFilterChange = (filter: StatusFilter) => {
     setStatusFilter(filter);
+  };
+
+  const handleCabinetFilterChange = (filter: CabinetFilter) => {
+    setCabinetFilter(filter);
   };
 
   return (
