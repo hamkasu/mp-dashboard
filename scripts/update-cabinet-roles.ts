@@ -69,7 +69,7 @@ const deputyMinisters = [
   { name: "Ugak Anak Kumbong", role: "Deputy Minister of Digital" },
   { name: "Hanifah Hajar Taib", role: "Deputy Minister of Health" },
   { name: "Lim Hui Ying", role: "Deputy Minister of Women, Family & Community Development" },
-  { name: "Adam Adli Abd Halim", role: "Deputy Minister of Higher Education" },
+  { name: "Adam Adli", role: "Deputy Minister of Higher Education" },
   { name: "Chiew Choon Man", role: "Deputy Minister of Tourism, Arts & Culture" },
   { name: "Teo Nie Ching", role: "Deputy Minister of Communications" },
   { name: "Wong Kah Woh", role: "Deputy Minister of Education" },
