@@ -325,14 +325,11 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         // State filter
         if (states.length > 0 && !states.includes(mp.state)) return false;
 
-        // Cabinet position filter
+        // Cabinet position filter - simple OR logic
         if (cabinetPositions.length > 0) {
-          const matchesPosition = cabinetPositions.some(position => {
-            if (position === 'ministers') return mp.isMinister;
-            if (position === 'deputy-ministers') return mp.isDeputyMinister;
-            return false;
-          });
-          if (!matchesPosition) return false;
+          const isMinister = cabinetPositions.includes('ministers') && mp.isMinister;
+          const isDeputyMinister = cabinetPositions.includes('deputy-ministers') && mp.isDeputyMinister;
+          if (!isMinister && !isDeputyMinister) return false;
         }
 
         // Cabinet filter (dropdown menu filter)
@@ -684,14 +681,12 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         filteredMps = filteredMps.filter(mp => states.includes(mp.state));
       }
 
-      // Cabinet position filter
+      // Cabinet position filter - simple OR logic
       if (cabinetPositions.length > 0) {
         filteredMps = filteredMps.filter(mp => {
-          return cabinetPositions.some(position => {
-            if (position === 'ministers') return mp.isMinister;
-            if (position === 'deputy-ministers') return mp.isDeputyMinister;
-            return false;
-          });
+          const isMinister = cabinetPositions.includes('ministers') && mp.isMinister;
+          const isDeputyMinister = cabinetPositions.includes('deputy-ministers') && mp.isDeputyMinister;
+          return isMinister || isDeputyMinister;
         });
       }
 
@@ -6074,11 +6069,24 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   // Update MP cabinet roles (Ministers/Deputy Ministers)
   app.post("/api/admin/update-cabinet-roles", requireAdmin, async (req, res) => {
     try {
-      console.log("🔄 Updating cabinet roles...");
+      console.log("🔄 Updating cabinet roles for Ministers and Deputy Ministers...\n");
 
-      const { ilike, or, eq } = await import('drizzle-orm');
+      const { ilike, or, eq, sql } = await import('drizzle-orm');
 
-      // Cabinet Ministers
+      // Step 1: Clear all existing cabinet roles and minister flags to prevent misassignments
+      console.log("📝 Clearing all existing cabinet roles, flags, and salaries...");
+      await db!
+        .update(mps)
+        .set({
+          role: null,
+          isMinister: false,
+          isDeputyMinister: false,
+          ministerSalary: 0
+        })
+        .where(sql`${mps.role} IS NOT NULL AND (${mps.role} LIKE '%Minister%' OR ${mps.role} LIKE '%Prime Minister%')`);
+      console.log("✓ Cleared existing cabinet roles, flags, and salaries\n");
+
+      // Cabinet Ministers (as of latest update - 2025)
       const ministers = [
         { name: "Anwar Ibrahim", role: "Prime Minister & Minister of Finance" },
         { name: "Ahmad Zahid Hamidi", role: "Deputy Prime Minister I & Minister of Rural & Regional Development" },
@@ -6162,28 +6170,74 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
 
         let bestMatch = null;
         let bestScore = 0;
+        let bestMatchPercentage = 0;
 
         for (const mp of matchingMps) {
           const mpNameLower = mp.name.toLowerCase();
+
+          // PARTY FILTER: Opposition parties cannot be in Unity Government cabinet
+          const oppositionParties = ['PN', 'MUDA', 'WARISAN', 'BEBAS'];
+          if (oppositionParties.includes(mp.party)) {
+            console.log(`⚠️  Skipping opposition party member: ${mp.name} (${mp.party}) for ${member.name}`);
+            continue;
+          }
+
           let score = 0;
           for (const term of searchTerms) {
             if (mpNameLower.includes(term.toLowerCase())) {
               score++;
             }
           }
-          if (score > bestScore) {
+
+          // Calculate match percentage
+          const matchPercentage = score / searchTerms.length;
+
+          // Only consider if it matches at least 66% of terms (at least 2/3)
+          // AND has the highest score so far
+          if (matchPercentage >= 0.66 && score > bestScore) {
             bestScore = score;
+            bestMatchPercentage = matchPercentage;
             bestMatch = mp;
+          } else if (matchPercentage >= 0.66 && score === bestScore) {
+            // If same score, prefer the one with more matching terms relative to MP name length
+            const currentMpTerms = mp.name.split(" ").filter(t => t.length > 2).length;
+            const bestMatchTerms = bestMatch ? bestMatch.name.split(" ").filter(t => t.length > 2).length : 0;
+
+            if (currentMpTerms <= bestMatchTerms) {
+              bestMatch = mp;
+            }
           }
         }
 
         if (bestMatch && bestScore >= Math.min(2, searchTerms.length)) {
+          // Determine if this is a minister or deputy minister
+          const isMinisterRole = ministers.some(m => m.name === member.name);
+          const isDeputyMinisterRole = deputyMinisters.some(m => m.name === member.name);
+
+          // Calculate ministerial salary (after 20% voluntary paycut)
+          let ministerSalary = 0;
+          const roleLower = member.role.toLowerCase();
+          if (roleLower.includes("prime minister") && !roleLower.includes("deputy")) {
+            ministerSalary = 0; // PM takes no salary
+          } else if (roleLower.includes("deputy prime minister")) {
+            ministerSalary = 18168.15;
+          } else if (roleLower.includes("deputy minister")) {
+            ministerSalary = 10847.65;
+          } else if (roleLower.includes("minister")) {
+            ministerSalary = 14907.20;
+          }
+
           await db!
             .update(mps)
-            .set({ role: member.role })
+            .set({
+              role: member.role,
+              isMinister: isMinisterRole,
+              isDeputyMinister: isDeputyMinisterRole,
+              ministerSalary: ministerSalary
+            })
             .where(eq(mps.id, bestMatch.id));
 
-          console.log(`✅ ${member.name} → ${bestMatch.name}: ${member.role}`);
+          console.log(`✅ ${member.name} → ${bestMatch.name}: ${member.role} (RM ${ministerSalary.toFixed(2)})`);
           updated++;
         } else {
           console.log(`❌ Not found: ${member.name}`);
@@ -6192,7 +6246,10 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         }
       }
 
-      console.log(`✅ Cabinet roles update complete: ${updated} updated, ${notFound} not found`);
+      console.log(`\n📊 Summary:`);
+      console.log(`   Updated: ${updated}`);
+      console.log(`   Not found: ${notFound}`);
+      console.log(`   Total attempted: ${allCabinet.length}`);
 
       res.json({
         message: "Cabinet roles update completed",
@@ -6200,7 +6257,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
           totalProcessed: allCabinet.length,
           updated,
           notFound,
-          notFoundNames: notFoundNames.slice(0, 10)
+          notFoundNames
         }
       });
 
