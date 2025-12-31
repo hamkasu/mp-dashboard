@@ -298,6 +298,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       const states = req.query.states ? (req.query.states as string).split(',') : [];
       const cabinetPositions = req.query.cabinetPositions ? (req.query.cabinetPositions as string).split(',') : [];
       const statusFilter = (req.query.status as string) || 'active';
+      const cabinetFilter = (req.query.cabinetFilter as string) || 'all';
 
       // Get all MPs (this is fast, just DB read)
       const allMps = await storage.getAllMps();
@@ -332,6 +333,20 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
             return false;
           });
           if (!matchesPosition) return false;
+        }
+
+        // Cabinet filter (dropdown menu filter)
+        if (cabinetFilter !== 'all') {
+          if (cabinetFilter === 'cabinet') {
+            // Cabinet members are ministers or deputy ministers
+            if (!mp.isMinister && !mp.isDeputyMinister) return false;
+          } else if (cabinetFilter === 'ministers') {
+            // Only ministers (not deputy ministers)
+            if (!mp.isMinister) return false;
+          } else if (cabinetFilter === 'deputy-ministers') {
+            // Only deputy ministers
+            if (!mp.isDeputyMinister) return false;
+          }
         }
 
         // Status filter (active vs former/deceased MPs)

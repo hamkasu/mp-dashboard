@@ -88,8 +88,9 @@ export default function Home() {
     if (selectedStates.length > 0) params.set('states', selectedStates.join(','));
     if (selectedCabinetPositions.length > 0) params.set('cabinetPositions', selectedCabinetPositions.join(','));
     if (statusFilter !== 'all') params.set('status', statusFilter);
+    if (cabinetFilter !== 'all') params.set('cabinetFilter', cabinetFilter);
     return params.toString();
-  }, [currentPage, sortBy, searchQuery, selectedParties, selectedStates, selectedCabinetPositions, statusFilter]);
+  }, [currentPage, sortBy, searchQuery, selectedParties, selectedStates, selectedCabinetPositions, statusFilter, cabinetFilter]);
 
   // Use paginated API for standard sorts, non-paginated for special sorts
   const { data: paginatedData, isLoading: paginatedLoading } = useQuery<PaginatedMpsResponse>({
@@ -116,7 +117,7 @@ export default function Home() {
   // Reset to page 1 when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [sortBy, searchQuery, selectedParties, selectedStates, selectedCabinetPositions, statusFilter]);
+  }, [sortBy, searchQuery, selectedParties, selectedStates, selectedCabinetPositions, statusFilter, cabinetFilter]);
 
   const { data: stats, isLoading: statsLoading } = useQuery<{
     totalMps: number;
@@ -412,6 +413,7 @@ export default function Home() {
     setSelectedStates([]);
     setSelectedCabinetPositions([]);
     setStatusFilter("active");
+    setCabinetFilter("all");
   };
 
   const handleStatusFilterChange = (filter: StatusFilter) => {
