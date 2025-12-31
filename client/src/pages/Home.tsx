@@ -311,7 +311,7 @@ export default function Home() {
         filtered = filtered.filter(mp => selectedStates.includes(mp.state));
       }
 
-      // Apply cabinet position filter (multi-select)
+      // Apply cabinet position filter (multi-select takes precedence)
       if (selectedCabinetPositions.length > 0) {
         filtered = filtered.filter(mp => {
           return selectedCabinetPositions.some(position => {
@@ -320,10 +320,8 @@ export default function Home() {
             return false;
           });
         });
-      }
-
-      // Apply old cabinet filter (kept for backward compatibility)
-      if (cabinetFilter !== "all") {
+      } else if (cabinetFilter !== "all") {
+        // Apply old cabinet filter (only used when no multi-select positions are chosen)
         if (cabinetFilter === "cabinet") {
           filtered = filtered.filter(mp => mp.isMinister || mp.isDeputyMinister);
         } else if (cabinetFilter === "ministers") {
