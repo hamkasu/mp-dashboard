@@ -978,6 +978,7 @@ export const mpReportCards = pgTable("mp_report_cards", {
 
   // Calculated scores (0-100)
   attendanceScore: integer("attendance_score").notNull().default(0),
+  attendancePercentage: integer("attendance_percentage").notNull().default(0), // Raw attendance %
   participationScore: integer("participation_score").notNull().default(0),
   conductScore: integer("conduct_score").notNull().default(0),
   constituencyImpactScore: integer("constituency_impact_score").notNull().default(0),
