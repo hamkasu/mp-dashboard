@@ -1016,3 +1016,93 @@ export type MpReportCard = typeof mpReportCards.$inferSelect;
 export type MpReportCardWithDetails = MpReportCard & {
   mp: Mp;
 };
+
+// ========== MP CONTACT MESSAGES ==========
+// Stores constituent messages sent to MPs via the contact form
+export const mpContactMessages = pgTable("mp_contact_messages", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  mpId: varchar("mp_id").notNull().references(() => mps.id, { onDelete: "cascade" }),
+
+  // Sender information
+  senderName: text("sender_name").notNull(),
+  senderEmail: text("sender_email").notNull(),
+  senderPhone: text("sender_phone"),
+
+  // Message content
+  subject: text("subject").notNull(),
+  message: text("message").notNull(),
+
+  // Categorization for anonymized summaries
+  category: text("category").notNull().default("general"),
+  // Categories: general, flooding_drainage, education, healthcare, infrastructure,
+  // housing, employment, safety_crime, environment, transportation, other
+
+  // Status tracking
+  status: text("status").notNull().default("pending"),
+  // Status: pending, read, replied, resolved, spam
+
+  // Privacy and moderation
+  isPublic: boolean("is_public").notNull().default(false), // If constituent agreed to share anonymously
+  isSpam: boolean("is_spam").notNull().default(false),
+
+  // Response tracking
+  repliedAt: timestamp("replied_at"),
+  repliedBy: varchar("replied_by"), // Admin/MP user ID
+  replyMessage: text("reply_message"),
+
+  // Metadata
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+  emailSent: boolean("email_sent").notNull().default(false),
+
+  // Timestamps
+  createdAt: timestamp("created_at").notNull().default(sql`NOW()`),
+  readAt: timestamp("read_at"),
+  updatedAt: timestamp("updated_at").notNull().default(sql`NOW()`),
+});
+
+export const insertMpContactMessageSchema = createInsertSchema(mpContactMessages).omit({
+  id: true,
+  createdAt: true,
+  readAt: true,
+  updatedAt: true,
+  repliedAt: true,
+}).extend({
+  category: z.enum([
+    "general",
+    "flooding_drainage",
+    "education",
+    "healthcare",
+    "infrastructure",
+    "housing",
+    "employment",
+    "safety_crime",
+    "environment",
+    "transportation",
+    "corruption",
+    "youth_sports",
+    "poverty_welfare",
+    "other"
+  ]).optional().default("general"),
+  status: z.enum(["pending", "read", "replied", "resolved", "spam"]).optional().default("pending"),
+  senderEmail: z.string().email(),
+  senderPhone: z.string().nullable().optional(),
+  isPublic: z.boolean().optional().default(false),
+  isSpam: z.boolean().optional().default(false),
+  emailSent: z.boolean().optional().default(false),
+  ipAddress: z.string().nullable().optional(),
+  userAgent: z.string().nullable().optional(),
+  repliedBy: z.string().nullable().optional(),
+  replyMessage: z.string().nullable().optional(),
+});
+
+export const updateMpContactMessageSchema = insertMpContactMessageSchema.partial();
+
+export type InsertMpContactMessage = z.infer<typeof insertMpContactMessageSchema>;
+export type UpdateMpContactMessage = z.infer<typeof updateMpContactMessageSchema>;
+export type MpContactMessage = typeof mpContactMessages.$inferSelect;
+
+// Extended type with MP details
+export type MpContactMessageWithMp = MpContactMessage & {
+  mp: Mp;
+};

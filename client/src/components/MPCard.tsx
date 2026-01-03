@@ -13,6 +13,7 @@ import { getMinisterialSalary, getCabinetRoleType } from "@/lib/allowanceCalcula
 import { useLanguage } from "@/i18n/LanguageContext";
 import { useConstituencyByCode } from "@/hooks/use-constituencies";
 import type { LanguageStat } from "./MPGrid";
+import { MPMessageStats } from "./MPMessageStats";
 
 interface MPCardProps {
   mp: Mp;
@@ -147,6 +148,7 @@ export function MPCard({ mp, bills, oralQuestions, languageStats }: MPCardProps)
                 {cabinetRoleType}
               </Badge>
             )}
+            <MPMessageStats mpId={mp.id} mpName={mp.name} />
           </div>
 
           <div className="space-y-1 text-sm">

@@ -1430,7 +1430,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   app.post("/api/mps/:id/contact", mutationRateLimit, async (req, res) => {
     try {
       const { id } = req.params;
-      const { senderName, senderEmail, subject, message } = req.body;
+      const { senderName, senderEmail, senderPhone, subject, message, category, isPublic } = req.body;
 
       // Validate required fields
       if (!senderName || !senderEmail || !subject || !message) {
@@ -1449,13 +1449,17 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         return res.status(404).json({ error: "MP not found" });
       }
 
+      // Get client IP and user agent for tracking
+      const ipAddress = req.ip || req.headers['x-forwarded-for'] as string || null;
+      const userAgent = req.headers['user-agent'] || null;
+
       // Log the contact request
       console.log(`[MP Contact] Message to ${mp.name} (${mp.constituency})`);
       console.log(`  From: ${senderName} <${senderEmail}>`);
       console.log(`  Subject: ${subject}`);
       console.log(`  Message: ${message.substring(0, 100)}...`);
 
-      // Send email via SendGrid if configured
+      // Send email via Resend if configured
       let emailSent = false;
       if (isEmailConfigured()) {
         const emailParams = {
@@ -1478,9 +1482,27 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         });
       }
 
+      // Save message to database
+      const savedMessage = await storage.createMpContactMessage({
+        mpId: id,
+        senderName,
+        senderEmail,
+        senderPhone: senderPhone || null,
+        subject,
+        message,
+        category: category || "general",
+        status: "pending",
+        isPublic: isPublic || false,
+        isSpam: false,
+        emailSent,
+        ipAddress,
+        userAgent,
+      });
+
       res.json({
         success: true,
         emailSent,
+        messageId: savedMessage.id,
         message: emailSent
           ? "Your message has been sent to the MP's office."
           : "Your message has been received and logged. Email delivery is not configured.",
@@ -1490,6 +1512,69 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     } catch (error) {
       console.error("Error sending contact message:", error);
       res.status(500).json({ error: "Failed to send message" });
+    }
+  });
+
+  // Get message statistics for an MP (public anonymized data)
+  app.get("/api/mps/:id/message-stats", async (req, res) => {
+    try {
+      const { id } = req.params;
+
+      // Verify MP exists
+      const mp = await storage.getMp(id);
+      if (!mp) {
+        return res.status(404).json({ error: "MP not found" });
+      }
+
+      const stats = await storage.getMpContactMessageStats(id);
+
+      // Return anonymized statistics for public display
+      res.json({
+        mpId: id,
+        mpName: mp.name,
+        total: stats.total,
+        byCategory: stats.byCategory,
+      });
+    } catch (error) {
+      console.error("Error fetching message stats:", error);
+      res.status(500).json({ error: "Failed to fetch message statistics" });
+    }
+  });
+
+  // Get all messages for an MP (admin/MP only)
+  app.get("/api/mps/:id/messages", requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { status, limit } = req.query;
+
+      const messages = await storage.getMpContactMessagesByMpId(id, {
+        status: status as string | undefined,
+        limit: limit ? parseInt(limit as string) : undefined,
+      });
+
+      res.json(messages);
+    } catch (error) {
+      console.error("Error fetching MP messages:", error);
+      res.status(500).json({ error: "Failed to fetch messages" });
+    }
+  });
+
+  // Update message status (admin/MP only)
+  app.patch("/api/messages/:id", requireAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const updates = req.body;
+
+      const updatedMessage = await storage.updateMpContactMessage(id, updates);
+
+      if (!updatedMessage) {
+        return res.status(404).json({ error: "Message not found" });
+      }
+
+      res.json(updatedMessage);
+    } catch (error) {
+      console.error("Error updating message:", error);
+      res.status(500).json({ error: "Failed to update message" });
     }
   });
 
