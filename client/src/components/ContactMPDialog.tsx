@@ -17,6 +17,14 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { MessageSquare, Send, Loader2, Mail, ExternalLink } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
@@ -29,14 +37,34 @@ interface ContactMPDialogProps {
   children?: React.ReactNode;
 }
 
+const MESSAGE_CATEGORIES = [
+  { value: "general", label: "General Inquiry" },
+  { value: "flooding_drainage", label: "Flooding & Drainage" },
+  { value: "education", label: "Education" },
+  { value: "healthcare", label: "Healthcare" },
+  { value: "infrastructure", label: "Infrastructure" },
+  { value: "housing", label: "Housing" },
+  { value: "employment", label: "Employment" },
+  { value: "safety_crime", label: "Safety & Crime" },
+  { value: "environment", label: "Environment" },
+  { value: "transportation", label: "Transportation" },
+  { value: "corruption", label: "Corruption" },
+  { value: "youth_sports", label: "Youth & Sports" },
+  { value: "poverty_welfare", label: "Poverty & Welfare" },
+  { value: "other", label: "Other" },
+];
+
 export function ContactMPDialog({ mpId, mpName, mpEmail, mpConstituency, children }: ContactMPDialogProps) {
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [formData, setFormData] = useState({
     senderName: "",
     senderEmail: "",
+    senderPhone: "",
     subject: "",
     message: "",
+    category: "general",
+    isPublic: false,
   });
 
   const sendMessageMutation = useMutation({
@@ -55,7 +83,15 @@ export function ContactMPDialog({ mpId, mpName, mpEmail, mpConstituency, childre
         description: `Your message has been sent to ${mpName}'s office.`,
       });
       setOpen(false);
-      setFormData({ senderName: "", senderEmail: "", subject: "", message: "" });
+      setFormData({
+        senderName: "",
+        senderEmail: "",
+        senderPhone: "",
+        subject: "",
+        message: "",
+        category: "general",
+        isPublic: false,
+      });
     },
     onError: (error: any) => {
       toast({
@@ -71,7 +107,7 @@ export function ContactMPDialog({ mpId, mpName, mpEmail, mpConstituency, childre
     if (!formData.senderName || !formData.senderEmail || !formData.subject || !formData.message) {
       toast({
         title: "Missing Information",
-        description: "Please fill in all fields.",
+        description: "Please fill in all required fields.",
         variant: "destructive",
       });
       return;
@@ -134,14 +170,45 @@ export function ContactMPDialog({ mpId, mpName, mpEmail, mpConstituency, childre
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="subject">Subject *</Label>
+            <Label htmlFor="senderPhone">Phone Number (Optional)</Label>
             <Input
-              id="subject"
-              placeholder="What is your message about?"
-              value={formData.subject}
-              onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
-              required
+              id="senderPhone"
+              type="tel"
+              placeholder="+60123456789"
+              value={formData.senderPhone}
+              onChange={(e) => setFormData({ ...formData, senderPhone: e.target.value })}
             />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="category">Category *</Label>
+              <Select
+                value={formData.category}
+                onValueChange={(value) => setFormData({ ...formData, category: value })}
+              >
+                <SelectTrigger id="category">
+                  <SelectValue placeholder="Select category" />
+                </SelectTrigger>
+                <SelectContent>
+                  {MESSAGE_CATEGORIES.map((cat) => (
+                    <SelectItem key={cat.value} value={cat.value}>
+                      {cat.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="subject">Subject *</Label>
+              <Input
+                id="subject"
+                placeholder="Brief subject line"
+                value={formData.subject}
+                onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
+                required
+              />
+            </div>
           </div>
 
           <div className="space-y-2">
@@ -154,6 +221,22 @@ export function ContactMPDialog({ mpId, mpName, mpEmail, mpConstituency, childre
               onChange={(e) => setFormData({ ...formData, message: e.target.value })}
               required
             />
+          </div>
+
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="isPublic"
+              checked={formData.isPublic}
+              onCheckedChange={(checked) =>
+                setFormData({ ...formData, isPublic: checked as boolean })
+              }
+            />
+            <Label
+              htmlFor="isPublic"
+              className="text-sm font-normal cursor-pointer"
+            >
+              Allow my concern to be shared anonymously in public statistics (your personal details will NOT be shown)
+            </Label>
           </div>
 
           <Alert>

@@ -2,10 +2,10 @@
  * Copyright by Calmic Sdn Bhd
  */
 
-import { type Mp, type InsertMp, type CourtCase, type InsertCourtCase, type SprmInvestigation, type InsertSprmInvestigation, type LegislativeProposal, type InsertLegislativeProposal, type DebateParticipation, type InsertDebateParticipation, type ParliamentaryQuestion, type InsertParliamentaryQuestion, type HansardRecord, type InsertHansardRecord, type UpdateHansardRecord, type PageView, type UserActivityLog, type InsertUserActivityLog, type Constituency, type InsertConstituency, type DunMember, type InsertDunMember, type UserFeedback, type InsertUserFeedback, type TopicSummaryCache, type InsertTopicSummaryCache } from "@shared/schema";
+import { type Mp, type InsertMp, type CourtCase, type InsertCourtCase, type SprmInvestigation, type InsertSprmInvestigation, type LegislativeProposal, type InsertLegislativeProposal, type DebateParticipation, type InsertDebateParticipation, type ParliamentaryQuestion, type InsertParliamentaryQuestion, type HansardRecord, type InsertHansardRecord, type UpdateHansardRecord, type PageView, type UserActivityLog, type InsertUserActivityLog, type Constituency, type InsertConstituency, type DunMember, type InsertDunMember, type UserFeedback, type InsertUserFeedback, type TopicSummaryCache, type InsertTopicSummaryCache, type MpContactMessage, type InsertMpContactMessage, type UpdateMpContactMessage } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db, pool } from "./db";
-import { mps, courtCases, sprmInvestigations, legislativeProposals, debateParticipations, parliamentaryQuestions, hansardRecords, pageViews, userActivityLog, constituencies, dunMembers, courtCaseNewsArticles, userFeedback, topicSummaryCache } from "@shared/schema";
+import { mps, courtCases, sprmInvestigations, legislativeProposals, debateParticipations, parliamentaryQuestions, hansardRecords, pageViews, userActivityLog, constituencies, dunMembers, courtCaseNewsArticles, userFeedback, topicSummaryCache, mpContactMessages } from "@shared/schema";
 import { eq, sql, desc, and } from "drizzle-orm";
 import { MPNameMatcher } from "./mp-name-matcher";
 import { HansardScraper } from "./hansard-scraper";
@@ -163,6 +163,21 @@ export interface IStorage {
   createUserFeedback(feedback: InsertUserFeedback): Promise<UserFeedback>;
   getAllUserFeedback(options?: { status?: string; limit?: number }): Promise<UserFeedback[]>;
   updateUserFeedbackStatus(id: string, status: string, reviewedBy?: string): Promise<UserFeedback | undefined>;
+
+  // MP Contact Message methods
+  createMpContactMessage(message: InsertMpContactMessage): Promise<MpContactMessage>;
+  getMpContactMessage(id: string): Promise<MpContactMessage | undefined>;
+  getMpContactMessagesByMpId(mpId: string, options?: { status?: string; limit?: number }): Promise<MpContactMessage[]>;
+  getAllMpContactMessages(options?: { limit?: number }): Promise<MpContactMessage[]>;
+  updateMpContactMessage(id: string, updates: Partial<UpdateMpContactMessage>): Promise<MpContactMessage | undefined>;
+  getMpContactMessageStats(mpId: string): Promise<{
+    total: number;
+    pending: number;
+    read: number;
+    replied: number;
+    resolved: number;
+    byCategory: Record<string, number>;
+  }>;
 
   // Topic Summary Cache methods
   getTopicSummaryCache(hansardRecordId: string, topicName: string): Promise<TopicSummaryCache | undefined>;
@@ -1770,6 +1785,63 @@ export class MemStorage implements IStorage {
     return undefined;
   }
 
+  // MP Contact Message methods (stub implementations for MemStorage)
+  async createMpContactMessage(message: InsertMpContactMessage): Promise<MpContactMessage> {
+    const id = randomUUID();
+    return {
+      ...message,
+      id,
+      senderPhone: message.senderPhone ?? null,
+      category: message.category ?? "general",
+      status: message.status ?? "pending",
+      isPublic: message.isPublic ?? false,
+      isSpam: message.isSpam ?? false,
+      repliedAt: null,
+      repliedBy: message.repliedBy ?? null,
+      replyMessage: message.replyMessage ?? null,
+      ipAddress: message.ipAddress ?? null,
+      userAgent: message.userAgent ?? null,
+      emailSent: message.emailSent ?? false,
+      createdAt: new Date(),
+      readAt: null,
+      updatedAt: new Date(),
+    };
+  }
+
+  async getMpContactMessage(id: string): Promise<MpContactMessage | undefined> {
+    return undefined;
+  }
+
+  async getMpContactMessagesByMpId(mpId: string, options?: { status?: string; limit?: number }): Promise<MpContactMessage[]> {
+    return [];
+  }
+
+  async getAllMpContactMessages(options?: { limit?: number }): Promise<MpContactMessage[]> {
+    return [];
+  }
+
+  async updateMpContactMessage(id: string, updates: Partial<UpdateMpContactMessage>): Promise<MpContactMessage | undefined> {
+    return undefined;
+  }
+
+  async getMpContactMessageStats(mpId: string): Promise<{
+    total: number;
+    pending: number;
+    read: number;
+    replied: number;
+    resolved: number;
+    byCategory: Record<string, number>;
+  }> {
+    return {
+      total: 0,
+      pending: 0,
+      read: 0,
+      replied: 0,
+      resolved: 0,
+      byCategory: {},
+    };
+  }
+
   // Topic Summary Cache methods (stub implementations for MemStorage)
   async getTopicSummaryCache(hansardRecordId: string, topicName: string): Promise<TopicSummaryCache | undefined> {
     return undefined;
@@ -3044,6 +3116,91 @@ export class DbStorage implements IStorage {
       .where(eq(userFeedback.id, id))
       .returning();
     return result[0];
+  }
+
+  // MP Contact Message methods
+  async createMpContactMessage(message: InsertMpContactMessage): Promise<MpContactMessage> {
+    const result = await db.insert(mpContactMessages).values(message).returning();
+    return result[0];
+  }
+
+  async getMpContactMessage(id: string): Promise<MpContactMessage | undefined> {
+    const result = await db.select().from(mpContactMessages).where(eq(mpContactMessages.id, id));
+    return result[0];
+  }
+
+  async getMpContactMessagesByMpId(mpId: string, options?: { status?: string; limit?: number }): Promise<MpContactMessage[]> {
+    let query = db.select().from(mpContactMessages)
+      .where(eq(mpContactMessages.mpId, mpId))
+      .orderBy(desc(mpContactMessages.createdAt));
+
+    if (options?.status) {
+      query = query.where(and(
+        eq(mpContactMessages.mpId, mpId),
+        eq(mpContactMessages.status, options.status)
+      )) as typeof query;
+    }
+
+    if (options?.limit) {
+      query = query.limit(options.limit) as typeof query;
+    }
+
+    return await query;
+  }
+
+  async getAllMpContactMessages(options?: { limit?: number }): Promise<MpContactMessage[]> {
+    let query = db.select().from(mpContactMessages).orderBy(desc(mpContactMessages.createdAt));
+
+    if (options?.limit) {
+      query = query.limit(options.limit) as typeof query;
+    }
+
+    return await query;
+  }
+
+  async updateMpContactMessage(id: string, updates: Partial<UpdateMpContactMessage>): Promise<MpContactMessage | undefined> {
+    const result = await db
+      .update(mpContactMessages)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(mpContactMessages.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async getMpContactMessageStats(mpId: string): Promise<{
+    total: number;
+    pending: number;
+    read: number;
+    replied: number;
+    resolved: number;
+    byCategory: Record<string, number>;
+  }> {
+    const messages = await db.select().from(mpContactMessages).where(eq(mpContactMessages.mpId, mpId));
+
+    const stats = {
+      total: messages.length,
+      pending: 0,
+      read: 0,
+      replied: 0,
+      resolved: 0,
+      byCategory: {} as Record<string, number>,
+    };
+
+    messages.forEach(msg => {
+      // Count by status
+      if (msg.status === 'pending') stats.pending++;
+      else if (msg.status === 'read') stats.read++;
+      else if (msg.status === 'replied') stats.replied++;
+      else if (msg.status === 'resolved') stats.resolved++;
+
+      // Count by category
+      if (!stats.byCategory[msg.category]) {
+        stats.byCategory[msg.category] = 0;
+      }
+      stats.byCategory[msg.category]++;
+    });
+
+    return stats;
   }
 
   // Topic Summary Cache methods

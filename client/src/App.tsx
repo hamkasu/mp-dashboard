@@ -44,6 +44,7 @@ const DunSarawak = lazy(() => import("@/pages/DunSarawak"));
 const DunSelangor = lazy(() => import("@/pages/DunSelangor"));
 const ReportCard = lazy(() => import("@/pages/ReportCard"));
 const ReportCardAdmin = lazy(() => import("@/pages/ReportCardAdmin"));
+const MPMessagesAdmin = lazy(() => import("@/pages/MPMessagesAdmin"));
 
 // Loading component
 function PageLoader() {
@@ -92,6 +93,7 @@ function Router() {
         <Route path="/dun/selangor" component={DunSelangor} />
         <Route path="/report-card" component={ReportCard} />
         <Route path="/report-card-admin" component={ReportCardAdmin} />
+        <Route path="/mp-messages-admin" component={MPMessagesAdmin} />
         <Route component={NotFound} />
       </Switch>
     </Suspense>
