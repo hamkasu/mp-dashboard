@@ -2,9 +2,10 @@
  * Copyright by Calmic Sdn Bhd
  */
 
-import { MapPin, UserCircle, Wallet, Calendar, Mic, TrendingDown, ScrollText, MessageSquareWarning, HelpCircle } from "lucide-react";
+import { MapPin, UserCircle, Wallet, Calendar, Mic, TrendingDown, ScrollText, MessageSquareWarning, HelpCircle, MessageSquare } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import type { Mp, LegislativeProposal, ParliamentaryQuestion } from "@shared/schema";
 import { Link } from "wouter";
@@ -14,6 +15,7 @@ import { useLanguage } from "@/i18n/LanguageContext";
 import { useConstituencyByCode } from "@/hooks/use-constituencies";
 import type { LanguageStat } from "./MPGrid";
 import { MPMessageStats } from "./MPMessageStats";
+import { ContactMPDialog } from "./ContactMPDialog";
 
 interface MPCardProps {
   mp: Mp;
@@ -300,7 +302,29 @@ export function MPCard({ mp, bills, oralQuestions, languageStats }: MPCardProps)
               </div>
             )}
 
-            <p className="text-xs text-muted-foreground font-mono">
+            {/* Contact Button */}
+            <div className="pt-4 border-t">
+              <ContactMPDialog
+                mpId={mp.id}
+                mpName={mp.name}
+                mpEmail={mp.email}
+                mpConstituency={mp.constituency}
+              >
+                <Button
+                  variant="default"
+                  className="w-full gap-2"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                  }}
+                >
+                  <MessageSquare className="h-4 w-4" />
+                  {t('profile.sendMessage')}
+                </Button>
+              </ContactMPDialog>
+            </div>
+
+            <p className="text-xs text-muted-foreground font-mono mt-2">
               {mp.parliamentCode}
             </p>
           </div>
