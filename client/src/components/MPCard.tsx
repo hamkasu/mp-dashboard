@@ -102,7 +102,7 @@ export function MPCard({ mp, bills, oralQuestions, languageStats }: MPCardProps)
   return (
     <Link href={`/mp/${mp.id}`}>
       <Card
-        className="hover-elevate overflow-hidden transition-shadow duration-200 cursor-pointer h-full"
+        className="hover-elevate overflow-hidden transition-shadow duration-200 cursor-pointer h-full flex flex-col"
         data-testid={`card-mp-${mp.id}`}
       >
         <div className="aspect-[3/4] relative overflow-hidden bg-muted">
@@ -126,8 +126,9 @@ export function MPCard({ mp, bills, oralQuestions, languageStats }: MPCardProps)
             </div>
           )}
         </div>
-        
-        <CardContent className="p-4 space-y-3">
+
+        <CardContent className="p-4 flex flex-col flex-1">
+          <div className="space-y-3 flex-1">
           <div className="space-y-2">
             <h3 className="text-lg font-semibold leading-tight line-clamp-2 min-h-[3.5rem]" data-testid={`text-mp-name-${mp.id}`}>
               {mp.title && <span className="text-muted-foreground text-sm">{mp.title} </span>}
@@ -301,8 +302,10 @@ export function MPCard({ mp, bills, oralQuestions, languageStats }: MPCardProps)
                 </div>
               </div>
             )}
+          </div>
 
-            {/* Contact Button */}
+          {/* Contact Button - Always at bottom */}
+          <div className="mt-auto space-y-2">
             <div className="pt-4 border-t">
               <ContactMPDialog
                 mpId={mp.id}
@@ -324,7 +327,7 @@ export function MPCard({ mp, bills, oralQuestions, languageStats }: MPCardProps)
               </ContactMPDialog>
             </div>
 
-            <p className="text-xs text-muted-foreground font-mono mt-2">
+            <p className="text-xs text-muted-foreground font-mono text-center">
               {mp.parliamentCode}
             </p>
           </div>
