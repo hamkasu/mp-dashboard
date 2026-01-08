@@ -405,26 +405,54 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <PageMeta
-        title={t("dashboard.title")}
-        description="Track Malaysian Parliament MPs, voting records, and parliamentary activities. Comprehensive Dewan Rakyat dashboard with attendance tracking, court cases, and SPRM investigations."
-        keywords="Malaysian Parliament, MP dashboard, Dewan Rakyat, voting records, parliamentary activities, MP attendance, court cases, SPRM investigations, Malaysia MPs"
-        url="https://myparliament.calmic.com.my"
-      />
-      <Header
-        onMenuClick={() => setMobileFiltersOpen(true)}
-        onSearchClick={() => setSearchDialogOpen(true)}
-      />
+    <div className="min-h-screen bg-background relative">
+      {/* Blue Abstract Background */}
+      <div
+        className="fixed inset-0 -z-10 bg-gradient-to-br from-blue-950 via-blue-900 to-blue-800"
+        style={{
+          backgroundImage: `
+            radial-gradient(circle at 20% 50%, rgba(59, 130, 246, 0.3) 0%, transparent 50%),
+            radial-gradient(circle at 80% 20%, rgba(96, 165, 250, 0.2) 0%, transparent 50%),
+            radial-gradient(circle at 40% 80%, rgba(59, 130, 246, 0.2) 0%, transparent 50%),
+            linear-gradient(135deg, transparent 40%, rgba(59, 130, 246, 0.1) 60%, transparent 80%),
+            linear-gradient(45deg, transparent 30%, rgba(96, 165, 250, 0.15) 50%, transparent 70%)
+          `,
+          backgroundSize: '100% 100%, 100% 100%, 100% 100%, 200% 200%, 200% 200%',
+        }}
+      >
+        {/* Curved Light Elements */}
+        <div
+          className="absolute inset-0 opacity-30"
+          style={{
+            background: `
+              radial-gradient(ellipse 80% 50% at 50% -20%, rgba(147, 197, 253, 0.3), transparent),
+              radial-gradient(ellipse 60% 30% at 50% 120%, rgba(147, 197, 253, 0.2), transparent)
+            `
+          }}
+        />
+      </div>
+
+      {/* Content overlay */}
+      <div className="relative z-10">
+        <PageMeta
+          title={t("dashboard.title")}
+          description="Track Malaysian Parliament MPs, voting records, and parliamentary activities. Comprehensive Dewan Rakyat dashboard with attendance tracking, court cases, and SPRM investigations."
+          keywords="Malaysian Parliament, MP dashboard, Dewan Rakyat, voting records, parliamentary activities, MP attendance, court cases, SPRM investigations, Malaysia MPs"
+          url="https://myparliament.calmic.com.my"
+        />
+        <Header
+          onMenuClick={() => setMobileFiltersOpen(true)}
+          onSearchClick={() => setSearchDialogOpen(true)}
+        />
       
       <SearchDialog 
         open={searchDialogOpen}
         onOpenChange={setSearchDialogOpen}
       />
 
-      <div className="flex max-w-7xl mx-auto">
+      <div className="flex max-w-7xl mx-auto bg-background/95 backdrop-blur-sm">
         {/* Desktop Sidebar */}
-        <aside className="hidden md:block w-64 lg:w-72 shrink-0 sticky top-20 h-[calc(100vh-5rem)] border-r">
+        <aside className="hidden md:block w-64 lg:w-72 shrink-0 sticky top-20 h-[calc(100vh-5rem)] border-r bg-background/98">
           <FilterSidebar
             parties={(stats || defaultStats).partyBreakdown}
             states={availableStates}
@@ -736,6 +764,7 @@ export default function Home() {
         </main>
       </div>
       <Footer />
+      </div>
     </div>
   );
 }
