@@ -12,6 +12,7 @@ import { StatisticsCards } from "@/components/StatisticsCards";
 import { FilterSidebar } from "@/components/FilterSidebar";
 import { MPGrid } from "@/components/MPGrid";
 import { DonateButton } from "@/components/DonateButton";
+import { RoyalAddress } from "@/components/RoyalAddress";
 import { Footer } from "@/components/Footer";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -50,6 +51,7 @@ interface PaginatedMpsResponse {
 
 type SortOption = "name" | "attendance-best" | "attendance-worst" | "speeches-most" | "speeches-fewest" | "poverty-highest" | "poverty-lowest" | "bills-raised" | "oral-questions" | "inappropriate-language";
 type StatusFilter = "all" | "active" | "former";
+type CabinetFilter = "all" | "ministers" | "deputy-ministers";
 
 interface LanguageAnalysisMpStat {
   mpId: string;
@@ -496,6 +498,7 @@ export default function Home() {
         {/* Main Content */}
         <main className="flex-1 px-4 md:px-6 lg:px-8 py-6 md:py-8">
           <div className="space-y-6 md:space-y-8">
+            <RoyalAddress />
             {/* SEO Landing Section */}
             <div className="space-y-3" data-testid="landing-section">
               <div className="flex items-center gap-2">
