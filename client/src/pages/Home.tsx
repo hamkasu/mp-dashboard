@@ -498,7 +498,10 @@ export default function Home() {
         {/* Main Content */}
         <main className="flex-1 px-4 md:px-6 lg:px-8 py-6 md:py-8">
           <div className="space-y-6 md:space-y-8">
-            <RoyalAddress />
+            <div className="relative">
+              <div className="absolute -inset-1 bg-gradient-to-r from-primary/20 to-primary/10 rounded-lg blur opacity-25" />
+              <RoyalAddress />
+            </div>
             {/* SEO Landing Section */}
             <div className="space-y-3" data-testid="landing-section">
               <div className="flex items-center gap-2">
