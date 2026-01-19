@@ -97,7 +97,7 @@ export function MPCard({ mp, bills, oralQuestions, languageStats }: MPCardProps)
   const isValidDate = (date: any) => !!date && !isNaN(new Date(date).getTime());
 
   // Check if MP has passed away
-  const isDeceased = isValidDate(mp.termEndDate) && new Date(mp.termEndDate) <= new Date();
+  const isDeceased = isValidDate(mp.termEndDate) && new Date(mp.termEndDate!) <= new Date();
 
   return (
     <Link href={`/mp/${mp.id}`}>
@@ -302,6 +302,7 @@ export function MPCard({ mp, bills, oralQuestions, languageStats }: MPCardProps)
                 </div>
               </div>
             )}
+          </div>
           </div>
 
           {/* Contact Button - Always at bottom */}
