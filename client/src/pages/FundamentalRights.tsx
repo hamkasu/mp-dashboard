@@ -114,7 +114,7 @@ export default function FundamentalRights() {
           summary: "Rights related to education and protection from discrimination in educational institutions.",
           points: [
             "No discrimination in admission to educational institutions based on religion, race, descent, or place of birth",
-            "Citizens have the right to establish and maintain institutions for education of children in their own language",
+            "Citizens have the right to establish and maintain institutions for education of children",
             "No person shall be required to receive instruction or take part in any ceremony or worship of a religion other than their own",
             "Federal or State may establish or maintain Islamic institutions or provide instruction in Islam",
             "Right to federal aid for educational institutions"
