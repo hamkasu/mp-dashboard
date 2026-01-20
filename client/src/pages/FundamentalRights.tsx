@@ -247,7 +247,7 @@ export default function FundamentalRights() {
           summary: "Hak yang berkaitan dengan pendidikan dan perlindungan daripada diskriminasi dalam institusi pendidikan.",
           points: [
             "Tiada diskriminasi dalam kemasukan ke institusi pendidikan berdasarkan agama, bangsa, keturunan, atau tempat lahir",
-            "Warganegara mempunyai hak untuk menubuhkan dan menyelenggara institusi untuk pendidikan kanak-kanak dalam bahasa mereka sendiri",
+            "Warganegara mempunyai hak untuk menubuhkan dan menyelenggara institusi untuk pendidikan kanak-kanak",
             "Tiada seorang pun boleh dipaksa menerima pengajaran atau mengambil bahagian dalam upacara atau ibadat agama selain agamanya sendiri",
             "Persekutuan atau Negeri boleh menubuhkan atau menyelenggara institusi Islam atau menyediakan pengajaran Islam",
             "Hak kepada bantuan persekutuan untuk institusi pendidikan"
@@ -380,7 +380,7 @@ export default function FundamentalRights() {
           summary: "与教育相关的权利及保护免受教育机构歧视。",
           points: [
             "教育机构入学不得基于宗教、种族、血统或出生地歧视",
-            "公民有权建立和维护以其母语教育子女的机构",
+            "公民有权建立和维护教育子女的机构",
             "任何人不得被要求接受或参与非本人宗教的指导、仪式或礼拜",
             "联邦或州可建立或维护伊斯兰机构或提供伊斯兰教育",
             "教育机构有权获得联邦援助"
@@ -513,7 +513,7 @@ export default function FundamentalRights() {
           summary: "கல்வி தொடர்பான உரிமைகள் மற்றும் கல்வி நிறுவனங்களில் பாகுபாட்டிலிருந்து பாதுகாப்பு.",
           points: [
             "மதம், இனம், வம்சாவளி அல்லது பிறந்த இடத்தின் அடிப்படையில் கல்வி நிறுவனங்களில் சேர்க்கையில் பாகுபாடு காட்டக்கூடாது",
-            "குடிமக்கள் தங்கள் சொந்த மொழியில் குழந்தைகளின் கல்விக்காக நிறுவனங்களை நிறுவி பராமரிக்க உரிமை உள்ளது",
+            "குடிமக்கள் குழந்தைகளின் கல்விக்காக நிறுவனங்களை நிறுவி பராமரிக்க உரிமை உள்ளது",
             "எந்த நபரும் தனது சொந்த மதம் அல்லாத மதத்தின் போதனை அல்லது சடங்கு அல்லது வழிபாட்டில் பங்கேற்க கட்டாயப்படுத்தப்படக்கூடாது",
             "கூட்டாட்சி அல்லது மாநிலம் இஸ்லாமிய நிறுவனங்களை நிறுவலாம் அல்லது பராமரிக்கலாம் அல்லது இஸ்லாமில் போதனை வழங்கலாம்",
             "கல்வி நிறுவனங்களுக்கு கூட்டாட்சி உதவிக்கான உரிமை"
