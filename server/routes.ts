@@ -34,6 +34,7 @@ import {
   blogPosts,
   bills,
   billImpacts,
+  billGrokReviews,
 } from "@shared/schema";
 import crypto from "crypto";
 import { HansardScraper, ConstituencyAttendanceCounts } from "./hansard-scraper";
@@ -7241,6 +7242,107 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     } catch (error: any) {
       console.error("Error generating bill impact:", error);
       res.status(500).json({ error: "Failed to generate bill impact", details: error.message });
+    }
+  });
+
+  // Get Grok AI review for a bill
+  app.get("/api/bills/:id/grok-review", async (req, res) => {
+    try {
+      const { id } = req.params;
+
+      const review = await db.query.billGrokReviews.findFirst({
+        where: eq(billGrokReviews.billId, id),
+        orderBy: (billGrokReviews, { desc }) => [desc(billGrokReviews.generatedAt)],
+      });
+
+      res.json(review || null);
+    } catch (error: any) {
+      console.error("Error getting bill Grok review:", error);
+      res.status(500).json({ error: "Failed to get Grok review", details: error.message });
+    }
+  });
+
+  // Generate Grok AI review for a bill PDF
+  app.post("/api/bills/:id/generate-grok-review", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { title, billNumber } = req.body;
+
+      // First, get the PDF for this bill
+      const pdfFile = await getBillPdf(id);
+
+      if (!pdfFile) {
+        return res.status(404).json({
+          error: "No PDF found for this bill. Please upload a PDF first."
+        });
+      }
+
+      // Extract text from PDF
+      const { PDFParse } = await import('pdf-parse');
+      const parser = new PDFParse({ data: pdfFile.pdfData });
+      const result = await parser.getText();
+      const pdfText = result.text;
+
+      if (!pdfText || pdfText.trim().length === 0) {
+        return res.status(400).json({
+          error: "Could not extract text from PDF. The PDF may be image-based or corrupted."
+        });
+      }
+
+      console.log(`[Grok Review] Extracted ${pdfText.length} characters from PDF`);
+
+      // Generate review using Grok
+      const grokService = await import("./services/grok.js");
+
+      if (!grokService.isGrokConfigured()) {
+        return res.status(503).json({
+          error: "Grok AI is not configured. Please set GROK_API_KEY environment variable."
+        });
+      }
+
+      const documentType = `Bill ${billNumber || ''}: ${title}`.trim();
+      const reviewData = await grokService.analyzeDocumentWithGrok(
+        pdfText,
+        documentType,
+        pdfFile.originalFilename || 'bill.pdf'
+      );
+
+      // Save or update the review in database
+      const existingReview = await db.query.billGrokReviews.findFirst({
+        where: eq(billGrokReviews.billId, id),
+      });
+
+      if (existingReview) {
+        // Update existing
+        await db.update(billGrokReviews)
+          .set({
+            review: reviewData.review,
+            generatedAt: reviewData.generatedAt,
+            updatedAt: new Date(),
+          })
+          .where(eq(billGrokReviews.id, existingReview.id));
+      } else {
+        // Create new
+        await db.insert(billGrokReviews).values({
+          billId: id,
+          review: reviewData.review,
+          generatedBy: "grok",
+        });
+      }
+
+      // Return the newly generated review
+      const newReview = await db.query.billGrokReviews.findFirst({
+        where: eq(billGrokReviews.billId, id),
+        orderBy: (billGrokReviews, { desc }) => [desc(billGrokReviews.generatedAt)],
+      });
+
+      res.json(newReview);
+    } catch (error: any) {
+      console.error("Error generating Grok review:", error);
+      res.status(500).json({
+        error: "Failed to generate Grok review",
+        details: error.message
+      });
     }
   });
 

@@ -809,6 +809,30 @@ export type InsertBillImpact = z.infer<typeof insertBillImpactSchema>;
 export type UpdateBillImpact = z.infer<typeof updateBillImpactSchema>;
 export type BillImpact = typeof billImpacts.$inferSelect;
 
+// Bill Grok Reviews table for storing Grok AI-generated comprehensive reviews
+export const billGrokReviews = pgTable("bill_grok_reviews", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  billId: varchar("bill_id").notNull().references(() => bills.id, { onDelete: "cascade" }),
+  review: text("review").notNull(), // Markdown-formatted comprehensive review
+  generatedBy: text("generated_by").default("grok"),
+  generatedAt: timestamp("generated_at").notNull().default(sql`NOW()`),
+  createdAt: timestamp("created_at").notNull().default(sql`NOW()`),
+  updatedAt: timestamp("updated_at").notNull().default(sql`NOW()`),
+});
+
+export const insertBillGrokReviewSchema = createInsertSchema(billGrokReviews).omit({
+  id: true,
+  generatedAt: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const updateBillGrokReviewSchema = insertBillGrokReviewSchema.partial();
+
+export type InsertBillGrokReview = z.infer<typeof insertBillGrokReviewSchema>;
+export type UpdateBillGrokReview = z.infer<typeof updateBillGrokReviewSchema>;
+export type BillGrokReview = typeof billGrokReviews.$inferSelect;
+
 // ========== PARLIAMENTARY ORAL ANSWERS ==========
 // Parliamentary oral answers table for storing scraped jawapan lisan from Parliament website
 export const parliamentaryOralAnswers = pgTable("parliamentary_oral_answers", {
