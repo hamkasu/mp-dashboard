@@ -12,6 +12,7 @@ import { Header } from "@/components/Header";
 import { SearchDialog } from "@/components/SearchDialog";
 import { PageMeta } from "@/components/PageMeta";
 import { BillImpactDialog } from "@/components/BillImpactDialog";
+import { GrokReviewDialog } from "@/components/GrokReviewDialog";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -23,17 +24,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { 
-  FileText, 
-  Search, 
-  ExternalLink, 
-  RefreshCw, 
-  AlertCircle, 
-  Download, 
+import {
+  FileText,
+  Search,
+  ExternalLink,
+  RefreshCw,
+  AlertCircle,
+  Download,
   Calendar,
   Sparkles,
   CheckCircle,
   Filter,
+  Brain,
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -389,6 +391,21 @@ export default function Bills() {
                             {bill.impact && (
                               <CheckCircle className="w-3.5 h-3.5 text-green-300" />
                             )}
+                          </Button>
+                        }
+                      />
+                      <GrokReviewDialog
+                        bill={bill as any}
+                        trigger={
+                          <Button
+                            data-testid={`button-grok-review-${bill.id}`}
+                            variant="outline"
+                            size="sm"
+                            className="gap-2"
+                            disabled={!bill.hasPdf}
+                          >
+                            <Brain className="w-4 h-4" />
+                            Review
                           </Button>
                         }
                       />
