@@ -1,218 +1,164 @@
 /**
  * Import GE15 (2022) Election Results
- * This script imports election vote data from Tindak Malaysia's GitHub repository
- * and updates MP records with their election performance metrics.
+ * Fetches data from Tindak Malaysia's GitHub and updates MP records
  */
 
 import { db } from "../db";
 import { mps } from "../shared/schema";
-import { eq, sql } from "drizzle-orm";
-import csvParser from "csv-parser";
-import { Readable } from "stream";
+import { eq } from "drizzle-orm";
 
-interface ElectionResult {
-  constituencyCode: string;
-  constituencyName: string;
-  winningParty: string;
+// Official GE15 results from Tindak Malaysia
+const CSV_URL = "https://raw.githubusercontent.com/TindakMalaysia/HISTORICAL-ELECTION-RESULTS/main/2022-ELECTION-RESULTS/MALAYSIA_2022_PARLIAMENT_RESULTS.csv";
+
+interface ElectionData {
+  parliamentCode: string;
+  votesReceived: number;
   totalValidVotes: number;
-  totalElectorate: number;
-  winningMajority: number;
+  majority: number;
   turnoutPercent: number;
-  candidates: Array<{
-    party: string;
-    name: string;
-    votes: number;
-    sex: string;
-    age: number;
-  }>;
+  votePercentage: number;
 }
 
-// URL to the official GE15 results CSV from Tindak Malaysia
-const GE15_CSV_URL = "https://raw.githubusercontent.com/TindakMalaysia/HISTORICAL-ELECTION-RESULTS/main/2022-ELECTION-RESULTS/MALAYSIA_2022_PARLIAMENT_RESULTS.csv";
+async function fetchElectionData(): Promise<Map<string, ElectionData>> {
+  console.log("📥 Fetching election data from GitHub...");
 
-// Normalize constituency code (remove spaces and dots)
-function normalizeConstituencyCode(code: string): string {
-  return code.replace(/\s+/g, "").replace(/\./g, "");
-}
-
-// Fetch CSV from URL and convert to stream
-async function fetchCsvStream(): Promise<Readable> {
-  console.log(`Fetching election data from: ${GE15_CSV_URL}`);
-  const response = await fetch(GE15_CSV_URL);
-
+  const response = await fetch(CSV_URL);
   if (!response.ok) {
-    throw new Error(`Failed to fetch CSV: ${response.status} ${response.statusText}`);
+    throw new Error(`Failed to fetch data: ${response.status} ${response.statusText}`);
   }
 
-  const text = await response.text();
-  return Readable.from([text]);
-}
+  const csvText = await response.text();
+  const lines = csvText.split('\n');
+  const headers = lines[0].split(',');
 
-// Parse CSV and extract election results
-async function parseElectionResults(): Promise<Map<string, ElectionResult>> {
-  const resultsMap = new Map<string, ElectionResult>();
+  // Find column indices
+  const codeIdx = headers.findIndex(h => h.includes('PARLIAMENTARY CONSTITUENCY CODE'));
+  const validVotesIdx = headers.findIndex(h => h.includes('TOTAL VALID VOTES'));
+  const majorityIdx = headers.findIndex(h => h.includes('WINNING MAJORITY'));
+  const turnoutIdx = headers.findIndex(h => h.includes('TURNOUT'));
 
-  // Fetch CSV from online source
-  const csvStream = await fetchCsvStream();
+  const results = new Map<string, ElectionData>();
 
-  return new Promise((resolve, reject) => {
-    const results: any[] = [];
+  for (let i = 1; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (!line) continue;
 
-    csvStream
-      .pipe(csvParser())
-      .on("data", (row) => {
-        results.push(row);
-      })
-      .on("end", () => {
-        console.log(`Parsed ${results.length} rows from CSV`);
+    const cols = parseCSVLine(line);
+    if (cols.length < headers.length) continue;
 
-        for (const row of results) {
-          const constituencyCode = normalizeConstituencyCode(row["PARLIAMENTARY CONSTITUENCY CODE"]);
+    const code = normalizeCode(cols[codeIdx]);
+    const totalValidVotes = parseInt(cols[validVotesIdx]?.replace(/,/g, '') || '0', 10);
+    const majority = parseInt(cols[majorityIdx]?.replace(/,/g, '') || '0', 10);
+    const turnout = parseFloat(cols[turnoutIdx] || '0');
 
-          // Extract all candidates and their votes
-          const candidates: Array<{party: string; name: string; votes: number; sex: string; age: number}> = [];
+    // Find winner's votes (highest vote count from all party columns)
+    const winnerVotes = findWinnerVotes(cols, headers);
+    const votePercentage = totalValidVotes > 0 ? (winnerVotes / totalValidVotes) * 100 : 0;
 
-          // Parse party columns (BN, PH, PN, GPS, GRS, WARISAN, etc.)
-          const parties = ["BN", "PH", "PN", "GPS", "GRS", "WARISAN", "GTA"];
-
-          for (const party of parties) {
-            const candidateName = row[`${party} CANDIDATE`];
-            const votesStr = row[`${party} VOTE`];
-
-            if (candidateName && votesStr) {
-              candidates.push({
-                party: party,
-                name: candidateName.trim(),
-                votes: parseInt(votesStr.replace(/,/g, ""), 10) || 0,
-                sex: row[`${party} CANDIDATE SEX`] || "",
-                age: parseInt(row[`${party} CANDIDATE AGE`], 10) || 0,
-              });
-            }
-          }
-
-          // Parse independent candidates (IND 1, IND 2, etc.)
-          for (let i = 1; i <= 10; i++) {
-            const indPrefix = `IND ${i}`;
-            const candidateName = row[indPrefix];
-            const votesStr = row[`${indPrefix} VOTE`];
-
-            if (candidateName && votesStr) {
-              candidates.push({
-                party: "IND",
-                name: candidateName.trim(),
-                votes: parseInt(votesStr.replace(/,/g, ""), 10) || 0,
-                sex: row[`${indPrefix} SEX`] || "",
-                age: parseInt(row[`${indPrefix} AGE`], 10) || 0,
-              });
-            }
-          }
-
-          // Sort candidates by votes to find winner
-          candidates.sort((a, b) => b.votes - a.votes);
-
-          resultsMap.set(constituencyCode, {
-            constituencyCode,
-            constituencyName: row["PARLIAMENTARY CONSTITUENCY NAME"],
-            winningParty: row["WINNING PARTY"] || "",
-            totalValidVotes: parseInt(row["TOTAL VALID VOTES"].replace(/,/g, ""), 10) || 0,
-            totalElectorate: parseInt(row["TOTAL ELECTORATE"].replace(/,/g, ""), 10) || 0,
-            winningMajority: parseInt(row["WINNING MAJORITY"].replace(/,/g, ""), 10) || 0,
-            turnoutPercent: parseFloat(row["TURNOUT (%)"]) || 0,
-            candidates,
-          });
-        }
-
-        resolve(resultsMap);
-      })
-      .on("error", reject);
-  });
-}
-
-// Match MP to winning candidate by name similarity
-function findWinningCandidate(
-  mp: { name: string; party: string; constituency: string },
-  electionResult: ElectionResult
-): { votes: number; votePercentage: number } | null {
-  if (!electionResult || electionResult.candidates.length === 0) {
-    return null;
+    if (winnerVotes > 0) {
+      results.set(code, {
+        parliamentCode: code,
+        votesReceived: winnerVotes,
+        totalValidVotes,
+        majority,
+        turnoutPercent: Math.round(turnout * 100), // Store as integer (7652 = 76.52%)
+        votePercentage: Math.round(votePercentage * 100), // Store as integer
+      });
+    }
   }
 
-  // The winner is the first candidate (already sorted by votes)
-  const winner = electionResult.candidates[0];
-
-  // Calculate vote percentage
-  const votePercentage = (winner.votes / electionResult.totalValidVotes) * 100;
-
-  return {
-    votes: winner.votes,
-    votePercentage: Math.round(votePercentage * 100), // Store as integer (e.g., 5358 = 53.58%)
-  };
+  console.log(`✅ Parsed ${results.size} constituency results`);
+  return results;
 }
 
-// Main import function
-async function importElectionResults() {
-  console.log("Starting GE15 election results import...");
+function normalizeCode(code: string): string {
+  return code.replace(/\s+/g, '').replace(/\./g, '');
+}
 
-  // Parse CSV file
-  const electionResults = await parseElectionResults();
-  console.log(`Loaded election results for ${electionResults.size} constituencies`);
+function parseCSVLine(line: string): string[] {
+  const result: string[] = [];
+  let current = '';
+  let inQuotes = false;
 
-  // Fetch all MPs from database
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+
+    if (char === '"') {
+      inQuotes = !inQuotes;
+    } else if (char === ',' && !inQuotes) {
+      result.push(current.trim());
+      current = '';
+    } else {
+      current += char;
+    }
+  }
+  result.push(current.trim());
+  return result;
+}
+
+function findWinnerVotes(cols: string[], headers: string[]): number {
+  let maxVotes = 0;
+
+  // Check all party vote columns (BN VOTE, PH VOTE, PN VOTE, etc.)
+  for (let i = 0; i < headers.length; i++) {
+    if (headers[i].includes('VOTE') && !headers[i].includes('TOTAL') && !headers[i].includes('VALID')) {
+      const votes = parseInt(cols[i]?.replace(/,/g, '') || '0', 10);
+      if (votes > maxVotes) {
+        maxVotes = votes;
+      }
+    }
+  }
+
+  return maxVotes;
+}
+
+async function updateMPs(electionData: Map<string, ElectionData>) {
+  console.log("🔄 Updating MP records...");
+
   const allMps = await db.select().from(mps);
-  console.log(`Found ${allMps.length} MPs in database`);
-
-  let updatedCount = 0;
-  let notFoundCount = 0;
+  let updated = 0;
+  let notFound = 0;
 
   for (const mp of allMps) {
-    const normalizedCode = normalizeConstituencyCode(mp.parliamentCode);
-    const electionResult = electionResults.get(normalizedCode);
+    const code = normalizeCode(mp.parliamentCode);
+    const data = electionData.get(code);
 
-    if (!electionResult) {
-      console.warn(`No election result found for ${mp.name} (${mp.parliamentCode} - ${mp.constituency})`);
-      notFoundCount++;
+    if (!data) {
+      console.warn(`⚠️  No data for ${mp.name} (${mp.parliamentCode})`);
+      notFound++;
       continue;
     }
 
-    const winnerData = findWinningCandidate(mp, electionResult);
-
-    if (!winnerData) {
-      console.warn(`Could not find winner for ${mp.name} (${mp.constituency})`);
-      notFoundCount++;
-      continue;
-    }
-
-    // Update MP with election data
     await db
       .update(mps)
       .set({
-        electionVotesReceived: winnerData.votes,
-        electionTotalValidVotes: electionResult.totalValidVotes,
+        electionVotesReceived: data.votesReceived,
+        electionTotalValidVotes: data.totalValidVotes,
         electionYear: 2022,
-        electionMajority: electionResult.winningMajority,
-        electionTurnoutPercent: Math.round(electionResult.turnoutPercent * 100), // Store as integer
-        electionVotePercentage: winnerData.votePercentage,
+        electionMajority: data.majority,
+        electionTurnoutPercent: data.turnoutPercent,
+        electionVotePercentage: data.votePercentage,
       })
       .where(eq(mps.id, mp.id));
 
-    console.log(
-      `Updated ${mp.name} (${mp.constituency}): ${winnerData.votes.toLocaleString()} votes (${(winnerData.votePercentage / 100).toFixed(2)}%)`
-    );
-    updatedCount++;
+    console.log(`✓ ${mp.name}: ${data.votesReceived.toLocaleString()} votes (${(data.votePercentage / 100).toFixed(1)}%)`);
+    updated++;
   }
 
-  console.log(`\nImport complete!`);
-  console.log(`- Updated: ${updatedCount} MPs`);
-  console.log(`- Not found: ${notFoundCount} MPs`);
+  console.log(`\n✅ Import complete!`);
+  console.log(`- Updated: ${updated} MPs`);
+  console.log(`- Not found: ${notFound} MPs`);
 }
 
-// Run the import
-importElectionResults()
-  .then(() => {
-    console.log("Import completed successfully");
+async function main() {
+  try {
+    const electionData = await fetchElectionData();
+    await updateMPs(electionData);
     process.exit(0);
-  })
-  .catch((error) => {
-    console.error("Import failed:", error);
+  } catch (error) {
+    console.error("❌ Import failed:", error);
     process.exit(1);
-  });
+  }
+}
+
+main();
