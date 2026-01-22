@@ -4338,8 +4338,16 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       const { promisify } = await import('util');
       const execPromise = promisify(exec);
 
+      // Determine the correct command based on environment
+      const isDevelopment = process.env.NODE_ENV === 'development';
+      const command = isDevelopment
+        ? 'npx tsx scripts/import-election-results.ts'
+        : 'node dist/scripts/import-election-results.js';
+
+      console.log(`Running: ${command}`);
+
       // Run the import script
-      const { stdout, stderr } = await execPromise('npx tsx scripts/import-election-results.ts', {
+      const { stdout, stderr } = await execPromise(command, {
         cwd: process.cwd(),
         maxBuffer: 10 * 1024 * 1024, // 10MB buffer
       });
