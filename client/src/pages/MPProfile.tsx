@@ -869,6 +869,60 @@ export default function MPProfile() {
             </Card>
           </div>
 
+          {/* Election Results Section */}
+          {mp.electionVotesReceived && (
+            <Card className="border-purple-500/20">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                  {t('profile.electionResults')}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div>
+                  <p className="text-sm text-muted-foreground">{t('profile.votesReceived')}</p>
+                  <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">
+                    {mp.electionVotesReceived.toLocaleString()}
+                  </p>
+                  {mp.electionVotePercentage && (
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {(mp.electionVotePercentage / 100).toFixed(2)}% {t('profile.ofValidVotes')}
+                    </p>
+                  )}
+                </div>
+                <Separator />
+                {mp.electionMajority && (
+                  <>
+                    <div>
+                      <p className="text-sm text-muted-foreground">{t('profile.winningMajority')}</p>
+                      <p className="font-semibold">{mp.electionMajority.toLocaleString()}</p>
+                    </div>
+                    <Separator />
+                  </>
+                )}
+                {mp.electionTurnoutPercent && (
+                  <>
+                    <div>
+                      <p className="text-sm text-muted-foreground">{t('profile.voterTurnout')}</p>
+                      <p className="font-semibold">{(mp.electionTurnoutPercent / 100).toFixed(2)}%</p>
+                    </div>
+                    <Separator />
+                  </>
+                )}
+                {mp.electionTotalValidVotes && (
+                  <div>
+                    <p className="text-sm text-muted-foreground">{t('profile.totalValidVotes')}</p>
+                    <p className="font-semibold">{mp.electionTotalValidVotes.toLocaleString()}</p>
+                  </div>
+                )}
+                <Separator />
+                <div className="text-xs text-muted-foreground">
+                  {t('profile.electionYear')}: {mp.electionYear || 2022} (GE15)
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Contact Information Section */}
           {(mp.email || mp.telephone || mp.fax || mp.mobileNumber || mp.facebookUrl || mp.instagramUrl || mp.twitterUrl || mp.tiktokUrl || mp.socialMedia || mp.contactAddress || mp.serviceAddress) && (
             <Card>
