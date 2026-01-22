@@ -702,12 +702,15 @@ export default function Home() {
                         <p className="text-xs font-medium text-muted-foreground mb-1">Plus attendance-based:</p>
                         <ul className="text-xs text-blue-800 dark:text-blue-200 space-y-0.5">
                           <li>• Parliament sitting allowances (RM 400/day)</li>
-                          <li>• Government meeting allowances (RM 300/day)</li>
+                          <li>• Government meeting allowances (RM 300/day)**</li>
                         </ul>
                       </div>
                     </div>
                     <p className="text-xs text-blue-800 dark:text-blue-200 mt-2">
                       *Note: PM receives no salary. Other ministers have taken a 20% voluntary paycut.
+                    </p>
+                    <p className="text-xs text-blue-800 dark:text-blue-200">
+                      **Government meeting attendance data not yet available.
                     </p>
                     <p className="text-xs text-muted-foreground italic">
                       Calculated based on individual sworn-in dates and attendance records. Does not include periodic allowances (handphone, computer, attire purchases).
