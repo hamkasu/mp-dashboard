@@ -269,6 +269,15 @@ export const translations = {
       constituencyName: "Constituency Name",
       stateTerritory: "State/Territory",
 
+      // Election Results
+      electionResults: "Election Results (GE15)",
+      votesReceived: "Votes Received",
+      ofValidVotes: "of valid votes",
+      winningMajority: "Winning Majority",
+      voterTurnout: "Voter Turnout",
+      totalValidVotes: "Total Valid Votes",
+      electionYear: "Election Year",
+
       // Salary & Allowances
       salaryInformation: "Salary Information",
       monthlyAllowance: "Monthly Allowance",
@@ -960,6 +969,15 @@ export const translations = {
       constituencyDetails: "Butiran Kawasan",
       constituencyName: "Nama Kawasan",
       stateTerritory: "Negeri/Wilayah",
+
+      // Election Results
+      electionResults: "Keputusan Pilihan Raya (PRU15)",
+      votesReceived: "Undi Diterima",
+      ofValidVotes: "daripada undi sah",
+      winningMajority: "Majoriti Kemenangan",
+      voterTurnout: "Kadar Keluar Mengundi",
+      totalValidVotes: "Jumlah Undi Sah",
+      electionYear: "Tahun Pilihan Raya",
 
       // Salary & Allowances
       salaryInformation: "Maklumat Gaji",
