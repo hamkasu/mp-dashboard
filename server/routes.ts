@@ -4329,6 +4329,50 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
+  // Admin endpoint to import GE15 election results
+  app.post("/api/admin/import-election-results", requireAdmin, async (req, res) => {
+    try {
+      console.log("📊 Importing GE15 election results...");
+
+      const { exec } = await import('child_process');
+      const { promisify } = await import('util');
+      const execPromise = promisify(exec);
+
+      // Run the import script
+      const { stdout, stderr } = await execPromise('npx tsx scripts/import-election-results.ts', {
+        cwd: process.cwd(),
+        maxBuffer: 10 * 1024 * 1024, // 10MB buffer
+      });
+
+      console.log("Import script output:", stdout);
+      if (stderr) console.error("Import script stderr:", stderr);
+
+      // Parse the output to extract statistics
+      const updatedMatch = stdout.match(/Updated:\s*(\d+)/);
+      const notFoundMatch = stdout.match(/Not found:\s*(\d+)/);
+
+      const updatedCount = updatedMatch ? parseInt(updatedMatch[1], 10) : 0;
+      const notFoundCount = notFoundMatch ? parseInt(notFoundMatch[1], 10) : 0;
+
+      res.json({
+        success: true,
+        message: "Election results imported successfully",
+        results: {
+          updatedMps: updatedCount,
+          notFound: notFoundCount,
+          totalProcessed: updatedCount + notFoundCount,
+        },
+      });
+    } catch (error: any) {
+      console.error("Error importing election results:", error);
+      res.status(500).json({
+        error: "Failed to import election results",
+        details: error.message || String(error),
+        stderr: error.stderr,
+      });
+    }
+  });
+
   // Admin endpoint to re-extract Bills, Motions, and Questions from existing Hansard records
   app.post("/api/admin/reextract-activities", requireAdmin, async (req, res) => {
     try {

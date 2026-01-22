@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, Download, Trash2, AlertTriangle, CheckCircle2, RefreshCw, Upload, FileText, X, Database, Clock, History, Share2, Sparkles, StopCircle, Users, Edit, UserX } from "lucide-react";
+import { Loader2, Download, Trash2, AlertTriangle, CheckCircle2, RefreshCw, Upload, FileText, X, Database, Clock, History, Share2, Sparkles, StopCircle, Users, Edit, UserX, Vote } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { UnmatchedSpeakersManager } from "@/components/UnmatchedSpeakersManager";
@@ -367,6 +367,35 @@ export default function HansardAdmin() {
   const handleRefreshMpData = () => {
     if (confirm("This will recalculate all MP attendance, speech counts, and performance metrics from Hansard records. Continue?")) {
       refreshMpDataMutation.mutate();
+    }
+  };
+
+  // Import Election Results mutation
+  const importElectionResultsMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/admin/import-election-results");
+      return await res.json();
+    },
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/mps"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
+      toast({
+        title: "Success",
+        description: `Imported election results for ${data.results.updatedMps} MPs`,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to import election results",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleImportElectionResults = () => {
+    if (confirm("This will import GE15 (2022) election vote data for all MPs. The CSV file must be present in the project root. Continue?")) {
+      importElectionResultsMutation.mutate();
     }
   };
 
@@ -1409,6 +1438,55 @@ export default function HansardAdmin() {
                 <>
                   <Database className="mr-2 h-4 w-4" />
                   Refresh MP Data
+                </>
+              )}
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* Import Election Results Card */}
+        <Card className="border-purple-500">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Vote className="h-5 w-5" />
+              Import Election Results
+            </CardTitle>
+            <CardDescription>
+              Import GE15 (2022) election vote data for all MPs
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <p className="text-sm text-muted-foreground">
+                This will import election results from the GE15 CSV file (ge15_results.csv) in the project root and update all MP records with:
+              </p>
+              <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1 ml-2">
+                <li>Votes received</li>
+                <li>Vote percentage</li>
+                <li>Winning majority</li>
+                <li>Voter turnout</li>
+              </ul>
+              <Alert>
+                <AlertDescription>
+                  The CSV file must be present in the project root directory. Run this after the migration to populate election data.
+                </AlertDescription>
+              </Alert>
+            </div>
+            <Button
+              onClick={handleImportElectionResults}
+              disabled={importElectionResultsMutation.isPending}
+              className="w-full"
+              data-testid="button-import-election-results"
+            >
+              {importElectionResultsMutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Importing...
+                </>
+              ) : (
+                <>
+                  <Vote className="mr-2 h-4 w-4" />
+                  Import Election Data
                 </>
               )}
             </Button>
