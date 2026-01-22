@@ -13,6 +13,11 @@ export interface GrokReviewResult {
   generatedAt: Date;
 }
 
+export interface GrokComparisonResult {
+  comparison: string; // Markdown-formatted comparison analysis
+  generatedAt: Date;
+}
+
 /**
  * Analyze a PDF document using Grok AI
  * @param pdfText - Extracted text content from the PDF
@@ -112,6 +117,131 @@ Provide a detailed, insightful analysis following the structure outlined in your
   } catch (error: any) {
     console.error("[Grok] Error analyzing document:", error);
     throw new Error(`Failed to analyze document with Grok: ${error.message}`);
+  }
+}
+
+/**
+ * Compare two Members of Parliament using Grok AI
+ * @param mp1Card - First MP's report card data
+ * @param mp2Card - Second MP's report card data
+ * @returns Comprehensive comparison analysis
+ */
+export async function compareMPs(mp1Card: any, mp2Card: any): Promise<GrokComparisonResult> {
+  if (!GROK_API_KEY) {
+    throw new Error("GROK_API_KEY not configured. Please set the GROK_API_KEY environment variable.");
+  }
+
+  try {
+    const systemPrompt = `You are an expert political analyst specializing in Malaysian parliamentary affairs and Member of Parliament (MP) performance evaluation.
+
+When comparing two MPs, provide:
+1. **Performance Overview**: Overall grade and score comparison with context
+2. **Attendance & Participation**: Detailed comparison of attendance rates, speeches, questions asked, and bills raised
+3. **Conduct & Behavior**: Analysis of parliamentary conduct scores and any noted issues
+4. **Constituency Impact**: Comparison of their impact on their respective constituencies
+5. **Strengths & Weaknesses**: What each MP excels at and where they need improvement
+6. **Key Differences**: Highlight the most significant differences between the two
+7. **Overall Assessment**: Who performs better in which areas and why
+
+Be objective, fair, and data-driven. Focus on factual performance metrics while providing meaningful context and insights.`;
+
+    const mp1Summary = `
+**${mp1Card.mp.name}** (${mp1Card.mp.party})
+- Constituency: ${mp1Card.mp.constituency}, ${mp1Card.mp.state}
+- Overall Grade: ${mp1Card.grade}
+- Overall Score: ${mp1Card.overallScore}/100
+- Attendance: ${mp1Card.attendancePercentage}% (Score: ${mp1Card.attendanceScore})
+- Participation Score: ${mp1Card.participationScore}
+- Conduct Score: ${mp1Card.conductScore}
+- Constituency Impact Score: ${mp1Card.constituencyImpactScore}
+- Total Speeches: ${mp1Card.totalSpeeches}
+- Questions Asked: ${mp1Card.questionsAsked}
+- Bills Raised: ${mp1Card.billsRaised || 0}
+- Inappropriate Language Count: ${mp1Card.inappropriateLanguageCount || 0}
+${mp1Card.mp.title ? `- Title/Role: ${mp1Card.mp.title}` : ''}
+`;
+
+    const mp2Summary = `
+**${mp2Card.mp.name}** (${mp2Card.mp.party})
+- Constituency: ${mp2Card.mp.constituency}, ${mp2Card.mp.state}
+- Overall Grade: ${mp2Card.grade}
+- Overall Score: ${mp2Card.overallScore}/100
+- Attendance: ${mp2Card.attendancePercentage}% (Score: ${mp2Card.attendanceScore})
+- Participation Score: ${mp2Card.participationScore}
+- Conduct Score: ${mp2Card.conductScore}
+- Constituency Impact Score: ${mp2Card.constituencyImpactScore}
+- Total Speeches: ${mp2Card.totalSpeeches}
+- Questions Asked: ${mp2Card.questionsAsked}
+- Bills Raised: ${mp2Card.billsRaised || 0}
+- Inappropriate Language Count: ${mp2Card.inappropriateLanguageCount || 0}
+${mp2Card.mp.title ? `- Title/Role: ${mp2Card.mp.title}` : ''}
+`;
+
+    const userPrompt = `Please provide a comprehensive comparison of these two Malaysian Members of Parliament:
+
+**MP 1:**
+${mp1Summary}
+
+**MP 2:**
+${mp2Summary}
+
+**Scoring Methodology:**
+- Overall Score is calculated from: Attendance (25%), Participation (25%), Conduct (25%), Constituency Impact (25%)
+- Grades: A (90-100), B (80-89), C (70-79), D (60-69), F (<60)
+
+Provide a detailed, insightful comparison following the structure outlined in your instructions.`;
+
+    console.log(`[Grok] Comparing ${mp1Card.mp.name} vs ${mp2Card.mp.name}`);
+
+    const response = await fetch(`${GROK_BASE_URL}/chat/completions`, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${GROK_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: GROK_MODEL,
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt }
+        ],
+        temperature: 0.4,
+        max_tokens: 3000,
+        stream: false,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("[Grok] API error:", response.status, errorText);
+
+      if (response.status === 401) {
+        throw new Error("Invalid Grok API key. Please check your GROK_API_KEY configuration.");
+      } else if (response.status === 429) {
+        throw new Error("Grok API rate limit exceeded. Please try again later.");
+      } else if (response.status === 500) {
+        throw new Error("Grok API server error. Please try again later.");
+      }
+
+      throw new Error(`Grok API error: ${response.status} - ${errorText}`);
+    }
+
+    const data = await response.json();
+    const comparison = data.choices?.[0]?.message?.content;
+
+    if (!comparison) {
+      throw new Error("No content in Grok response");
+    }
+
+    console.log(`[Grok] Successfully generated comparison (${comparison.length} chars)`);
+
+    return {
+      comparison,
+      generatedAt: new Date(),
+    };
+  } catch (error: any) {
+    console.error("[Grok] Error comparing MPs:", error);
+    throw new Error(`Failed to compare MPs with Grok: ${error.message}`);
   }
 }
 
