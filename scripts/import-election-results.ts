@@ -3,7 +3,7 @@
  * Fetches data from Tindak Malaysia's GitHub and updates MP records
  */
 
-import { db } from "../db";
+import { db } from "../server/db";
 import { mps } from "../shared/schema";
 import { eq } from "drizzle-orm";
 
