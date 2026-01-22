@@ -4336,15 +4336,26 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
 
       const { exec } = await import('child_process');
       const { promisify } = await import('util');
+      const { existsSync } = await import('fs');
+      const { join } = await import('path');
       const execPromise = promisify(exec);
 
-      // Determine the correct command based on environment
-      const isDevelopment = process.env.NODE_ENV === 'development';
-      const command = isDevelopment
-        ? 'npx tsx scripts/import-election-results.ts'
-        : 'node dist/scripts/import-election-results.js';
+      // Check which file exists to determine the correct command
+      const compiledScript = join(process.cwd(), 'dist/scripts/import-election-results.js');
+      const sourceScript = join(process.cwd(), 'scripts/import-election-results.ts');
 
-      console.log(`Running: ${command}`);
+      const useCompiled = existsSync(compiledScript);
+      const command = useCompiled
+        ? 'node dist/scripts/import-election-results.js'
+        : existsSync(sourceScript)
+          ? 'npx tsx scripts/import-election-results.ts'
+          : null;
+
+      if (!command) {
+        throw new Error('Import script not found in either dist/scripts/ or scripts/ directory');
+      }
+
+      console.log(`Running: ${command} (${useCompiled ? 'compiled' : 'source'})`);
 
       // Run the import script
       const { stdout, stderr } = await execPromise(command, {
