@@ -1,15 +1,14 @@
 /**
  * Import GE15 (2022) Election Results
- * This script imports election vote data from the Tindak Malaysia CSV
+ * This script imports election vote data from Tindak Malaysia's GitHub repository
  * and updates MP records with their election performance metrics.
  */
 
 import { db } from "../db";
 import { mps } from "../shared/schema";
 import { eq, sql } from "drizzle-orm";
-import fs from "fs";
-import path from "path";
 import csvParser from "csv-parser";
+import { Readable } from "stream";
 
 interface ElectionResult {
   constituencyCode: string;
@@ -28,20 +27,38 @@ interface ElectionResult {
   }>;
 }
 
+// URL to the official GE15 results CSV from Tindak Malaysia
+const GE15_CSV_URL = "https://raw.githubusercontent.com/TindakMalaysia/HISTORICAL-ELECTION-RESULTS/main/2022-ELECTION-RESULTS/MALAYSIA_2022_PARLIAMENT_RESULTS.csv";
+
 // Normalize constituency code (remove spaces and dots)
 function normalizeConstituencyCode(code: string): string {
   return code.replace(/\s+/g, "").replace(/\./g, "");
 }
 
+// Fetch CSV from URL and convert to stream
+async function fetchCsvStream(): Promise<Readable> {
+  console.log(`Fetching election data from: ${GE15_CSV_URL}`);
+  const response = await fetch(GE15_CSV_URL);
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch CSV: ${response.status} ${response.statusText}`);
+  }
+
+  const text = await response.text();
+  return Readable.from([text]);
+}
+
 // Parse CSV and extract election results
 async function parseElectionResults(): Promise<Map<string, ElectionResult>> {
   const resultsMap = new Map<string, ElectionResult>();
-  const csvFilePath = path.join(__dirname, "..", "ge15_results.csv");
+
+  // Fetch CSV from online source
+  const csvStream = await fetchCsvStream();
 
   return new Promise((resolve, reject) => {
     const results: any[] = [];
 
-    fs.createReadStream(csvFilePath)
+    csvStream
       .pipe(csvParser())
       .on("data", (row) => {
         results.push(row);

@@ -22,7 +22,21 @@ The import script adds the following election metrics to each MP's record:
 
 ## How to Import
 
-### Step 1: Run the Migration
+### Method 1: Via Admin Dashboard (Recommended)
+
+The easiest way to import election data is through the Hansard Admin interface:
+
+1. Navigate to `/hansard-admin` (requires admin login)
+2. Find the "Import Election Results" card (purple border)
+3. Click "Import Election Data" button
+4. Confirm the dialog prompt
+5. Wait for the success notification
+
+The data will be automatically fetched from Tindak Malaysia's GitHub repository and imported.
+
+### Method 2: Via Command Line
+
+#### Step 1: Run the Migration
 
 First, apply the database schema changes:
 
@@ -36,15 +50,7 @@ Or manually run the migration:
 psql $DATABASE_URL -f migrations/0018_add_election_results_columns.sql
 ```
 
-### Step 2: Download the CSV (if not already done)
-
-The GE15 results CSV should already be in the project root as `ge15_results.csv`. If not, download it:
-
-```bash
-curl -o ge15_results.csv "https://raw.githubusercontent.com/TindakMalaysia/HISTORICAL-ELECTION-RESULTS/main/2022-ELECTION-RESULTS/MALAYSIA_2022_PARLIAMENT_RESULTS.csv"
-```
-
-### Step 3: Run the Import Script
+#### Step 2: Run the Import Script
 
 Execute the import script to populate the database:
 
@@ -59,12 +65,13 @@ npx tsx scripts/import-election-results.ts
 ```
 
 The script will:
-1. Parse the GE15 results CSV file
-2. Match constituencies to MPs using parliament codes
-3. Extract vote counts and election metrics
-4. Update each MP's record with their election performance data
+1. Fetch the GE15 results CSV from Tindak Malaysia's GitHub repository
+2. Parse the CSV data
+3. Match constituencies to MPs using parliament codes
+4. Extract vote counts and election metrics
+5. Update each MP's record with their election performance data
 
-### Step 4: Verify the Import
+#### Step 3: Verify the Import
 
 Check that the data was imported successfully:
 
@@ -100,10 +107,22 @@ After import, election results will appear on:
 
 ### No election data showing up
 
-1. Check if the migration ran successfully
-2. Verify the CSV file exists at `/home/user/mp-dashboard/ge15_results.csv`
-3. Check the import script logs for any errors
-4. Ensure constituency codes match between the database and CSV
+1. Check if the migration ran successfully:
+   ```sql
+   SELECT column_name FROM information_schema.columns
+   WHERE table_name = 'mps' AND column_name LIKE 'election_%';
+   ```
+2. Verify the import script ran without errors (check logs)
+3. Ensure you have internet connectivity (script fetches data from GitHub)
+4. Check that constituency codes match between the database and CSV
+
+### Network errors during import
+
+If the script fails to fetch the CSV from GitHub:
+- Check your internet connection
+- Verify GitHub is accessible from your server
+- The source URL is: https://raw.githubusercontent.com/TindakMalaysia/HISTORICAL-ELECTION-RESULTS/main/2022-ELECTION-RESULTS/MALAYSIA_2022_PARLIAMENT_RESULTS.csv
+- If GitHub is blocked, you may need to use a proxy or download the file manually
 
 ### Constituency code mismatches
 

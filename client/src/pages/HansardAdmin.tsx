@@ -394,7 +394,7 @@ export default function HansardAdmin() {
   });
 
   const handleImportElectionResults = () => {
-    if (confirm("This will import GE15 (2022) election vote data for all MPs. The CSV file must be present in the project root. Continue?")) {
+    if (confirm("This will fetch GE15 (2022) election vote data from Tindak Malaysia's GitHub repository and update all MPs. Continue?")) {
       importElectionResultsMutation.mutate();
     }
   };
@@ -1458,7 +1458,7 @@ export default function HansardAdmin() {
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <p className="text-sm text-muted-foreground">
-                This will import election results from the GE15 CSV file (ge15_results.csv) in the project root and update all MP records with:
+                This will fetch official GE15 (2022) election results from Tindak Malaysia's GitHub repository and update all MP records with:
               </p>
               <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1 ml-2">
                 <li>Votes received</li>
@@ -1468,7 +1468,7 @@ export default function HansardAdmin() {
               </ul>
               <Alert>
                 <AlertDescription>
-                  The CSV file must be present in the project root directory. Run this after the migration to populate election data.
+                  Data is fetched directly from the official source. Run this after the migration to populate election data.
                 </AlertDescription>
               </Alert>
             </div>
