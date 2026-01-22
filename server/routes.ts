@@ -7291,12 +7291,12 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
 
       console.log(`[Grok Review] Extracted ${pdfText.length} characters from PDF`);
 
-      // Generate review using Grok
+      // Generate review using Gemini via OpenRouter
       const grokService = await import("./services/grok.js");
 
       if (!grokService.isGrokConfigured()) {
         return res.status(503).json({
-          error: "Grok AI is not configured. Please set GROK_API_KEY environment variable."
+          error: "AI service is not configured. Please set OPENROUTER_API_KEY environment variable."
         });
       }
 
@@ -8411,15 +8411,15 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         return res.status(404).json({ error: "One or both MPs not found" });
       }
 
-      // Check if Grok is configured
+      // Check if AI service is configured
       const grokService = await import("./services/grok.js");
       if (!grokService.isGrokConfigured()) {
         return res.status(503).json({
-          error: "Grok AI is not configured. Please set GROK_API_KEY environment variable."
+          error: "AI service is not configured. Please set OPENROUTER_API_KEY environment variable."
         });
       }
 
-      // Generate comparison using Grok
+      // Generate comparison using Gemini via OpenRouter
       console.log(`[Grok Compare] Comparing ${mp1Card.mp.name} vs ${mp2Card.mp.name}`);
 
       const comparisonResult = await grokService.compareMPs(mp1Card, mp2Card);

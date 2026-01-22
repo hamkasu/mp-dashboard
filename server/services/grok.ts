@@ -1,12 +1,12 @@
 /**
- * Grok AI Service for PDF Document Analysis
- * Integration: xai_grok
+ * Grok AI Service for PDF Document Analysis and MP Comparison
+ * Integration: OpenRouter with Gemini 2.0 Flash
  */
 
 // API Configuration
-const GROK_API_KEY = process.env.GROK_API_KEY;
-const GROK_BASE_URL = "https://api.x.ai/v1";
-const GROK_MODEL = "grok-beta"; // Grok's latest model
+const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
+const OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1";
+const GEMINI_MODEL = "google/gemini-2.0-flash-exp:free"; // Gemini 2.0 Flash (free tier)
 
 export interface GrokReviewResult {
   review: string; // Markdown-formatted comprehensive review
@@ -30,8 +30,8 @@ export async function analyzeDocumentWithGrok(
   documentType: string = "Parliamentary Document",
   filename: string = "document.pdf"
 ): Promise<GrokReviewResult> {
-  if (!GROK_API_KEY) {
-    throw new Error("GROK_API_KEY not configured. Please set the GROK_API_KEY environment variable.");
+  if (!OPENROUTER_API_KEY) {
+    throw new Error("OPENROUTER_API_KEY not configured. Please set the OPENROUTER_API_KEY environment variable.");
   }
 
   try {
@@ -67,21 +67,22 @@ Provide a detailed, insightful analysis following the structure outlined in your
 
     console.log(`[Grok] Analyzing ${documentType} (${pdfText.length} chars, ${truncatedText.length} sent)`);
 
-    const response = await fetch(`${GROK_BASE_URL}/chat/completions`, {
+    const response = await fetch(`${OPENROUTER_BASE_URL}/chat/completions`, {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${GROK_API_KEY}`,
+        "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
         "Content-Type": "application/json",
+        "HTTP-Referer": "https://mp-dashboard.com", // Optional, for rankings
+        "X-Title": "MP Dashboard", // Optional, for rankings
       },
       body: JSON.stringify({
-        model: GROK_MODEL,
+        model: GEMINI_MODEL,
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt }
         ],
         temperature: 0.3,
         max_tokens: 4000,
-        stream: false,
       }),
     });
 
@@ -91,14 +92,14 @@ Provide a detailed, insightful analysis following the structure outlined in your
 
       // Provide more helpful error messages
       if (response.status === 401) {
-        throw new Error("Invalid Grok API key. Please check your GROK_API_KEY configuration.");
+        throw new Error("Invalid OpenRouter API key. Please check your OPENROUTER_API_KEY configuration.");
       } else if (response.status === 429) {
-        throw new Error("Grok API rate limit exceeded. Please try again later.");
+        throw new Error("OpenRouter API rate limit exceeded. Please try again later.");
       } else if (response.status === 500) {
-        throw new Error("Grok API server error. Please try again later.");
+        throw new Error("OpenRouter API server error. Please try again later.");
       }
 
-      throw new Error(`Grok API error: ${response.status} - ${errorText}`);
+      throw new Error(`OpenRouter API error: ${response.status} - ${errorText}`);
     }
 
     const data = await response.json();
@@ -116,7 +117,7 @@ Provide a detailed, insightful analysis following the structure outlined in your
     };
   } catch (error: any) {
     console.error("[Grok] Error analyzing document:", error);
-    throw new Error(`Failed to analyze document with Grok: ${error.message}`);
+    throw new Error(`Failed to analyze document: ${error.message}`);
   }
 }
 
@@ -127,8 +128,8 @@ Provide a detailed, insightful analysis following the structure outlined in your
  * @returns Comprehensive comparison analysis
  */
 export async function compareMPs(mp1Card: any, mp2Card: any): Promise<GrokComparisonResult> {
-  if (!GROK_API_KEY) {
-    throw new Error("GROK_API_KEY not configured. Please set the GROK_API_KEY environment variable.");
+  if (!OPENROUTER_API_KEY) {
+    throw new Error("OPENROUTER_API_KEY not configured. Please set the OPENROUTER_API_KEY environment variable.");
   }
 
   try {
@@ -193,21 +194,22 @@ Provide a detailed, insightful comparison following the structure outlined in yo
 
     console.log(`[Grok] Comparing ${mp1Card.mp.name} vs ${mp2Card.mp.name}`);
 
-    const response = await fetch(`${GROK_BASE_URL}/chat/completions`, {
+    const response = await fetch(`${OPENROUTER_BASE_URL}/chat/completions`, {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${GROK_API_KEY}`,
+        "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
         "Content-Type": "application/json",
+        "HTTP-Referer": "https://mp-dashboard.com", // Optional, for rankings
+        "X-Title": "MP Dashboard", // Optional, for rankings
       },
       body: JSON.stringify({
-        model: GROK_MODEL,
+        model: GEMINI_MODEL,
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt }
         ],
         temperature: 0.4,
         max_tokens: 3000,
-        stream: false,
       }),
     });
 
@@ -216,21 +218,21 @@ Provide a detailed, insightful comparison following the structure outlined in yo
       console.error("[Grok] API error:", response.status, errorText);
 
       if (response.status === 401) {
-        throw new Error("Invalid Grok API key. Please check your GROK_API_KEY configuration.");
+        throw new Error("Invalid OpenRouter API key. Please check your OPENROUTER_API_KEY configuration.");
       } else if (response.status === 429) {
-        throw new Error("Grok API rate limit exceeded. Please try again later.");
+        throw new Error("OpenRouter API rate limit exceeded. Please try again later.");
       } else if (response.status === 500) {
-        throw new Error("Grok API server error. Please try again later.");
+        throw new Error("OpenRouter API server error. Please try again later.");
       }
 
-      throw new Error(`Grok API error: ${response.status} - ${errorText}`);
+      throw new Error(`OpenRouter API error: ${response.status} - ${errorText}`);
     }
 
     const data = await response.json();
     const comparison = data.choices?.[0]?.message?.content;
 
     if (!comparison) {
-      throw new Error("No content in Grok response");
+      throw new Error("No content in response");
     }
 
     console.log(`[Grok] Successfully generated comparison (${comparison.length} chars)`);
@@ -241,23 +243,23 @@ Provide a detailed, insightful comparison following the structure outlined in yo
     };
   } catch (error: any) {
     console.error("[Grok] Error comparing MPs:", error);
-    throw new Error(`Failed to compare MPs with Grok: ${error.message}`);
+    throw new Error(`Failed to compare MPs: ${error.message}`);
   }
 }
 
 /**
- * Check if Grok API is properly configured
+ * Check if OpenRouter API is properly configured
  */
 export function isGrokConfigured(): boolean {
-  return !!GROK_API_KEY;
+  return !!OPENROUTER_API_KEY;
 }
 
 /**
- * Get Grok configuration status for debugging
+ * Get configuration status for debugging
  */
 export function getGrokStatus(): { configured: boolean; model: string } {
   return {
     configured: isGrokConfigured(),
-    model: GROK_MODEL,
+    model: GEMINI_MODEL,
   };
 }
