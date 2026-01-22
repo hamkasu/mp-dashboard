@@ -62,6 +62,13 @@ export const mps = pgTable("mps", {
   // By-election tracking
   byElectionDate: timestamp("by_election_date"),
   byElectionNotes: text("by_election_notes"),
+  // Election results tracking
+  electionVotesReceived: integer("election_votes_received"),
+  electionTotalValidVotes: integer("election_total_valid_votes"),
+  electionYear: integer("election_year").default(2022),
+  electionMajority: integer("election_majority"),
+  electionTurnoutPercent: integer("election_turnout_percent"), // percentage * 100 (e.g. 7652 = 76.52%)
+  electionVotePercentage: integer("election_vote_percentage"), // percentage * 100 (e.g. 5358 = 53.58%)
 });
 
 export const insertMpSchema = createInsertSchema(mps).omit({

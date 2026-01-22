@@ -34,7 +34,8 @@
     "extract-all-questions": "tsx scripts/extract-all-questions.ts",
     "count-questions-by-mp": "tsx scripts/count-questions-by-mp.ts",
     "update-deceased-mp": "tsx scripts/update-deceased-mp.ts",
-    "regenerate-report-cards": "tsx scripts/regenerate-report-cards.ts"
+    "regenerate-report-cards": "tsx scripts/regenerate-report-cards.ts",
+    "import-election-results": "tsx scripts/import-election-results.ts"
   },
   "dependencies": {
     "@google/genai": "^1.30.0",
@@ -84,6 +85,7 @@
     "compression": "^1.8.1",
     "connect-pg-simple": "^10.0.0",
     "cors": "^2.8.5",
+    "csv-parser": "^3.0.0",
     "date-fns": "^3.6.0",
     "drizzle-kit": "^0.31.6",
     "drizzle-orm": "^0.39.1",

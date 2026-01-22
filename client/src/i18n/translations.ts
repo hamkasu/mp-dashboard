@@ -154,6 +154,11 @@ export const translations = {
       more: "more",
       inappropriateInstances: "inappropriate language instances",
       memberOfParliament: "Member of Parliament",
+      votes: "votes",
+      receivedIn: "Received in",
+      election: "election",
+      majority: "Majority",
+      turnout: "Turnout",
     },
 
     // Home Page
@@ -841,6 +846,11 @@ export const translations = {
       more: "lagi",
       inappropriateInstances: "insiden bahasa tidak sesuai",
       memberOfParliament: "Ahli Parlimen",
+      votes: "undi",
+      receivedIn: "Diterima dalam",
+      election: "pilihan raya",
+      majority: "Majoriti",
+      turnout: "Kadar keluar mengundi",
     },
 
     // Home Page
