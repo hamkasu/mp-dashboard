@@ -117,6 +117,8 @@ export const translations = {
       sortMostQuestions: "Most Questions Raised",
       sortNoQuestions: "No Questions Raised",
       sortInappropriateLanguage: "Inappropriate Language",
+      sortHighestMajority: "Highest Majority",
+      sortSmallestMajority: "Smallest Majority",
       cabinetPosition: "Cabinet Position",
       allMPs: "All MPs",
       cabinetMembers: "All Cabinet Members",

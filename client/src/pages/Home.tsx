@@ -49,7 +49,7 @@ interface PaginatedMpsResponse {
   };
 }
 
-type SortOption = "name" | "attendance-best" | "attendance-worst" | "speeches-most" | "speeches-fewest" | "poverty-highest" | "poverty-lowest" | "bills-raised" | "oral-questions" | "inappropriate-language";
+type SortOption = "name" | "attendance-best" | "attendance-worst" | "speeches-most" | "speeches-fewest" | "poverty-highest" | "poverty-lowest" | "bills-raised" | "oral-questions" | "inappropriate-language" | "majority-highest" | "majority-smallest";
 type StatusFilter = "all" | "active" | "former";
 type CabinetFilter = "all" | "ministers" | "deputy-ministers";
 
@@ -76,7 +76,7 @@ export default function Home() {
   const ITEMS_PER_PAGE = 20;
 
   // Special sort modes require all MPs for client-side filtering/sorting
-  const SPECIAL_SORT_MODES: SortOption[] = ["bills-raised", "oral-questions", "inappropriate-language", "poverty-highest", "poverty-lowest"];
+  const SPECIAL_SORT_MODES: SortOption[] = ["bills-raised", "oral-questions", "inappropriate-language", "poverty-highest", "poverty-lowest", "majority-highest", "majority-smallest"];
   const isSpecialSortMode = SPECIAL_SORT_MODES.includes(sortBy);
 
   // Build query string for paginated API
@@ -341,6 +341,12 @@ export default function Home() {
         const countA = inappropriateLanguageByMpId.get(a.id)?.count ?? 0;
         const countB = inappropriateLanguageByMpId.get(b.id)?.count ?? 0;
         return countB - countA;
+      });
+    } else if (sortBy === "majority-highest" || sortBy === "majority-smallest") {
+      result.sort((a, b) => {
+        const majorityA = a.electionMajority ?? (sortBy === "majority-highest" ? -1 : Infinity);
+        const majorityB = b.electionMajority ?? (sortBy === "majority-highest" ? -1 : Infinity);
+        return sortBy === "majority-highest" ? majorityB - majorityA : majorityA - majorityB;
       });
     }
 
