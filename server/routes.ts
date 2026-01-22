@@ -8387,6 +8387,56 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
+  // Compare two MPs using Grok AI
+  app.post("/api/report-cards/compare-grok", async (req, res) => {
+    try {
+      const { mp1Id, mp2Id } = req.body;
+
+      if (!mp1Id || !mp2Id) {
+        return res.status(400).json({ error: "Both MP IDs are required" });
+      }
+
+      if (mp1Id === mp2Id) {
+        return res.status(400).json({ error: "Cannot compare an MP with themselves" });
+      }
+
+      // Fetch report cards for both MPs
+      const { getReportCardsWithDetails } = await import("./services/report-card-service");
+      const allCards = await getReportCardsWithDetails();
+
+      const mp1Card = allCards.find(card => card.mpId === mp1Id);
+      const mp2Card = allCards.find(card => card.mpId === mp2Id);
+
+      if (!mp1Card || !mp2Card) {
+        return res.status(404).json({ error: "One or both MPs not found" });
+      }
+
+      // Check if Grok is configured
+      const grokService = await import("./services/grok.js");
+      if (!grokService.isGrokConfigured()) {
+        return res.status(503).json({
+          error: "Grok AI is not configured. Please set GROK_API_KEY environment variable."
+        });
+      }
+
+      // Generate comparison using Grok
+      console.log(`[Grok Compare] Comparing ${mp1Card.mp.name} vs ${mp2Card.mp.name}`);
+
+      const comparisonResult = await grokService.compareMPs(mp1Card, mp2Card);
+
+      res.json({
+        comparison: comparisonResult.comparison,
+        generatedAt: comparisonResult.generatedAt,
+      });
+    } catch (error: any) {
+      console.error("Error comparing MPs with Grok:", error);
+      res.status(500).json({
+        error: "Failed to compare MPs",
+        details: error.message
+      });
+    }
+  });
+
   // Admin: Trigger manual report card update
   app.post("/api/admin/report-cards/update", requireAdmin, mutationRateLimit, auditMiddleware('report-card-update'), async (req, res) => {
     try {
