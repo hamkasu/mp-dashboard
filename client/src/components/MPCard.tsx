@@ -2,7 +2,7 @@
  * Copyright by Calmic Sdn Bhd
  */
 
-import { MapPin, UserCircle, Wallet, Calendar, Mic, TrendingDown, ScrollText, MessageSquareWarning, HelpCircle, MessageSquare } from "lucide-react";
+import { MapPin, UserCircle, Wallet, Calendar, Mic, TrendingDown, ScrollText, MessageSquareWarning, HelpCircle, MessageSquare, Vote } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -172,6 +172,31 @@ export function MPCard({ mp, bills, oralQuestions, languageStats }: MPCardProps)
                 </div>
               </div>
             </div>
+
+            {mp.electionVotesReceived && (
+              <div className="flex items-start gap-2">
+                <Vote className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-purple-600 dark:text-purple-400" data-testid={`text-election-votes-${mp.id}`}>
+                    {mp.electionVotesReceived.toLocaleString()} {t('mpCard.votes')}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {t('mpCard.receivedIn')} {mp.electionYear || 2022} {t('mpCard.election')}
+                    {mp.electionVotePercentage && ` (${(mp.electionVotePercentage / 100).toFixed(1)}%)`}
+                  </p>
+                  {mp.electionMajority && (
+                    <p className="text-xs text-purple-600 dark:text-purple-400 mt-0.5">
+                      {t('mpCard.majority')}: {mp.electionMajority.toLocaleString()} {t('mpCard.votes')}
+                    </p>
+                  )}
+                  {mp.electionTurnoutPercent && (
+                    <p className="text-xs text-muted-foreground">
+                      {t('mpCard.turnout')}: {(mp.electionTurnoutPercent / 100).toFixed(1)}%
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
 
             <div className="flex items-start gap-2">
               <Wallet className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
