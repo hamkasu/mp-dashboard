@@ -612,22 +612,26 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         const DEPUTY_PRIME_MINISTER_SALARY = 18168.15;
         const MINISTER_SALARY = 14907.20;
         const DEPUTY_MINISTER_SALARY = 10847.65;
+        const PARLIAMENTARY_SECRETARY_SALARY = 7187.40;
 
         const baseMonthlySalary = DEWAN_RAKYAT_SALARY;
 
         // Calculate ministerial salary based on role
+        // Check specific positions (order matters - check more specific first)
         let ministerialSalary = 0;
         if (mp.role) {
           const roleLower = mp.role.toLowerCase();
-          if (roleLower.includes("deputy prime minister") || roleLower.includes("timbalan perdana menteri")) {
+
+          if (roleLower.includes("prime minister") && !roleLower.includes("deputy")) {
+            ministerialSalary = 0; // PM takes no ministerial salary
+          } else if (roleLower.includes("deputy prime minister") || roleLower.includes("timbalan perdana menteri")) {
             ministerialSalary = DEPUTY_PRIME_MINISTER_SALARY;
           } else if (roleLower.includes("deputy minister") || roleLower.includes("timbalan menteri")) {
             ministerialSalary = DEPUTY_MINISTER_SALARY;
           } else if (roleLower.includes("minister") || roleLower.includes("menteri")) {
-            // Minister but not Prime Minister (PM takes no salary) or Deputy
-            if (!roleLower.includes("prime minister") || roleLower.includes("deputy")) {
-              ministerialSalary = MINISTER_SALARY;
-            }
+            ministerialSalary = MINISTER_SALARY;
+          } else if (roleLower.includes("parliamentary secretary") || roleLower.includes("setiausaha parlimen")) {
+            ministerialSalary = PARLIAMENTARY_SECRETARY_SALARY;
           }
         }
 
