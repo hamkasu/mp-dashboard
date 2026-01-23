@@ -7,7 +7,7 @@ import { createServer } from "http";
 import compression from "compression";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
-import { startHansardCron } from "./hansard-cron";
+import { startHansardCronWithRecovery } from "./hansard-cron";
 import { scheduleParliamentaryAnswersSync } from "./parliamentary-answers-cron";
 import { startReportCardCron } from "./report-card-cron";
 import { trackVisitorAnalytics } from "./analytics-middleware";
@@ -198,8 +198,8 @@ server.listen({
 
   log(`App fully initialized`);
 
-  // Start the daily Hansard sync cron job
-  startHansardCron();
+  // Start the daily Hansard sync cron job with startup recovery
+  await startHansardCronWithRecovery();
 
   // Start the daily Parliamentary Answers sync cron job
   scheduleParliamentaryAnswersSync();
