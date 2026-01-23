@@ -4245,11 +4245,12 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   app.post("/api/admin/trigger-hansard-check", requireAdmin, async (req, res) => {
     try {
       console.log("Manual Hansard sync triggered via API...");
-      const { addSyncLog } = await import('./hansard-cron');
+      const { addSyncLog, persistSyncLogToDb } = await import('./hansard-cron');
       const result = await runHansardSync({ triggeredBy: 'manual' });
 
-      // Log the result
+      // Log the result (both in-memory and database)
       addSyncLog(result);
+      await persistSyncLogToDb(result);
 
       res.json({
         message: "Hansard sync completed",
@@ -4269,9 +4270,9 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     } catch (error: any) {
       console.error("Error triggering Hansard sync:", error);
       // Log failed sync attempt
-      const { addSyncLog } = await import('./hansard-cron');
-      addSyncLog({
-        triggeredBy: 'manual',
+      const { addSyncLog, persistSyncLogToDb } = await import('./hansard-cron');
+      const failedResult = {
+        triggeredBy: 'manual' as 'manual',
         startTime: new Date(),
         endTime: new Date(),
         durationMs: 0,
@@ -4280,7 +4281,9 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         recordsInserted: 0,
         recordsSkipped: 0,
         errors: [{ sessionNumber: 'N/A', error: error.message || String(error) }]
-      });
+      };
+      addSyncLog(failedResult);
+      await persistSyncLogToDb(failedResult);
       res.status(500).json({ error: "Failed to trigger Hansard sync", details: String(error) });
     }
   });
@@ -4288,14 +4291,38 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   // Admin endpoint to get Hansard sync logs
   app.get("/api/admin/hansard-sync-logs", requireAdmin, async (req, res) => {
     try {
-      const { getSyncLogs, getLatestSyncLog } = await import('./hansard-cron');
-      const logs = getSyncLogs();
-      const latest = getLatestSyncLog();
+      const { getSyncLogs, getLatestSyncLog, getLastSyncFromDb } = await import('./hansard-cron');
+      const inMemoryLogs = getSyncLogs();
+      const latestInMemory = getLatestSyncLog();
+      const lastFromDb = await getLastSyncFromDb();
+
+      // Also fetch recent logs from database (last 50)
+      let dbLogs = [];
+      try {
+        const { desc } = await import('drizzle-orm');
+        const { hansardSyncLogs } = await import('@shared/schema');
+        if (db) {
+          dbLogs = await db
+            .select()
+            .from(hansardSyncLogs)
+            .orderBy(desc(hansardSyncLogs.startedAt))
+            .limit(50);
+        }
+      } catch (dbError) {
+        console.error("Error fetching logs from database:", dbError);
+      }
 
       res.json({
-        totalLogs: logs.length,
-        latestSync: latest,
-        logs: logs
+        inMemory: {
+          totalLogs: inMemoryLogs.length,
+          latestSync: latestInMemory,
+          logs: inMemoryLogs
+        },
+        database: {
+          totalLogs: dbLogs.length,
+          latestSync: lastFromDb,
+          logs: dbLogs
+        }
       });
     } catch (error) {
       console.error("Error fetching sync logs:", error);

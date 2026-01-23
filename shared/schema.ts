@@ -1137,3 +1137,25 @@ export type MpContactMessage = typeof mpContactMessages.$inferSelect;
 export type MpContactMessageWithMp = MpContactMessage & {
   mp: Mp;
 };
+
+// Hansard Sync Logs table for tracking automated sync operations
+export const hansardSyncLogs = pgTable("hansard_sync_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  triggeredBy: text("triggered_by").notNull(), // 'manual', 'scheduled', 'startup-recovery'
+  startedAt: timestamp("started_at").notNull(),
+  completedAt: timestamp("completed_at"),
+  durationMs: integer("duration_ms"),
+  lastKnownSession: text("last_known_session"),
+  recordsFound: integer("records_found").default(0),
+  recordsInserted: integer("records_inserted").default(0),
+  recordsSkipped: integer("records_skipped").default(0),
+  errors: jsonb("errors").$type<Array<{ sessionNumber: string; error: string }>>(),
+  success: boolean("success").default(true),
+});
+
+export const insertHansardSyncLogSchema = createInsertSchema(hansardSyncLogs).omit({
+  id: true,
+});
+
+export type InsertHansardSyncLog = z.infer<typeof insertHansardSyncLogSchema>;
+export type HansardSyncLog = typeof hansardSyncLogs.$inferSelect;
