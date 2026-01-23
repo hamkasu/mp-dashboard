@@ -111,8 +111,9 @@ export function HansardAnalysisDialog({ hansardRecord, trigger }: HansardAnalysi
   const filteredMps = (() => {
     if (!mps) return [];
 
+    // Only show MPs who spoke in this session
     if (!selectedHansard?.speakers || selectedHansard.speakers.length === 0) {
-      return mps;
+      return [];
     }
 
     const speakerMpIds = selectedHansard.speakers
@@ -120,12 +121,10 @@ export function HansardAnalysisDialog({ hansardRecord, trigger }: HansardAnalysi
       .map(speaker => speaker.mpId);
 
     if (speakerMpIds.length === 0) {
-      return mps;
+      return [];
     }
 
-    const filtered = mps.filter(mp => speakerMpIds.includes(mp.id));
-
-    return filtered.length > 0 ? filtered : mps;
+    return mps.filter(mp => speakerMpIds.includes(mp.id));
   })();
 
   const analyzeMutation = useMutation({
