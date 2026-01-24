@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, Download, Trash2, AlertTriangle, CheckCircle2, RefreshCw, Upload, FileText, X, Database, Clock, History, Share2, Sparkles, StopCircle, Users, Edit, UserX, Vote } from "lucide-react";
+import { Loader2, Download, Trash2, AlertTriangle, CheckCircle2, RefreshCw, Upload, FileText, X, Database, Clock, History, Share2, Sparkles, StopCircle, Users, Edit, UserX, Vote, DollarSign } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { UnmatchedSpeakersManager } from "@/components/UnmatchedSpeakersManager";
@@ -136,6 +136,28 @@ export default function HansardAdmin() {
   // Fetch all MPs for status update
   const { data: allMps = [] } = useQuery<Array<{id: string; name: string; constituency: string; party: string; termEndDate: string | null}>>({
     queryKey: ["/api/mps"],
+  });
+
+  // Query for parliament costs
+  const { data: parliamentCosts, isLoading: costsLoading, refetch: refetchCosts } = useQuery<{
+    success: boolean;
+    data: {
+      totalCosts: number;
+      breakdown: {
+        totalBaseSalaries: number;
+        totalMinisterialSalaries: number;
+        totalFixedAllowances: number;
+        totalParliamentSittingAllowances: number;
+        totalGovernmentMeetingAllowances: number;
+      };
+      statistics: {
+        totalMps: number;
+        totalMinisters: number;
+        averageCostPerMp: number;
+      };
+    };
+  }>({
+    queryKey: ["/api/admin/calculate-parliament-costs"],
   });
 
   // Update MP status mutation
@@ -815,6 +837,110 @@ export default function HansardAdmin() {
             </p>
           </div>
         </div>
+
+      {/* Total Parliament Costs Section */}
+      <Card className="border-green-500">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <DollarSign className="h-5 w-5" />
+            Total Parliament Costs
+          </CardTitle>
+          <CardDescription>
+            Calculate total salaries and allowances for all MPs (including parliament attendance)
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {costsLoading ? (
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Calculating costs...
+            </div>
+          ) : parliamentCosts?.data ? (
+            <div className="space-y-4">
+              <div className="p-4 bg-green-50 dark:bg-green-950/20 rounded-md border border-green-200 dark:border-green-800">
+                <h3 className="text-2xl font-bold text-green-700 dark:text-green-400">
+                  RM {parliamentCosts.data.totalCosts.toLocaleString('en-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </h3>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Total cumulative costs since MPs sworn in
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-3">
+                  <h4 className="font-semibold text-sm">Cost Breakdown</h4>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Base Salaries:</span>
+                      <strong>RM {parliamentCosts.data.breakdown.totalBaseSalaries.toLocaleString('en-MY')}</strong>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Ministerial Salaries:</span>
+                      <strong>RM {parliamentCosts.data.breakdown.totalMinisterialSalaries.toLocaleString('en-MY')}</strong>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Fixed Allowances:</span>
+                      <strong>RM {parliamentCosts.data.breakdown.totalFixedAllowances.toLocaleString('en-MY')}</strong>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Parliament Sitting:</span>
+                      <strong>RM {parliamentCosts.data.breakdown.totalParliamentSittingAllowances.toLocaleString('en-MY')}</strong>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Government Meetings:</span>
+                      <strong>RM {parliamentCosts.data.breakdown.totalGovernmentMeetingAllowances.toLocaleString('en-MY')}</strong>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <h4 className="font-semibold text-sm">Statistics</h4>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Total MPs:</span>
+                      <strong>{parliamentCosts.data.statistics.totalMps}</strong>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Ministers:</span>
+                      <strong>{parliamentCosts.data.statistics.totalMinisters}</strong>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Avg Cost per MP:</span>
+                      <strong>RM {parliamentCosts.data.statistics.averageCostPerMp.toLocaleString('en-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex gap-2 mt-4">
+                <Button
+                  onClick={() => refetchCosts()}
+                  disabled={costsLoading}
+                  variant="outline"
+                  className="flex-1"
+                  data-testid="button-refresh-costs"
+                >
+                  {costsLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Calculating...
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className="mr-2 h-4 w-4" />
+                      Refresh Calculation
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="text-center text-muted-foreground py-4">
+              Failed to calculate costs. Please try again.
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* MP Status Update Section */}
       <Card>

@@ -4360,6 +4360,97 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
+  // Admin endpoint to calculate total parliament costs
+  app.get("/api/admin/calculate-parliament-costs", requireAdmin, async (req, res) => {
+    try {
+      console.log("💰 Calculating total parliament costs...");
+
+      // Get all MPs
+      const mps = await db.select().from(schema.mps);
+
+      // Constants for allowance calculations
+      const DEWAN_RAKYAT_SALARY = 25700;
+      const PARLIAMENT_SITTING_PER_DAY = 400;
+      const GOVERNMENT_MEETING_PER_DAY = 300;
+      const MONTHLY_FIXED_ALLOWANCES =
+        2500 + // Entertainment
+        1500 + // Special Non-Admin MP
+        1500 + // Fixed Travel
+        1500 + // Fuel
+        300 +  // Toll
+        1500 + // Driver
+        900;   // Phone Bill
+
+      let totalCosts = 0;
+      let totalBaseSalaries = 0;
+      let totalMinisterialSalaries = 0;
+      let totalFixedAllowances = 0;
+      let totalParliamentSittingAllowances = 0;
+      let totalGovernmentMeetingAllowances = 0;
+      let totalMps = 0;
+      let totalMinisters = 0;
+
+      for (const mp of mps) {
+        // Calculate months since sworn in
+        const swornInDate = new Date(mp.swornInDate);
+        const now = new Date();
+        const monthsSinceSwornIn = Math.max(0,
+          (now.getFullYear() - swornInDate.getFullYear()) * 12 +
+          (now.getMonth() - swornInDate.getMonth())
+        );
+
+        // Base salary
+        const baseSalaryCost = DEWAN_RAKYAT_SALARY * monthsSinceSwornIn;
+        totalBaseSalaries += baseSalaryCost;
+
+        // Ministerial salary
+        const ministerialSalaryCost = (mp.ministerSalary || 0) * monthsSinceSwornIn;
+        totalMinisterialSalaries += ministerialSalaryCost;
+        if (mp.isMinister) totalMinisters++;
+
+        // Fixed allowances
+        const fixedAllowancesCost = MONTHLY_FIXED_ALLOWANCES * monthsSinceSwornIn;
+        totalFixedAllowances += fixedAllowancesCost;
+
+        // Parliament sitting allowances (cumulative)
+        const parliamentSittingCost = mp.daysAttended * PARLIAMENT_SITTING_PER_DAY;
+        totalParliamentSittingAllowances += parliamentSittingCost;
+
+        // Government meeting allowances (cumulative)
+        const governmentMeetingCost = mp.governmentMeetingDays * GOVERNMENT_MEETING_PER_DAY;
+        totalGovernmentMeetingAllowances += governmentMeetingCost;
+
+        // Total for this MP
+        const mpTotal = baseSalaryCost + ministerialSalaryCost + fixedAllowancesCost +
+                       parliamentSittingCost + governmentMeetingCost;
+        totalCosts += mpTotal;
+        totalMps++;
+      }
+
+      res.json({
+        success: true,
+        data: {
+          totalCosts,
+          breakdown: {
+            totalBaseSalaries,
+            totalMinisterialSalaries,
+            totalFixedAllowances,
+            totalParliamentSittingAllowances,
+            totalGovernmentMeetingAllowances,
+          },
+          statistics: {
+            totalMps,
+            totalMinisters,
+            averageCostPerMp: totalMps > 0 ? totalCosts / totalMps : 0,
+          }
+        }
+      });
+    } catch (error) {
+      console.error("Error calculating parliament costs:", error);
+      res.status(500).json({ error: "Failed to calculate parliament costs", details: String(error) });
+    }
+  });
+
   // Admin endpoint to import GE15 election results
   app.post("/api/admin/import-election-results", requireAdmin, async (req, res) => {
     try {
