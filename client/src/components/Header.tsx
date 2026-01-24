@@ -34,14 +34,14 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shadow-sm">
-      <div className="flex h-16 md:h-20 items-center gap-4 px-4 md:px-6 lg:px-8 max-w-7xl mx-auto">
+      <div className="flex h-16 md:h-20 items-center justify-between gap-4 px-4 md:px-6 lg:px-8 max-w-7xl mx-auto">
         {onMenuClick && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
                 variant="ghost"
                 size="icon"
-                className="md:hidden"
+                className="md:hidden shrink-0"
                 data-testid="button-menu-toggle"
               >
                 <Menu className="h-5 w-5" />
@@ -85,25 +85,25 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
         )}
         
         <Link href="/">
-          <div className="flex items-center gap-2 md:gap-4 cursor-pointer hover-elevate px-1 md:px-2 py-1 rounded-md">
+          <div className="flex items-center gap-2 md:gap-3 cursor-pointer hover-elevate px-1 md:px-2 py-1 rounded-md">
             <img
               src="/calmic-logo.png"
               alt="Calmic Logo"
-              className="h-10 w-10 md:h-14 md:w-14 rounded-full object-cover shrink-0"
+              className="h-10 w-10 md:h-12 md:w-12 rounded-full object-cover shrink-0"
               data-testid="img-calmic-logo"
             />
-            <div className="flex flex-col min-w-0 flex-1">
-              <h1 className="text-sm md:text-lg font-bold tracking-tight whitespace-nowrap overflow-hidden text-ellipsis">
+            <div className="flex flex-col justify-center min-w-0">
+              <h1 className="text-sm md:text-base font-bold tracking-tight whitespace-nowrap overflow-hidden text-ellipsis leading-tight">
                 {t('nav.malayParliament')}
               </h1>
-              <p className="text-xs text-muted-foreground hidden sm:block whitespace-nowrap overflow-hidden text-ellipsis">
+              <p className="text-xs text-muted-foreground hidden sm:block whitespace-nowrap overflow-hidden text-ellipsis leading-tight">
                 {t('nav.dewanRakyatDashboard')}
               </p>
             </div>
           </div>
         </Link>
 
-        <nav className="hidden md:flex items-center gap-2 ml-4">
+        <nav className="hidden md:flex items-center gap-1 lg:gap-2 flex-1 ml-2 lg:ml-4">
           <Link href="/">
             <Button
               variant={location === "/" ? "secondary" : "ghost"}
@@ -451,7 +451,7 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
           </a>
         </nav>
 
-        <div className="flex-1 flex justify-end items-center gap-2">
+        <div className="flex justify-end items-center gap-1 md:gap-2 ml-auto shrink-0">
           {onSearchClick && (
             <Button
               variant="ghost"
