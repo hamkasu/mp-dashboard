@@ -504,11 +504,6 @@ export default function Home() {
         {/* Main Content */}
         <main className="flex-1 px-4 md:px-6 lg:px-8 py-6 md:py-8">
           <div className="space-y-6 md:space-y-8">
-            <div className="relative">
-              <div className="absolute -inset-1 bg-gradient-to-r from-primary/20 to-primary/10 rounded-lg blur opacity-25" />
-              <RoyalAddress />
-            </div>
-
             {/* Relocation Notice */}
             <Card className="border-amber-200 dark:border-amber-900 bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-950/20 dark:to-yellow-950/20" data-testid="relocation-notice">
               <CardContent className="pt-6">
@@ -526,6 +521,11 @@ export default function Home() {
                 </div>
               </CardContent>
             </Card>
+
+            <div className="relative">
+              <div className="absolute -inset-1 bg-gradient-to-r from-primary/20 to-primary/10 rounded-lg blur opacity-25" />
+              <RoyalAddress />
+            </div>
 
             {/* SEO Landing Section */}
             <div className="space-y-3" data-testid="landing-section">
