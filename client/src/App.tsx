@@ -9,6 +9,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { LanguageProvider } from "@/i18n/LanguageContext";
+import { PWAInstallPrompt } from "@/components/PWAInstallPrompt";
 
 // Eager load only the most critical pages
 import Home from "@/pages/Home";
@@ -108,6 +109,7 @@ function App() {
       <LanguageProvider>
         <TooltipProvider>
           <Toaster />
+          <PWAInstallPrompt />
           <Router />
         </TooltipProvider>
       </LanguageProvider>
