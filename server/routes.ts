@@ -4366,7 +4366,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       console.log("💰 Calculating total parliament costs...");
 
       // Get all MPs
-      const mps = await db.select().from(schema.mps);
+      const allMps = await db.select().from(mps);
 
       // Constants for allowance calculations
       const DEWAN_RAKYAT_SALARY = 25700;
@@ -4387,10 +4387,10 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       let totalFixedAllowances = 0;
       let totalParliamentSittingAllowances = 0;
       let totalGovernmentMeetingAllowances = 0;
-      let totalMps = 0;
+      let totalMpsCount = 0;
       let totalMinisters = 0;
 
-      for (const mp of mps) {
+      for (const mp of allMps) {
         // Calculate months since sworn in
         const swornInDate = new Date(mp.swornInDate);
         const now = new Date();
@@ -4424,7 +4424,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         const mpTotal = baseSalaryCost + ministerialSalaryCost + fixedAllowancesCost +
                        parliamentSittingCost + governmentMeetingCost;
         totalCosts += mpTotal;
-        totalMps++;
+        totalMpsCount++;
       }
 
       res.json({
@@ -4439,9 +4439,9 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
             totalGovernmentMeetingAllowances,
           },
           statistics: {
-            totalMps,
+            totalMps: totalMpsCount,
             totalMinisters,
-            averageCostPerMp: totalMps > 0 ? totalCosts / totalMps : 0,
+            averageCostPerMp: totalMpsCount > 0 ? totalCosts / totalMpsCount : 0,
           }
         }
       });
