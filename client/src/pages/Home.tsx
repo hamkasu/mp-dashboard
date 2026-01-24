@@ -447,6 +447,52 @@ export default function Home() {
           description="Track Malaysian Parliament MPs, voting records, and parliamentary activities. Comprehensive Dewan Rakyat dashboard with attendance tracking, court cases, and SPRM investigations."
           keywords="Malaysian Parliament, MP dashboard, Dewan Rakyat, voting records, parliamentary activities, MP attendance, court cases, SPRM investigations, Malaysia MPs"
           url="https://myparliament.calmic.com.my"
+          structuredData={{
+            "@context": "https://schema.org",
+            "@type": "FAQPage",
+            "mainEntity": [
+              {
+                "@type": "Question",
+                "name": "How many MPs are in the Malaysian Parliament?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "There are 222 Members of Parliament (MPs) in Dewan Rakyat, representing constituencies across Malaysia."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "Can I track my MP's attendance?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "Yes, the Malaysian Parliament Dashboard provides real-time attendance tracking for all 222 MPs, including detailed statistics and voting records."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "What information is available about MPs?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "The dashboard tracks MP attendance, parliamentary activities, Hansard speeches, court cases, SPRM investigations, allowances, and voting records for complete transparency."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "How often is the data updated?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "The Malaysian Parliament Dashboard is updated regularly to reflect the latest parliamentary activities, attendance records, and official announcements."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "Is the Malaysian Parliament Dashboard official?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "This is an independent platform created to increase transparency and public access to Malaysian Parliament data. It aggregates publicly available information about MPs and parliamentary activities."
+                }
+              }
+            ]
+          }}
         />
         <Header
           onMenuClick={() => setMobileFiltersOpen(true)}
