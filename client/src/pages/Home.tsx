@@ -508,6 +508,25 @@ export default function Home() {
               <div className="absolute -inset-1 bg-gradient-to-r from-primary/20 to-primary/10 rounded-lg blur opacity-25" />
               <RoyalAddress />
             </div>
+
+            {/* Relocation Notice */}
+            <Card className="border-amber-200 dark:border-amber-900 bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-950/20 dark:to-yellow-950/20" data-testid="relocation-notice">
+              <CardContent className="pt-6">
+                <div className="flex items-start gap-3">
+                  <div className="flex-shrink-0 mt-0.5">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-amber-600 dark:text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-amber-900 dark:text-amber-100">
+                      We will be moving to our permanent address soon. Stay tuned for updates!
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
             {/* SEO Landing Section */}
             <div className="space-y-3" data-testid="landing-section">
               <div className="flex items-center gap-2">
