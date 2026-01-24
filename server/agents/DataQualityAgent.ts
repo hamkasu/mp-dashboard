@@ -1,5 +1,5 @@
 /**
- * Data Quality Agent
+ * Data Quality Agent - Enhanced Version
  * Autonomously resolves data quality issues like unmatched speakers
  * Copyright by Calmic Sdn Bhd
  */
@@ -23,6 +23,7 @@ export class DataQualityAgent extends BaseAgent {
     let apiCalls = 0;
     let dataUpdated = false;
     let resolvedCount = 0;
+    let suggestionCount = 0;
 
     onProgress?.({
       stage: "fetching",
@@ -36,7 +37,8 @@ export class DataQualityAgent extends BaseAgent {
         eq(unmatchedSpeakers.isMapped, false),
         isNull(unmatchedSpeakers.mappedMpId)
       ),
-      limit: context.parameters.limit || 100,
+      limit: context.parameters.limit || 50,
+      orderBy: (speakers, { desc }) => [desc(speakers.createdAt)],
     });
 
     if (unmatchedSpeakerRecords.length === 0) {
@@ -58,6 +60,16 @@ export class DataQualityAgent extends BaseAgent {
     // Get all MPs for fuzzy matching
     const allMps = await db.query.mps.findMany();
 
+    // Create a map of constituencies for faster lookup
+    const constituencyMap = new Map<string, typeof allMps>();
+    allMps.forEach(mp => {
+      const key = this.normalizeConstituency(mp.constituency);
+      if (!constituencyMap.has(key)) {
+        constituencyMap.set(key, []);
+      }
+      constituencyMap.get(key)!.push(mp);
+    });
+
     // Try to resolve each unmatched speaker
     for (let i = 0; i < unmatchedSpeakerRecords.length; i++) {
       const speaker = unmatchedSpeakerRecords[i];
@@ -70,10 +82,10 @@ export class DataQualityAgent extends BaseAgent {
       });
 
       try {
-        // Attempt fuzzy matching
-        const match = this.findBestMatch(speaker, allMps);
+        // Attempt intelligent fuzzy matching
+        const match = this.findBestMatch(speaker, allMps, constituencyMap);
 
-        if (match && match.confidence >= 80) {
+        if (match && match.confidence >= 85) {
           // High confidence match - auto-resolve
           await db
             .update(unmatchedSpeakers)
@@ -90,7 +102,7 @@ export class DataQualityAgent extends BaseAgent {
             mpId: match.mpId,
             mappingType: "auto-fuzzy",
             confidence: match.confidence,
-            notes: `Automatically matched by Data Quality Agent`,
+            notes: `Automatically matched by Data Quality Agent. Reason: ${match.reason}`,
             createdBy: "data-quality-agent",
           });
 
@@ -101,7 +113,7 @@ export class DataQualityAgent extends BaseAgent {
             this.createFinding(
               "insight",
               "info",
-              `Auto-resolved Speaker: ${speaker.extractedName}`,
+              `Auto-resolved: ${speaker.extractedName}`,
               `Successfully matched "${speaker.extractedName}" to MP "${match.mpName}" with ${match.confidence}% confidence`,
               {
                 relatedMpIds: [match.mpId],
@@ -110,11 +122,12 @@ export class DataQualityAgent extends BaseAgent {
                   matchedName: match.mpName,
                   confidence: match.confidence,
                   constituency: speaker.extractedConstituency,
+                  matchReason: match.reason,
                 },
               }
             )
           );
-        } else if (match && match.confidence >= 50) {
+        } else if (match && match.confidence >= 60) {
           // Medium confidence - suggest manual review
           await db
             .update(unmatchedSpeakers)
@@ -123,11 +136,13 @@ export class DataQualityAgent extends BaseAgent {
             })
             .where(eq(unmatchedSpeakers.id, speaker.id));
 
+          suggestionCount++;
+
           findings.push(
             this.createFinding(
               "suggestion",
               "low",
-              `Possible Match Needs Review: ${speaker.extractedName}`,
+              `Possible Match: ${speaker.extractedName}`,
               `Found possible match for "${speaker.extractedName}" → "${match.mpName}" (${match.confidence}% confidence). Manual review recommended.`,
               {
                 relatedMpIds: [match.mpId],
@@ -135,26 +150,28 @@ export class DataQualityAgent extends BaseAgent {
                   extractedName: speaker.extractedName,
                   matchedName: match.mpName,
                   confidence: match.confidence,
+                  matchReason: match.reason,
                 },
-                suggestedAction: "Review and confirm match in admin panel",
+                suggestedAction: "Review and confirm match in Hansard Admin panel under Unmatched Speakers",
               }
             )
           );
-        } else {
-          // Low confidence - flag for attention
+        } else if (speaker.extractedName && speaker.extractedName.length > 5) {
+          // Only flag meaningful names that couldn't be matched
           findings.push(
             this.createFinding(
               "warning",
               "low",
-              `Unable to Match Speaker: ${speaker.extractedName}`,
+              `Unable to Match: ${speaker.extractedName}`,
               `Could not find confident match for "${speaker.extractedName}"${speaker.extractedConstituency ? ` from ${speaker.extractedConstituency}` : ""}`,
               {
                 evidence: {
                   extractedName: speaker.extractedName,
                   constituency: speaker.extractedConstituency,
                   rawHeaderText: speaker.rawHeaderText,
+                  bestMatch: match ? { name: match.mpName, confidence: match.confidence } : null,
                 },
-                suggestedAction: "Manual intervention required - check if this is a new MP or data entry error",
+                suggestedAction: "Manual intervention required - check if this is a new MP, senator, or data entry error",
               }
             )
           );
@@ -170,7 +187,7 @@ export class DataQualityAgent extends BaseAgent {
       message: "Generating quality report...",
     });
 
-    const summary = `Processed ${unmatchedSpeakerRecords.length} unmatched speakers. Auto-resolved ${resolvedCount} with high confidence. Generated ${findings.length} findings.`;
+    const summary = `Processed ${unmatchedSpeakerRecords.length} unmatched speakers. Auto-resolved ${resolvedCount} (${Math.round(resolvedCount/unmatchedSpeakerRecords.length*100)}%). Suggested ${suggestionCount} for review.`;
 
     return {
       success: true,
@@ -179,8 +196,9 @@ export class DataQualityAgent extends BaseAgent {
       data: {
         totalProcessed: unmatchedSpeakerRecords.length,
         autoResolved: resolvedCount,
-        needsReview: findings.filter((f) => f.type === "suggestion").length,
-        unresolved: findings.filter((f) => f.type === "warning").length,
+        needsReview: suggestionCount,
+        unresolved: unmatchedSpeakerRecords.length - resolvedCount - suggestionCount,
+        resolutionRate: Math.round((resolvedCount / unmatchedSpeakerRecords.length) * 100),
       },
       apiCalls,
       dataUpdated,
@@ -188,56 +206,159 @@ export class DataQualityAgent extends BaseAgent {
   }
 
   /**
-   * Find best matching MP for an unmatched speaker
+   * Enhanced fuzzy matching with constituency awareness
    */
   private findBestMatch(
     speaker: any,
-    allMps: any[]
-  ): { mpId: string; mpName: string; confidence: number } | null {
-    let bestMatch: { mpId: string; mpName: string; confidence: number } | null = null;
+    allMps: any[],
+    constituencyMap: Map<string, any[]>
+  ): { mpId: string; mpName: string; confidence: number; reason: string } | null {
+    let bestMatch: { mpId: string; mpName: string; confidence: number; reason: string } | null = null;
     let bestScore = 0;
 
-    const extractedName = speaker.extractedName.toLowerCase().trim();
-    const extractedConstituency = speaker.extractedConstituency?.toLowerCase().trim();
+    const extractedName = this.normalizeName(speaker.extractedName);
+    const extractedConstituency = speaker.extractedConstituency
+      ? this.normalizeConstituency(speaker.extractedConstituency)
+      : null;
 
-    for (const mp of allMps) {
-      let score = 0;
-
-      // Name matching (weighted heavily)
-      const mpName = mp.name.toLowerCase();
-      if (mpName === extractedName) {
-        score += 70; // Exact match
-      } else if (mpName.includes(extractedName) || extractedName.includes(mpName)) {
-        score += 50; // Partial match
-      } else {
-        // Check for name similarity (simple word overlap)
-        const extractedWords = extractedName.split(/\s+/);
-        const mpWords = mpName.split(/\s+/);
-        const commonWords = extractedWords.filter((word) => mpWords.includes(word));
-        score += commonWords.length * 15;
-      }
-
-      // Constituency matching (if available)
-      if (extractedConstituency && mp.constituency) {
-        const mpConstituency = mp.constituency.toLowerCase();
-        if (mpConstituency === extractedConstituency) {
-          score += 30; // Exact constituency match
-        } else if (mpConstituency.includes(extractedConstituency) || extractedConstituency.includes(mpConstituency)) {
-          score += 20; // Partial constituency match
+    // Strategy 1: If constituency is provided, search within that constituency first
+    if (extractedConstituency) {
+      const constituencyMps = constituencyMap.get(extractedConstituency) || [];
+      for (const mp of constituencyMps) {
+        const score = this.calculateNameMatchScore(extractedName, this.normalizeName(mp.name));
+        if (score > bestScore) {
+          bestScore = score + 30; // Bonus for constituency match
+          bestMatch = {
+            mpId: mp.id,
+            mpName: mp.name,
+            confidence: Math.min(Math.round(bestScore), 100),
+            reason: `Name match in correct constituency (${mp.constituency})`,
+          };
         }
+      }
+    }
+
+    // Strategy 2: Full search across all MPs
+    for (const mp of allMps) {
+      const mpName = this.normalizeName(mp.name);
+      let score = this.calculateNameMatchScore(extractedName, mpName);
+
+      // Constituency match bonus (if available)
+      if (extractedConstituency && this.normalizeConstituency(mp.constituency) === extractedConstituency) {
+        score += 25;
       }
 
       if (score > bestScore) {
         bestScore = score;
+        let reason = "Name similarity";
+        if (extractedConstituency && this.normalizeConstituency(mp.constituency) === extractedConstituency) {
+          reason = `Strong name match + constituency confirmation`;
+        }
+
         bestMatch = {
           mpId: mp.id,
           mpName: mp.name,
-          confidence: Math.min(score, 100),
+          confidence: Math.min(Math.round(score), 100),
+          reason,
         };
       }
     }
 
     return bestMatch;
+  }
+
+  /**
+   * Calculate name match score using multiple algorithms
+   */
+  private calculateNameMatchScore(name1: string, name2: string): number {
+    // Exact match
+    if (name1 === name2) return 95;
+
+    // Contains match
+    if (name1.includes(name2) || name2.includes(name1)) return 80;
+
+    // Word-based matching
+    const words1 = name1.split(/\s+/).filter(w => w.length > 2);
+    const words2 = name2.split(/\s+/).filter(w => w.length > 2);
+
+    if (words1.length === 0 || words2.length === 0) return 0;
+
+    // Calculate word overlap
+    const commonWords = words1.filter(w => words2.includes(w));
+    const wordOverlapScore = (commonWords.length / Math.max(words1.length, words2.length)) * 70;
+
+    // Levenshtein distance for overall similarity
+    const levenshteinScore = this.levenshteinSimilarity(name1, name2) * 50;
+
+    return Math.max(wordOverlapScore, levenshteinScore);
+  }
+
+  /**
+   * Calculate Levenshtein similarity (0-1)
+   */
+  private levenshteinSimilarity(str1: string, str2: string): number {
+    const longer = str1.length > str2.length ? str1 : str2;
+    const shorter = str1.length > str2.length ? str2 : str1;
+
+    if (longer.length === 0) return 1.0;
+
+    const distance = this.levenshteinDistance(longer, shorter);
+    return (longer.length - distance) / longer.length;
+  }
+
+  /**
+   * Calculate Levenshtein distance
+   */
+  private levenshteinDistance(str1: string, str2: string): number {
+    const matrix: number[][] = [];
+
+    for (let i = 0; i <= str2.length; i++) {
+      matrix[i] = [i];
+    }
+
+    for (let j = 0; j <= str1.length; j++) {
+      matrix[0][j] = j;
+    }
+
+    for (let i = 1; i <= str2.length; i++) {
+      for (let j = 1; j <= str1.length; j++) {
+        if (str2.charAt(i - 1) === str1.charAt(j - 1)) {
+          matrix[i][j] = matrix[i - 1][j - 1];
+        } else {
+          matrix[i][j] = Math.min(
+            matrix[i - 1][j - 1] + 1,
+            matrix[i][j - 1] + 1,
+            matrix[i - 1][j] + 1
+          );
+        }
+      }
+    }
+
+    return matrix[str2.length][str1.length];
+  }
+
+  /**
+   * Normalize name for comparison
+   */
+  private normalizeName(name: string): string {
+    return name
+      .toLowerCase()
+      .trim()
+      .replace(/\s+/g, ' ')
+      .replace(/[^\w\s]/g, '')
+      .replace(/\b(yang berhormat|yb|dato|datin|tuan|puan|encik|cik|dr|tan sri|datuk|seri)\b/g, '')
+      .trim();
+  }
+
+  /**
+   * Normalize constituency for comparison
+   */
+  private normalizeConstituency(constituency: string): string {
+    return constituency
+      .toLowerCase()
+      .trim()
+      .replace(/\s+/g, ' ')
+      .replace(/[^\w\s]/g, '');
   }
 
   validateParameters(parameters: Record<string, any>): {
@@ -246,8 +367,8 @@ export class DataQualityAgent extends BaseAgent {
   } {
     const errors: string[] = [];
 
-    if (parameters.limit && (typeof parameters.limit !== "number" || parameters.limit < 1 || parameters.limit > 500)) {
-      errors.push("limit must be a number between 1 and 500");
+    if (parameters.limit && (typeof parameters.limit !== "number" || parameters.limit < 1 || parameters.limit > 200)) {
+      errors.push("limit must be a number between 1 and 200");
     }
 
     return {
