@@ -1159,3 +1159,164 @@ export const insertHansardSyncLogSchema = createInsertSchema(hansardSyncLogs).om
 
 export type InsertHansardSyncLog = z.infer<typeof insertHansardSyncLogSchema>;
 export type HansardSyncLog = typeof hansardSyncLogs.$inferSelect;
+
+// ========== AGENTIC AI INFRASTRUCTURE ==========
+// AI Agent Executions table for tracking all agent runs
+export const aiAgentExecutions = pgTable("ai_agent_executions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  agentType: text("agent_type").notNull(), // 'hansard-monitor', 'data-quality', 'bill-analyzer', etc.
+  targetId: varchar("target_id"), // ID of the resource being analyzed (hansardId, billId, mpId, etc.)
+  targetType: text("target_type"), // 'hansard', 'bill', 'mp', 'constituency', 'global'
+
+  // Execution lifecycle
+  status: text("status").notNull().default("pending"), // 'pending', 'running', 'completed', 'failed', 'cancelled'
+  startedAt: timestamp("started_at").notNull().default(sql`NOW()`),
+  completedAt: timestamp("completed_at"),
+  durationMs: integer("duration_ms"),
+
+  // Input/output
+  parameters: jsonb("parameters").$type<Record<string, any>>().default(sql`'{}'::jsonb`),
+  result: jsonb("result").$type<Record<string, any>>(),
+
+  // Metadata
+  triggeredBy: text("triggered_by").notNull(), // 'manual', 'scheduled', 'webhook', 'user'
+  triggeredByUserId: varchar("triggered_by_user_id"),
+  errorMessage: text("error_message"),
+  errorStack: text("error_stack"),
+
+  // Stats
+  tokensUsed: integer("tokens_used"),
+  apiCalls: integer("api_calls").default(0),
+  dataUpdated: boolean("data_updated").default(false),
+
+  createdAt: timestamp("created_at").notNull().default(sql`NOW()`),
+});
+
+export const insertAiAgentExecutionSchema = createInsertSchema(aiAgentExecutions).omit({
+  id: true,
+  createdAt: true,
+  startedAt: true,
+  completedAt: true,
+}).extend({
+  targetId: z.string().nullable().optional(),
+  targetType: z.enum(["hansard", "bill", "mp", "constituency", "global"]).nullable().optional(),
+  status: z.enum(["pending", "running", "completed", "failed", "cancelled"]).optional().default("pending"),
+  parameters: z.record(z.any()).optional().default({}),
+  result: z.record(z.any()).nullable().optional(),
+  triggeredByUserId: z.string().nullable().optional(),
+  errorMessage: z.string().nullable().optional(),
+  errorStack: z.string().nullable().optional(),
+  tokensUsed: z.number().nullable().optional(),
+  apiCalls: z.number().optional().default(0),
+  dataUpdated: z.boolean().optional().default(false),
+  durationMs: z.number().nullable().optional(),
+});
+
+export const updateAiAgentExecutionSchema = insertAiAgentExecutionSchema.partial();
+
+export type InsertAiAgentExecution = z.infer<typeof insertAiAgentExecutionSchema>;
+export type UpdateAiAgentExecution = z.infer<typeof updateAiAgentExecutionSchema>;
+export type AiAgentExecution = typeof aiAgentExecutions.$inferSelect;
+
+// AI Agent Findings table for storing specific insights discovered by agents
+export const aiAgentFindings = pgTable("ai_agent_findings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  executionId: varchar("execution_id").notNull().references(() => aiAgentExecutions.id, { onDelete: "cascade" }),
+
+  // Finding details
+  findingType: text("finding_type").notNull(), // 'insight', 'inconsistency', 'suggestion', 'warning', 'error'
+  severity: text("severity").notNull().default("info"), // 'critical', 'high', 'medium', 'low', 'info'
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+
+  // Related entities
+  relatedMpIds: jsonb("related_mp_ids").$type<string[]>().default(sql`'[]'::jsonb`),
+  relatedHansardIds: jsonb("related_hansard_ids").$type<string[]>().default(sql`'[]'::jsonb`),
+  relatedBillIds: jsonb("related_bill_ids").$type<string[]>().default(sql`'[]'::jsonb`),
+
+  // Evidence and actions
+  evidence: jsonb("evidence").$type<Record<string, any>>(), // Supporting data
+  suggestedAction: text("suggested_action"),
+  actionTaken: text("action_taken"),
+  actionTakenAt: timestamp("action_taken_at"),
+  actionTakenBy: varchar("action_taken_by"),
+
+  // Status
+  status: text("status").notNull().default("new"), // 'new', 'acknowledged', 'in_progress', 'resolved', 'dismissed'
+  reviewedBy: varchar("reviewed_by"),
+  reviewedAt: timestamp("reviewed_at"),
+
+  createdAt: timestamp("created_at").notNull().default(sql`NOW()`),
+});
+
+export const insertAiAgentFindingSchema = createInsertSchema(aiAgentFindings).omit({
+  id: true,
+  createdAt: true,
+  actionTakenAt: true,
+  reviewedAt: true,
+}).extend({
+  findingType: z.enum(["insight", "inconsistency", "suggestion", "warning", "error"]),
+  severity: z.enum(["critical", "high", "medium", "low", "info"]).optional().default("info"),
+  relatedMpIds: z.array(z.string()).optional().default([]),
+  relatedHansardIds: z.array(z.string()).optional().default([]),
+  relatedBillIds: z.array(z.string()).optional().default([]),
+  evidence: z.record(z.any()).nullable().optional(),
+  suggestedAction: z.string().nullable().optional(),
+  actionTaken: z.string().nullable().optional(),
+  actionTakenBy: z.string().nullable().optional(),
+  status: z.enum(["new", "acknowledged", "in_progress", "resolved", "dismissed"]).optional().default("new"),
+  reviewedBy: z.string().nullable().optional(),
+});
+
+export const updateAiAgentFindingSchema = insertAiAgentFindingSchema.partial();
+
+export type InsertAiAgentFinding = z.infer<typeof insertAiAgentFindingSchema>;
+export type UpdateAiAgentFinding = z.infer<typeof updateAiAgentFindingSchema>;
+export type AiAgentFinding = typeof aiAgentFindings.$inferSelect;
+
+// AI Agent Schedules table for managing scheduled agent runs
+export const aiAgentSchedules = pgTable("ai_agent_schedules", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  agentType: text("agent_type").notNull(),
+
+  // Schedule configuration
+  enabled: boolean("enabled").notNull().default(true),
+  cronExpression: text("cron_expression"), // e.g., '0 0 * * *' for daily at midnight
+  intervalMinutes: integer("interval_minutes"), // Alternative to cron
+
+  // Parameters for scheduled runs
+  parameters: jsonb("parameters").$type<Record<string, any>>().default(sql`'{}'::jsonb`),
+
+  // Execution tracking
+  lastRunAt: timestamp("last_run_at"),
+  lastRunStatus: text("last_run_status"),
+  lastExecutionId: varchar("last_execution_id").references(() => aiAgentExecutions.id),
+  nextRunAt: timestamp("next_run_at"),
+
+  // Metadata
+  createdBy: varchar("created_by"),
+  createdAt: timestamp("created_at").notNull().default(sql`NOW()`),
+  updatedAt: timestamp("updated_at").notNull().default(sql`NOW()`),
+});
+
+export const insertAiAgentScheduleSchema = createInsertSchema(aiAgentSchedules).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  lastRunAt: true,
+}).extend({
+  enabled: z.boolean().optional().default(true),
+  cronExpression: z.string().nullable().optional(),
+  intervalMinutes: z.number().nullable().optional(),
+  parameters: z.record(z.any()).optional().default({}),
+  lastRunStatus: z.string().nullable().optional(),
+  lastExecutionId: z.string().nullable().optional(),
+  nextRunAt: z.date().nullable().optional(),
+  createdBy: z.string().nullable().optional(),
+});
+
+export const updateAiAgentScheduleSchema = insertAiAgentScheduleSchema.partial();
+
+export type InsertAiAgentSchedule = z.infer<typeof insertAiAgentScheduleSchema>;
+export type UpdateAiAgentSchedule = z.infer<typeof updateAiAgentScheduleSchema>;
+export type AiAgentSchedule = typeof aiAgentSchedules.$inferSelect;

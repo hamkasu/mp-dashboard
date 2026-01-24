@@ -8661,5 +8661,170 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
+  // ========== AGENTIC AI ENDPOINTS ==========
+
+  // Get all available AI agents
+  app.get("/api/agents", async (req, res) => {
+    try {
+      const { AgentService } = await import("./services/agentService");
+      const agents = AgentService.getAvailableAgents();
+      res.json({ agents });
+    } catch (error) {
+      console.error("Error fetching agents:", error);
+      res.status(500).json({ error: "Failed to fetch agents" });
+    }
+  });
+
+  // Execute an AI agent
+  app.post("/api/agents/:agentType/execute", requireAdmin, mutationRateLimit, auditMiddleware('agent-execute'), async (req, res) => {
+    try {
+      const { agentType } = req.params;
+      const { targetId, targetType, parameters } = req.body;
+      const username = getCurrentUsername(req);
+
+      const { AgentService } = await import("./services/agentService");
+
+      console.log(`[Agent] Executing ${agentType} agent by ${username}`);
+
+      // Execute agent (async)
+      const result = await AgentService.executeAgent(agentType as any, {
+        targetId,
+        targetType,
+        parameters: parameters || {},
+        triggeredBy: "manual",
+        triggeredByUserId: username,
+      });
+
+      res.json({
+        success: true,
+        executionId: result.executionId,
+        result: result.result,
+      });
+    } catch (error: any) {
+      console.error("Error executing agent:", error);
+      res.status(500).json({
+        error: "Failed to execute agent",
+        details: error.message
+      });
+    }
+  });
+
+  // Get agent execution history
+  app.get("/api/agents/executions", requireAdmin, async (req, res) => {
+    try {
+      const { limit = 50 } = req.query;
+      const { AgentService } = await import("./services/agentService");
+
+      const executions = await AgentService.getRecentExecutions(parseInt(limit as string));
+      res.json({ executions });
+    } catch (error) {
+      console.error("Error fetching executions:", error);
+      res.status(500).json({ error: "Failed to fetch executions" });
+    }
+  });
+
+  // Get execution details
+  app.get("/api/agents/executions/:executionId", requireAdmin, async (req, res) => {
+    try {
+      const { executionId } = req.params;
+      const { AgentService } = await import("./services/agentService");
+
+      const execution = await AgentService.getExecution(executionId);
+      if (!execution) {
+        return res.status(404).json({ error: "Execution not found" });
+      }
+
+      const findings = await AgentService.getExecutionFindings(executionId);
+
+      res.json({
+        execution,
+        findings,
+      });
+    } catch (error) {
+      console.error("Error fetching execution details:", error);
+      res.status(500).json({ error: "Failed to fetch execution details" });
+    }
+  });
+
+  // Get all agent findings
+  app.get("/api/agents/findings", requireAdmin, async (req, res) => {
+    try {
+      const { status, limit = 100 } = req.query;
+      const { AgentService } = await import("./services/agentService");
+
+      let findings;
+      if (status) {
+        findings = await AgentService.getFindingsByStatus(status as any);
+      } else {
+        findings = await AgentService.getRecentFindings(parseInt(limit as string));
+      }
+
+      res.json({ findings });
+    } catch (error) {
+      console.error("Error fetching findings:", error);
+      res.status(500).json({ error: "Failed to fetch findings" });
+    }
+  });
+
+  // Update finding status
+  app.patch("/api/agents/findings/:findingId", requireAdmin, mutationRateLimit, auditMiddleware('finding-update'), async (req, res) => {
+    try {
+      const { findingId } = req.params;
+      const { status } = req.body;
+      const username = getCurrentUsername(req);
+
+      const { AgentService } = await import("./services/agentService");
+
+      await AgentService.updateFindingStatus(findingId, status, username);
+
+      res.json({
+        success: true,
+        message: "Finding status updated",
+      });
+    } catch (error) {
+      console.error("Error updating finding:", error);
+      res.status(500).json({ error: "Failed to update finding" });
+    }
+  });
+
+  // Get agent schedules
+  app.get("/api/agents/schedules", requireAdmin, async (req, res) => {
+    try {
+      const { AgentService } = await import("./services/agentService");
+      const schedules = await AgentService.getSchedules();
+      res.json({ schedules });
+    } catch (error) {
+      console.error("Error fetching schedules:", error);
+      res.status(500).json({ error: "Failed to fetch schedules" });
+    }
+  });
+
+  // Create or update agent schedule
+  app.post("/api/agents/schedules/:agentType", requireAdmin, mutationRateLimit, auditMiddleware('schedule-update'), async (req, res) => {
+    try {
+      const { agentType } = req.params;
+      const { enabled, cronExpression, intervalMinutes, parameters } = req.body;
+      const username = getCurrentUsername(req);
+
+      const { AgentService } = await import("./services/agentService");
+
+      await AgentService.upsertSchedule(agentType as any, {
+        enabled,
+        cronExpression,
+        intervalMinutes,
+        parameters,
+        createdBy: username,
+      });
+
+      res.json({
+        success: true,
+        message: "Schedule updated",
+      });
+    } catch (error) {
+      console.error("Error updating schedule:", error);
+      res.status(500).json({ error: "Failed to update schedule" });
+    }
+  });
+
   // Server is now passed in from index.ts, no need to create it here
 }
