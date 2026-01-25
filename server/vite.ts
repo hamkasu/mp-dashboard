@@ -97,8 +97,7 @@ function loadUrlMap(prerenderedPath: string): Record<string, string> {
 }
 
 export function serveStatic(app: Express) {
-  // After build, server is at dist/server/, client assets are at dist/public/
-  const distPath = path.resolve(import.meta.dirname, "..", "public");
+  const distPath = path.resolve(import.meta.dirname, "public");
   const prerenderedPath = path.resolve(import.meta.dirname, "..", "dist", "prerendered");
 
   if (!fs.existsSync(distPath)) {
