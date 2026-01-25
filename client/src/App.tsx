@@ -47,6 +47,7 @@ const ReportCard = lazy(() => import("@/pages/ReportCard"));
 const ReportCardAdmin = lazy(() => import("@/pages/ReportCardAdmin"));
 const MPMessagesAdmin = lazy(() => import("@/pages/MPMessagesAdmin"));
 const AIAgentsAdmin = lazy(() => import("@/pages/AIAgentsAdmin"));
+const MPBioAdmin = lazy(() => import("@/pages/MPBioAdmin"));
 
 // Loading component
 function PageLoader() {
@@ -97,6 +98,7 @@ function Router() {
         <Route path="/report-card-admin" component={ReportCardAdmin} />
         <Route path="/mp-messages-admin" component={MPMessagesAdmin} />
         <Route path="/ai-agents-admin" component={AIAgentsAdmin} />
+        <Route path="/mp-bio-admin" component={MPBioAdmin} />
         <Route component={NotFound} />
       </Switch>
     </Suspense>

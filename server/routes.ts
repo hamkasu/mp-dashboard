@@ -6844,6 +6844,83 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   });
 
   // ======================
+  // MP Biography Admin API
+  // ======================
+
+  // Update MP biography
+  app.post("/api/admin/update-mp-bio", requireAdmin, async (req, res) => {
+    try {
+      const { mpId, biography } = req.body;
+
+      if (!mpId) {
+        return res.status(400).json({ error: "mpId is required" });
+      }
+
+      // Find the MP
+      const [mp] = await db.select().from(mps).where(eq(mps.id, mpId)).limit(1);
+
+      if (!mp) {
+        return res.status(404).json({ error: "MP not found" });
+      }
+
+      console.log(`📝 Updating biography for ${mp.name} (${mp.constituency})`);
+
+      // Update MP biography
+      await db.update(mps)
+        .set({ biography: biography || null })
+        .where(eq(mps.id, mpId));
+
+      console.log(`✅ Biography updated successfully: ${mp.name}`);
+
+      // Log the action
+      await logAudit(
+        getCurrentUsername(req),
+        'UPDATE_MP_BIO',
+        `Updated biography for ${mp.name} (${mp.constituency})`,
+        { mpId, biographyLength: biography?.length || 0 }
+      );
+
+      res.json({
+        message: "MP biography updated successfully",
+        mp: {
+          id: mp.id,
+          name: mp.name,
+          constituency: mp.constituency,
+          biography: biography || null,
+        }
+      });
+
+    } catch (error) {
+      console.error("Error updating MP biography:", error);
+      res.status(500).json({ error: "Failed to update MP biography", details: String(error) });
+    }
+  });
+
+  // Get MP biography for admin
+  app.get("/api/admin/mp-bio/:mpId", requireAdmin, async (req, res) => {
+    try {
+      const { mpId } = req.params;
+
+      const [mp] = await db.select({
+        id: mps.id,
+        name: mps.name,
+        constituency: mps.constituency,
+        party: mps.party,
+        biography: mps.biography,
+      }).from(mps).where(eq(mps.id, mpId)).limit(1);
+
+      if (!mp) {
+        return res.status(404).json({ error: "MP not found" });
+      }
+
+      res.json(mp);
+    } catch (error) {
+      console.error("Error fetching MP biography:", error);
+      res.status(500).json({ error: "Failed to fetch MP biography" });
+    }
+  });
+
+  // ======================
   // Blog Posts API
   // ======================
 

@@ -59,6 +59,8 @@ export const mps = pgTable("mps", {
   instagramUrl: text("instagram_url"),
   twitterUrl: text("twitter_url"),
   tiktokUrl: text("tiktok_url"),
+  // Biography
+  biography: text("biography"),
   // By-election tracking
   byElectionDate: timestamp("by_election_date"),
   byElectionNotes: text("by_election_notes"),
