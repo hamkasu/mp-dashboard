@@ -187,7 +187,7 @@ Extract the following in JSON format (respond ONLY with valid JSON):
   "stance": "brief description of their position/stance"
 }
 
-Keep topics concise (2-4 words each). List 2-5 topics and 1-3 key arguments.`;
+Keep topics concise (2-4 words each). List 2-5 topics and 1-3 key arguments. Key arguments should be full sentences summarizing the speaker's main points.`;
 
   const result = await callAI(prompt);
 
