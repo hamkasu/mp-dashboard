@@ -11,9 +11,11 @@ export function RoyalAddress() {
     <Card className="border-primary/20 bg-primary/5 overflow-hidden h-full">
       <CardContent className="p-0">
         <div className="bg-primary/10 px-6 py-4 border-b border-primary/10">
-          <Badge variant="outline" className="border-primary/30 text-primary bg-primary/5 uppercase tracking-wider font-semibold mb-3">
-            {t("royalAddress.session")}
-          </Badge>
+          <div className="mb-3">
+            <Badge variant="outline" className="border-primary/30 text-primary bg-primary/5 uppercase tracking-wider font-semibold">
+              {t("royalAddress.session")}
+            </Badge>
+          </div>
           <div className="flex items-center gap-3">
             <div className="bg-primary text-primary-foreground p-2 rounded-full">
               <Crown className="h-5 w-5" />
