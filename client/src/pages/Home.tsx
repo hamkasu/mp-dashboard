@@ -13,6 +13,7 @@ import { FilterSidebar } from "@/components/FilterSidebar";
 import { MPGrid } from "@/components/MPGrid";
 import { DonateButton } from "@/components/DonateButton";
 import { RoyalAddress } from "@/components/RoyalAddress";
+import { MPSpotlight } from "@/components/MPSpotlight";
 import { Footer } from "@/components/Footer";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -568,9 +569,16 @@ export default function Home() {
               </CardContent>
             </Card>
 
-            <div className="relative">
-              <div className="absolute -inset-1 bg-gradient-to-r from-primary/20 to-primary/10 rounded-lg blur opacity-25" />
-              <RoyalAddress />
+            {/* Featured Cards: Royal Address & MP Spotlight */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="relative">
+                <div className="absolute -inset-1 bg-gradient-to-r from-primary/20 to-primary/10 rounded-lg blur opacity-25" />
+                <RoyalAddress />
+              </div>
+              <div className="relative">
+                <div className="absolute -inset-1 bg-gradient-to-r from-amber-500/20 to-orange-500/10 rounded-lg blur opacity-25" />
+                <MPSpotlight />
+              </div>
             </div>
 
             {/* SEO Landing Section */}

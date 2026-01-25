@@ -427,6 +427,153 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   });
 
   // Get all MPs
+  // Get MP Spotlight - daily rotating MP with stats highlight
+  app.get("/api/mp-spotlight", async (_req, res) => {
+    try {
+      const mps = await storage.getAllMps();
+      const hansardRecords = await storage.getAllHansardRecords();
+
+      // Filter to only active MPs (no termEndDate)
+      const activeMps = mps.filter(mp => !mp.termEndDate);
+
+      if (activeMps.length === 0) {
+        return res.status(404).json({ error: "No active MPs found" });
+      }
+
+      // Use deterministic daily rotation based on date
+      // The same MP will be shown all day, rotating at midnight
+      const today = new Date();
+      const dayOfYear = Math.floor((today.getTime() - new Date(today.getFullYear(), 0, 0).getTime()) / (1000 * 60 * 60 * 24));
+      const year = today.getFullYear();
+      const seed = year * 1000 + dayOfYear;
+
+      // Sort MPs by ID for consistent ordering, then select based on seed
+      const sortedMps = [...activeMps].sort((a, b) => a.id.localeCompare(b.id));
+      const mpIndex = seed % sortedMps.length;
+      const spotlightMp = sortedMps[mpIndex];
+
+      // Calculate MP stats from Hansard records
+      const mpSwornInDate = new Date(spotlightMp.swornInDate).toISOString().split('T')[0];
+      const relevantSessions = hansardRecords.filter(record => {
+        const sessionDate = new Date(record.sessionDate).toISOString().split('T')[0];
+        return sessionDate >= mpSwornInDate;
+      });
+
+      // Count sessions attended
+      const sessionsAttended = relevantSessions.filter(record => {
+        if (record.attendedMpIds && record.attendedMpIds.length > 0) {
+          return record.attendedMpIds.includes(spotlightMp.id);
+        } else {
+          return !record.absentMpIds || !record.absentMpIds.includes(spotlightMp.id);
+        }
+      }).length;
+
+      // Count sessions where MP spoke
+      const sessionsSpoke = relevantSessions.filter(record =>
+        (record.speakerStats && record.speakerStats.some((stat: any) => stat.mpId === spotlightMp.id)) ||
+        (record.speakers && record.speakers.some(speaker => speaker.mpId === spotlightMp.id))
+      ).length;
+
+      // Calculate total speeches
+      const totalSpeeches = relevantSessions.reduce((total, record) => {
+        if (record.speakerStats) {
+          const mpStat = record.speakerStats.find((stat: any) => stat.mpId === spotlightMp.id);
+          if (mpStat && (mpStat as any).totalSpeeches) {
+            return total + (mpStat as any).totalSpeeches;
+          }
+        }
+        return total;
+      }, 0);
+
+      // Get oral questions count from parliamentary_oral_answers table
+      const { parliamentaryOralAnswers } = await import("@shared/schema");
+      const { eq, count: drizzleCount } = await import("drizzle-orm");
+      const oralResult = await db.select({ count: drizzleCount() })
+        .from(parliamentaryOralAnswers)
+        .where(eq(parliamentaryOralAnswers.questionerMpId, spotlightMp.id));
+      const oralQuestionsCount = oralResult[0]?.count || 0;
+
+      // Get bills count from legislative_proposals table
+      const { legislativeProposals } = await import("@shared/schema");
+      const { and } = await import("drizzle-orm");
+      const { sql } = await import("drizzle-orm");
+      const billsResult = await db.select({ count: drizzleCount() })
+        .from(legislativeProposals)
+        .where(and(
+          eq(legislativeProposals.mpId, spotlightMp.id),
+          sql`LOWER(${legislativeProposals.type}) = 'bill'`
+        ));
+      const billsCount = billsResult[0]?.count || 0;
+
+      // Calculate attendance rate
+      const totalSessions = relevantSessions.length;
+      const attendanceRate = totalSessions > 0 ? Math.round((sessionsAttended / totalSessions) * 100) : 0;
+
+      // Determine the highlight stat based on what's most notable
+      let highlightStat: { type: string; value: number; label: string };
+
+      if (oralQuestionsCount > 0) {
+        highlightStat = {
+          type: 'oral_questions',
+          value: oralQuestionsCount,
+          label: oralQuestionsCount === 1 ? 'oral question asked' : 'oral questions asked'
+        };
+      } else if (billsCount > 0) {
+        highlightStat = {
+          type: 'bills',
+          value: billsCount,
+          label: billsCount === 1 ? 'bill raised' : 'bills raised'
+        };
+      } else if (totalSpeeches > 0) {
+        highlightStat = {
+          type: 'speeches',
+          value: totalSpeeches,
+          label: totalSpeeches === 1 ? 'speech in Parliament' : 'speeches in Parliament'
+        };
+      } else if (sessionsSpoke > 0) {
+        highlightStat = {
+          type: 'sessions_spoke',
+          value: sessionsSpoke,
+          label: sessionsSpoke === 1 ? 'session spoke' : 'sessions spoke'
+        };
+      } else {
+        highlightStat = {
+          type: 'attendance',
+          value: attendanceRate,
+          label: '% attendance rate'
+        };
+      }
+
+      res.json({
+        mp: {
+          id: spotlightMp.id,
+          name: spotlightMp.name,
+          party: spotlightMp.party,
+          constituency: spotlightMp.constituency,
+          state: spotlightMp.state,
+          photoUrl: spotlightMp.photoUrl,
+          isMinister: spotlightMp.isMinister,
+          isDeputyMinister: spotlightMp.isDeputyMinister,
+          ministerialPosition: spotlightMp.ministerialPosition,
+        },
+        stats: {
+          totalSessions,
+          sessionsAttended,
+          sessionsSpoke,
+          totalSpeeches,
+          oralQuestionsCount,
+          billsCount,
+          attendanceRate,
+        },
+        highlightStat,
+        date: today.toISOString().split('T')[0],
+      });
+    } catch (error) {
+      console.error("Error fetching MP spotlight:", error);
+      res.status(500).json({ error: "Failed to fetch MP spotlight" });
+    }
+  });
+
   app.get("/api/mps", async (_req, res) => {
     try {
       const mps = await storage.getAllMps();

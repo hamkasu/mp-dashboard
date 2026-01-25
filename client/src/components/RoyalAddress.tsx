@@ -8,7 +8,7 @@ export function RoyalAddress() {
   const { t } = useLanguage();
 
   return (
-    <Card className="border-primary/20 bg-primary/5 mb-8 overflow-hidden">
+    <Card className="border-primary/20 bg-primary/5 overflow-hidden h-full">
       <CardContent className="p-0">
         <div className="bg-primary/10 px-6 py-4 flex items-center justify-between border-b border-primary/10">
           <div className="flex items-center gap-3">
