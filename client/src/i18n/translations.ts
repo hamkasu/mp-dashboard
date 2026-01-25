@@ -63,6 +63,16 @@ export const translations = {
       dewanRakyatDashboard: "Dewan Rakyat Dashboard",
     },
 
+    // MP Spotlight
+    mpSpotlight: {
+      title: "MP of the Day",
+      subtitle: "Featured Member of Parliament",
+      daily: "Daily Spotlight",
+      viewProfile: "View full profile",
+      parliament15: "15th Parliament",
+      deputyMinister: "Deputy Minister",
+    },
+
     // Royal Address
     royalAddress: {
       title: "Royal Address",
@@ -1444,6 +1454,16 @@ export const translations = {
       errorMessage: "Tidak dapat menghantar maklum balas anda. Sila cuba lagi.",
       missingFields: "Maklumat Tidak Lengkap",
       fillRequired: "Sila isikan ruangan subjek dan mesej.",
+    },
+
+    // MP Spotlight
+    mpSpotlight: {
+      title: "Ahli Parlimen Hari Ini",
+      subtitle: "Ahli Parlimen Terpilih",
+      daily: "Sorotan Harian",
+      viewProfile: "Lihat profil penuh",
+      parliament15: "Parlimen ke-15",
+      deputyMinister: "Timbalan Menteri",
     },
 
     // Royal Address
