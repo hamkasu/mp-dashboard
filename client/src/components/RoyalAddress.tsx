@@ -10,7 +10,12 @@ export function RoyalAddress() {
   return (
     <Card className="border-primary/20 bg-primary/5 overflow-hidden h-full">
       <CardContent className="p-0">
-        <div className="bg-primary/10 px-6 py-4 flex items-center justify-between border-b border-primary/10">
+        <div className="bg-primary/10 px-6 py-4 border-b border-primary/10">
+          <div className="mb-3">
+            <Badge variant="outline" className="border-primary/30 text-primary bg-primary/5 uppercase tracking-wider font-semibold">
+              {t("royalAddress.session")}
+            </Badge>
+          </div>
           <div className="flex items-center gap-3">
             <div className="bg-primary text-primary-foreground p-2 rounded-full">
               <Crown className="h-5 w-5" />
@@ -20,9 +25,6 @@ export function RoyalAddress() {
               <p className="text-sm text-muted-foreground">{t("royalAddress.subtitle")}</p>
             </div>
           </div>
-          <Badge variant="outline" className="border-primary/30 text-primary bg-primary/5 uppercase tracking-wider font-semibold">
-            {t("royalAddress.session")}
-          </Badge>
         </div>
         
         <ScrollArea className="h-[400px] w-full">
