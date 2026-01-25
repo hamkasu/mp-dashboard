@@ -15,6 +15,7 @@ import {
 import { Link, useLocation } from "wouter";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { useLanguage } from "@/i18n/LanguageContext";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useQuery } from "@tanstack/react-query";
 
 interface HeaderProps {
@@ -49,7 +50,7 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="w-[240px]">
               <DropdownMenuItem onSelect={() => setLocation("/")}>
-                <img src="/parlimen-malaysia.svg" alt="Parlimen" className="w-4 h-4 mr-2" />
+                <img src="/parlimen-malaysia.svg" alt="Ahli Parlimen" className="w-6 h-6 mr-2" />
                 <span>{t('nav.mps')}</span>
               </DropdownMenuItem>
               <DropdownMenuItem onSelect={() => setLocation("/hansard")}>
@@ -104,17 +105,24 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
         </Link>
 
         <nav className="hidden md:flex items-center gap-1 lg:gap-2 flex-1 ml-2 lg:ml-4">
-          <Link href="/">
-            <Button
-              variant={location === "/" ? "secondary" : "ghost"}
-              size="sm"
-              data-testid="nav-home"
-              className="gap-2"
-            >
-              <img src="/parlimen-malaysia.svg" alt="Parlimen" className="w-4 h-4" />
-              <span>{t('nav.mps')}</span>
-            </Button>
-          </Link>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Link href="/">
+                  <Button
+                    variant={location === "/" ? "secondary" : "ghost"}
+                    size="icon"
+                    data-testid="nav-home"
+                  >
+                    <img src="/parlimen-malaysia.svg" alt="Ahli Parlimen" className="w-6 h-6" />
+                  </Button>
+                </Link>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Ahli Parlimen</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
           <Link href="/hansard">
             <Button
               variant={location === "/hansard" ? "secondary" : "ghost"}
