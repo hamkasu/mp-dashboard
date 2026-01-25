@@ -5,7 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { Link } from "wouter";
-import { Star, ArrowRight, MessageSquare, FileText, Mic, Calendar } from "lucide-react";
+import { Star, ArrowRight, MessageSquare, FileText, Mic, Calendar, Quote } from "lucide-react";
 import { getProxiedPhotoUrl } from "@/lib/utils";
 
 interface SpotlightData {
@@ -34,6 +34,10 @@ interface SpotlightData {
     value: number;
     label: string;
   };
+  hansardQuotes: {
+    quote: string;
+    sessionDate: string;
+  }[];
   date: string;
 }
 
@@ -72,7 +76,7 @@ export function MPSpotlight() {
     return null;
   }
 
-  const { mp, stats, highlightStat } = spotlightData;
+  const { mp, stats, highlightStat, hansardQuotes } = spotlightData;
 
   const getHighlightIcon = () => {
     switch (highlightStat.type) {
@@ -188,6 +192,28 @@ export function MPSpotlight() {
               </div>
             </div>
           </div>
+
+          {/* Hansard Quotes */}
+          {hansardQuotes && hansardQuotes.length > 0 && (
+            <div className="mt-4 space-y-2">
+              <div className="flex items-center gap-2 text-xs font-medium text-amber-700 dark:text-amber-400">
+                <Quote className="h-3.5 w-3.5" />
+                <span>{t("mpSpotlight.recentStatements")}</span>
+              </div>
+              <div className="space-y-2">
+                {hansardQuotes.map((item, idx) => (
+                  <blockquote
+                    key={idx}
+                    className="border-l-2 border-amber-300 dark:border-amber-700 pl-3 py-1"
+                  >
+                    <p className="text-xs text-muted-foreground italic leading-relaxed">
+                      "{item.quote}"
+                    </p>
+                  </blockquote>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* View Profile Link */}
           <Link href={`/mp/${mp.id}`}>
