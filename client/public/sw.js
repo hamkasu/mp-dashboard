@@ -3,8 +3,8 @@
  * Provides offline support and caching
  */
 
-const CACHE_NAME = 'myparliament-v1';
-const RUNTIME_CACHE = 'myparliament-runtime-v1';
+const CACHE_NAME = 'myparliament-v2';
+const RUNTIME_CACHE = 'myparliament-runtime-v2';
 
 // Assets to cache immediately
 const PRECACHE_ASSETS = [
