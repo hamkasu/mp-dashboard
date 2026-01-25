@@ -50,7 +50,7 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="w-[240px]">
               <DropdownMenuItem onSelect={() => setLocation("/")}>
-                <img src="/parlimen-malaysia.svg" alt="Ahli Parlimen" className="w-8 h-8 mr-2" />
+                <img src="/parlimen-malaysia.svg" alt="Ahli Parlimen" className="w-16 h-16 mr-2" />
                 <span>{t('nav.mps')}</span>
               </DropdownMenuItem>
               <DropdownMenuItem onSelect={() => setLocation("/hansard")}>
@@ -114,7 +114,7 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
                     size="icon"
                     data-testid="nav-home"
                   >
-                    <img src="/parlimen-malaysia.svg" alt="Ahli Parlimen" className="w-8 h-8" />
+                    <img src="/parlimen-malaysia.svg" alt="Ahli Parlimen" className="w-16 h-16" />
                   </Button>
                 </Link>
               </TooltipTrigger>
