@@ -9,6 +9,8 @@ import { z } from "zod";
 import multer from "multer";
 import { promises as fs } from "fs";
 import path from "path";
+import axios from "axios";
+import https from "https";
 import { getPublicBaseUrl, buildPdfUrl, fixHansardPdfUrls } from "./utils/url-helper";
 import {
   insertCourtCaseSchema,
@@ -725,6 +727,48 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     } catch (error) {
       console.error("Error calculating filtered stats:", error);
       res.status(500).json({ error: "Failed to calculate filtered statistics" });
+    }
+  });
+
+  // Image proxy for parliament website photos (bypasses hotlink protection)
+  app.get("/api/image-proxy", async (req, res) => {
+    try {
+      const imageUrl = req.query.url as string;
+
+      if (!imageUrl) {
+        return res.status(400).json({ error: "Missing url parameter" });
+      }
+
+      // Only allow proxying images from the parliament website
+      if (!imageUrl.startsWith("https://www.parlimen.gov.my/")) {
+        return res.status(403).json({ error: "Only parliament.gov.my images are allowed" });
+      }
+
+      const response = await axios.get(imageUrl, {
+        responseType: "arraybuffer",
+        headers: {
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+          "Referer": "https://www.parlimen.gov.my/",
+          "Accept": "image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
+        },
+        httpsAgent: new https.Agent({
+          rejectUnauthorized: false,
+        }),
+        timeout: 10000,
+      });
+
+      // Set appropriate headers for the image
+      const contentType = response.headers["content-type"] || "image/jpeg";
+      res.set({
+        "Content-Type": contentType,
+        "Cache-Control": "public, max-age=86400", // Cache for 24 hours
+        "Access-Control-Allow-Origin": "*",
+      });
+
+      res.send(Buffer.from(response.data));
+    } catch (error: any) {
+      console.error("Image proxy error:", error.message);
+      res.status(500).json({ error: "Failed to fetch image" });
     }
   });
 

@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import type { Mp, LegislativeProposal, ParliamentaryQuestion } from "@shared/schema";
 import { Link } from "wouter";
-import { calculateTotalSalary, formatCurrency } from "@/lib/utils";
+import { calculateTotalSalary, formatCurrency, getProxiedPhotoUrl } from "@/lib/utils";
 import { getMinisterialSalary, getCabinetRoleType } from "@/lib/allowanceCalculator";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { useConstituencyByCode } from "@/hooks/use-constituencies";
@@ -108,7 +108,7 @@ export function MPCard({ mp, bills, oralQuestions, languageStats }: MPCardProps)
         <div className="aspect-[3/4] relative overflow-hidden bg-muted">
           {mp.photoUrl ? (
             <img
-              src={mp.photoUrl}
+              src={getProxiedPhotoUrl(mp.photoUrl) || mp.photoUrl}
               alt={mp.name}
               className={`object-cover w-full h-full ${isDeceased ? 'opacity-60 grayscale' : ''}`}
               loading="lazy"
