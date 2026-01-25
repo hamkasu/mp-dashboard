@@ -20,7 +20,7 @@ import { HansardParticipation15th } from "@/components/HansardParticipation15th"
 import { HansardSpeakingRecord } from "@/components/HansardSpeakingRecord";
 import { ContactMPDialog } from "@/components/ContactMPDialog";
 import type { Mp, CourtCase, SprmInvestigation, LegislativeProposal, DebateParticipation, ParliamentaryQuestion, ParliamentaryOralAnswer, HansardRecord } from "@shared/schema";
-import { calculateTotalSalary, calculateYearlyBreakdown, formatCurrency, getPublicationName } from "@/lib/utils";
+import { calculateTotalSalary, calculateYearlyBreakdown, formatCurrency, getPublicationName, getProxiedPhotoUrl } from "@/lib/utils";
 import { getMinisterialSalary, getCabinetRoleType, ALLOWANCE_RATES } from "@/lib/allowanceCalculator";
 import { useConstituencyByCode } from "@/hooks/use-constituencies";
 import { format } from "date-fns";
@@ -396,7 +396,7 @@ export default function MPProfile() {
                 <div className="aspect-[3/4] rounded-lg overflow-hidden bg-muted border">
                   {mp.photoUrl ? (
                     <img
-                      src={mp.photoUrl}
+                      src={getProxiedPhotoUrl(mp.photoUrl) || mp.photoUrl}
                       alt={mp.name}
                       className="object-cover w-full h-full"
                     />

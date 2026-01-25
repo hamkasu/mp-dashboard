@@ -136,3 +136,18 @@ export function getPublicationName(url: string): string {
     return 'External Source';
   }
 }
+
+/**
+ * Convert a parliament photo URL to use the image proxy to bypass hotlink protection
+ */
+export function getProxiedPhotoUrl(photoUrl: string | null | undefined): string | null {
+  if (!photoUrl) return null;
+
+  // Only proxy parliament.gov.my URLs
+  if (photoUrl.startsWith('https://www.parlimen.gov.my/')) {
+    return `/api/image-proxy?url=${encodeURIComponent(photoUrl)}`;
+  }
+
+  // Return other URLs as-is
+  return photoUrl;
+}
