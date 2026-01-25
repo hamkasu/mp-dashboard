@@ -71,6 +71,7 @@ export const translations = {
       viewProfile: "View full profile",
       parliament15: "15th Parliament",
       deputyMinister: "Deputy Minister",
+      recentStatements: "Recent Statements",
     },
 
     // Royal Address
@@ -1464,6 +1465,7 @@ export const translations = {
       viewProfile: "Lihat profil penuh",
       parliament15: "Parlimen ke-15",
       deputyMinister: "Timbalan Menteri",
+      recentStatements: "Kenyataan Terkini",
     },
 
     // Royal Address

@@ -509,6 +509,39 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       const totalSessions = relevantSessions.length;
       const attendanceRate = totalSessions > 0 ? Math.round((sessionsAttended / totalSessions) * 100) : 0;
 
+      // Fetch Hansard quotes/key arguments for this MP
+      const { hansardSpeakerAnalysis } = await import("@shared/schema");
+      const speakerAnalysisRecords = await db.select().from(hansardSpeakerAnalysis);
+
+      // Find key arguments from sessions where this MP spoke
+      const mpQuotes: { quote: string; sessionDate: string }[] = [];
+
+      for (const record of speakerAnalysisRecords) {
+        if (record.speakerInsights) {
+          const mpInsight = record.speakerInsights.find(
+            (insight: any) => insight.mpId === spotlightMp.id
+          );
+          if (mpInsight && mpInsight.keyArguments && mpInsight.keyArguments.length > 0) {
+            // Get the hansard record to get session date
+            const hansardRecord = relevantSessions.find(r => r.id === record.hansardRecordId);
+            const sessionDate = hansardRecord
+              ? new Date(hansardRecord.sessionDate).toISOString().split('T')[0]
+              : '';
+
+            for (const arg of mpInsight.keyArguments) {
+              mpQuotes.push({
+                quote: arg,
+                sessionDate
+              });
+            }
+          }
+        }
+      }
+
+      // Sort by session date (most recent first) and take up to 2 quotes
+      mpQuotes.sort((a, b) => b.sessionDate.localeCompare(a.sessionDate));
+      const hansardQuotes = mpQuotes.slice(0, 2);
+
       // Determine the highlight stat based on what's most notable
       let highlightStat: { type: string; value: number; label: string };
 
@@ -566,6 +599,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
           attendanceRate,
         },
         highlightStat,
+        hansardQuotes,
         date: today.toISOString().split('T')[0],
       });
     } catch (error) {
