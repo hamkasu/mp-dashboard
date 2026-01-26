@@ -583,6 +583,21 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         };
       }
 
+      // Fetch poverty data for the constituency
+      let povertyIncidence: number | null = null;
+      try {
+        const { constituencies } = await import("@shared/schema");
+        const constituencyResult = await db.select()
+          .from(constituencies)
+          .where(eq(constituencies.parliamentCode, spotlightMp.parliamentCode));
+        if (constituencyResult.length > 0 && constituencyResult[0].povertyIncidence !== null) {
+          // Convert from integer (57 = 5.7%) to actual percentage
+          povertyIncidence = constituencyResult[0].povertyIncidence / 10;
+        }
+      } catch (povertyError) {
+        console.error("Error fetching poverty data:", povertyError);
+      }
+
       res.json({
         mp: {
           id: spotlightMp.id,
@@ -594,6 +609,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
           isMinister: spotlightMp.isMinister,
           isDeputyMinister: spotlightMp.isDeputyMinister,
           ministerialPosition: spotlightMp.ministerialPosition,
+          parliamentCode: spotlightMp.parliamentCode,
         },
         stats: {
           totalSessions,
@@ -603,6 +619,17 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
           oralQuestionsCount,
           billsCount,
           attendanceRate,
+        },
+        electionResults: {
+          year: spotlightMp.electionYear || 2022,
+          votesReceived: spotlightMp.electionVotesReceived,
+          totalValidVotes: spotlightMp.electionTotalValidVotes,
+          majority: spotlightMp.electionMajority,
+          turnoutPercent: spotlightMp.electionTurnoutPercent ? spotlightMp.electionTurnoutPercent / 100 : null,
+          votePercentage: spotlightMp.electionVotePercentage ? spotlightMp.electionVotePercentage / 100 : null,
+        },
+        constituencyData: {
+          povertyIncidence,
         },
         highlightStat,
         hansardQuotes,

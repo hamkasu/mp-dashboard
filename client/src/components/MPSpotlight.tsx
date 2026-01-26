@@ -5,7 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { Link } from "wouter";
-import { Star, ArrowRight, MessageSquare, FileText, Mic, Calendar, Quote } from "lucide-react";
+import { Star, ArrowRight, MessageSquare, FileText, Mic, Calendar, Quote, Vote, Users } from "lucide-react";
 import { getProxiedPhotoUrl } from "@/lib/utils";
 
 interface SpotlightData {
@@ -19,6 +19,7 @@ interface SpotlightData {
     isMinister: boolean;
     isDeputyMinister: boolean;
     ministerialPosition: string | null;
+    parliamentCode: string;
   };
   stats: {
     totalSessions: number;
@@ -28,6 +29,17 @@ interface SpotlightData {
     oralQuestionsCount: number;
     billsCount: number;
     attendanceRate: number;
+  };
+  electionResults: {
+    year: number;
+    votesReceived: number | null;
+    totalValidVotes: number | null;
+    majority: number | null;
+    turnoutPercent: number | null;
+    votePercentage: number | null;
+  };
+  constituencyData: {
+    povertyIncidence: number | null;
   };
   highlightStat: {
     type: string;
@@ -76,7 +88,7 @@ export function MPSpotlight() {
     return null;
   }
 
-  const { mp, stats, highlightStat, hansardQuotes } = spotlightData;
+  const { mp, stats, highlightStat, hansardQuotes, electionResults, constituencyData } = spotlightData;
 
   const getHighlightIcon = () => {
     switch (highlightStat.type) {
@@ -191,6 +203,77 @@ export function MPSpotlight() {
                 </p>
               </div>
             </div>
+          </div>
+
+          {/* Election Results & Constituency Data */}
+          <div className="mt-4 grid grid-cols-2 gap-3">
+            {/* Election Results */}
+            {electionResults && electionResults.votePercentage !== null && (
+              <div className="bg-white/60 dark:bg-black/20 rounded-lg p-3 border border-amber-200/50 dark:border-amber-800/50">
+                <div className="flex items-center gap-2 mb-2">
+                  <Vote className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                  <span className="text-xs font-medium text-amber-700 dark:text-amber-400">
+                    {t("mpSpotlight.electionResults")}
+                  </span>
+                </div>
+                <div className="space-y-1.5">
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs text-muted-foreground">{t("mpSpotlight.voteShare")}</span>
+                    <span className="text-sm font-semibold text-foreground">
+                      {electionResults.votePercentage.toFixed(1)}%
+                    </span>
+                  </div>
+                  {electionResults.majority !== null && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs text-muted-foreground">{t("mpSpotlight.majority")}</span>
+                      <span className="text-sm font-semibold text-foreground">
+                        {electionResults.majority.toLocaleString()}
+                      </span>
+                    </div>
+                  )}
+                  {electionResults.turnoutPercent !== null && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs text-muted-foreground">{t("mpSpotlight.turnout")}</span>
+                      <span className="text-sm font-semibold text-foreground">
+                        {electionResults.turnoutPercent.toFixed(1)}%
+                      </span>
+                    </div>
+                  )}
+                </div>
+                <p className="text-[10px] text-muted-foreground mt-2">
+                  GE{electionResults.year === 2022 ? '15' : electionResults.year} ({electionResults.year})
+                </p>
+              </div>
+            )}
+
+            {/* Poverty Incidence */}
+            {constituencyData && constituencyData.povertyIncidence !== null && (
+              <div className="bg-white/60 dark:bg-black/20 rounded-lg p-3 border border-amber-200/50 dark:border-amber-800/50">
+                <div className="flex items-center gap-2 mb-2">
+                  <Users className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                  <span className="text-xs font-medium text-amber-700 dark:text-amber-400">
+                    {t("mpSpotlight.constituencyData")}
+                  </span>
+                </div>
+                <div className="space-y-1.5">
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs text-muted-foreground">{t("mpSpotlight.povertyRate")}</span>
+                    <span className={`text-sm font-semibold ${
+                      constituencyData.povertyIncidence > 10
+                        ? 'text-red-600 dark:text-red-400'
+                        : constituencyData.povertyIncidence > 5
+                          ? 'text-amber-600 dark:text-amber-400'
+                          : 'text-green-600 dark:text-green-400'
+                    }`}>
+                      {constituencyData.povertyIncidence.toFixed(1)}%
+                    </span>
+                  </div>
+                </div>
+                <p className="text-[10px] text-muted-foreground mt-2">
+                  {mp.parliamentCode} • {mp.constituency}
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Hansard Quotes */}
