@@ -3,7 +3,7 @@
  * Updated: Parliamentary Answers Navigation (2025-12-02)
  */
 
-import { Search, Menu, FileText, BookOpen, UserCheck, Calculator, BarChart3, ExternalLink, AlertCircle, GraduationCap, TrendingUp, Scale, Shield, MessageSquare, Edit, Gavel, UserX, Building2, MessageSquareText, Award } from "lucide-react";
+import { Search, Menu, FileText, BookOpen, UserCheck, Calculator, BarChart3, ExternalLink, AlertCircle, GraduationCap, TrendingUp, Scale, Shield, MessageSquare, Edit, Gavel, UserX, Building2, MessageSquareText, Award, Handshake } from "lucide-react";
 import { FeedbackModal } from "@/components/FeedbackModal";
 import { Button } from "@/components/ui/button";
 import {
@@ -80,6 +80,10 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
               <DropdownMenuItem onSelect={() => setLocation("/allowances")}>
                 <Calculator className="w-4 h-4 mr-2" />
                 <span>{t('nav.allowances')}</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => setLocation("/ma63")}>
+                <Handshake className="w-4 h-4 mr-2" />
+                <span>MA63 Dashboard</span>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -254,6 +258,14 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
               </Tooltip>
             </TooltipProvider>
             <DropdownMenuContent align="start" className="max-h-80 overflow-y-auto">
+              <DropdownMenuItem
+                onSelect={() => setLocation("/ma63")}
+                data-testid="nav-ma63"
+                className="bg-blue-50 dark:bg-blue-950/30 font-medium"
+              >
+                <Handshake className="w-4 h-4 mr-2 text-blue-600 dark:text-blue-400" />
+                <span>MA63 Dashboard</span>
+              </DropdownMenuItem>
               <DropdownMenuItem
                 onSelect={() => setLocation("/dun/johor")}
                 data-testid="nav-dun-johor"

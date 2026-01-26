@@ -61,6 +61,7 @@ export const translations = {
       searchMps: "Search MPs...",
       malayParliament: "Malaysian Parliament",
       dewanRakyatDashboard: "Dewan Rakyat Dashboard",
+      ma63Dashboard: "MA63 Dashboard",
     },
 
     // MP Spotlight
@@ -819,6 +820,7 @@ export const translations = {
       searchMps: "Cari Ahli Parlimen...",
       malayParliament: "Parlimen Malaysia",
       dewanRakyatDashboard: "Papan Pemuka Dewan Rakyat",
+      ma63Dashboard: "Papan Pemuka MA63",
     },
 
     // Filters & Sorting

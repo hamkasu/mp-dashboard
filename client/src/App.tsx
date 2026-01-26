@@ -47,6 +47,7 @@ const ReportCard = lazy(() => import("@/pages/ReportCard"));
 const ReportCardAdmin = lazy(() => import("@/pages/ReportCardAdmin"));
 const MPMessagesAdmin = lazy(() => import("@/pages/MPMessagesAdmin"));
 const AIAgentsAdmin = lazy(() => import("@/pages/AIAgentsAdmin"));
+const MA63Dashboard = lazy(() => import("@/pages/MA63Dashboard"));
 
 // Loading component
 function PageLoader() {
@@ -93,6 +94,7 @@ function Router() {
         <Route path="/mp-status-admin" component={MPStatusAdmin} />
         <Route path="/dun/sarawak" component={DunSarawak} />
         <Route path="/dun/selangor" component={DunSelangor} />
+        <Route path="/ma63" component={MA63Dashboard} />
         <Route path="/report-card" component={ReportCard} />
         <Route path="/report-card-admin" component={ReportCardAdmin} />
         <Route path="/mp-messages-admin" component={MPMessagesAdmin} />
