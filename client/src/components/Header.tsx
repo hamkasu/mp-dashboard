@@ -114,7 +114,7 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
                     size="icon"
                     data-testid="nav-home"
                   >
-                    <img src="/parlimen-malaysia.svg" alt="Ahli Parlimen" className="w-5 h-5" />
+                    <img src="/parlimen-malaysia.svg" alt="Ahli Parlimen" className="w-10 h-10" />
                   </Button>
                 </Link>
               </TooltipTrigger>
@@ -132,7 +132,7 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
                     size="icon"
                     data-testid="nav-hansard"
                   >
-                    <BookOpen className="w-4 h-4" />
+                    <BookOpen className="w-8 h-8" />
                   </Button>
                 </Link>
               </TooltipTrigger>
@@ -150,7 +150,7 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
                     size="icon"
                     data-testid="nav-parliament-guide"
                   >
-                    <GraduationCap className="w-4 h-4" />
+                    <GraduationCap className="w-8 h-8" />
                   </Button>
                 </Link>
               </TooltipTrigger>
@@ -168,7 +168,7 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
                     size="icon"
                     data-testid="nav-report-card"
                   >
-                    <Award className="w-4 h-4" />
+                    <Award className="w-8 h-8" />
                   </Button>
                 </Link>
               </TooltipTrigger>
@@ -187,7 +187,7 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
                       size="icon"
                       data-testid="nav-legal-dropdown"
                     >
-                      <Scale className="w-4 h-4" />
+                      <Scale className="w-8 h-8" />
                     </Button>
                   </DropdownMenuTrigger>
                 </TooltipTrigger>
@@ -244,7 +244,7 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
                       size="icon"
                       data-testid="nav-dun-dropdown"
                     >
-                      <Building2 className="w-4 h-4" />
+                      <Building2 className="w-8 h-8" />
                     </Button>
                   </DropdownMenuTrigger>
                 </TooltipTrigger>
@@ -358,7 +358,7 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
                         size="icon"
                         data-testid="nav-admin-dropdown"
                       >
-                        <Shield className="w-4 h-4" />
+                        <Shield className="w-8 h-8" />
                       </Button>
                     </DropdownMenuTrigger>
                   </TooltipTrigger>
@@ -416,7 +416,7 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
                       size="icon"
                       data-testid="nav-analysis-dropdown"
                     >
-                      <BarChart3 className="w-4 h-4" />
+                      <BarChart3 className="w-8 h-8" />
                     </Button>
                   </DropdownMenuTrigger>
                 </TooltipTrigger>
@@ -500,7 +500,7 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
                     size="icon"
                     data-testid="nav-kawanku"
                   >
-                    <ExternalLink className="w-4 h-4" />
+                    <ExternalLink className="w-8 h-8" />
                   </Button>
                 </a>
               </TooltipTrigger>
