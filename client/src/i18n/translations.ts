@@ -72,6 +72,12 @@ export const translations = {
       parliament15: "15th Parliament",
       deputyMinister: "Deputy Minister",
       recentStatements: "Recent Statements",
+      electionResults: "Election Results",
+      voteShare: "Vote Share",
+      majority: "Majority",
+      turnout: "Turnout",
+      constituencyData: "Constituency Data",
+      povertyRate: "Poverty Rate",
     },
 
     // Royal Address
@@ -1466,6 +1472,12 @@ export const translations = {
       parliament15: "Parlimen ke-15",
       deputyMinister: "Timbalan Menteri",
       recentStatements: "Kenyataan Terkini",
+      electionResults: "Keputusan Pilihan Raya",
+      voteShare: "Peratusan Undi",
+      majority: "Majoriti",
+      turnout: "Keluar Mengundi",
+      constituencyData: "Data Kawasan",
+      povertyRate: "Kadar Kemiskinan",
     },
 
     // Royal Address
