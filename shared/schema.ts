@@ -1320,3 +1320,186 @@ export const updateAiAgentScheduleSchema = insertAiAgentScheduleSchema.partial()
 export type InsertAiAgentSchedule = z.infer<typeof insertAiAgentScheduleSchema>;
 export type UpdateAiAgentSchedule = z.infer<typeof updateAiAgentScheduleSchema>;
 export type AiAgentSchedule = typeof aiAgentSchedules.$inferSelect;
+
+// ========== MA63 DASHBOARD TABLES ==========
+// Malaysia Agreement 1963 Implementation Tracker for Sabah & Sarawak
+
+// MA63 Summary Statistics
+export const ma63Summary = pgTable("ma63_summary", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  totalIssues: integer("total_issues").notNull().default(0),
+  resolved: integer("resolved").notNull().default(0),
+  resolvedMadani: integer("resolved_madani").notNull().default(0), // Resolved under Madani government
+  inProgress: integer("in_progress").notNull().default(0),
+  pending: integer("pending").notNull().default(0),
+  overallProgress: integer("overall_progress").notNull().default(0), // Percentage (0-100)
+  dataSource: text("data_source"),
+  lastOfficialUpdate: timestamp("last_official_update"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").notNull().default(sql`NOW()`),
+  updatedAt: timestamp("updated_at").notNull().default(sql`NOW()`),
+});
+
+export const insertMa63SummarySchema = createInsertSchema(ma63Summary).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const updateMa63SummarySchema = insertMa63SummarySchema.partial();
+
+export type InsertMa63Summary = z.infer<typeof insertMa63SummarySchema>;
+export type UpdateMa63Summary = z.infer<typeof updateMa63SummarySchema>;
+export type Ma63Summary = typeof ma63Summary.$inferSelect;
+
+// MA63 Categories
+export const ma63Categories = pgTable("ma63_categories", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  code: varchar("code", { length: 50 }).unique().notNull(), // e.g., 'territorial', 'fiscal'
+  nameEn: text("name_en").notNull(),
+  nameMs: text("name_ms").notNull(),
+  icon: varchar("icon", { length: 50 }), // Lucide icon name
+  color: varchar("color", { length: 20 }), // Hex color code
+  resolved: integer("resolved").notNull().default(0),
+  inProgress: integer("in_progress").notNull().default(0),
+  pending: integer("pending").notNull().default(0),
+  total: integer("total").notNull().default(0),
+  displayOrder: integer("display_order").notNull().default(0),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").notNull().default(sql`NOW()`),
+  updatedAt: timestamp("updated_at").notNull().default(sql`NOW()`),
+});
+
+export const insertMa63CategorySchema = createInsertSchema(ma63Categories).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const updateMa63CategorySchema = insertMa63CategorySchema.partial();
+
+export type InsertMa63Category = z.infer<typeof insertMa63CategorySchema>;
+export type UpdateMa63Category = z.infer<typeof updateMa63CategorySchema>;
+export type Ma63Category = typeof ma63Categories.$inferSelect;
+
+// MA63 Individual Issues
+export const ma63Issues = pgTable("ma63_issues", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  categoryId: varchar("category_id").references(() => ma63Categories.id, { onDelete: "cascade" }),
+  titleEn: text("title_en").notNull(),
+  titleMs: text("title_ms").notNull(),
+  descriptionEn: text("description_en"),
+  descriptionMs: text("description_ms"),
+  status: text("status").notNull().default("pending"), // 'resolved', 'in_progress', 'pending', 'blocked'
+  priority: text("priority").default("medium"), // 'critical', 'high', 'medium', 'low'
+  resolvedDate: timestamp("resolved_date"),
+  resolvedBy: text("resolved_by"), // Which government/administration
+  relatedDocuments: jsonb("related_documents").$type<string[]>().default(sql`'[]'::jsonb`),
+  keyStakeholders: jsonb("key_stakeholders").$type<string[]>().default(sql`'[]'::jsonb`),
+  notes: text("notes"),
+  isFeatured: boolean("is_featured").notNull().default(false), // Show in watchlist
+  lastUpdate: timestamp("last_update"),
+  createdAt: timestamp("created_at").notNull().default(sql`NOW()`),
+  updatedAt: timestamp("updated_at").notNull().default(sql`NOW()`),
+});
+
+export const insertMa63IssueSchema = createInsertSchema(ma63Issues).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  status: z.enum(["resolved", "in_progress", "pending", "blocked"]).optional().default("pending"),
+  priority: z.enum(["critical", "high", "medium", "low"]).optional().default("medium"),
+  relatedDocuments: z.array(z.string()).optional().default([]),
+  keyStakeholders: z.array(z.string()).optional().default([]),
+  isFeatured: z.boolean().optional().default(false),
+  categoryId: z.string().nullable().optional(),
+  descriptionEn: z.string().nullable().optional(),
+  descriptionMs: z.string().nullable().optional(),
+  resolvedDate: z.date().nullable().optional(),
+  resolvedBy: z.string().nullable().optional(),
+  notes: z.string().nullable().optional(),
+  lastUpdate: z.date().nullable().optional(),
+});
+
+export const updateMa63IssueSchema = insertMa63IssueSchema.partial();
+
+export type InsertMa63Issue = z.infer<typeof insertMa63IssueSchema>;
+export type UpdateMa63Issue = z.infer<typeof updateMa63IssueSchema>;
+export type Ma63Issue = typeof ma63Issues.$inferSelect;
+
+// MA63 Timeline Events
+export const ma63TimelineEvents = pgTable("ma63_timeline_events", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  eventDate: timestamp("event_date").notNull(),
+  year: integer("year").notNull(),
+  month: varchar("month", { length: 20 }),
+  eventEn: text("event_en").notNull(),
+  eventMs: text("event_ms").notNull(),
+  eventType: text("event_type").notNull().default("milestone"), // 'milestone', 'resolved', 'in_progress', 'upcoming', 'setback'
+  relatedIssueId: varchar("related_issue_id").references(() => ma63Issues.id, { onDelete: "set null" }),
+  sourceUrl: text("source_url"),
+  sourceName: text("source_name"),
+  isMajor: boolean("is_major").notNull().default(false),
+  displayOrder: integer("display_order"),
+  createdAt: timestamp("created_at").notNull().default(sql`NOW()`),
+  updatedAt: timestamp("updated_at").notNull().default(sql`NOW()`),
+});
+
+export const insertMa63TimelineEventSchema = createInsertSchema(ma63TimelineEvents).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  eventType: z.enum(["milestone", "resolved", "in_progress", "upcoming", "setback"]).optional().default("milestone"),
+  isMajor: z.boolean().optional().default(false),
+  relatedIssueId: z.string().nullable().optional(),
+  sourceUrl: z.string().nullable().optional(),
+  sourceName: z.string().nullable().optional(),
+  month: z.string().nullable().optional(),
+  displayOrder: z.number().nullable().optional(),
+});
+
+export const updateMa63TimelineEventSchema = insertMa63TimelineEventSchema.partial();
+
+export type InsertMa63TimelineEvent = z.infer<typeof insertMa63TimelineEventSchema>;
+export type UpdateMa63TimelineEvent = z.infer<typeof updateMa63TimelineEventSchema>;
+export type Ma63TimelineEvent = typeof ma63TimelineEvents.$inferSelect;
+
+// MA63 Priority Watchlist Items
+export const ma63WatchlistItems = pgTable("ma63_watchlist_items", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  issueId: varchar("issue_id").references(() => ma63Issues.id, { onDelete: "cascade" }),
+  titleEn: text("title_en").notNull(),
+  titleMs: text("title_ms").notNull(),
+  descriptionEn: text("description_en").notNull(),
+  descriptionMs: text("description_ms").notNull(),
+  status: text("status").notNull().default("in_progress"), // 'resolved', 'in_progress', 'pending', 'blocked'
+  priority: text("priority").notNull().default("medium"), // 'critical', 'high', 'medium', 'low'
+  lastUpdateDate: timestamp("last_update_date"),
+  lastUpdateNote: text("last_update_note"),
+  displayOrder: integer("display_order").notNull().default(0),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").notNull().default(sql`NOW()`),
+  updatedAt: timestamp("updated_at").notNull().default(sql`NOW()`),
+});
+
+export const insertMa63WatchlistItemSchema = createInsertSchema(ma63WatchlistItems).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  status: z.enum(["resolved", "in_progress", "pending", "blocked"]).optional().default("in_progress"),
+  priority: z.enum(["critical", "high", "medium", "low"]).optional().default("medium"),
+  isActive: z.boolean().optional().default(true),
+  displayOrder: z.number().optional().default(0),
+  issueId: z.string().nullable().optional(),
+  lastUpdateDate: z.date().nullable().optional(),
+  lastUpdateNote: z.string().nullable().optional(),
+});
+
+export const updateMa63WatchlistItemSchema = insertMa63WatchlistItemSchema.partial();
+
+export type InsertMa63WatchlistItem = z.infer<typeof insertMa63WatchlistItemSchema>;
+export type UpdateMa63WatchlistItem = z.infer<typeof updateMa63WatchlistItemSchema>;
+export type Ma63WatchlistItem = typeof ma63WatchlistItems.$inferSelect;
