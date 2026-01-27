@@ -125,7 +125,9 @@ export function serveStatic(app: Express) {
       }
       // Cache HTML for shorter time (1 hour) to allow updates
       else if (path.endsWith('.html')) {
-        res.setHeader('Cache-Control', 'public, max-age=3600, must-revalidate');
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+        res.setHeader('Pragma', 'no-cache');
+        res.setHeader('Expires', '0');
       }
     }
   }));
@@ -149,11 +151,16 @@ export function serveStatic(app: Express) {
   });
 
   app.use("*", (req, res) => {
+    // Set no-cache headers for index.html to ensure fresh content after deploys
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+
     if (shouldServePrerendered(req) && fs.existsSync(prerenderedPath)) {
       const normalizedPath = normalizePathForPrerender(req.path);
       const urlMap = loadUrlMap(prerenderedPath);
       const filename = urlMap[normalizedPath];
-      
+
       if (filename) {
         const htmlPath = path.join(prerenderedPath, filename);
         if (fs.existsSync(htmlPath)) {
@@ -162,7 +169,7 @@ export function serveStatic(app: Express) {
         }
       }
     }
-    
+
     res.sendFile(path.resolve(distPath, "index.html"));
   });
 }
