@@ -26,7 +26,7 @@ const NavButton = React.forwardRef<HTMLButtonElement, NavButtonProps>(
           gap: '0px',
         }}
         className={cn(
-          "text-sm font-medium rounded-md border border-transparent",
+          "text-sm font-medium text-foreground rounded-md border border-transparent",
           "hover:bg-accent hover:text-accent-foreground",
           "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
           "disabled:pointer-events-none disabled:opacity-50",
