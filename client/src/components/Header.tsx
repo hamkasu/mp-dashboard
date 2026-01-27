@@ -47,6 +47,34 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
           </div>
         </Link>
 
+        {/* Center: Main Nav Items */}
+        <nav className="hidden md:flex items-center gap-1">
+          <Link href="/">
+            <Button variant="ghost" size="sm" className="gap-2">
+              <img src="/parlimen-malaysia.svg" alt="" className="w-4 h-4" />
+              {t('nav.mps')}
+            </Button>
+          </Link>
+          <Link href="/hansard">
+            <Button variant="ghost" size="sm" className="gap-2">
+              <BookOpen className="w-4 h-4" />
+              {t('nav.hansard')}
+            </Button>
+          </Link>
+          <Link href="/parliament-guide">
+            <Button variant="ghost" size="sm" className="gap-2">
+              <GraduationCap className="w-4 h-4" />
+              {t('nav.parliamentGuide')}
+            </Button>
+          </Link>
+          <Link href="/report-card">
+            <Button variant="ghost" size="sm" className="gap-2">
+              <Award className="w-4 h-4" />
+              {t('nav.reportCard')}
+            </Button>
+          </Link>
+        </nav>
+
         {/* Right: Menu + Search + Feedback + Language */}
         <div className="flex items-center gap-1">
           {/* Hamburger Menu */}
