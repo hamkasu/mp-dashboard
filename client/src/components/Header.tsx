@@ -50,25 +50,25 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
         {/* Center: Main Nav Items */}
         <nav className="hidden md:flex items-center gap-1">
           <Link href="/">
-            <Button variant="ghost" size="sm" className="gap-2">
+            <Button variant="outline" size="sm" className="gap-2">
               <img src="/parlimen-malaysia.svg" alt="" className="w-4 h-4" />
               {t('nav.mps')}
             </Button>
           </Link>
           <Link href="/hansard">
-            <Button variant="ghost" size="sm" className="gap-2">
+            <Button variant="outline" size="sm" className="gap-2">
               <BookOpen className="w-4 h-4" />
               {t('nav.hansard')}
             </Button>
           </Link>
           <Link href="/parliament-guide">
-            <Button variant="ghost" size="sm" className="gap-2">
+            <Button variant="outline" size="sm" className="gap-2">
               <GraduationCap className="w-4 h-4" />
               {t('nav.parliamentGuide')}
             </Button>
           </Link>
           <Link href="/report-card">
-            <Button variant="ghost" size="sm" className="gap-2">
+            <Button variant="outline" size="sm" className="gap-2">
               <Award className="w-4 h-4" />
               {t('nav.reportCard')}
             </Button>
@@ -80,7 +80,7 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
           {/* Hamburger Menu */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" data-testid="button-menu-toggle">
+              <Button variant="outline" size="icon" data-testid="button-menu-toggle">
                 <Menu className="h-5 w-5" />
               </Button>
             </DropdownMenuTrigger>
@@ -186,7 +186,7 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
             </DropdownMenuContent>
           </DropdownMenu>
           <Button
-            variant="ghost"
+            variant="outline"
             size="icon"
             onClick={onSearchClick}
             data-testid="button-search"
@@ -194,7 +194,7 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
             <Search className="h-5 w-5" />
           </Button>
           <FeedbackModal>
-            <Button variant="ghost" size="icon" data-testid="button-feedback">
+            <Button variant="outline" size="icon" data-testid="button-feedback">
               <MessageSquareText className="h-5 w-5" />
             </Button>
           </FeedbackModal>
