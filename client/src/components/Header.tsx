@@ -111,52 +111,52 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
           <Link href="/">
             <Button
               variant={location === "/" ? "secondary" : "ghost"}
-              className="flex flex-col items-center justify-center h-auto py-1 px-2"
+              className="nav-button"
               data-testid="nav-home"
             >
-              <img src="/parlimen-malaysia.svg" alt="Ahli Parlimen" className="w-6 h-6" />
-              <span className="text-[10px] mt-0.5 leading-tight">MPs</span>
+              <img src="/parlimen-malaysia.svg" alt="Ahli Parlimen" className="nav-icon-lg" />
+              <span className="nav-label">MPs</span>
             </Button>
           </Link>
           <Link href="/hansard">
             <Button
               variant={location === "/hansard" ? "secondary" : "ghost"}
-              className="flex flex-col items-center justify-center h-auto py-1 px-2"
+              className="nav-button"
               data-testid="nav-hansard"
             >
-              <BookOpen className="w-5 h-5" />
-              <span className="text-[10px] mt-0.5 leading-tight">Hansard</span>
+              <BookOpen />
+              <span className="nav-label">Hansard</span>
             </Button>
           </Link>
           <Link href="/parliament-guide">
             <Button
               variant={location === "/parliament-guide" ? "secondary" : "ghost"}
-              className="flex flex-col items-center justify-center h-auto py-1 px-2"
+              className="nav-button"
               data-testid="nav-parliament-guide"
             >
-              <GraduationCap className="w-5 h-5" />
-              <span className="text-[10px] mt-0.5 leading-tight">Guide</span>
+              <GraduationCap />
+              <span className="nav-label">Guide</span>
             </Button>
           </Link>
           <Link href="/report-card">
             <Button
               variant={location === "/report-card" ? "secondary" : "ghost"}
-              className="flex flex-col items-center justify-center h-auto py-1 px-2"
+              className="nav-button"
               data-testid="nav-report-card"
             >
-              <Award className="w-5 h-5" />
-              <span className="text-[10px] mt-0.5 leading-tight">Report</span>
+              <Award />
+              <span className="nav-label">Report</span>
             </Button>
           </Link>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
                 variant={location === "/constitution" || location === "/fundamental-rights" || location === "/courts" || location === "/bills" ? "secondary" : "ghost"}
-                className="flex flex-col items-center justify-center h-auto py-1 px-2"
+                className="nav-button"
                 data-testid="nav-legal-dropdown"
               >
-                <Scale className="w-5 h-5" />
-                <span className="text-[10px] mt-0.5 leading-tight">Legal</span>
+                <Scale />
+                <span className="nav-label">Legal</span>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start">
@@ -201,11 +201,11 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
             <DropdownMenuTrigger asChild>
               <Button
                 variant={location.startsWith("/dun") ? "secondary" : "ghost"}
-                className="flex flex-col items-center justify-center h-auto py-1 px-2"
+                className="nav-button"
                 data-testid="nav-dun-dropdown"
               >
-                <Building2 className="w-5 h-5" />
-                <span className="text-[10px] mt-0.5 leading-tight">DUN</span>
+                <Building2 />
+                <span className="nav-label">DUN</span>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="max-h-80 overflow-y-auto">
@@ -305,11 +305,11 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
           <Link href="/ma63">
             <Button
               variant={location === "/ma63" ? "secondary" : "ghost"}
-              className="flex flex-col items-center justify-center h-auto py-1 px-2"
+              className="nav-button"
               data-testid="nav-ma63"
             >
-              <Handshake className="w-5 h-5" />
-              <span className="text-[10px] mt-0.5 leading-tight">MA63</span>
+              <Handshake />
+              <span className="nav-label">MA63</span>
             </Button>
           </Link>
           {authStatus?.isAdmin && (
@@ -317,11 +317,11 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
               <DropdownMenuTrigger asChild>
                 <Button
                   variant={location === "/hansard-admin" || location === "/blog-admin" || location === "/court-cases-admin" || location === "/parliamentary-answers-admin" ? "secondary" : "ghost"}
-                  className="flex flex-col items-center justify-center h-auto py-1 px-2"
+                  className="nav-button"
                   data-testid="nav-admin-dropdown"
                 >
-                  <Shield className="w-5 h-5" />
-                  <span className="text-[10px] mt-0.5 leading-tight">Admin</span>
+                  <Shield />
+                  <span className="nav-label">Admin</span>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start">
@@ -367,11 +367,11 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
             <DropdownMenuTrigger asChild>
               <Button
                 variant={location === "/activity" || location === "/unpassed-bills" || location === "/attendance" || location === "/hansard-analysis" || location === "/hansard-questions" || location === "/parliamentary-answers" || location === "/allowances" || location === "/disclaimer" || location === "/analytics" ? "secondary" : "ghost"}
-                className="flex flex-col items-center justify-center h-auto py-1 px-2"
+                className="nav-button"
                 data-testid="nav-analysis-dropdown"
               >
-                <BarChart3 className="w-5 h-5" />
-                <span className="text-[10px] mt-0.5 leading-tight">Analysis</span>
+                <BarChart3 />
+                <span className="nav-label">Analysis</span>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start">
@@ -443,11 +443,11 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
           <a href="https://open.dosm.gov.my/ms-MY/dashboard/kawasanku" target="_blank" rel="noopener noreferrer">
             <Button
               variant="ghost"
-              className="flex flex-col items-center justify-center h-auto py-1 px-2"
+              className="nav-button"
               data-testid="nav-kawanku"
             >
-              <ExternalLink className="w-5 h-5" />
-              <span className="text-[10px] mt-0.5 leading-tight">Kawanku</span>
+              <ExternalLink />
+              <span className="nav-label">KAWANKU</span>
             </Button>
           </a>
         </nav>
