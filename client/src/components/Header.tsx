@@ -259,14 +259,6 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
             </TooltipProvider>
             <DropdownMenuContent align="start" className="max-h-80 overflow-y-auto">
               <DropdownMenuItem
-                onSelect={() => setLocation("/ma63")}
-                data-testid="nav-ma63"
-                className="bg-blue-50 dark:bg-blue-950/30 font-medium"
-              >
-                <Handshake className="w-4 h-4 mr-2 text-blue-600 dark:text-blue-400" />
-                <span>MA63 Dashboard</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem
                 onSelect={() => setLocation("/dun/johor")}
                 data-testid="nav-dun-johor"
               >
@@ -359,6 +351,24 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Link href="/ma63">
+                  <Button
+                    variant={location === "/ma63" ? "secondary" : "ghost"}
+                    size="icon"
+                    data-testid="nav-ma63"
+                  >
+                    <Handshake className="w-8 h-8" />
+                  </Button>
+                </Link>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>MA63 Dashboard</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
           {authStatus?.isAdmin && (
             <DropdownMenu>
               <TooltipProvider>
