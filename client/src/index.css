@@ -327,6 +327,8 @@
   }
 
   /* Navigation button styling - ensures vertical layout with icon above label */
+  /* Using high specificity to override Tailwind's button base styles */
+  button.nav-button,
   .nav-button {
     display: flex !important;
     flex-direction: column !important;
@@ -334,23 +336,29 @@
     justify-content: center !important;
     height: auto !important;
     padding: 0.25rem 0.5rem !important;
+    gap: 0 !important;
   }
 
-  .nav-button svg {
+  button.nav-button > svg,
+  button.nav-button > img,
+  .nav-button > svg,
+  .nav-button > img {
     width: 1.25rem !important;
     height: 1.25rem !important;
-    flex-shrink: 0;
+    flex-shrink: 0 !important;
   }
 
-  .nav-button .nav-icon-lg {
+  button.nav-button > .nav-icon-lg,
+  .nav-button > .nav-icon-lg {
     width: 1.5rem !important;
     height: 1.5rem !important;
   }
 
-  .nav-button .nav-label {
-    font-size: 10px;
-    margin-top: 0.125rem;
-    line-height: 1.25;
-    white-space: nowrap;
+  button.nav-button > .nav-label,
+  .nav-button > .nav-label {
+    font-size: 10px !important;
+    margin-top: 0.125rem !important;
+    line-height: 1.25 !important;
+    white-space: nowrap !important;
   }
 }
