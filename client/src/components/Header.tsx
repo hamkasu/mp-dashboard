@@ -32,6 +32,36 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
     retry: false,
   });
 
+  // Inline styles for navigation buttons to ensure consistent vertical layout
+  const navButtonStyle: React.CSSProperties = {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 'auto',
+    padding: '0.25rem 0.5rem',
+    gap: 0,
+  };
+
+  const navIconStyle: React.CSSProperties = {
+    width: '1.25rem',
+    height: '1.25rem',
+    flexShrink: 0,
+  };
+
+  const navIconLgStyle: React.CSSProperties = {
+    width: '1.5rem',
+    height: '1.5rem',
+    flexShrink: 0,
+  };
+
+  const navLabelStyle: React.CSSProperties = {
+    fontSize: '10px',
+    marginTop: '0.125rem',
+    lineHeight: 1.25,
+    whiteSpace: 'nowrap',
+  };
+
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shadow-sm">
       <div className="flex h-16 md:h-20 items-center justify-between gap-4 px-4 md:px-6 lg:px-8 max-w-7xl mx-auto">
@@ -111,52 +141,52 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
           <Link href="/">
             <Button
               variant={location === "/" ? "secondary" : "ghost"}
-              className="nav-button"
+              style={navButtonStyle}
               data-testid="nav-home"
             >
-              <img src="/parlimen-malaysia.svg" alt="Ahli Parlimen" className="nav-icon-lg" />
-              <span className="nav-label">MPs</span>
+              <img src="/parlimen-malaysia.svg" alt="Ahli Parlimen" style={navIconLgStyle} />
+              <span style={navLabelStyle}>MPs</span>
             </Button>
           </Link>
           <Link href="/hansard">
             <Button
               variant={location === "/hansard" ? "secondary" : "ghost"}
-              className="nav-button"
+              style={navButtonStyle}
               data-testid="nav-hansard"
             >
-              <BookOpen />
-              <span className="nav-label">Hansard</span>
+              <BookOpen style={navIconStyle} />
+              <span style={navLabelStyle}>Hansard</span>
             </Button>
           </Link>
           <Link href="/parliament-guide">
             <Button
               variant={location === "/parliament-guide" ? "secondary" : "ghost"}
-              className="nav-button"
+              style={navButtonStyle}
               data-testid="nav-parliament-guide"
             >
-              <GraduationCap />
-              <span className="nav-label">Guide</span>
+              <GraduationCap style={navIconStyle} />
+              <span style={navLabelStyle}>Guide</span>
             </Button>
           </Link>
           <Link href="/report-card">
             <Button
               variant={location === "/report-card" ? "secondary" : "ghost"}
-              className="nav-button"
+              style={navButtonStyle}
               data-testid="nav-report-card"
             >
-              <Award />
-              <span className="nav-label">Report</span>
+              <Award style={navIconStyle} />
+              <span style={navLabelStyle}>Report</span>
             </Button>
           </Link>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
                 variant={location === "/constitution" || location === "/fundamental-rights" || location === "/courts" || location === "/bills" ? "secondary" : "ghost"}
-                className="nav-button"
+                style={navButtonStyle}
                 data-testid="nav-legal-dropdown"
               >
-                <Scale />
-                <span className="nav-label">Legal</span>
+                <Scale style={navIconStyle} />
+                <span style={navLabelStyle}>Legal</span>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start">
@@ -201,11 +231,11 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
             <DropdownMenuTrigger asChild>
               <Button
                 variant={location.startsWith("/dun") ? "secondary" : "ghost"}
-                className="nav-button"
+                style={navButtonStyle}
                 data-testid="nav-dun-dropdown"
               >
-                <Building2 />
-                <span className="nav-label">DUN</span>
+                <Building2 style={navIconStyle} />
+                <span style={navLabelStyle}>DUN</span>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="max-h-80 overflow-y-auto">
@@ -305,11 +335,11 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
           <Link href="/ma63">
             <Button
               variant={location === "/ma63" ? "secondary" : "ghost"}
-              className="nav-button"
+              style={navButtonStyle}
               data-testid="nav-ma63"
             >
-              <Handshake />
-              <span className="nav-label">MA63</span>
+              <Handshake style={navIconStyle} />
+              <span style={navLabelStyle}>MA63</span>
             </Button>
           </Link>
           {authStatus?.isAdmin && (
@@ -317,11 +347,11 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
               <DropdownMenuTrigger asChild>
                 <Button
                   variant={location === "/hansard-admin" || location === "/blog-admin" || location === "/court-cases-admin" || location === "/parliamentary-answers-admin" ? "secondary" : "ghost"}
-                  className="nav-button"
+                  style={navButtonStyle}
                   data-testid="nav-admin-dropdown"
                 >
-                  <Shield />
-                  <span className="nav-label">Admin</span>
+                  <Shield style={navIconStyle} />
+                  <span style={navLabelStyle}>Admin</span>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start">
@@ -367,11 +397,11 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
             <DropdownMenuTrigger asChild>
               <Button
                 variant={location === "/activity" || location === "/unpassed-bills" || location === "/attendance" || location === "/hansard-analysis" || location === "/hansard-questions" || location === "/parliamentary-answers" || location === "/allowances" || location === "/disclaimer" || location === "/analytics" ? "secondary" : "ghost"}
-                className="nav-button"
+                style={navButtonStyle}
                 data-testid="nav-analysis-dropdown"
               >
-                <BarChart3 />
-                <span className="nav-label">Analysis</span>
+                <BarChart3 style={navIconStyle} />
+                <span style={navLabelStyle}>Analysis</span>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start">
@@ -443,11 +473,11 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
           <a href="https://open.dosm.gov.my/ms-MY/dashboard/kawasanku" target="_blank" rel="noopener noreferrer">
             <Button
               variant="ghost"
-              className="nav-button"
+              style={navButtonStyle}
               data-testid="nav-kawanku"
             >
-              <ExternalLink />
-              <span className="nav-label">KAWANKU</span>
+              <ExternalLink style={navIconStyle} />
+              <span style={navLabelStyle}>KAWANKU</span>
             </Button>
           </a>
         </nav>
