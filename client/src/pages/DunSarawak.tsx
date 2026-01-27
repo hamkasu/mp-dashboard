@@ -589,7 +589,7 @@ export default function DunSarawak() {
                         </a>
                       </Button>
                       <Button 
-                        variant="ghost" 
+                        variant="outline" 
                         size="sm" 
                         asChild
                         data-testid="button-download-hansard-doc"
@@ -643,7 +643,7 @@ export default function DunSarawak() {
                         </a>
                       </Button>
                       <Button 
-                        variant="ghost" 
+                        variant="outline" 
                         size="sm" 
                         asChild
                         data-testid="button-download-remuneration-doc"
@@ -1081,7 +1081,7 @@ export default function DunSarawak() {
                   </a>
                 </Button>
                 <Button 
-                  variant="ghost" 
+                  variant="outline" 
                   size="sm" 
                   asChild
                 >
@@ -1266,7 +1266,7 @@ export default function DunSarawak() {
                   </a>
                 </Button>
                 <Button 
-                  variant="ghost" 
+                  variant="outline" 
                   size="sm" 
                   asChild
                 >

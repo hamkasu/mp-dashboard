@@ -87,7 +87,7 @@ export function FeedbackModal({ children }: FeedbackModalProps) {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         {children || (
-          <Button variant="ghost" size="sm" className="gap-2" data-testid="button-feedback">
+          <Button variant="outline" size="sm" className="gap-2" data-testid="button-feedback">
             <MessageSquareText className="h-4 w-4" />
             {t('feedback.button')}
           </Button>

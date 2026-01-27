@@ -22,7 +22,7 @@ export default function ConstituencyAnalysis() {
       <div className="container mx-auto px-4 py-8">
         <div className="mb-6">
           <Button
-            variant="ghost"
+            variant="outline"
             onClick={() => setLocation("/")}
             className="mb-4"
             data-testid="button-back"

@@ -283,7 +283,7 @@ export default function ParliamentaryAnswers() {
                           <div className="flex justify-center gap-1">
                             {answer.hasPdf && (
                               <Button
-                                variant="ghost"
+                                variant="outline"
                                 size="sm"
                                 asChild
                                 title="View stored PDF"
@@ -299,7 +299,7 @@ export default function ParliamentaryAnswers() {
                             )}
                             {answer.fullTextUrl && (
                               <Button
-                                variant="ghost"
+                                variant="outline"
                                 size="sm"
                                 asChild
                                 title="View on Parliament website"

@@ -603,7 +603,7 @@ export default function CourtCasesAdmin() {
                                 )}
                               </div>
                             </div>
-                            <Button variant="ghost" size="icon" asChild onClick={(e) => e.stopPropagation()}>
+                            <Button variant="outline" size="icon" asChild onClick={(e) => e.stopPropagation()}>
                               <a href={article.sourceUrl} target="_blank" rel="noopener noreferrer">
                                 <ExternalLink className="h-4 w-4" />
                               </a>
@@ -668,7 +668,7 @@ export default function CourtCasesAdmin() {
                             </div>
                             <div className="flex items-center gap-2">
                               <Button 
-                                variant="ghost" 
+                                variant="outline" 
                                 size="icon" 
                                 onClick={() => handleEditCase(courtCase)}
                                 data-testid={`button-edit-case-${courtCase.id}`}
@@ -676,7 +676,7 @@ export default function CourtCasesAdmin() {
                                 <Edit className="h-4 w-4" />
                               </Button>
                               <Button 
-                                variant="ghost" 
+                                variant="outline" 
                                 size="icon"
                                 onClick={() => {
                                   if (confirm("Are you sure you want to delete this court case?")) {

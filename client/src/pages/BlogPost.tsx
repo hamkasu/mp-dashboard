@@ -154,7 +154,7 @@ export default function BlogPost() {
       <main className="flex-1 container mx-auto px-4 py-6 md:py-8 max-w-4xl">
         <article className="space-y-6">
           <Button
-            variant="ghost"
+            variant="outline"
             onClick={handleBack}
             className="mb-4"
             data-testid="button-back-to-blog"

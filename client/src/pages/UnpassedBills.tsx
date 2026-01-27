@@ -325,7 +325,7 @@ export default function UnpassedBills() {
                           <TableCell className="text-right">
                             {bill.hansardReference && (
                               <Button
-                                variant="ghost"
+                                variant="outline"
                                 size="sm"
                                 asChild
                               >

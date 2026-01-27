@@ -382,7 +382,7 @@ export default function MPProfile() {
           <div className="space-y-6 md:space-y-8">
           {/* Back Button */}
           <Link href="/">
-            <Button variant="ghost" size="sm" data-testid="button-back">
+            <Button variant="outline" size="sm" data-testid="button-back">
               <ArrowLeft className="mr-2 h-4 w-4" />
               {t('nav.backToDashboard')}
             </Button>

@@ -626,7 +626,7 @@ export default function ReportCard() {
                     Showing {filteredAndSortedCards.length} of {reportCards.length} MPs
                   </span>
                   <Button
-                    variant="ghost"
+                    variant="outline"
                     size="sm"
                     onClick={() => {
                       setSearchQuery("");
@@ -725,7 +725,7 @@ export default function ReportCard() {
                           <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
                             <div className="flex items-center justify-center">
                               <Button
-                                variant="ghost"
+                                variant="outline"
                                 size="sm"
                                 className="h-8 w-8 p-0"
                                 onClick={() => handleMPSelection(card.mpId, !selectedMPs.includes(card.mpId))}
@@ -775,7 +775,7 @@ export default function ReportCard() {
                             </div>
                           </TableCell>
                           <TableCell className="text-center">
-                            <Button variant="ghost" size="sm" onClick={() => navigate(`/mp/${card.mpId}`)}>
+                            <Button variant="outline" size="sm" onClick={() => navigate(`/mp/${card.mpId}`)}>
                               View Profile
                             </Button>
                           </TableCell>

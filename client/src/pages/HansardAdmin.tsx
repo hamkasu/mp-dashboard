@@ -1093,7 +1093,7 @@ export default function HansardAdmin() {
                         </p>
                       </div>
                       <Button
-                        variant="ghost"
+                        variant="outline"
                         size="icon"
                         onClick={() => handleRemoveFile(index)}
                         data-testid={`button-remove-file-${index}`}

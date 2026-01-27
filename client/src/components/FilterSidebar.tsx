@@ -59,7 +59,7 @@ export function FilterSidebar({
         <>
           <div className="flex items-center justify-between p-4">
             <h2 className="text-lg font-semibold">{t('filters.title')}</h2>
-            <Button variant="ghost" size="icon" onClick={onClose} data-testid="button-close-filters">
+            <Button variant="outline" size="icon" onClick={onClose} data-testid="button-close-filters">
               <X className="h-4 w-4" />
             </Button>
           </div>
