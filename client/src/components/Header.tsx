@@ -1,9 +1,9 @@
 /**
  * Copyright by Calmic Sdn Bhd
- * Updated: Simplified Navigation Menu
+ * Updated: Consolidated Navigation Menu with Submenus
  */
 
-import { Search, Menu, FileText, BookOpen, UserCheck, Calculator, BarChart3, ExternalLink, AlertCircle, GraduationCap, Scale, Shield, MessageSquare, Gavel, Building2, MessageSquareText, Award, Handshake } from "lucide-react";
+import { Search, Menu, FileText, BookOpen, UserCheck, Calculator, BarChart3, ExternalLink, AlertCircle, GraduationCap, Scale, Shield, MessageSquare, Gavel, Building2, MessageSquareText, Award, Handshake, ChevronDown, Users, Activity, LayoutDashboard } from "lucide-react";
 import { FeedbackModal } from "@/components/FeedbackModal";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,6 +12,11 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
+  DropdownMenuPortal,
+  DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
 import { Link, useLocation } from "wouter";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
@@ -29,63 +34,186 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shadow-sm">
       <div className="flex h-16 items-center justify-between gap-4 px-4 max-w-7xl mx-auto">
-        {/* Left: Logo */}
-        <Link href="/">
-          <div className="flex items-center gap-2 cursor-pointer px-1 py-1 rounded-md hover:bg-accent">
-            <img
-              src="/calmic-logo.png"
-              alt="Logo"
-              className="h-10 w-10 rounded-full object-cover"
-              data-testid="img-calmic-logo"
-            />
-            <div className="flex flex-col">
-              <span className="text-sm font-bold">{t('nav.malayParliament')}</span>
-              <span className="text-xs text-muted-foreground hidden sm:block">
-                {t('nav.dewanRakyatDashboard')}
-              </span>
-            </div>
-          </div>
-        </Link>
-
-        {/* Center: Main Nav Items */}
-        <nav className="hidden md:flex items-center gap-1">
+        {/* Left: Logo + Main Menu Dropdown */}
+        <div className="flex items-center gap-2">
           <Link href="/">
-            <Button variant="outline" size="sm" className="gap-2">
-              <img src="/parlimen-malaysia.svg" alt="" className="w-4 h-4" />
-              {t('nav.mps')}
-            </Button>
+            <div className="flex items-center gap-2 cursor-pointer px-1 py-1 rounded-md hover:bg-accent">
+              <img
+                src="/calmic-logo.png"
+                alt="Logo"
+                className="h-10 w-10 rounded-full object-cover"
+                data-testid="img-calmic-logo"
+              />
+              <div className="flex flex-col">
+                <span className="text-sm font-bold">{t('nav.malayParliament')}</span>
+                <span className="text-xs text-muted-foreground hidden sm:block">
+                  {t('nav.dewanRakyatDashboard')}
+                </span>
+              </div>
+            </div>
           </Link>
-          <Link href="/hansard">
-            <Button variant="outline" size="sm" className="gap-2">
-              <BookOpen className="w-4 h-4" />
-              {t('nav.hansard')}
-            </Button>
-          </Link>
-          <Link href="/parliament-guide">
-            <Button variant="outline" size="sm" className="gap-2">
-              <GraduationCap className="w-4 h-4" />
-              {t('nav.parliamentGuide')}
-            </Button>
-          </Link>
-          <Link href="/report-card">
-            <Button variant="outline" size="sm" className="gap-2">
-              <Award className="w-4 h-4" />
-              {t('nav.reportCard')}
-            </Button>
-          </Link>
-        </nav>
 
-        {/* Right: Menu + Search + Feedback + Language */}
-        <div className="flex items-center gap-1">
-          {/* Hamburger Menu */}
+          {/* Main Navigation Dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="icon" data-testid="button-menu-toggle">
+              <Button variant="outline" size="sm" className="gap-1 hidden md:flex" data-testid="button-main-nav">
+                <LayoutDashboard className="w-4 h-4" />
+                Menu
+                <ChevronDown className="w-3 h-3" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-64">
+              {/* Parliament Section */}
+              <DropdownMenuLabel className="text-xs text-muted-foreground">Parliament</DropdownMenuLabel>
+              <DropdownMenuItem onSelect={() => setLocation("/")} data-testid="menu-mps">
+                <img src="/parlimen-malaysia.svg" alt="" className="w-4 h-4 mr-2" />
+                {t('nav.mps')}
+              </DropdownMenuItem>
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger data-testid="menu-hansard-submenu">
+                  <BookOpen className="w-4 h-4 mr-2" />
+                  {t('nav.hansard')}
+                </DropdownMenuSubTrigger>
+                <DropdownMenuPortal>
+                  <DropdownMenuSubContent>
+                    <DropdownMenuItem onSelect={() => setLocation("/hansard")} data-testid="submenu-hansard-main">
+                      <BookOpen className="w-4 h-4 mr-2" />
+                      View Hansard
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onSelect={() => setLocation("/hansard-analysis")} data-testid="submenu-hansard-analysis">
+                      <BarChart3 className="w-4 h-4 mr-2" />
+                      {t('nav.hansardAnalysis')}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onSelect={() => setLocation("/parliamentary-answers")} data-testid="submenu-parliamentary-answers">
+                      <MessageSquare className="w-4 h-4 mr-2" />
+                      {t('nav.parliamentaryAnswers')}
+                    </DropdownMenuItem>
+                  </DropdownMenuSubContent>
+                </DropdownMenuPortal>
+              </DropdownMenuSub>
+              <DropdownMenuItem onSelect={() => setLocation("/parliament-guide")} data-testid="menu-parliament-guide">
+                <GraduationCap className="w-4 h-4 mr-2" />
+                {t('nav.parliamentGuide')}
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => setLocation("/report-card")} data-testid="menu-report-card">
+                <Award className="w-4 h-4 mr-2" />
+                {t('nav.reportCard')}
+              </DropdownMenuItem>
+
+              <DropdownMenuSeparator />
+
+              {/* MP Analysis Section */}
+              <DropdownMenuLabel className="text-xs text-muted-foreground">MP Analysis</DropdownMenuLabel>
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger data-testid="menu-activity-submenu">
+                  <Activity className="w-4 h-4 mr-2" />
+                  Performance
+                </DropdownMenuSubTrigger>
+                <DropdownMenuPortal>
+                  <DropdownMenuSubContent>
+                    <DropdownMenuItem onSelect={() => setLocation("/activity")} data-testid="submenu-activity">
+                      <FileText className="w-4 h-4 mr-2" />
+                      {t('nav.activity')}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onSelect={() => setLocation("/attendance")} data-testid="submenu-attendance">
+                      <UserCheck className="w-4 h-4 mr-2" />
+                      {t('nav.attendance')}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onSelect={() => setLocation("/allowances")} data-testid="submenu-allowances">
+                      <Calculator className="w-4 h-4 mr-2" />
+                      {t('nav.allowances')}
+                    </DropdownMenuItem>
+                  </DropdownMenuSubContent>
+                </DropdownMenuPortal>
+              </DropdownMenuSub>
+
+              <DropdownMenuSeparator />
+
+              {/* Legal & Constitution Section */}
+              <DropdownMenuLabel className="text-xs text-muted-foreground">Legal & Constitution</DropdownMenuLabel>
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger data-testid="menu-legal-submenu">
+                  <Scale className="w-4 h-4 mr-2" />
+                  Legal Framework
+                </DropdownMenuSubTrigger>
+                <DropdownMenuPortal>
+                  <DropdownMenuSubContent>
+                    <DropdownMenuItem onSelect={() => setLocation("/constitution")} data-testid="submenu-constitution">
+                      <Scale className="w-4 h-4 mr-2" />
+                      {t('nav.constitution')}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onSelect={() => setLocation("/fundamental-rights")} data-testid="submenu-fundamental-rights">
+                      <Shield className="w-4 h-4 mr-2" />
+                      {t('nav.fundamentalRights')}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onSelect={() => setLocation("/courts")} data-testid="submenu-courts">
+                      <Gavel className="w-4 h-4 mr-2" />
+                      {t('nav.courts')}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onSelect={() => setLocation("/bills")} data-testid="submenu-bills">
+                      <FileText className="w-4 h-4 mr-2" />
+                      {t('nav.bills')}
+                    </DropdownMenuItem>
+                  </DropdownMenuSubContent>
+                </DropdownMenuPortal>
+              </DropdownMenuSub>
+
+              <DropdownMenuSeparator />
+
+              {/* State Assemblies Section */}
+              <DropdownMenuLabel className="text-xs text-muted-foreground">State Assemblies</DropdownMenuLabel>
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger data-testid="menu-dun-submenu">
+                  <Building2 className="w-4 h-4 mr-2" />
+                  DUN
+                </DropdownMenuSubTrigger>
+                <DropdownMenuPortal>
+                  <DropdownMenuSubContent>
+                    <DropdownMenuItem onSelect={() => setLocation("/dun/sabah")} data-testid="submenu-dun-sabah">
+                      <Building2 className="w-4 h-4 mr-2" />
+                      DUN Sabah
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onSelect={() => setLocation("/dun/sarawak")} data-testid="submenu-dun-sarawak">
+                      <Building2 className="w-4 h-4 mr-2" />
+                      DUN Sarawak
+                    </DropdownMenuItem>
+                  </DropdownMenuSubContent>
+                </DropdownMenuPortal>
+              </DropdownMenuSub>
+              <DropdownMenuItem onSelect={() => window.open("https://myparliament.calmic.com.my/ma63", "_blank")} data-testid="menu-ma63">
+                <Handshake className="w-4 h-4 mr-2" />
+                MA63 Dashboard
+                <ExternalLink className="w-3 h-3 ml-auto opacity-50" />
+              </DropdownMenuItem>
+
+              <DropdownMenuSeparator />
+
+              {/* External Links */}
+              <DropdownMenuItem onSelect={() => window.open("https://open.dosm.gov.my/ms-MY/dashboard/kawasanku", "_blank")} data-testid="menu-kawanku">
+                <ExternalLink className="w-4 h-4 mr-2" />
+                {t('nav.kawanku')}
+                <ExternalLink className="w-3 h-3 ml-auto opacity-50" />
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => setLocation("/disclaimer")} data-testid="menu-disclaimer">
+                <AlertCircle className="w-4 h-4 mr-2" />
+                {t('nav.disclaimer')}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+
+        {/* Right: Mobile Menu + Search + Feedback + Language */}
+        <div className="flex items-center gap-1">
+          {/* Mobile Hamburger Menu */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="icon" className="md:hidden" data-testid="button-mobile-menu">
                 <Menu className="h-5 w-5" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56 max-h-[80vh] overflow-y-auto">
-              {/* Main Navigation */}
+              {/* Parliament */}
+              <DropdownMenuLabel className="text-xs text-muted-foreground">Parliament</DropdownMenuLabel>
               <DropdownMenuItem onSelect={() => setLocation("/")}>
                 <img src="/parlimen-malaysia.svg" alt="" className="w-4 h-4 mr-2" />
                 {t('nav.mps')}
@@ -105,16 +233,33 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
 
               <DropdownMenuSeparator />
 
-              {/* MA63 - External Link */}
-              <DropdownMenuItem onSelect={() => window.open("https://myparliament.calmic.com.my/ma63", "_blank")}>
-                <Handshake className="w-4 h-4 mr-2" />
-                MA63 Dashboard
-                <ExternalLink className="w-3 h-3 ml-auto opacity-50" />
+              {/* Analysis */}
+              <DropdownMenuLabel className="text-xs text-muted-foreground">Analysis</DropdownMenuLabel>
+              <DropdownMenuItem onSelect={() => setLocation("/activity")}>
+                <FileText className="w-4 h-4 mr-2" />
+                {t('nav.activity')}
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => setLocation("/attendance")}>
+                <UserCheck className="w-4 h-4 mr-2" />
+                {t('nav.attendance')}
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => setLocation("/hansard-analysis")}>
+                <BarChart3 className="w-4 h-4 mr-2" />
+                {t('nav.hansardAnalysis')}
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => setLocation("/parliamentary-answers")}>
+                <MessageSquare className="w-4 h-4 mr-2" />
+                {t('nav.parliamentaryAnswers')}
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => setLocation("/allowances")}>
+                <Calculator className="w-4 h-4 mr-2" />
+                {t('nav.allowances')}
               </DropdownMenuItem>
 
               <DropdownMenuSeparator />
 
-              {/* Legal Section */}
+              {/* Legal */}
+              <DropdownMenuLabel className="text-xs text-muted-foreground">Legal</DropdownMenuLabel>
               <DropdownMenuItem onSelect={() => setLocation("/constitution")}>
                 <Scale className="w-4 h-4 mr-2" />
                 {t('nav.constitution')}
@@ -134,31 +279,8 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
 
               <DropdownMenuSeparator />
 
-              {/* Analysis Section */}
-              <DropdownMenuItem onSelect={() => setLocation("/activity")}>
-                <FileText className="w-4 h-4 mr-2" />
-                {t('nav.activity')}
-              </DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => setLocation("/attendance")}>
-                <UserCheck className="w-4 h-4 mr-2" />
-                {t('nav.attendance')}
-              </DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => setLocation("/parliamentary-answers")}>
-                <MessageSquare className="w-4 h-4 mr-2" />
-                {t('nav.parliamentaryAnswers')}
-              </DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => setLocation("/hansard-analysis")}>
-                <BarChart3 className="w-4 h-4 mr-2" />
-                {t('nav.hansardAnalysis')}
-              </DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => setLocation("/allowances")}>
-                <Calculator className="w-4 h-4 mr-2" />
-                {t('nav.allowances')}
-              </DropdownMenuItem>
-
-              <DropdownMenuSeparator />
-
-              {/* DUN Section */}
+              {/* DUN */}
+              <DropdownMenuLabel className="text-xs text-muted-foreground">State Assemblies</DropdownMenuLabel>
               <DropdownMenuItem onSelect={() => setLocation("/dun/sabah")}>
                 <Building2 className="w-4 h-4 mr-2" />
                 DUN Sabah
@@ -167,24 +289,26 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
                 <Building2 className="w-4 h-4 mr-2" />
                 DUN Sarawak
               </DropdownMenuItem>
-
-              <DropdownMenuSeparator />
-
-              {/* External Links */}
-              <DropdownMenuItem onSelect={() => window.open("https://open.dosm.gov.my/ms-MY/dashboard/kawasanku", "_blank")}>
-                <ExternalLink className="w-4 h-4 mr-2" />
-                {t('nav.kawanku')}
+              <DropdownMenuItem onSelect={() => window.open("https://myparliament.calmic.com.my/ma63", "_blank")}>
+                <Handshake className="w-4 h-4 mr-2" />
+                MA63 Dashboard
                 <ExternalLink className="w-3 h-3 ml-auto opacity-50" />
               </DropdownMenuItem>
 
               <DropdownMenuSeparator />
 
+              <DropdownMenuItem onSelect={() => window.open("https://open.dosm.gov.my/ms-MY/dashboard/kawasanku", "_blank")}>
+                <ExternalLink className="w-4 h-4 mr-2" />
+                {t('nav.kawanku')}
+                <ExternalLink className="w-3 h-3 ml-auto opacity-50" />
+              </DropdownMenuItem>
               <DropdownMenuItem onSelect={() => setLocation("/disclaimer")}>
                 <AlertCircle className="w-4 h-4 mr-2" />
                 {t('nav.disclaimer')}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+
           <Button
             variant="outline"
             size="icon"
