@@ -29,8 +29,26 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shadow-sm">
       <div className="flex h-16 items-center justify-between gap-4 px-4 max-w-7xl mx-auto">
-        {/* Left: Menu + Logo */}
-        <div className="flex items-center gap-2">
+        {/* Left: Logo */}
+        <Link href="/">
+          <div className="flex items-center gap-2 cursor-pointer px-1 py-1 rounded-md hover:bg-accent">
+            <img
+              src="/calmic-logo.png"
+              alt="Logo"
+              className="h-10 w-10 rounded-full object-cover"
+              data-testid="img-calmic-logo"
+            />
+            <div className="flex flex-col">
+              <span className="text-sm font-bold">{t('nav.malayParliament')}</span>
+              <span className="text-xs text-muted-foreground hidden sm:block">
+                {t('nav.dewanRakyatDashboard')}
+              </span>
+            </div>
+          </div>
+        </Link>
+
+        {/* Right: Menu + Search + Feedback + Language */}
+        <div className="flex items-center gap-1">
           {/* Hamburger Menu */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -38,7 +56,7 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
                 <Menu className="h-5 w-5" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-56 max-h-[80vh] overflow-y-auto">
+            <DropdownMenuContent align="end" className="w-56 max-h-[80vh] overflow-y-auto">
               {/* Main Navigation */}
               <DropdownMenuItem onSelect={() => setLocation("/")}>
                 <img src="/parlimen-malaysia.svg" alt="" className="w-4 h-4 mr-2" />
@@ -139,28 +157,6 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-
-          {/* Logo */}
-          <Link href="/">
-            <div className="flex items-center gap-2 cursor-pointer px-1 py-1 rounded-md hover:bg-accent">
-              <img
-                src="/calmic-logo.png"
-                alt="Logo"
-                className="h-10 w-10 rounded-full object-cover"
-                data-testid="img-calmic-logo"
-              />
-              <div className="flex flex-col">
-                <span className="text-sm font-bold">{t('nav.malayParliament')}</span>
-                <span className="text-xs text-muted-foreground hidden sm:block">
-                  {t('nav.dewanRakyatDashboard')}
-                </span>
-              </div>
-            </div>
-          </Link>
-        </div>
-
-        {/* Right: Search, Feedback, Language */}
-        <div className="flex items-center gap-1">
           <Button
             variant="ghost"
             size="icon"
