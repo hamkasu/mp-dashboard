@@ -21,6 +21,16 @@ export function PWAInstallPrompt() {
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
+    // Check if mobile screen (max-width: 768px)
+    const mobileMediaQuery = window.matchMedia('(max-width: 768px)');
+    setIsMobile(mobileMediaQuery.matches);
+
+    // Listen for screen size changes
+    const handleResize = (e: MediaQueryListEvent) => {
+      setIsMobile(e.matches);
+    };
+    mobileMediaQuery.addEventListener('change', handleResize);
+
     // Check if already installed
     const isInStandaloneMode = window.matchMedia('(display-mode: standalone)').matches ||
       (window.navigator as any).standalone === true;
@@ -52,7 +62,10 @@ export function PWAInstallPrompt() {
       if (iOS) {
         // Show iOS-specific instructions after 3 seconds
         const timer = setTimeout(() => setShowPrompt(true), 3000);
-        return () => clearTimeout(timer);
+        return () => {
+          clearTimeout(timer);
+          mobileMediaQuery.removeEventListener('change', handleResize);
+        };
       }
     }
 
@@ -69,6 +82,7 @@ export function PWAInstallPrompt() {
 
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      mobileMediaQuery.removeEventListener('change', handleResize);
     };
   }, []);
 
