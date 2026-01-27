@@ -65,7 +65,7 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
               <Award className="w-4 h-4 mr-2" />
               <span>{t('nav.reportCard')}</span>
             </DropdownMenuItem>
-            <DropdownMenuItem onSelect={() => setLocation("/ma63")}>
+            <DropdownMenuItem onSelect={() => window.open("https://myparliament.calmic.com.my/ma63", "_blank")}>
               <Handshake className="w-4 h-4 mr-2" />
               <span>{t('nav.ma63Dashboard')}</span>
             </DropdownMenuItem>
@@ -247,12 +247,12 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
             </DropdownMenuContent>
           </DropdownMenu>
 
-          <Link href="/ma63">
-            <NavButton active={location === "/ma63"} data-testid="nav-ma63">
+          <a href="https://myparliament.calmic.com.my/ma63" target="_blank" rel="noopener noreferrer">
+            <NavButton data-testid="nav-ma63">
               <NavIcon><Handshake /></NavIcon>
               <NavLabel>MA63</NavLabel>
             </NavButton>
-          </Link>
+          </a>
 
           {authStatus?.isAdmin && (
             <DropdownMenu>
