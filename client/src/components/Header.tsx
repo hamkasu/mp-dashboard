@@ -36,58 +36,69 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shadow-sm">
       <div className="flex h-16 md:h-20 items-center justify-between gap-4 px-4 md:px-6 lg:px-8 max-w-7xl mx-auto">
-        {onMenuClick && (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="md:hidden shrink-0"
-                data-testid="button-menu-toggle"
-              >
-                <Menu className="h-5 w-5" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-[240px]">
-              <DropdownMenuItem onSelect={() => setLocation("/")}>
-                <img src="/parlimen-malaysia.svg" alt="Ahli Parlimen" className="w-5 h-5 mr-2" />
-                <span>{t('nav.mps')}</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => setLocation("/hansard")}>
-                <BookOpen className="w-4 h-4 mr-2" />
-                <span>{t('nav.hansard')}</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => setLocation("/parliament-guide")}>
-                <GraduationCap className="w-4 h-4 mr-2" />
-                <span>{t('nav.parliamentGuide')}</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => setLocation("/report-card")}>
-                <Award className="w-4 h-4 mr-2" />
-                <span>Report Card</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => setLocation("/ma63")}>
-                <Handshake className="w-4 h-4 mr-2" />
-                <span>MA63 Dashboard</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => setLocation("/activity")}>
-                <FileText className="w-4 h-4 mr-2" />
-                <span>{t('nav.activity')}</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => setLocation("/attendance")}>
-                <UserCheck className="w-4 h-4 mr-2" />
-                <span>{t('nav.attendance')}</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => setLocation("/parliamentary-answers")}>
-                <MessageSquare className="w-4 h-4 mr-2" />
-                <span>{t('nav.parliamentaryAnswers')}</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => setLocation("/allowances")}>
-                <Calculator className="w-4 h-4 mr-2" />
-                <span>{t('nav.allowances')}</span>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )}
+        {/* Mobile Navigation Menu - Always visible on mobile */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="md:hidden shrink-0"
+              data-testid="button-menu-toggle"
+            >
+              <Menu className="h-5 w-5" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="w-[240px]">
+            <DropdownMenuItem onSelect={() => setLocation("/")}>
+              <img src="/parlimen-malaysia.svg" alt="Ahli Parlimen" className="w-5 h-5 mr-2" />
+              <span>{t('nav.mps')}</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => setLocation("/hansard")}>
+              <BookOpen className="w-4 h-4 mr-2" />
+              <span>{t('nav.hansard')}</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => setLocation("/parliament-guide")}>
+              <GraduationCap className="w-4 h-4 mr-2" />
+              <span>{t('nav.parliamentGuide')}</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => setLocation("/report-card")}>
+              <Award className="w-4 h-4 mr-2" />
+              <span>{t('nav.reportCard')}</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => setLocation("/ma63")}>
+              <Handshake className="w-4 h-4 mr-2" />
+              <span>{t('nav.ma63Dashboard')}</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => setLocation("/activity")}>
+              <FileText className="w-4 h-4 mr-2" />
+              <span>{t('nav.activity')}</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => setLocation("/attendance")}>
+              <UserCheck className="w-4 h-4 mr-2" />
+              <span>{t('nav.attendance')}</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => setLocation("/parliamentary-answers")}>
+              <MessageSquare className="w-4 h-4 mr-2" />
+              <span>{t('nav.parliamentaryAnswers')}</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => setLocation("/allowances")}>
+              <Calculator className="w-4 h-4 mr-2" />
+              <span>{t('nav.allowances')}</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => setLocation("/constitution")}>
+              <Scale className="w-4 h-4 mr-2" />
+              <span>{t('nav.constitution')}</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => setLocation("/courts")}>
+              <Gavel className="w-4 h-4 mr-2" />
+              <span>{t('nav.courts')}</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => setLocation("/disclaimer")}>
+              <AlertCircle className="w-4 h-4 mr-2" />
+              <span>{t('nav.disclaimer')}</span>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
 
         <Link href="/">
           <div className="flex items-center gap-2 md:gap-3 cursor-pointer hover-elevate px-1 md:px-2 py-1 rounded-md">
@@ -114,28 +125,28 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
               <NavIcon large>
                 <img src="/parlimen-malaysia.svg" alt="Ahli Parlimen" />
               </NavIcon>
-              <NavLabel>MPs</NavLabel>
+              <NavLabel>{t('nav.mps')}</NavLabel>
             </NavButton>
           </Link>
 
           <Link href="/hansard">
             <NavButton active={location === "/hansard"} data-testid="nav-hansard">
               <NavIcon><BookOpen /></NavIcon>
-              <NavLabel>Hansard</NavLabel>
+              <NavLabel>{t('nav.hansard')}</NavLabel>
             </NavButton>
           </Link>
 
           <Link href="/parliament-guide">
             <NavButton active={location === "/parliament-guide"} data-testid="nav-parliament-guide">
               <NavIcon><GraduationCap /></NavIcon>
-              <NavLabel>Guide</NavLabel>
+              <NavLabel>{t('nav.guide')}</NavLabel>
             </NavButton>
           </Link>
 
           <Link href="/report-card">
             <NavButton active={location === "/report-card"} data-testid="nav-report-card">
               <NavIcon><Award /></NavIcon>
-              <NavLabel>Report</NavLabel>
+              <NavLabel>{t('nav.report')}</NavLabel>
             </NavButton>
           </Link>
 
@@ -146,7 +157,7 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
                 data-testid="nav-legal-dropdown"
               >
                 <NavIcon><Scale /></NavIcon>
-                <NavLabel>Legal</NavLabel>
+                <NavLabel>{t('nav.legal')}</NavLabel>
               </NavButton>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start">
@@ -177,7 +188,7 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
             <DropdownMenuTrigger asChild>
               <NavButton active={location.startsWith("/dun")} data-testid="nav-dun-dropdown">
                 <NavIcon><Building2 /></NavIcon>
-                <NavLabel>DUN</NavLabel>
+                <NavLabel>{t('nav.dun')}</NavLabel>
               </NavButton>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="max-h-80 overflow-y-auto">
@@ -251,7 +262,7 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
                   data-testid="nav-admin-dropdown"
                 >
                   <NavIcon><Shield /></NavIcon>
-                  <NavLabel>Admin</NavLabel>
+                  <NavLabel>{t('nav.admin')}</NavLabel>
                 </NavButton>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start">
@@ -286,7 +297,7 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
                 data-testid="nav-analysis-dropdown"
               >
                 <NavIcon><BarChart3 /></NavIcon>
-                <NavLabel>Analysis</NavLabel>
+                <NavLabel>{t('nav.analysis')}</NavLabel>
               </NavButton>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start">
@@ -332,23 +343,21 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
           <a href="https://open.dosm.gov.my/ms-MY/dashboard/kawasanku" target="_blank" rel="noopener noreferrer">
             <NavButton data-testid="nav-kawanku">
               <NavIcon><ExternalLink /></NavIcon>
-              <NavLabel>KAWANKU</NavLabel>
+              <NavLabel>{t('nav.kawanku')}</NavLabel>
             </NavButton>
           </a>
         </nav>
 
         <div className="flex justify-end items-center gap-1 md:gap-2 ml-auto shrink-0">
-          {onSearchClick && (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onSearchClick}
-              className="h-9 w-9"
-              data-testid="button-search"
-            >
-              <Search className="h-5 w-5" />
-            </Button>
-          )}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onSearchClick}
+            className="h-9 w-9"
+            data-testid="button-search"
+          >
+            <Search className="h-5 w-5" />
+          </Button>
           <FeedbackModal>
             <Button variant="ghost" size="icon" className="h-9 w-9" data-testid="button-feedback">
               <MessageSquareText className="h-5 w-5" />
