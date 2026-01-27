@@ -15,7 +15,6 @@ import {
 import { Link, useLocation } from "wouter";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { useLanguage } from "@/i18n/LanguageContext";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useQuery } from "@tanstack/react-query";
 
 interface HeaderProps {
@@ -108,98 +107,58 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
           </div>
         </Link>
 
-        <nav className="hidden md:flex items-center gap-1 lg:gap-2 flex-1 ml-2 lg:ml-4">
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Link href="/">
-                  <Button
-                    variant={location === "/" ? "secondary" : "ghost"}
-                    size="icon"
-                    data-testid="nav-home"
-                  >
-                    <img src="/parlimen-malaysia.svg" alt="Ahli Parlimen" className="w-10 h-10" />
-                  </Button>
-                </Link>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Ahli Parlimen</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Link href="/hansard">
-                  <Button
-                    variant={location === "/hansard" ? "secondary" : "ghost"}
-                    size="icon"
-                    data-testid="nav-hansard"
-                  >
-                    <BookOpen className="w-8 h-8" />
-                  </Button>
-                </Link>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>{t('nav.hansard')}</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Link href="/parliament-guide">
-                  <Button
-                    variant={location === "/parliament-guide" ? "secondary" : "ghost"}
-                    size="icon"
-                    data-testid="nav-parliament-guide"
-                  >
-                    <GraduationCap className="w-8 h-8" />
-                  </Button>
-                </Link>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>{t('nav.parliamentGuide')}</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Link href="/report-card">
-                  <Button
-                    variant={location === "/report-card" ? "secondary" : "ghost"}
-                    size="icon"
-                    data-testid="nav-report-card"
-                  >
-                    <Award className="w-8 h-8" />
-                  </Button>
-                </Link>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Report Card</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+        <nav className="hidden md:flex items-center gap-0.5 lg:gap-1 flex-1 ml-2 lg:ml-4">
+          <Link href="/">
+            <Button
+              variant={location === "/" ? "secondary" : "ghost"}
+              className="flex flex-col items-center justify-center h-auto py-1 px-2"
+              data-testid="nav-home"
+            >
+              <img src="/parlimen-malaysia.svg" alt="Ahli Parlimen" className="w-6 h-6" />
+              <span className="text-[10px] mt-0.5 leading-tight">MPs</span>
+            </Button>
+          </Link>
+          <Link href="/hansard">
+            <Button
+              variant={location === "/hansard" ? "secondary" : "ghost"}
+              className="flex flex-col items-center justify-center h-auto py-1 px-2"
+              data-testid="nav-hansard"
+            >
+              <BookOpen className="w-5 h-5" />
+              <span className="text-[10px] mt-0.5 leading-tight">Hansard</span>
+            </Button>
+          </Link>
+          <Link href="/parliament-guide">
+            <Button
+              variant={location === "/parliament-guide" ? "secondary" : "ghost"}
+              className="flex flex-col items-center justify-center h-auto py-1 px-2"
+              data-testid="nav-parliament-guide"
+            >
+              <GraduationCap className="w-5 h-5" />
+              <span className="text-[10px] mt-0.5 leading-tight">Guide</span>
+            </Button>
+          </Link>
+          <Link href="/report-card">
+            <Button
+              variant={location === "/report-card" ? "secondary" : "ghost"}
+              className="flex flex-col items-center justify-center h-auto py-1 px-2"
+              data-testid="nav-report-card"
+            >
+              <Award className="w-5 h-5" />
+              <span className="text-[10px] mt-0.5 leading-tight">Report</span>
+            </Button>
+          </Link>
           <DropdownMenu>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant={location === "/constitution" || location === "/fundamental-rights" || location === "/courts" || location === "/bills" ? "secondary" : "ghost"}
-                      size="icon"
-                      data-testid="nav-legal-dropdown"
-                    >
-                      <Scale className="w-8 h-8" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>{t('nav.legal')}</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant={location === "/constitution" || location === "/fundamental-rights" || location === "/courts" || location === "/bills" ? "secondary" : "ghost"}
+                className="flex flex-col items-center justify-center h-auto py-1 px-2"
+                data-testid="nav-legal-dropdown"
+              >
+                <Scale className="w-5 h-5" />
+                <span className="text-[10px] mt-0.5 leading-tight">Legal</span>
+              </Button>
+            </DropdownMenuTrigger>
             <DropdownMenuContent align="start">
               <DropdownMenuItem
                 onSelect={() => setLocation("/constitution")}
@@ -239,24 +198,16 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
             </DropdownMenuContent>
           </DropdownMenu>
           <DropdownMenu>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant={location.startsWith("/dun") ? "secondary" : "ghost"}
-                      size="icon"
-                      data-testid="nav-dun-dropdown"
-                    >
-                      <Building2 className="w-8 h-8" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>{t('nav.dun')}</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant={location.startsWith("/dun") ? "secondary" : "ghost"}
+                className="flex flex-col items-center justify-center h-auto py-1 px-2"
+                data-testid="nav-dun-dropdown"
+              >
+                <Building2 className="w-5 h-5" />
+                <span className="text-[10px] mt-0.5 leading-tight">DUN</span>
+              </Button>
+            </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="max-h-80 overflow-y-auto">
               <DropdownMenuItem
                 onSelect={() => setLocation("/dun/johor")}
@@ -351,44 +302,28 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Link href="/ma63">
-                  <Button
-                    variant={location === "/ma63" ? "secondary" : "ghost"}
-                    size="icon"
-                    data-testid="nav-ma63"
-                  >
-                    <Handshake className="w-8 h-8" />
-                  </Button>
-                </Link>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>MA63 Dashboard</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          <Link href="/ma63">
+            <Button
+              variant={location === "/ma63" ? "secondary" : "ghost"}
+              className="flex flex-col items-center justify-center h-auto py-1 px-2"
+              data-testid="nav-ma63"
+            >
+              <Handshake className="w-5 h-5" />
+              <span className="text-[10px] mt-0.5 leading-tight">MA63</span>
+            </Button>
+          </Link>
           {authStatus?.isAdmin && (
             <DropdownMenu>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant={location === "/hansard-admin" || location === "/blog-admin" || location === "/court-cases-admin" || location === "/parliamentary-answers-admin" ? "secondary" : "ghost"}
-                        size="icon"
-                        data-testid="nav-admin-dropdown"
-                      >
-                        <Shield className="w-8 h-8" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>{t('nav.admin')}</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant={location === "/hansard-admin" || location === "/blog-admin" || location === "/court-cases-admin" || location === "/parliamentary-answers-admin" ? "secondary" : "ghost"}
+                  className="flex flex-col items-center justify-center h-auto py-1 px-2"
+                  data-testid="nav-admin-dropdown"
+                >
+                  <Shield className="w-5 h-5" />
+                  <span className="text-[10px] mt-0.5 leading-tight">Admin</span>
+                </Button>
+              </DropdownMenuTrigger>
               <DropdownMenuContent align="start">
                 <DropdownMenuItem
                   onSelect={() => setLocation("/hansard-admin")}
@@ -429,24 +364,16 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
             </DropdownMenu>
           )}
           <DropdownMenu>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant={location === "/activity" || location === "/unpassed-bills" || location === "/attendance" || location === "/hansard-analysis" || location === "/hansard-questions" || location === "/parliamentary-answers" || location === "/allowances" || location === "/disclaimer" || location === "/analytics" ? "secondary" : "ghost"}
-                      size="icon"
-                      data-testid="nav-analysis-dropdown"
-                    >
-                      <BarChart3 className="w-8 h-8" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>{t('nav.analysis')}</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant={location === "/activity" || location === "/unpassed-bills" || location === "/attendance" || location === "/hansard-analysis" || location === "/hansard-questions" || location === "/parliamentary-answers" || location === "/allowances" || location === "/disclaimer" || location === "/analytics" ? "secondary" : "ghost"}
+                className="flex flex-col items-center justify-center h-auto py-1 px-2"
+                data-testid="nav-analysis-dropdown"
+              >
+                <BarChart3 className="w-5 h-5" />
+                <span className="text-[10px] mt-0.5 leading-tight">Analysis</span>
+              </Button>
+            </DropdownMenuTrigger>
             <DropdownMenuContent align="start">
               <DropdownMenuItem
                 onSelect={() => setLocation("/activity")}
@@ -513,24 +440,16 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <a href="https://open.dosm.gov.my/ms-MY/dashboard/kawasanku" target="_blank" rel="noopener noreferrer">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    data-testid="nav-kawanku"
-                  >
-                    <ExternalLink className="w-8 h-8" />
-                  </Button>
-                </a>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>{t('nav.kawanku')}</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          <a href="https://open.dosm.gov.my/ms-MY/dashboard/kawasanku" target="_blank" rel="noopener noreferrer">
+            <Button
+              variant="ghost"
+              className="flex flex-col items-center justify-center h-auto py-1 px-2"
+              data-testid="nav-kawanku"
+            >
+              <ExternalLink className="w-5 h-5" />
+              <span className="text-[10px] mt-0.5 leading-tight">Kawanku</span>
+            </Button>
+          </a>
         </nav>
 
         <div className="flex justify-end items-center gap-1 md:gap-2 ml-auto shrink-0">
