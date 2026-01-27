@@ -261,21 +261,8 @@ export function setCsrfToken(req: Request, res: Response, next: NextFunction) {
 const isDev = process.env.NODE_ENV === 'development';
 
 export const helmetConfig = helmet({
-  contentSecurityPolicy: isDev ? false : {
-    directives: {
-      defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
-      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
-      styleSrcElem: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
-      imgSrc: ["'self'", "data:", "https:", "blob:"],
-      connectSrc: ["'self'", "wss:", "ws:"],
-      fontSrc: ["'self'", "data:", "https://fonts.gstatic.com"],
-      objectSrc: ["'self'"],
-      mediaSrc: ["'self'"],
-      frameSrc: ["'self'", "blob:"],
-    },
-  },
-  crossOriginEmbedderPolicy: false, // Disable for external images
+  contentSecurityPolicy: false,
+  crossOriginEmbedderPolicy: false,
   hsts: {
     maxAge: 31536000, // 1 year
     includeSubDomains: true,

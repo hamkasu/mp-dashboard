@@ -102,15 +102,24 @@ function loadUrlMap(prerenderedPath: string): Record<string, string> {
 }
 
 export function serveStatic(app: Express) {
-  const distPath = path.resolve(import.meta.dirname, "public");
+  const distPath = path.resolve(import.meta.dirname, "..", "dist", "public");
   const prerenderedPath = path.resolve(import.meta.dirname, "..", "dist", "prerendered");
 
   if (!fs.existsSync(distPath)) {
+    // Fallback for different build structures
+    const altPath = path.resolve(import.meta.dirname, "public");
+    if (fs.existsSync(altPath)) {
+      return _serveStatic(app, altPath, prerenderedPath);
+    }
     throw new Error(
       `Could not find the build directory: ${distPath}, make sure to build the client first`,
     );
   }
+  
+  return _serveStatic(app, distPath, prerenderedPath);
+}
 
+function _serveStatic(app: Express, distPath: string, prerenderedPath: string) {
   // Aggressive caching for static assets to reduce bandwidth costs
   app.use(express.static(distPath, {
     maxAge: '1y', // Cache for 1 year (static assets have hashed filenames)
