@@ -845,6 +845,8 @@ export const translations = {
       sortMostQuestions: "Soalan Terbanyak Dikemukakan",
       sortNoQuestions: "Tiada Soalan Dikemukakan",
       sortInappropriateLanguage: "Bahasa Tidak Sesuai",
+      sortHighestMajority: "Majoriti Tertinggi",
+      sortSmallestMajority: "Majoriti Terkecil",
       cabinetPosition: "Jawatan Kabinet",
       allMPs: "Semua Ahli Parlimen",
       cabinetMembers: "Semua Ahli Kabinet",

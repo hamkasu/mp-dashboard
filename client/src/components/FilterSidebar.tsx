@@ -2,7 +2,7 @@
  * Copyright by Calmic Sdn Bhd
  */
 
-import { X } from "lucide-react";
+import { X, ArrowUpDown, Briefcase, UserCheck, Users, MapPin, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
@@ -71,7 +71,8 @@ export function FilterSidebar({
         <div className="p-4 md:p-6 space-y-6">
           {/* Sort Options */}
           <div className="space-y-3">
-            <h3 className="text-sm font-medium uppercase tracking-wide">
+            <h3 className="text-sm font-medium uppercase tracking-wide flex items-center gap-2">
+              <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
               {t('filters.sortBy')}
             </h3>
             <RadioGroup value={sortBy} onValueChange={(value) => onSortChange(value as SortOption)}>
@@ -155,7 +156,8 @@ export function FilterSidebar({
           {/* Cabinet Position Filter */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-medium uppercase tracking-wide">
+              <h3 className="text-sm font-medium uppercase tracking-wide flex items-center gap-2">
+                <Briefcase className="h-4 w-4 text-muted-foreground" />
                 {t('filters.cabinetPosition')}
               </h3>
               {selectedCabinetPositions.length > 0 && (
@@ -194,7 +196,8 @@ export function FilterSidebar({
 
           {/* MP Status Filter */}
           <div className="space-y-3">
-            <h3 className="text-sm font-medium uppercase tracking-wide">
+            <h3 className="text-sm font-medium uppercase tracking-wide flex items-center gap-2">
+              <UserCheck className="h-4 w-4 text-muted-foreground" />
               {t('filters.mpStatus')}
             </h3>
             <RadioGroup value={statusFilter} onValueChange={(value) => onStatusFilterChange(value as StatusFilter)}>
@@ -224,7 +227,8 @@ export function FilterSidebar({
           {/* Party Filters */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-medium uppercase tracking-wide">
+              <h3 className="text-sm font-medium uppercase tracking-wide flex items-center gap-2">
+                <Users className="h-4 w-4 text-muted-foreground" />
                 {t('filters.party')}
               </h3>
               {selectedParties.length > 0 && (
@@ -259,7 +263,8 @@ export function FilterSidebar({
           {/* State Filters */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-medium uppercase tracking-wide">
+              <h3 className="text-sm font-medium uppercase tracking-wide flex items-center gap-2">
+                <MapPin className="h-4 w-4 text-muted-foreground" />
                 {t('filters.state')}
               </h3>
               {selectedStates.length > 0 && (
@@ -298,6 +303,7 @@ export function FilterSidebar({
           disabled={!hasActiveFilters}
           data-testid="button-clear-filters"
         >
+          <RotateCcw className="h-4 w-4 mr-2" />
           {t('filters.clearAllFilters')}
         </Button>
       </div>
