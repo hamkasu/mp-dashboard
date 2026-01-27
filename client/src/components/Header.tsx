@@ -3,7 +3,7 @@
  * Updated: Parliamentary Answers Navigation (2025-12-02)
  */
 
-import { Search, Menu, FileText, BookOpen, UserCheck, Calculator, BarChart3, ExternalLink, AlertCircle, GraduationCap, TrendingUp, Scale, Shield, MessageSquare, Edit, Gavel, Building2, MessageSquareText, Award, Handshake } from "lucide-react";
+import { Search, Menu, FileText, BookOpen, UserCheck, Calculator, BarChart3, ExternalLink, AlertCircle, GraduationCap, TrendingUp, Scale, Shield, MessageSquare, Edit, Gavel, Building2, MessageSquareText, Award, Handshake, ChevronDown } from "lucide-react";
 import { FeedbackModal } from "@/components/FeedbackModal";
 import { Button } from "@/components/ui/button";
 import { NavButton, NavIcon, NavLabel } from "@/components/ui/nav-button";
@@ -157,7 +157,7 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
                 data-testid="nav-legal-dropdown"
               >
                 <NavIcon><Scale /></NavIcon>
-                <NavLabel>{t('nav.legal')}</NavLabel>
+                <NavLabel><span className="flex items-center gap-0.5">{t('nav.legal')}<ChevronDown className="h-3 w-3" /></span></NavLabel>
               </NavButton>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start">
@@ -188,7 +188,7 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
             <DropdownMenuTrigger asChild>
               <NavButton active={location.startsWith("/dun")} data-testid="nav-dun-dropdown">
                 <NavIcon><Building2 /></NavIcon>
-                <NavLabel>{t('nav.dun')}</NavLabel>
+                <NavLabel><span className="flex items-center gap-0.5">{t('nav.dun')}<ChevronDown className="h-3 w-3" /></span></NavLabel>
               </NavButton>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="max-h-80 overflow-y-auto">
@@ -262,7 +262,7 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
                   data-testid="nav-admin-dropdown"
                 >
                   <NavIcon><Shield /></NavIcon>
-                  <NavLabel>{t('nav.admin')}</NavLabel>
+                  <NavLabel><span className="flex items-center gap-0.5">{t('nav.admin')}<ChevronDown className="h-3 w-3" /></span></NavLabel>
                 </NavButton>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start">
@@ -297,7 +297,7 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
                 data-testid="nav-analysis-dropdown"
               >
                 <NavIcon><BarChart3 /></NavIcon>
-                <NavLabel>{t('nav.analysis')}</NavLabel>
+                <NavLabel><span className="flex items-center gap-0.5">{t('nav.analysis')}<ChevronDown className="h-3 w-3" /></span></NavLabel>
               </NavButton>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start">
