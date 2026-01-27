@@ -3,8 +3,8 @@
  * Provides offline support and caching
  */
 
-const CACHE_NAME = 'myparliament-v3';
-const RUNTIME_CACHE = 'myparliament-runtime-v3';
+const CACHE_NAME = 'myparliament-v4';
+const RUNTIME_CACHE = 'myparliament-runtime-v4';
 
 // Assets to cache immediately
 const PRECACHE_ASSETS = [
@@ -62,6 +62,37 @@ self.addEventListener('fetch', (event) => {
 
   // Skip chrome extensions
   if (url.protocol === 'chrome-extension:') {
+    return;
+  }
+
+  // Skip Vite HMR and development assets - always fetch from network
+  if (url.pathname.includes('/@vite/') || 
+      url.pathname.includes('/@react-refresh') ||
+      url.pathname.includes('/node_modules/') ||
+      url.pathname.startsWith('/src/') ||
+      url.search.includes('t=') ||
+      url.search.includes('v=')) {
+    return;
+  }
+
+  // JavaScript and CSS files - always network first in development
+  if (url.pathname.endsWith('.js') || 
+      url.pathname.endsWith('.ts') ||
+      url.pathname.endsWith('.tsx') ||
+      url.pathname.endsWith('.css')) {
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          if (response.status === 200) {
+            const responseToCache = response.clone();
+            caches.open(RUNTIME_CACHE).then((cache) => {
+              cache.put(request, responseToCache);
+            });
+          }
+          return response;
+        })
+        .catch(() => caches.match(request))
+    );
     return;
   }
 

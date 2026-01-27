@@ -257,18 +257,22 @@ export function setCsrfToken(req: Request, res: Response, next: NextFunction) {
 }
 
 // Helmet configuration for security headers
+// Disable CSP in development to avoid issues with Vite HMR and external resources
+const isDev = process.env.NODE_ENV === 'development';
+
 export const helmetConfig = helmet({
-  contentSecurityPolicy: {
+  contentSecurityPolicy: isDev ? false : {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"], // Vite needs unsafe-eval in dev
-      styleSrc: ["'self'", "'unsafe-inline'"],
-      imgSrc: ["'self'", "data:", "https:", "blob:"], // Allow parliament photos from external URLs
-      connectSrc: ["'self'"],
-      fontSrc: ["'self'", "data:"],
-      objectSrc: ["'self'"], // Allow PDFs from same origin
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      styleSrcElem: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      imgSrc: ["'self'", "data:", "https:", "blob:"],
+      connectSrc: ["'self'", "wss:", "ws:"],
+      fontSrc: ["'self'", "data:", "https://fonts.gstatic.com"],
+      objectSrc: ["'self'"],
       mediaSrc: ["'self'"],
-      frameSrc: ["'self'", "blob:"], // Allow iframes for PDF viewing from same origin
+      frameSrc: ["'self'", "blob:"],
     },
   },
   crossOriginEmbedderPolicy: false, // Disable for external images
