@@ -4,6 +4,7 @@
  * Focused on Sabah & Sarawak rights and autonomy progress
  */
 
+import { useEffect, useState } from "react";
 import { Header } from "@/components/Header";
 import { PageMeta } from "@/components/PageMeta";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -14,6 +15,7 @@ import malaysiaAgreementPdf from "@/assets/malaysia-agreement-1963.pdf";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from "@/components/ui/chart";
 import { useLanguage } from "@/i18n/LanguageContext";
+import { apiRequest } from "@/lib/queryClient";
 import {
   CheckCircle2,
   Clock,
@@ -32,7 +34,8 @@ import {
   AlertTriangle,
   ChevronRight,
   ExternalLink,
-  Download
+  Download,
+  Eye
 } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts";
 
@@ -460,6 +463,23 @@ function MalaysiaMapHighlight() {
 
 export default function MA63Dashboard() {
   const { language } = useLanguage();
+  const [visitorCount, setVisitorCount] = useState<number>(0);
+
+  useEffect(() => {
+    const trackAndFetchVisitorCount = async () => {
+      try {
+        await apiRequest("POST", "/api/page-views", { page: "ma63" });
+        const response = await fetch("/api/page-views/ma63");
+        if (response.ok) {
+          const data = await response.json();
+          setVisitorCount(data.count || 0);
+        }
+      } catch (error) {
+        console.debug("Failed to track page view:", error);
+      }
+    };
+    trackAndFetchVisitorCount();
+  }, []);
 
   const { summary, categories, timeline, priorityWatchlist } = ma63Data;
 
@@ -511,6 +531,10 @@ export default function MA63Dashboard() {
               </div>
             </div>
             <div className="sm:ml-auto flex flex-wrap items-center gap-2">
+              <div className="flex items-center gap-1.5 text-sm text-muted-foreground" data-testid="text-visitor-count">
+                <Eye className="h-4 w-4" />
+                <span>{visitorCount.toLocaleString()} {language === 'ms' ? 'pengunjung' : 'visitors'}</span>
+              </div>
               <Button
                 variant="outline"
                 size="sm"
