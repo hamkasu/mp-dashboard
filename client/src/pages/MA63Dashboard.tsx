@@ -8,7 +8,9 @@ import { Header } from "@/components/Header";
 import { PageMeta } from "@/components/PageMeta";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import malaysiaAgreementPdf from "@/assets/malaysia-agreement-1963.pdf";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from "@/components/ui/chart";
 import { useLanguage } from "@/i18n/LanguageContext";
@@ -29,7 +31,8 @@ import {
   Target,
   AlertTriangle,
   ChevronRight,
-  ExternalLink
+  ExternalLink,
+  Download
 } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts";
 
@@ -507,7 +510,19 @@ export default function MA63Dashboard() {
                 </p>
               </div>
             </div>
-            <div className="sm:ml-auto flex flex-wrap gap-2">
+            <div className="sm:ml-auto flex flex-wrap items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                asChild
+                className="gap-1.5"
+                data-testid="button-download-malaysia-agreement"
+              >
+                <a href={malaysiaAgreementPdf} download="Malaysia-Agreement-1963.pdf">
+                  <Download className="h-4 w-4" />
+                  {language === 'ms' ? 'Perjanjian Malaysia' : 'Malaysia Agreement'}
+                </a>
+              </Button>
               <Badge variant="outline" className="bg-[#0033A0]/10 text-[#0033A0] dark:text-blue-400 border-[#0033A0]/30">
                 Sabah
               </Badge>
