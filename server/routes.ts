@@ -4647,6 +4647,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       let totalGovernmentMeetingAllowances = 0;
       let totalMpsCount = 0;
       let totalMinisters = 0;
+      let totalParliamentDays = 0;
 
       for (const mp of allMps) {
         // Calculate months since sworn in
@@ -4683,6 +4684,11 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
                        parliamentSittingCost + governmentMeetingCost;
         totalCosts += mpTotal;
         totalMpsCount++;
+
+        // Track total parliament days (should be same for all MPs)
+        if (mp.totalParliamentDays > totalParliamentDays) {
+          totalParliamentDays = mp.totalParliamentDays;
+        }
       }
 
       res.json({
@@ -4700,6 +4706,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
             totalMps: totalMpsCount,
             totalMinisters,
             averageCostPerMp: totalMpsCount > 0 ? totalCosts / totalMpsCount : 0,
+            totalParliamentDays,
           }
         }
       });
