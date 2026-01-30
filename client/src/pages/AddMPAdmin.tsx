@@ -86,7 +86,7 @@ export default function AddMPAdmin() {
 
   // Check admin authentication
   const { data: authStatus, isLoading: authLoading } = useQuery<{ isAdmin: boolean }>({
-    queryKey: ["/api/admin/check"],
+    queryKey: ["/api/admin/auth-status"],
     retry: false,
   });
 
