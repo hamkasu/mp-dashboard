@@ -15,7 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, UserX, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { Loader2, UserX, AlertTriangle, CheckCircle2, UserPlus } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { Mp } from "@shared/schema";
@@ -132,11 +132,21 @@ export default function MPStatusAdmin() {
       <div className="max-w-4xl mx-auto px-4 md:px-6 lg:px-8 py-8">
         <div className="space-y-6">
           {/* Header */}
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">MP Status Management</h1>
-            <p className="text-muted-foreground mt-2">
-              Update MP records when they pass away or resign
-            </p>
+          <div className="flex items-start justify-between">
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight">MP Status Management</h1>
+              <p className="text-muted-foreground mt-2">
+                Update MP records when they pass away or resign
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              onClick={() => setLocation("/add-mp-admin")}
+              className="gap-2"
+            >
+              <UserPlus className="h-4 w-4" />
+              Add New MP
+            </Button>
           </div>
 
           {/* Stats Cards */}

@@ -41,6 +41,7 @@ const Bills = lazy(() => import("@/pages/Bills"));
 const ParliamentaryAnswers = lazy(() => import("@/pages/ParliamentaryAnswers"));
 const ParliamentaryAnswersAdmin = lazy(() => import("@/pages/ParliamentaryAnswersAdmin"));
 const MPStatusAdmin = lazy(() => import("@/pages/MPStatusAdmin"));
+const AddMPAdmin = lazy(() => import("@/pages/AddMPAdmin"));
 const DunSarawak = lazy(() => import("@/pages/DunSarawak"));
 const DunSelangor = lazy(() => import("@/pages/DunSelangor"));
 const ReportCard = lazy(() => import("@/pages/ReportCard"));
@@ -92,6 +93,7 @@ function Router() {
         <Route path="/admin/login" component={AdminLogin} />
         <Route path="/court-cases-admin" component={CourtCasesAdmin} />
         <Route path="/mp-status-admin" component={MPStatusAdmin} />
+        <Route path="/add-mp-admin" component={AddMPAdmin} />
         <Route path="/dun/sarawak" component={DunSarawak} />
         <Route path="/dun/selangor" component={DunSelangor} />
         <Route path="/ma63" component={MA63Dashboard} />
