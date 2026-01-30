@@ -3,7 +3,7 @@
  * Updated: Consolidated Navigation Menu with Submenus
  */
 
-import { Search, Menu, FileText, BookOpen, UserCheck, Calculator, BarChart3, ExternalLink, AlertCircle, GraduationCap, Scale, Shield, MessageSquare, Gavel, Building2, MessageSquareText, Award, Handshake, ChevronDown, Users, Activity, LayoutDashboard } from "lucide-react";
+import { Search, Menu, FileText, BookOpen, UserCheck, Calculator, BarChart3, ExternalLink, AlertCircle, GraduationCap, Scale, Shield, MessageSquare, Gavel, Building2, MessageSquareText, Award, Handshake, ChevronDown, Users, Activity, LayoutDashboard, Settings, UserPlus, UserX, Upload } from "lucide-react";
 import { FeedbackModal } from "@/components/FeedbackModal";
 import { Button } from "@/components/ui/button";
 import {
@@ -198,6 +198,46 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
                 <AlertCircle className="w-4 h-4 mr-2" />
                 {t('nav.disclaimer')}
               </DropdownMenuItem>
+
+              <DropdownMenuSeparator />
+
+              {/* Admin Section */}
+              <DropdownMenuLabel className="text-xs text-muted-foreground">Admin</DropdownMenuLabel>
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger data-testid="menu-admin-submenu">
+                  <Settings className="w-4 h-4 mr-2" />
+                  Administration
+                </DropdownMenuSubTrigger>
+                <DropdownMenuPortal>
+                  <DropdownMenuSubContent>
+                    <DropdownMenuItem onSelect={() => setLocation("/add-mp-admin")} data-testid="submenu-add-mp">
+                      <UserPlus className="w-4 h-4 mr-2" />
+                      Add New MP
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onSelect={() => setLocation("/mp-status-admin")} data-testid="submenu-mp-status">
+                      <UserX className="w-4 h-4 mr-2" />
+                      MP Status
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onSelect={() => setLocation("/hansard-admin")} data-testid="submenu-hansard-admin">
+                      <Upload className="w-4 h-4 mr-2" />
+                      Hansard Admin
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onSelect={() => setLocation("/court-cases-admin")} data-testid="submenu-court-cases-admin">
+                      <Gavel className="w-4 h-4 mr-2" />
+                      Court Cases Admin
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onSelect={() => setLocation("/parliamentary-answers-admin")} data-testid="submenu-parliamentary-answers-admin">
+                      <MessageSquare className="w-4 h-4 mr-2" />
+                      Parliamentary Answers Admin
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onSelect={() => setLocation("/report-card-admin")} data-testid="submenu-report-card-admin">
+                      <Award className="w-4 h-4 mr-2" />
+                      Report Card Admin
+                    </DropdownMenuItem>
+                  </DropdownMenuSubContent>
+                </DropdownMenuPortal>
+              </DropdownMenuSub>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -305,6 +345,27 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
               <DropdownMenuItem onSelect={() => setLocation("/disclaimer")}>
                 <AlertCircle className="w-4 h-4 mr-2" />
                 {t('nav.disclaimer')}
+              </DropdownMenuItem>
+
+              <DropdownMenuSeparator />
+
+              {/* Admin */}
+              <DropdownMenuLabel className="text-xs text-muted-foreground">Admin</DropdownMenuLabel>
+              <DropdownMenuItem onSelect={() => setLocation("/add-mp-admin")}>
+                <UserPlus className="w-4 h-4 mr-2" />
+                Add New MP
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => setLocation("/mp-status-admin")}>
+                <UserX className="w-4 h-4 mr-2" />
+                MP Status
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => setLocation("/hansard-admin")}>
+                <Upload className="w-4 h-4 mr-2" />
+                Hansard Admin
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => setLocation("/court-cases-admin")}>
+                <Gavel className="w-4 h-4 mr-2" />
+                Court Cases Admin
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
