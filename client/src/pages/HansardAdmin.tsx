@@ -905,6 +905,10 @@ export default function HansardAdmin() {
                       <strong>{parliamentCosts.data.statistics.totalMinisters}</strong>
                     </div>
                     <div className="flex justify-between">
+                      <span className="text-muted-foreground">Parliament Days Total:</span>
+                      <strong>{parliamentCosts.data.statistics.totalParliamentDays}</strong>
+                    </div>
+                    <div className="flex justify-between">
                       <span className="text-muted-foreground">Avg Cost per MP:</span>
                       <strong>RM {parliamentCosts.data.statistics.averageCostPerMp.toLocaleString('en-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
                     </div>
