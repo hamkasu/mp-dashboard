@@ -3,7 +3,7 @@
  */
 
 import { useState } from "react";
-import { useLocation } from "wouter";
+import { useLocation, useSearch } from "wouter";
 import { useMutation } from "@tanstack/react-query";
 import { PageMeta } from "@/components/PageMeta";
 import { Button } from "@/components/ui/button";
@@ -16,7 +16,12 @@ export default function AdminLogin() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [, setLocation] = useLocation();
+  const searchString = useSearch();
   const { toast } = useToast();
+
+  // Get redirect URL from query params (e.g., ?redirect=/add-mp-admin)
+  const params = new URLSearchParams(searchString);
+  const redirectTo = params.get("redirect") || "/hansard-admin";
 
   const loginMutation = useMutation({
     mutationFn: async (credentials: { username: string; password: string }) => {
@@ -39,7 +44,7 @@ export default function AdminLogin() {
         title: "Login successful",
         description: `Welcome back, ${data.user.displayName || data.user.username}!`,
       });
-      setLocation("/hansard-admin");
+      setLocation(redirectTo);
     },
     onError: (error: Error) => {
       toast({
