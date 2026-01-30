@@ -6877,6 +6877,128 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
+  // Admin endpoint to create a new MP (for replacements after by-elections)
+  app.post("/api/admin/create-mp", requireAdmin, async (req, res) => {
+    try {
+      const {
+        name,
+        party,
+        parliamentCode,
+        constituency,
+        state,
+        gender,
+        title,
+        role,
+        swornInDate,
+        photoUrl,
+        email,
+        telephone,
+        mobileNumber,
+        facebookUrl,
+        instagramUrl,
+        twitterUrl,
+        replacesFormerMpId,
+      } = req.body;
+
+      // Validate required fields
+      if (!name || !party || !parliamentCode || !constituency || !state || !gender || !swornInDate) {
+        return res.status(400).json({
+          error: "Missing required fields",
+          required: ["name", "party", "parliamentCode", "constituency", "state", "gender", "swornInDate"]
+        });
+      }
+
+      // Validate date format
+      const swornIn = new Date(swornInDate);
+      if (isNaN(swornIn.getTime())) {
+        return res.status(400).json({ error: "Invalid swornInDate format" });
+      }
+
+      // Check if parliament code is already in use by an active MP
+      const [existingActiveMp] = await db.select()
+        .from(mps)
+        .where(eq(mps.parliamentCode, parliamentCode))
+        .limit(1);
+
+      if (existingActiveMp) {
+        // Check if it's an active MP (no termEndDate or termEndDate in future)
+        const isActive = !existingActiveMp.termEndDate || new Date(existingActiveMp.termEndDate) > new Date();
+        if (isActive) {
+          return res.status(400).json({
+            error: `Parliament code ${parliamentCode} is already assigned to active MP: ${existingActiveMp.name}`,
+            existingMp: {
+              id: existingActiveMp.id,
+              name: existingActiveMp.name,
+              constituency: existingActiveMp.constituency
+            }
+          });
+        }
+      }
+
+      console.log(`📝 Creating new MP: ${name} (${constituency}, ${parliamentCode})`);
+
+      // Create the new MP record
+      const BASE_MP_ALLOWANCE = 25700;
+      const newMpData = {
+        name,
+        party,
+        parliamentCode,
+        constituency,
+        state,
+        gender,
+        title: title || "YB",
+        role: role || "Member of Parliament",
+        swornInDate: swornIn,
+        photoUrl: photoUrl || null,
+        mpAllowance: BASE_MP_ALLOWANCE,
+        ministerSalary: 0,
+        email: email || null,
+        telephone: telephone || null,
+        mobileNumber: mobileNumber || null,
+        facebookUrl: facebookUrl || null,
+        instagramUrl: instagramUrl || null,
+        twitterUrl: twitterUrl || null,
+      };
+
+      const [newMp] = await db.insert(mps).values(newMpData).returning();
+
+      console.log(`✅ New MP created successfully: ${newMp.name} (ID: ${newMp.id})`);
+
+      // If this MP replaces a former MP, update the by-election notes on the former MP
+      if (replacesFormerMpId) {
+        const [formerMp] = await db.select().from(mps).where(eq(mps.id, replacesFormerMpId)).limit(1);
+        if (formerMp) {
+          const updatedNotes = formerMp.byElectionNotes
+            ? `${formerMp.byElectionNotes}\n\nReplaced by: ${name} (sworn in: ${swornIn.toISOString().split('T')[0]})`
+            : `Replaced by: ${name} (sworn in: ${swornIn.toISOString().split('T')[0]})`;
+
+          await db.update(mps)
+            .set({ byElectionNotes: updatedNotes })
+            .where(eq(mps.id, replacesFormerMpId));
+
+          console.log(`📝 Updated by-election notes for former MP: ${formerMp.name}`);
+        }
+      }
+
+      // Log the action
+      await logAudit(
+        getCurrentUsername(req),
+        'CREATE_MP',
+        `Created new MP: ${name} (${constituency}, ${parliamentCode})`,
+        { mpId: newMp.id, name, constituency, parliamentCode, replacesFormerMpId }
+      );
+
+      res.status(201).json({
+        message: "MP created successfully",
+        mp: newMp
+      });
+
+    } catch (error) {
+      console.error("Error creating MP:", error);
+      res.status(500).json({ error: "Failed to create MP", details: String(error) });
+    }
+  });
+
   // ======================
   // Blog Posts API
   // ======================
