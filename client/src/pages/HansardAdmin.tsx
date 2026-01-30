@@ -392,6 +392,33 @@ export default function HansardAdmin() {
     }
   };
 
+  // Mutation to refresh MP data and recalculate costs
+  const refreshCostsMutation = useMutation({
+    mutationFn: async () => {
+      // First refresh MP data (recalculate attendance from hansard records)
+      const refreshRes = await apiRequest("POST", "/api/admin/refresh-mp-data");
+      await refreshRes.json();
+      // Then get updated costs
+      const costsRes = await apiRequest("GET", "/api/admin/calculate-parliament-costs");
+      return await costsRes.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/calculate-parliament-costs"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/mps"] });
+      toast({
+        title: "Success",
+        description: "Parliament costs recalculated with updated attendance data",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to recalculate costs",
+        variant: "destructive",
+      });
+    },
+  });
+
   // Import Election Results mutation
   const importElectionResultsMutation = useMutation({
     mutationFn: async () => {
@@ -918,16 +945,16 @@ export default function HansardAdmin() {
 
               <div className="flex gap-2 mt-4">
                 <Button
-                  onClick={() => refetchCosts()}
-                  disabled={costsLoading}
+                  onClick={() => refreshCostsMutation.mutate()}
+                  disabled={costsLoading || refreshCostsMutation.isPending}
                   variant="outline"
                   className="flex-1"
                   data-testid="button-refresh-costs"
                 >
-                  {costsLoading ? (
+                  {costsLoading || refreshCostsMutation.isPending ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Calculating...
+                      Recalculating...
                     </>
                   ) : (
                     <>
