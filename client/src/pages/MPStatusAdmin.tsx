@@ -90,7 +90,7 @@ export default function MPStatusAdmin() {
   }
 
   if (!authStatus?.isAdmin) {
-    setLocation("/admin/login");
+    setLocation("/admin/login?redirect=/mp-status-admin");
     return null;
   }
 

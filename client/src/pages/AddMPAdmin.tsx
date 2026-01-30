@@ -166,7 +166,7 @@ export default function AddMPAdmin() {
   }
 
   if (!authStatus?.isAdmin) {
-    setLocation("/admin/login");
+    setLocation("/admin/login?redirect=/add-mp-admin");
     return null;
   }
 
