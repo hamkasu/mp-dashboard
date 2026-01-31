@@ -574,15 +574,15 @@ export default function Home() {
             {/* Featured Cards: Royal Address, MP Spotlight & Weekly Poll */}
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
               <div className="relative">
-                <div className="absolute -inset-1 bg-gradient-to-r from-primary/20 to-primary/10 rounded-lg blur opacity-25" />
+                <div className="absolute -inset-1 bg-gradient-to-r from-primary/20 to-primary/10 rounded-lg blur opacity-25 pointer-events-none" />
                 <RoyalAddress />
               </div>
               <div className="relative">
-                <div className="absolute -inset-1 bg-gradient-to-r from-amber-500/20 to-orange-500/10 rounded-lg blur opacity-25" />
+                <div className="absolute -inset-1 bg-gradient-to-r from-amber-500/20 to-orange-500/10 rounded-lg blur opacity-25 pointer-events-none" />
                 <MPSpotlight />
               </div>
               <div className="relative md:col-span-2 xl:col-span-1">
-                <div className="absolute -inset-1 bg-gradient-to-r from-green-500/20 to-emerald-500/10 rounded-lg blur opacity-25" />
+                <div className="absolute -inset-1 bg-gradient-to-r from-green-500/20 to-emerald-500/10 rounded-lg blur opacity-25 pointer-events-none" />
                 <PollWidget />
               </div>
             </div>
