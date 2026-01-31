@@ -72,17 +72,16 @@
             .then((registration) => {
               console.log('SW registered:', registration);
 
-              // Check for updates
+              // Check for updates periodically
+              setInterval(() => registration.update(), 60 * 1000);
+
+              // Auto-update when new service worker is available
               registration.addEventListener('updatefound', () => {
                 const newWorker = registration.installing;
                 newWorker.addEventListener('statechange', () => {
                   if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                    // New service worker available
-                    console.log('New service worker available');
-                    if (confirm('New version available! Reload to update?')) {
-                      newWorker.postMessage({ type: 'SKIP_WAITING' });
-                      window.location.reload();
-                    }
+                    console.log('New service worker available, activating...');
+                    newWorker.postMessage({ type: 'SKIP_WAITING' });
                   }
                 });
               });
@@ -92,7 +91,7 @@
             });
         });
 
-        // Handle service worker updates
+        // Handle service worker updates - auto reload when controller changes
         let refreshing = false;
         navigator.serviceWorker.addEventListener('controllerchange', () => {
           if (refreshing) return;
