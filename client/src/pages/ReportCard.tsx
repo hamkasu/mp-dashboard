@@ -52,6 +52,7 @@ import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { PageMeta } from "@/components/PageMeta";
 import { GrokCompareDialog } from "@/components/GrokCompareDialog";
+import { MALAYSIAN_STATES } from "@/lib/constants";
 
 interface Mp {
   id: string;
@@ -148,9 +149,9 @@ export default function ReportCard() {
 
   // Get unique states and coalitions for filters
   const uniqueStates = useMemo(() => {
-    const states = new Set(reportCards.map(card => card.mp.state));
-    return Array.from(states).sort();
-  }, [reportCards]);
+    // Include all Malaysian states, not just those with MPs in database
+    return [...MALAYSIAN_STATES].sort();
+  }, []);
 
   const governmentParties = ['UMNO', 'PKR', 'DAP', 'PH', 'BN', 'GPS', 'GRS', 'WARISAN'];
 

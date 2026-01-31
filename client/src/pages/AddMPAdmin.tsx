@@ -17,6 +17,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, UserPlus, AlertTriangle, CheckCircle2, Info } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { MALAYSIAN_STATES, PARTIES } from "@/lib/constants";
 
 interface MpListItem {
   id: string;
@@ -28,39 +29,8 @@ interface MpListItem {
   termEndDate: string | null;
 }
 
-// Malaysian political parties
-const PARTIES = [
-  { value: "PH", label: "Pakatan Harapan (PH)" },
-  { value: "BN", label: "Barisan Nasional (BN)" },
-  { value: "PN", label: "Perikatan Nasional (PN)" },
-  { value: "GPS", label: "Gabungan Parti Sarawak (GPS)" },
-  { value: "GRS", label: "Gabungan Rakyat Sabah (GRS)" },
-  { value: "WARISAN", label: "Warisan" },
-  { value: "MUDA", label: "MUDA" },
-  { value: "PSB", label: "Parti Sarawak Bersatu (PSB)" },
-  { value: "KDM", label: "Parti Kesejahteraan Demokratik Masyarakat (KDM)" },
-  { value: "BEBAS", label: "Bebas (Independent)" },
-];
-
-// Malaysian states
-const STATES = [
-  "Perlis",
-  "Kedah",
-  "Penang",
-  "Perak",
-  "Selangor",
-  "Kuala Lumpur",
-  "Putrajaya",
-  "Negeri Sembilan",
-  "Melaka",
-  "Johor",
-  "Pahang",
-  "Terengganu",
-  "Kelantan",
-  "Sabah",
-  "Sarawak",
-  "Labuan",
-];
+// Use MALAYSIAN_STATES as STATES alias for backwards compatibility in this file
+const STATES = MALAYSIAN_STATES;
 
 export default function AddMPAdmin() {
   const { toast } = useToast();
