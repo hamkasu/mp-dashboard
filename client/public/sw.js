@@ -3,12 +3,11 @@
  * Provides offline support and caching
  */
 
-const CACHE_NAME = 'myparliament-v4';
-const RUNTIME_CACHE = 'myparliament-runtime-v4';
+const CACHE_NAME = 'myparliament-v5';
+const RUNTIME_CACHE = 'myparliament-runtime-v5';
 
-// Assets to cache immediately
+// Assets to cache immediately (excluding HTML to prevent stale content)
 const PRECACHE_ASSETS = [
-  '/',
   '/manifest.json',
   '/offline.html',
 ];
@@ -65,8 +64,18 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // Navigation requests (HTML pages) - ALWAYS network, never cache
+  // This prevents stale HTML from referencing non-existent hashed JS files
+  if (request.mode === 'navigate') {
+    event.respondWith(
+      fetch(request)
+        .catch(() => caches.match('/offline.html'))
+    );
+    return;
+  }
+
   // Skip Vite HMR and development assets - always fetch from network
-  if (url.pathname.includes('/@vite/') || 
+  if (url.pathname.includes('/@vite/') ||
       url.pathname.includes('/@react-refresh') ||
       url.pathname.includes('/node_modules/') ||
       url.pathname.startsWith('/src/') ||
@@ -75,15 +84,20 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // JavaScript and CSS files - always network first in development
-  if (url.pathname.endsWith('.js') || 
+  // JavaScript and CSS files with hashes - network first, no cache fallback for hashed assets
+  // Hashed assets are immutable; if they're not on the network, they're outdated
+  if (url.pathname.endsWith('.js') ||
       url.pathname.endsWith('.ts') ||
       url.pathname.endsWith('.tsx') ||
       url.pathname.endsWith('.css')) {
+    // Check if this is a hashed asset (contains hash pattern like -abc123.)
+    const isHashedAsset = /[-\.][a-zA-Z0-9]{6,}\.(js|css)$/.test(url.pathname);
+
     event.respondWith(
       fetch(request)
         .then((response) => {
-          if (response.status === 200) {
+          // Only cache successful responses for hashed assets
+          if (response.status === 200 && isHashedAsset) {
             const responseToCache = response.clone();
             caches.open(RUNTIME_CACHE).then((cache) => {
               cache.put(request, responseToCache);
@@ -91,7 +105,13 @@ self.addEventListener('fetch', (event) => {
           }
           return response;
         })
-        .catch(() => caches.match(request))
+        .catch(() => {
+          // For hashed assets, don't serve stale cache - it's likely outdated
+          if (isHashedAsset) {
+            return new Response('Asset not available', { status: 503 });
+          }
+          return caches.match(request);
+        })
     );
     return;
   }
