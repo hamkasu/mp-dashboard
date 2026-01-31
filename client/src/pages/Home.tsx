@@ -38,6 +38,7 @@ import { Link } from "wouter";
 import type { Mp, SprmInvestigation, LegislativeProposal, ParliamentaryQuestion } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { useConstituencies } from "@/hooks/use-constituencies";
+import { MALAYSIAN_STATES } from "@/lib/constants";
 
 interface PaginatedMpsResponse {
   data: Mp[];
@@ -355,9 +356,9 @@ export default function Home() {
   }, [mps, isSpecialSortMode, searchQuery, selectedParties, selectedStates, selectedCabinetPositions, sortBy, povertyByCode, billsCountByMpId, oralQuestionsCountByMpId, inappropriateLanguageByMpId]);
 
   const availableStates = useMemo(() => {
-    const states = Array.from(new Set(mps.map((mp) => mp.state)));
-    return states.sort();
-  }, [mps]);
+    // Include all Malaysian states, not just those with MPs in database
+    return [...MALAYSIAN_STATES].sort();
+  }, []);
 
   const mpsWithSprmInvestigations = useMemo(() => {
     if (!sprmInvestigations.length || !mps.length) return [];

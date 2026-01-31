@@ -20,6 +20,7 @@ import type { Mp } from "@shared/schema";
 import { ConstituencyAttendance } from "@/components/ConstituencyAttendance";
 import { ConstituencyAttendanceHistory } from "@/components/ConstituencyAttendanceHistory";
 import { useLanguage } from "@/i18n/LanguageContext";
+import { MALAYSIAN_STATES } from "@/lib/constants";
 
 interface AttendanceSession {
   id: string;
@@ -69,10 +70,9 @@ export default function AttendancePage() {
   }, [allMps]);
 
   const states = useMemo(() => {
-    if (!allMps) return [];
-    const uniqueStates = Array.from(new Set(allMps.map(mp => mp.state)));
-    return uniqueStates.sort();
-  }, [allMps]);
+    // Include all Malaysian states, not just those with MPs in database
+    return [...MALAYSIAN_STATES].sort();
+  }, []);
 
   const queryUrl = useMemo(() => {
     const params = new URLSearchParams();
