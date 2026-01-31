@@ -82,7 +82,7 @@ export default function AddMPAdmin() {
   const [facebookUrl, setFacebookUrl] = useState("");
   const [instagramUrl, setInstagramUrl] = useState("");
   const [twitterUrl, setTwitterUrl] = useState("");
-  const [replacesFormerMpId, setReplacesFormerMpId] = useState("");
+  const [replacesFormerMpId, setReplacesFormerMpId] = useState("none");
 
   // Check admin authentication
   const { data: authStatus, isLoading: authLoading } = useQuery<{ isAdmin: boolean }>({
@@ -153,7 +153,7 @@ export default function AddMPAdmin() {
     setFacebookUrl("");
     setInstagramUrl("");
     setTwitterUrl("");
-    setReplacesFormerMpId("");
+    setReplacesFormerMpId("none");
   };
 
   // Redirect if not admin
@@ -176,7 +176,7 @@ export default function AddMPAdmin() {
   // When a former MP is selected, auto-fill constituency info
   const handleFormerMpSelect = (mpId: string) => {
     setReplacesFormerMpId(mpId);
-    if (mpId) {
+    if (mpId && mpId !== "none") {
       const formerMp = formerMps.find((mp) => mp.id === mpId);
       if (formerMp) {
         setParliamentCode(formerMp.parliamentCode);
@@ -214,7 +214,7 @@ export default function AddMPAdmin() {
       facebookUrl: facebookUrl || undefined,
       instagramUrl: instagramUrl || undefined,
       twitterUrl: twitterUrl || undefined,
-      replacesFormerMpId: replacesFormerMpId || undefined,
+      replacesFormerMpId: replacesFormerMpId && replacesFormerMpId !== "none" ? replacesFormerMpId : undefined,
     });
   };
 
@@ -269,7 +269,7 @@ export default function AddMPAdmin() {
                         <SelectValue placeholder="Select former MP to replace..." />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">-- None (New Constituency) --</SelectItem>
+                        <SelectItem value="none">-- None (New Constituency) --</SelectItem>
                         {formerMps.map((mp) => (
                           <SelectItem key={mp.id} value={mp.id}>
                             {mp.name} - {mp.constituency} ({mp.parliamentCode})
@@ -497,7 +497,7 @@ export default function AddMPAdmin() {
                         <li><span className="font-medium">{name}</span> for {constituency} ({parliamentCode})</li>
                         <li>Party: {party || "(not selected)"}</li>
                         <li>State: {state || "(not selected)"}</li>
-                        {replacesFormerMpId && (
+                        {replacesFormerMpId && replacesFormerMpId !== "none" && (
                           <li>Replacing: {formerMps.find(mp => mp.id === replacesFormerMpId)?.name}</li>
                         )}
                       </ul>
