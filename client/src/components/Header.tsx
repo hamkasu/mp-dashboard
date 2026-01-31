@@ -198,6 +198,11 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
                 {t('nav.kawanku')}
                 <ExternalLink className="w-3 h-3 ml-auto opacity-50" />
               </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => window.open("https://luminews.my/", "_blank")} data-testid="menu-lumi-news">
+                <ExternalLink className="w-4 h-4 mr-2" />
+                {t('nav.lumiNews')}
+                <ExternalLink className="w-3 h-3 ml-auto opacity-50" />
+              </DropdownMenuItem>
               <DropdownMenuItem onSelect={() => setLocation("/disclaimer")} data-testid="menu-disclaimer">
                 <AlertCircle className="w-4 h-4 mr-2" />
                 {t('nav.disclaimer')}
@@ -348,6 +353,11 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
               <DropdownMenuItem onSelect={() => window.open("https://open.dosm.gov.my/ms-MY/dashboard/kawasanku", "_blank")}>
                 <ExternalLink className="w-4 h-4 mr-2" />
                 {t('nav.kawanku')}
+                <ExternalLink className="w-3 h-3 ml-auto opacity-50" />
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => window.open("https://luminews.my/", "_blank")}>
+                <ExternalLink className="w-4 h-4 mr-2" />
+                {t('nav.lumiNews')}
                 <ExternalLink className="w-3 h-3 ml-auto opacity-50" />
               </DropdownMenuItem>
               <DropdownMenuItem onSelect={() => setLocation("/disclaimer")}>
