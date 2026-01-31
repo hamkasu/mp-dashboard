@@ -13,7 +13,8 @@ export type AgentType =
   | "fact-checker"
   | "constituency-research"
   | "transparency-report"
-  | "semantic-search";
+  | "semantic-search"
+  | "poll-generator";
 
 export type AgentStatus = "pending" | "running" | "completed" | "failed" | "cancelled";
 export type FindingType = "insight" | "inconsistency" | "suggestion" | "warning" | "error";

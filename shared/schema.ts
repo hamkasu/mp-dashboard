@@ -1503,3 +1503,122 @@ export const updateMa63WatchlistItemSchema = insertMa63WatchlistItemSchema.parti
 export type InsertMa63WatchlistItem = z.infer<typeof insertMa63WatchlistItemSchema>;
 export type UpdateMa63WatchlistItem = z.infer<typeof updateMa63WatchlistItemSchema>;
 export type Ma63WatchlistItem = typeof ma63WatchlistItems.$inferSelect;
+
+// ========== WEEKLY POLLS ==========
+// Weekly polling system with AI-generated topics
+
+// Polls table - stores the weekly poll questions
+export const polls = pgTable("polls", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  question: text("question").notNull(),
+  questionMs: text("question_ms"), // Malay translation
+  description: text("description"), // Optional context for the poll
+  category: text("category").notNull().default("general"), // politics, economy, social, education, etc.
+
+  // Week tracking
+  weekNumber: integer("week_number").notNull(), // ISO week number
+  year: integer("year").notNull(),
+
+  // Status
+  status: text("status").notNull().default("draft"), // draft, active, closed, archived
+
+  // AI generation metadata
+  generatedBy: text("generated_by").default("ai"), // ai, manual
+  aiPromptUsed: text("ai_prompt_used"), // Store the prompt for reference
+  sourceContext: text("source_context"), // What data was used to generate this poll
+
+  // Timing
+  startsAt: timestamp("starts_at"),
+  endsAt: timestamp("ends_at"),
+
+  // Stats (denormalized for performance)
+  totalVotes: integer("total_votes").notNull().default(0),
+
+  createdAt: timestamp("created_at").notNull().default(sql`NOW()`),
+  updatedAt: timestamp("updated_at").notNull().default(sql`NOW()`),
+});
+
+export const insertPollSchema = createInsertSchema(polls).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  totalVotes: true,
+}).extend({
+  category: z.enum(["politics", "economy", "social", "education", "healthcare", "environment", "infrastructure", "governance", "general"]).optional().default("general"),
+  status: z.enum(["draft", "active", "closed", "archived"]).optional().default("draft"),
+  generatedBy: z.enum(["ai", "manual"]).optional().default("ai"),
+  questionMs: z.string().nullable().optional(),
+  description: z.string().nullable().optional(),
+  aiPromptUsed: z.string().nullable().optional(),
+  sourceContext: z.string().nullable().optional(),
+  startsAt: z.coerce.date().nullable().optional(),
+  endsAt: z.coerce.date().nullable().optional(),
+});
+
+export const updatePollSchema = insertPollSchema.partial();
+
+export type InsertPoll = z.infer<typeof insertPollSchema>;
+export type UpdatePoll = z.infer<typeof updatePollSchema>;
+export type Poll = typeof polls.$inferSelect;
+
+// Poll Options table - stores the answer choices for each poll
+export const pollOptions = pgTable("poll_options", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  pollId: varchar("poll_id").notNull().references(() => polls.id, { onDelete: "cascade" }),
+  optionText: text("option_text").notNull(),
+  optionTextMs: text("option_text_ms"), // Malay translation
+  displayOrder: integer("display_order").notNull().default(0),
+
+  // Stats (denormalized for performance)
+  voteCount: integer("vote_count").notNull().default(0),
+  votePercentage: integer("vote_percentage").notNull().default(0), // Stored as percentage * 100 (e.g., 5550 = 55.50%)
+
+  createdAt: timestamp("created_at").notNull().default(sql`NOW()`),
+});
+
+export const insertPollOptionSchema = createInsertSchema(pollOptions).omit({
+  id: true,
+  createdAt: true,
+  voteCount: true,
+  votePercentage: true,
+}).extend({
+  optionTextMs: z.string().nullable().optional(),
+  displayOrder: z.number().optional().default(0),
+});
+
+export type InsertPollOption = z.infer<typeof insertPollOptionSchema>;
+export type PollOption = typeof pollOptions.$inferSelect;
+
+// Poll Votes table - stores individual votes with deduplication
+export const pollVotes = pgTable("poll_votes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  pollId: varchar("poll_id").notNull().references(() => polls.id, { onDelete: "cascade" }),
+  optionId: varchar("option_id").notNull().references(() => pollOptions.id, { onDelete: "cascade" }),
+
+  // Voter identification for deduplication (anonymous)
+  voterFingerprint: text("voter_fingerprint").notNull(), // Hash of IP + user agent for deduplication
+  ipAddress: text("ip_address"), // For rate limiting
+
+  createdAt: timestamp("created_at").notNull().default(sql`NOW()`),
+});
+
+export const insertPollVoteSchema = createInsertSchema(pollVotes).omit({
+  id: true,
+  createdAt: true,
+}).extend({
+  ipAddress: z.string().nullable().optional(),
+});
+
+export type InsertPollVote = z.infer<typeof insertPollVoteSchema>;
+export type PollVote = typeof pollVotes.$inferSelect;
+
+// Extended types for API responses
+export type PollWithOptions = Poll & {
+  options: PollOption[];
+};
+
+export type PollWithResults = Poll & {
+  options: PollOption[];
+  hasVoted?: boolean;
+  userVotedOptionId?: string;
+};

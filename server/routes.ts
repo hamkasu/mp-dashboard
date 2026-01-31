@@ -9213,5 +9213,231 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
+  // ========== WEEKLY POLLS API ==========
+
+  // Get active poll (public)
+  app.get("/api/polls/active", async (req, res) => {
+    try {
+      const poll = await storage.getActivePoll();
+      if (!poll) {
+        return res.json({ poll: null });
+      }
+
+      // Get voter fingerprint for checking if user has voted
+      const ip = req.ip || req.socket.remoteAddress || 'unknown';
+      const userAgent = req.headers['user-agent'] || 'unknown';
+      const voterFingerprint = crypto.createHash('sha256').update(`${ip}:${userAgent}`).digest('hex');
+
+      const voteStatus = await storage.hasUserVoted(poll.id, voterFingerprint);
+
+      res.json({
+        poll: {
+          ...poll,
+          hasVoted: voteStatus.hasVoted,
+          userVotedOptionId: voteStatus.optionId,
+        },
+      });
+    } catch (error) {
+      console.error("Error fetching active poll:", error);
+      res.status(500).json({ error: "Failed to fetch active poll" });
+    }
+  });
+
+  // Get poll by ID (public)
+  app.get("/api/polls/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+
+      // Get voter fingerprint for checking if user has voted
+      const ip = req.ip || req.socket.remoteAddress || 'unknown';
+      const userAgent = req.headers['user-agent'] || 'unknown';
+      const voterFingerprint = crypto.createHash('sha256').update(`${ip}:${userAgent}`).digest('hex');
+
+      const poll = await storage.getPollWithResults(id, voterFingerprint);
+      if (!poll) {
+        return res.status(404).json({ error: "Poll not found" });
+      }
+
+      res.json({ poll });
+    } catch (error) {
+      console.error("Error fetching poll:", error);
+      res.status(500).json({ error: "Failed to fetch poll" });
+    }
+  });
+
+  // Get all polls (with optional filtering)
+  app.get("/api/polls", async (req, res) => {
+    try {
+      const { status, limit, offset } = req.query;
+
+      const polls = await storage.getAllPolls({
+        status: status as string | undefined,
+        limit: limit ? parseInt(limit as string) : 50,
+        offset: offset ? parseInt(offset as string) : 0,
+      });
+
+      res.json({ polls });
+    } catch (error) {
+      console.error("Error fetching polls:", error);
+      res.status(500).json({ error: "Failed to fetch polls" });
+    }
+  });
+
+  // Vote on a poll (public, rate-limited)
+  app.post("/api/polls/:id/vote", mutationRateLimit, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { optionId } = req.body;
+
+      if (!optionId) {
+        return res.status(400).json({ error: "optionId is required" });
+      }
+
+      // Verify poll exists and is active
+      const poll = await storage.getPoll(id);
+      if (!poll) {
+        return res.status(404).json({ error: "Poll not found" });
+      }
+      if (poll.status !== "active") {
+        return res.status(400).json({ error: "Poll is not active" });
+      }
+
+      // Verify option belongs to this poll
+      const validOption = poll.options.find((o) => o.id === optionId);
+      if (!validOption) {
+        return res.status(400).json({ error: "Invalid option for this poll" });
+      }
+
+      // Create voter fingerprint
+      const ip = req.ip || req.socket.remoteAddress || 'unknown';
+      const userAgent = req.headers['user-agent'] || 'unknown';
+      const voterFingerprint = crypto.createHash('sha256').update(`${ip}:${userAgent}`).digest('hex');
+
+      // Cast the vote
+      const result = await storage.castVote({
+        pollId: id,
+        optionId,
+        voterFingerprint,
+        ipAddress: ip,
+      });
+
+      if (result.alreadyVoted) {
+        return res.status(400).json({ error: "You have already voted on this poll" });
+      }
+
+      // Get updated poll results
+      const updatedPoll = await storage.getPollWithResults(id, voterFingerprint);
+
+      res.json({
+        success: true,
+        message: "Vote recorded successfully",
+        poll: updatedPoll,
+      });
+    } catch (error) {
+      console.error("Error casting vote:", error);
+      res.status(500).json({ error: "Failed to cast vote" });
+    }
+  });
+
+  // Admin: Create a poll manually
+  app.post("/api/polls", requireAdmin, mutationRateLimit, auditMiddleware('poll-create'), async (req, res) => {
+    try {
+      const { question, questionMs, description, category, weekNumber, year, status, options } = req.body;
+
+      if (!question || !weekNumber || !year || !options || !Array.isArray(options) || options.length < 2) {
+        return res.status(400).json({
+          error: "question, weekNumber, year, and at least 2 options are required",
+        });
+      }
+
+      const poll = await storage.createPoll(
+        {
+          question,
+          questionMs,
+          description,
+          category: category || "general",
+          weekNumber,
+          year,
+          status: status || "draft",
+          generatedBy: "manual",
+        },
+        options.map((opt: any, idx: number) => ({
+          pollId: "",
+          optionText: opt.optionText,
+          optionTextMs: opt.optionTextMs,
+          displayOrder: idx,
+        }))
+      );
+
+      res.json({ success: true, poll });
+    } catch (error) {
+      console.error("Error creating poll:", error);
+      res.status(500).json({ error: "Failed to create poll" });
+    }
+  });
+
+  // Admin: Update poll status
+  app.patch("/api/polls/:id", requireAdmin, mutationRateLimit, auditMiddleware('poll-update'), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const updates = req.body;
+
+      const poll = await storage.updatePoll(id, updates);
+      if (!poll) {
+        return res.status(404).json({ error: "Poll not found" });
+      }
+
+      res.json({ success: true, poll });
+    } catch (error) {
+      console.error("Error updating poll:", error);
+      res.status(500).json({ error: "Failed to update poll" });
+    }
+  });
+
+  // Admin: Delete a poll
+  app.delete("/api/polls/:id", requireAdmin, mutationRateLimit, auditMiddleware('poll-delete'), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const deleted = await storage.deletePoll(id);
+
+      if (!deleted) {
+        return res.status(404).json({ error: "Poll not found" });
+      }
+
+      res.json({ success: true, message: "Poll deleted" });
+    } catch (error) {
+      console.error("Error deleting poll:", error);
+      res.status(500).json({ error: "Failed to delete poll" });
+    }
+  });
+
+  // Admin: Trigger poll generation manually
+  app.post("/api/polls/generate", requireAdmin, mutationRateLimit, auditMiddleware('poll-generate'), async (req, res) => {
+    try {
+      const { numberOfPolls, forceRegenerate } = req.body;
+      const username = getCurrentUsername(req);
+
+      const { AgentService } = await import("./services/agentService");
+
+      const result = await AgentService.runAgent("poll-generator" as any, {
+        triggeredBy: "manual",
+        triggeredByUserId: username,
+        parameters: {
+          numberOfPolls: numberOfPolls || 1,
+          forceRegenerate: forceRegenerate || false,
+        },
+      });
+
+      res.json({
+        success: true,
+        executionId: result.executionId,
+        message: "Poll generation started",
+      });
+    } catch (error) {
+      console.error("Error triggering poll generation:", error);
+      res.status(500).json({ error: "Failed to trigger poll generation" });
+    }
+  });
+
   // Server is now passed in from index.ts, no need to create it here
 }
