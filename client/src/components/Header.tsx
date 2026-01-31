@@ -3,7 +3,7 @@
  * Updated: Consolidated Navigation Menu with Submenus
  */
 
-import { Search, Menu, FileText, BookOpen, UserCheck, Calculator, BarChart3, ExternalLink, AlertCircle, GraduationCap, Scale, Shield, MessageSquare, Gavel, Building2, MessageSquareText, Award, Handshake, ChevronDown, Users, Activity, LayoutDashboard, Settings, UserPlus, UserX, Upload } from "lucide-react";
+import { Search, Menu, FileText, BookOpen, UserCheck, Calculator, BarChart3, ExternalLink, AlertCircle, GraduationCap, Scale, Shield, MessageSquare, Gavel, Building2, MessageSquareText, Award, Handshake, ChevronDown, Users, Activity, LayoutDashboard, Settings, UserPlus, UserX, Upload, TrendingUp } from "lucide-react";
 import { FeedbackModal } from "@/components/FeedbackModal";
 import { Button } from "@/components/ui/button";
 import {
@@ -126,6 +126,10 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
                   </DropdownMenuSubContent>
                 </DropdownMenuPortal>
               </DropdownMenuSub>
+              <DropdownMenuItem onSelect={() => setLocation("/analytics")} data-testid="menu-analytics">
+                <TrendingUp className="w-4 h-4 mr-2" />
+                Analytics
+              </DropdownMenuItem>
 
               <DropdownMenuSeparator />
 
@@ -294,6 +298,10 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
               <DropdownMenuItem onSelect={() => setLocation("/allowances")}>
                 <Calculator className="w-4 h-4 mr-2" />
                 {t('nav.allowances')}
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => setLocation("/analytics")}>
+                <TrendingUp className="w-4 h-4 mr-2" />
+                Analytics
               </DropdownMenuItem>
 
               <DropdownMenuSeparator />
