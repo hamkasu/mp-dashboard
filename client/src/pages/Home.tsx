@@ -14,6 +14,7 @@ import { MPGrid } from "@/components/MPGrid";
 import { DonateButton } from "@/components/DonateButton";
 import { RoyalAddress } from "@/components/RoyalAddress";
 import { MPSpotlight } from "@/components/MPSpotlight";
+import { PollWidget } from "@/components/PollWidget";
 import { Footer } from "@/components/Footer";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -570,8 +571,8 @@ export default function Home() {
               </CardContent>
             </Card>
 
-            {/* Featured Cards: Royal Address & MP Spotlight */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Featured Cards: Royal Address, MP Spotlight & Weekly Poll */}
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
               <div className="relative">
                 <div className="absolute -inset-1 bg-gradient-to-r from-primary/20 to-primary/10 rounded-lg blur opacity-25" />
                 <RoyalAddress />
@@ -579,6 +580,10 @@ export default function Home() {
               <div className="relative">
                 <div className="absolute -inset-1 bg-gradient-to-r from-amber-500/20 to-orange-500/10 rounded-lg blur opacity-25" />
                 <MPSpotlight />
+              </div>
+              <div className="relative md:col-span-2 xl:col-span-1">
+                <div className="absolute -inset-1 bg-gradient-to-r from-green-500/20 to-emerald-500/10 rounded-lg blur opacity-25" />
+                <PollWidget />
               </div>
             </div>
 

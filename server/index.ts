@@ -10,6 +10,7 @@ import { setupVite, serveStatic, log } from "./vite";
 import { startHansardCronWithRecovery } from "./hansard-cron";
 import { scheduleParliamentaryAnswersSync } from "./parliamentary-answers-cron";
 import { startReportCardCron } from "./report-card-cron";
+import { initializePollCrons } from "./poll-cron";
 import { trackVisitorAnalytics } from "./analytics-middleware";
 import { helmetConfig, readRateLimit } from "./middleware/security";
 import { corsConfig } from "./middleware/cors";
@@ -206,6 +207,9 @@ server.listen({
 
   // Start the monthly Report Card update cron job
   startReportCardCron();
+
+  // Start the weekly poll generation and status management cron jobs
+  initializePollCrons();
 
   // Start memory monitoring (log every 10 minutes in production)
   if (process.env.NODE_ENV === "production") {

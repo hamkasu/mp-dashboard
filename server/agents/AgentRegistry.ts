@@ -8,6 +8,7 @@ import type { IAgent, AgentType } from "./types";
 import { HansardMonitorAgent } from "./HansardMonitorAgent";
 import { DataQualityAgent } from "./DataQualityAgent";
 import { BillAnalyzerAgent } from "./BillAnalyzerAgent";
+import { PollGeneratorAgent } from "./PollGeneratorAgent";
 
 export class AgentRegistry {
   private static agents: Map<AgentType, IAgent> = new Map();
@@ -19,6 +20,7 @@ export class AgentRegistry {
     this.register(new HansardMonitorAgent());
     this.register(new DataQualityAgent());
     this.register(new BillAnalyzerAgent());
+    this.register(new PollGeneratorAgent());
   }
 
   /**

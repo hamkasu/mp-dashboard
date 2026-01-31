@@ -2,10 +2,10 @@
  * Copyright by Calmic Sdn Bhd
  */
 
-import { type Mp, type InsertMp, type CourtCase, type InsertCourtCase, type SprmInvestigation, type InsertSprmInvestigation, type LegislativeProposal, type InsertLegislativeProposal, type DebateParticipation, type InsertDebateParticipation, type ParliamentaryQuestion, type InsertParliamentaryQuestion, type HansardRecord, type InsertHansardRecord, type UpdateHansardRecord, type PageView, type UserActivityLog, type InsertUserActivityLog, type Constituency, type InsertConstituency, type DunMember, type InsertDunMember, type UserFeedback, type InsertUserFeedback, type TopicSummaryCache, type InsertTopicSummaryCache, type MpContactMessage, type InsertMpContactMessage, type UpdateMpContactMessage } from "@shared/schema";
+import { type Mp, type InsertMp, type CourtCase, type InsertCourtCase, type SprmInvestigation, type InsertSprmInvestigation, type LegislativeProposal, type InsertLegislativeProposal, type DebateParticipation, type InsertDebateParticipation, type ParliamentaryQuestion, type InsertParliamentaryQuestion, type HansardRecord, type InsertHansardRecord, type UpdateHansardRecord, type PageView, type UserActivityLog, type InsertUserActivityLog, type Constituency, type InsertConstituency, type DunMember, type InsertDunMember, type UserFeedback, type InsertUserFeedback, type TopicSummaryCache, type InsertTopicSummaryCache, type MpContactMessage, type InsertMpContactMessage, type UpdateMpContactMessage, type Poll, type InsertPoll, type UpdatePoll, type PollOption, type InsertPollOption, type PollVote, type InsertPollVote, type PollWithOptions, type PollWithResults } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db, pool } from "./db";
-import { mps, courtCases, sprmInvestigations, legislativeProposals, debateParticipations, parliamentaryQuestions, hansardRecords, pageViews, userActivityLog, constituencies, dunMembers, courtCaseNewsArticles, userFeedback, topicSummaryCache, mpContactMessages } from "@shared/schema";
+import { mps, courtCases, sprmInvestigations, legislativeProposals, debateParticipations, parliamentaryQuestions, hansardRecords, pageViews, userActivityLog, constituencies, dunMembers, courtCaseNewsArticles, userFeedback, topicSummaryCache, mpContactMessages, polls, pollOptions, pollVotes } from "@shared/schema";
 import { eq, sql, desc, and } from "drizzle-orm";
 import { MPNameMatcher } from "./mp-name-matcher";
 import { HansardScraper } from "./hansard-scraper";
@@ -3232,6 +3232,275 @@ export class DbStorage implements IStorage {
       })
       .returning();
     return result[0];
+  }
+
+  // ========== POLL METHODS ==========
+
+  // Get a poll by ID with its options
+  async getPoll(id: string): Promise<PollWithOptions | undefined> {
+    const pollResult = await db.select().from(polls).where(eq(polls.id, id));
+    if (!pollResult[0]) return undefined;
+
+    const options = await db
+      .select()
+      .from(pollOptions)
+      .where(eq(pollOptions.pollId, id))
+      .orderBy(pollOptions.displayOrder);
+
+    return {
+      ...pollResult[0],
+      options,
+    };
+  }
+
+  // Get active poll (most recent active poll)
+  async getActivePoll(): Promise<PollWithOptions | undefined> {
+    const pollResult = await db
+      .select()
+      .from(polls)
+      .where(eq(polls.status, "active"))
+      .orderBy(desc(polls.createdAt))
+      .limit(1);
+
+    if (!pollResult[0]) return undefined;
+
+    const options = await db
+      .select()
+      .from(pollOptions)
+      .where(eq(pollOptions.pollId, pollResult[0].id))
+      .orderBy(pollOptions.displayOrder);
+
+    return {
+      ...pollResult[0],
+      options,
+    };
+  }
+
+  // Get polls for a specific week/year
+  async getPollsByWeek(year: number, weekNumber: number): Promise<PollWithOptions[]> {
+    const pollsResult = await db
+      .select()
+      .from(polls)
+      .where(and(eq(polls.year, year), eq(polls.weekNumber, weekNumber)))
+      .orderBy(desc(polls.createdAt));
+
+    const pollsWithOptions: PollWithOptions[] = [];
+    for (const poll of pollsResult) {
+      const options = await db
+        .select()
+        .from(pollOptions)
+        .where(eq(pollOptions.pollId, poll.id))
+        .orderBy(pollOptions.displayOrder);
+
+      pollsWithOptions.push({
+        ...poll,
+        options,
+      });
+    }
+
+    return pollsWithOptions;
+  }
+
+  // Get all polls with pagination
+  async getAllPolls(options?: { limit?: number; offset?: number; status?: string }): Promise<PollWithOptions[]> {
+    let query = db.select().from(polls);
+
+    if (options?.status) {
+      query = query.where(eq(polls.status, options.status)) as typeof query;
+    }
+
+    const pollsResult = await query
+      .orderBy(desc(polls.createdAt))
+      .limit(options?.limit || 50)
+      .offset(options?.offset || 0);
+
+    const pollsWithOptions: PollWithOptions[] = [];
+    for (const poll of pollsResult) {
+      const optionsResult = await db
+        .select()
+        .from(pollOptions)
+        .where(eq(pollOptions.pollId, poll.id))
+        .orderBy(pollOptions.displayOrder);
+
+      pollsWithOptions.push({
+        ...poll,
+        options: optionsResult,
+      });
+    }
+
+    return pollsWithOptions;
+  }
+
+  // Create a new poll with options
+  async createPoll(pollData: InsertPoll, optionsData: InsertPollOption[]): Promise<PollWithOptions> {
+    const pollResult = await db.insert(polls).values(pollData).returning();
+    const poll = pollResult[0];
+
+    const optionsWithPollId = optionsData.map((option, index) => ({
+      ...option,
+      pollId: poll.id,
+      displayOrder: option.displayOrder ?? index,
+    }));
+
+    const createdOptions = await db.insert(pollOptions).values(optionsWithPollId).returning();
+
+    return {
+      ...poll,
+      options: createdOptions,
+    };
+  }
+
+  // Update a poll
+  async updatePoll(id: string, updates: UpdatePoll): Promise<Poll | undefined> {
+    const result = await db
+      .update(polls)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(polls.id, id))
+      .returning();
+    return result[0];
+  }
+
+  // Delete a poll (cascades to options and votes)
+  async deletePoll(id: string): Promise<boolean> {
+    const result = await db.delete(polls).where(eq(polls.id, id)).returning();
+    return result.length > 0;
+  }
+
+  // Cast a vote
+  async castVote(voteData: InsertPollVote): Promise<{ success: boolean; alreadyVoted: boolean }> {
+    // Check if user already voted on this poll
+    const existingVote = await db
+      .select()
+      .from(pollVotes)
+      .where(
+        and(
+          eq(pollVotes.pollId, voteData.pollId),
+          eq(pollVotes.voterFingerprint, voteData.voterFingerprint)
+        )
+      );
+
+    if (existingVote.length > 0) {
+      return { success: false, alreadyVoted: true };
+    }
+
+    // Insert the vote
+    await db.insert(pollVotes).values(voteData);
+
+    // Update vote counts on the option
+    await db
+      .update(pollOptions)
+      .set({
+        voteCount: sql`${pollOptions.voteCount} + 1`,
+      })
+      .where(eq(pollOptions.id, voteData.optionId));
+
+    // Update total votes on the poll
+    await db
+      .update(polls)
+      .set({
+        totalVotes: sql`${polls.totalVotes} + 1`,
+        updatedAt: new Date(),
+      })
+      .where(eq(polls.id, voteData.pollId));
+
+    // Recalculate percentages for all options in this poll
+    await this.recalculatePollPercentages(voteData.pollId);
+
+    return { success: true, alreadyVoted: false };
+  }
+
+  // Recalculate vote percentages for a poll
+  async recalculatePollPercentages(pollId: string): Promise<void> {
+    const poll = await db.select().from(polls).where(eq(polls.id, pollId));
+    if (!poll[0] || poll[0].totalVotes === 0) return;
+
+    const totalVotes = poll[0].totalVotes;
+    const options = await db.select().from(pollOptions).where(eq(pollOptions.pollId, pollId));
+
+    for (const option of options) {
+      const percentage = Math.round((option.voteCount / totalVotes) * 10000); // Store as percentage * 100
+      await db
+        .update(pollOptions)
+        .set({ votePercentage: percentage })
+        .where(eq(pollOptions.id, option.id));
+    }
+  }
+
+  // Check if a user has voted on a poll
+  async hasUserVoted(pollId: string, voterFingerprint: string): Promise<{ hasVoted: boolean; optionId?: string }> {
+    const vote = await db
+      .select()
+      .from(pollVotes)
+      .where(
+        and(
+          eq(pollVotes.pollId, pollId),
+          eq(pollVotes.voterFingerprint, voterFingerprint)
+        )
+      );
+
+    if (vote.length > 0) {
+      return { hasVoted: true, optionId: vote[0].optionId };
+    }
+    return { hasVoted: false };
+  }
+
+  // Get poll with results and user vote status
+  async getPollWithResults(pollId: string, voterFingerprint?: string): Promise<PollWithResults | undefined> {
+    const poll = await this.getPoll(pollId);
+    if (!poll) return undefined;
+
+    let hasVoted = false;
+    let userVotedOptionId: string | undefined;
+
+    if (voterFingerprint) {
+      const voteStatus = await this.hasUserVoted(pollId, voterFingerprint);
+      hasVoted = voteStatus.hasVoted;
+      userVotedOptionId = voteStatus.optionId;
+    }
+
+    return {
+      ...poll,
+      hasVoted,
+      userVotedOptionId,
+    };
+  }
+
+  // Get recent polls (for history view)
+  async getRecentPolls(limit: number = 10): Promise<PollWithOptions[]> {
+    return this.getAllPolls({ limit, status: "closed" });
+  }
+
+  // Close expired polls (called by cron)
+  async closeExpiredPolls(): Promise<number> {
+    const now = new Date();
+    const result = await db
+      .update(polls)
+      .set({ status: "closed", updatedAt: now })
+      .where(
+        and(
+          eq(polls.status, "active"),
+          sql`${polls.endsAt} < ${now}`
+        )
+      )
+      .returning();
+    return result.length;
+  }
+
+  // Activate scheduled polls (called by cron)
+  async activateScheduledPolls(): Promise<number> {
+    const now = new Date();
+    const result = await db
+      .update(polls)
+      .set({ status: "active", updatedAt: now })
+      .where(
+        and(
+          eq(polls.status, "draft"),
+          sql`${polls.startsAt} <= ${now}`,
+          sql`(${polls.endsAt} IS NULL OR ${polls.endsAt} > ${now})`
+        )
+      )
+      .returning();
+    return result.length;
   }
 }
 
