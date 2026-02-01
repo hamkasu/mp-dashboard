@@ -22,7 +22,16 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { MessageSquare, Search, ExternalLink, RefreshCw, AlertCircle, File } from "lucide-react";
+import { MessageSquare, Search, ExternalLink, RefreshCw, AlertCircle, File, ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 import { format } from "date-fns";
 
 interface ParliamentaryAnswer {
@@ -48,10 +57,18 @@ interface AnswersResponse {
   fromDatabase?: boolean;
 }
 
+type SortColumn = 'questionNumber' | 'title' | 'questionerName' | 'answererMinistry' | 'dateAsked' | 'status';
+type SortDirection = 'asc' | 'desc';
+
+const ITEMS_PER_PAGE = 20;
+
 export default function ParliamentaryAnswers() {
   const { t } = useLanguage();
   const [searchQuery, setSearchQuery] = useState("");
   const [searchDialogOpen, setSearchDialogOpen] = useState(false);
+  const [sortColumn, setSortColumn] = useState<SortColumn | null>(null);
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+  const [currentPage, setCurrentPage] = useState(1);
 
   const { data: answersData, isLoading, error, refetch, isFetching } = useQuery<AnswersResponse>({
     queryKey: ["/api/parliamentary-answers"],
@@ -79,6 +96,116 @@ export default function ParliamentaryAnswers() {
       answer.status.toLowerCase().includes(query)
     );
   });
+
+  // Sort answers
+  const sortedAnswers = [...filteredAnswers].sort((a, b) => {
+    if (!sortColumn) return 0;
+
+    let aValue: string | null | undefined;
+    let bValue: string | null | undefined;
+
+    switch (sortColumn) {
+      case 'questionNumber':
+        aValue = a.questionNumber;
+        bValue = b.questionNumber;
+        break;
+      case 'title':
+        aValue = a.title;
+        bValue = b.title;
+        break;
+      case 'questionerName':
+        aValue = a.questionerName;
+        bValue = b.questionerName;
+        break;
+      case 'answererMinistry':
+        aValue = a.answererMinistry || a.answererName;
+        bValue = b.answererMinistry || b.answererName;
+        break;
+      case 'dateAsked':
+        aValue = a.dateAsked;
+        bValue = b.dateAsked;
+        break;
+      case 'status':
+        aValue = a.status;
+        bValue = b.status;
+        break;
+      default:
+        return 0;
+    }
+
+    // Handle null/undefined values - push them to the end
+    if (!aValue && !bValue) return 0;
+    if (!aValue) return 1;
+    if (!bValue) return -1;
+
+    const comparison = aValue.localeCompare(bValue);
+    return sortDirection === 'asc' ? comparison : -comparison;
+  });
+
+  // Pagination
+  const totalPages = Math.ceil(sortedAnswers.length / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const paginatedAnswers = sortedAnswers.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+
+  // Reset to page 1 when search query changes
+  const handleSearchChange = (value: string) => {
+    setSearchQuery(value);
+    setCurrentPage(1);
+  };
+
+  // Handle column header click for sorting
+  const handleSort = (column: SortColumn) => {
+    if (sortColumn === column) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortColumn(column);
+      setSortDirection('asc');
+    }
+    setCurrentPage(1);
+  };
+
+  // Get sort icon for column header
+  const getSortIcon = (column: SortColumn) => {
+    if (sortColumn !== column) {
+      return <ArrowUpDown className="w-4 h-4 ml-1 opacity-50" />;
+    }
+    return sortDirection === 'asc'
+      ? <ArrowUp className="w-4 h-4 ml-1" />
+      : <ArrowDown className="w-4 h-4 ml-1" />;
+  };
+
+  // Generate page numbers for pagination
+  const getPageNumbers = () => {
+    const pages: (number | 'ellipsis')[] = [];
+    const maxVisible = 5;
+
+    if (totalPages <= maxVisible + 2) {
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      pages.push(1);
+
+      if (currentPage > 3) {
+        pages.push('ellipsis');
+      }
+
+      const start = Math.max(2, currentPage - 1);
+      const end = Math.min(totalPages - 1, currentPage + 1);
+
+      for (let i = start; i <= end; i++) {
+        pages.push(i);
+      }
+
+      if (currentPage < totalPages - 2) {
+        pages.push('ellipsis');
+      }
+
+      pages.push(totalPages);
+    }
+
+    return pages;
+  };
 
   const getStatusColor = (status: string) => {
     const statusLower = status.toLowerCase();
@@ -201,7 +328,7 @@ export default function ParliamentaryAnswers() {
               <Input
                 placeholder="Search by question number, title, questioner, ministry, or status..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => handleSearchChange(e.target.value)}
                 className="pl-9"
               />
             </div>
@@ -210,7 +337,7 @@ export default function ParliamentaryAnswers() {
 
         {/* Results Count */}
         <div className="mb-4 text-sm text-muted-foreground">
-          Showing {filteredAnswers.length} oral answer{filteredAnswers.length !== 1 ? 's' : ''}
+          Showing {startIndex + 1}-{Math.min(startIndex + ITEMS_PER_PAGE, sortedAnswers.length)} of {sortedAnswers.length} oral answer{sortedAnswers.length !== 1 ? 's' : ''}
           {searchQuery && ` matching "${searchQuery}"`}
         </div>
 
@@ -222,7 +349,7 @@ export default function ParliamentaryAnswers() {
                 <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-4" />
                 Loading oral answers from Parliament website...
               </div>
-            ) : filteredAnswers.length === 0 ? (
+            ) : sortedAnswers.length === 0 ? (
               <div className="p-8 text-center text-muted-foreground">
                 {searchQuery ? (
                   'No oral answers found matching your search.'
@@ -247,17 +374,65 @@ export default function ParliamentaryAnswers() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="w-[100px]">Question No.</TableHead>
-                      <TableHead className="min-w-[300px]">Title</TableHead>
-                      <TableHead className="w-[150px]">Questioner</TableHead>
-                      <TableHead className="w-[180px]">Ministry</TableHead>
-                      <TableHead className="w-[120px]">Date</TableHead>
-                      <TableHead className="w-[100px]">Status</TableHead>
+                      <TableHead
+                        className="w-[100px] cursor-pointer hover:bg-muted/50 select-none"
+                        onClick={() => handleSort('questionNumber')}
+                      >
+                        <div className="flex items-center">
+                          Question No.
+                          {getSortIcon('questionNumber')}
+                        </div>
+                      </TableHead>
+                      <TableHead
+                        className="min-w-[300px] cursor-pointer hover:bg-muted/50 select-none"
+                        onClick={() => handleSort('title')}
+                      >
+                        <div className="flex items-center">
+                          Title
+                          {getSortIcon('title')}
+                        </div>
+                      </TableHead>
+                      <TableHead
+                        className="w-[150px] cursor-pointer hover:bg-muted/50 select-none"
+                        onClick={() => handleSort('questionerName')}
+                      >
+                        <div className="flex items-center">
+                          Questioner
+                          {getSortIcon('questionerName')}
+                        </div>
+                      </TableHead>
+                      <TableHead
+                        className="w-[180px] cursor-pointer hover:bg-muted/50 select-none"
+                        onClick={() => handleSort('answererMinistry')}
+                      >
+                        <div className="flex items-center">
+                          Ministry
+                          {getSortIcon('answererMinistry')}
+                        </div>
+                      </TableHead>
+                      <TableHead
+                        className="w-[120px] cursor-pointer hover:bg-muted/50 select-none"
+                        onClick={() => handleSort('dateAsked')}
+                      >
+                        <div className="flex items-center">
+                          Date
+                          {getSortIcon('dateAsked')}
+                        </div>
+                      </TableHead>
+                      <TableHead
+                        className="w-[100px] cursor-pointer hover:bg-muted/50 select-none"
+                        onClick={() => handleSort('status')}
+                      >
+                        <div className="flex items-center">
+                          Status
+                          {getSortIcon('status')}
+                        </div>
+                      </TableHead>
                       <TableHead className="text-center w-[100px]">Documents</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredAnswers.map((answer) => (
+                    {paginatedAnswers.map((answer) => (
                       <TableRow key={answer.id} className="hover:bg-muted/50">
                         <TableCell className="font-mono text-sm">
                           {answer.questionNumber || '-'}
@@ -326,6 +501,57 @@ export default function ParliamentaryAnswers() {
             )}
           </CardContent>
         </Card>
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="mt-4">
+            <Pagination>
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      if (currentPage > 1) setCurrentPage(currentPage - 1);
+                    }}
+                    className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                  />
+                </PaginationItem>
+
+                {getPageNumbers().map((page, index) => (
+                  <PaginationItem key={index}>
+                    {page === 'ellipsis' ? (
+                      <PaginationEllipsis />
+                    ) : (
+                      <PaginationLink
+                        href="#"
+                        isActive={currentPage === page}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setCurrentPage(page as number);
+                        }}
+                        className="cursor-pointer"
+                      >
+                        {page}
+                      </PaginationLink>
+                    )}
+                  </PaginationItem>
+                ))}
+
+                <PaginationItem>
+                  <PaginationNext
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      if (currentPage < totalPages) setCurrentPage(currentPage + 1);
+                    }}
+                    className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
+          </div>
+        )}
 
         {/* Source attribution */}
         <div className="mt-6 text-center text-sm text-muted-foreground">
