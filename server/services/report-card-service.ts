@@ -473,7 +473,23 @@ export async function getReportCardsWithDetails() {
  */
 export async function getAggregateStats() {
   try {
-    const cards = await db.select().from(mpReportCards);
+    // Join with mps table to filter for active MPs only (not deceased or resigned)
+    const now = new Date();
+    const cardsWithMps = await db
+      .select({
+        card: mpReportCards,
+        termEndDate: mps.termEndDate,
+      })
+      .from(mpReportCards)
+      .innerJoin(mps, eq(mpReportCards.mpId, mps.id));
+
+    // Filter to only include active MPs
+    const cards = cardsWithMps
+      .filter(row => {
+        if (!row.termEndDate) return true;
+        return new Date(row.termEndDate) > now;
+      })
+      .map(row => row.card);
 
     if (cards.length === 0) {
       return {
