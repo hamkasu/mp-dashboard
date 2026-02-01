@@ -97,10 +97,77 @@ export default function ParliamentaryAnswers() {
     );
   });
 
+  // Parse date string to Date object for proper sorting
+  // Handles formats like: "2024-11-08", "5 NOVEMBER 2024", "17 OKTOBER 2024"
+  const parseDate = (dateStr: string | null | undefined): Date | null => {
+    if (!dateStr) return null;
+
+    // Try ISO format first (YYYY-MM-DD)
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+      return new Date(dateStr);
+    }
+
+    // Map Malay month names to English
+    const monthMap: Record<string, string> = {
+      'JANUARI': 'JANUARY',
+      'FEBRUARI': 'FEBRUARY',
+      'MAC': 'MARCH',
+      'APRIL': 'APRIL',
+      'MEI': 'MAY',
+      'JUN': 'JUNE',
+      'JULAI': 'JULY',
+      'OGOS': 'AUGUST',
+      'SEPTEMBER': 'SEPTEMBER',
+      'OKTOBER': 'OCTOBER',
+      'NOVEMBER': 'NOVEMBER',
+      'DISEMBER': 'DECEMBER',
+    };
+
+    // Try text format: "5 NOVEMBER 2024" or "17 OKTOBER 2024"
+    const textMatch = dateStr.match(/^(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})$/i);
+    if (textMatch) {
+      const day = parseInt(textMatch[1], 10);
+      let month = textMatch[2].toUpperCase();
+      const year = parseInt(textMatch[3], 10);
+
+      // Convert Malay month to English if needed
+      if (monthMap[month]) {
+        month = monthMap[month];
+      }
+
+      const parsed = new Date(`${month} ${day}, ${year}`);
+      if (!isNaN(parsed.getTime())) {
+        return parsed;
+      }
+    }
+
+    // Fallback: try native Date parsing
+    const fallback = new Date(dateStr);
+    return isNaN(fallback.getTime()) ? null : fallback;
+  };
+
   // Sort answers
   const sortedAnswers = [...filteredAnswers].sort((a, b) => {
     if (!sortColumn) return 0;
 
+    let aValue: string | null | undefined;
+    let bValue: string | null | undefined;
+
+    // Special handling for date column
+    if (sortColumn === 'dateAsked') {
+      const aDate = parseDate(a.dateAsked);
+      const bDate = parseDate(b.dateAsked);
+
+      // Handle null dates - push them to the end
+      if (!aDate && !bDate) return 0;
+      if (!aDate) return 1;
+      if (!bDate) return -1;
+
+      const comparison = aDate.getTime() - bDate.getTime();
+      return sortDirection === 'asc' ? comparison : -comparison;
+    }
+
+    // String comparison for other columns
     let aValue: string | null | undefined;
     let bValue: string | null | undefined;
 
@@ -120,10 +187,6 @@ export default function ParliamentaryAnswers() {
       case 'answererMinistry':
         aValue = a.answererMinistry || a.answererName;
         bValue = b.answererMinistry || b.answererName;
-        break;
-      case 'dateAsked':
-        aValue = a.dateAsked;
-        bValue = b.dateAsked;
         break;
       case 'status':
         aValue = a.status;
