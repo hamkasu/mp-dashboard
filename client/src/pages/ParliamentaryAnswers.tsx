@@ -167,10 +167,6 @@ export default function ParliamentaryAnswers() {
       return sortDirection === 'asc' ? comparison : -comparison;
     }
 
-    // String comparison for other columns
-    let aValue: string | null | undefined;
-    let bValue: string | null | undefined;
-
     switch (sortColumn) {
       case 'questionNumber':
         aValue = a.questionNumber;
