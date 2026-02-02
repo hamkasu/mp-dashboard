@@ -150,6 +150,51 @@ export default function Bills() {
     return "bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20";
   };
 
+  // Extract the main status label from the full status string
+  const getStatusLabel = (status: string) => {
+    const statusLower = status.toLowerCase();
+    if (statusLower.startsWith("lulus")) return "Lulus";
+    if (statusLower.includes("passed")) return "Passed";
+    if (statusLower.includes("pending") || statusLower.includes("menunggu")) return "Pending";
+    if (statusLower.includes("rejected") || statusLower.includes("ditolak")) return "Rejected";
+    if (statusLower.includes("withdrawn") || statusLower.includes("ditarik")) return "Withdrawn";
+    if (statusLower.includes("bacaan")) return "Dalam Proses";
+    // If status is short, use it as-is
+    if (status.length <= 30) return status;
+    return "In Progress";
+  };
+
+  // Parse the detailed status information into structured fields
+  const parseStatusDetails = (status: string) => {
+    const details: { label: string; value: string }[] = [];
+
+    // Extract Bacaan Pertama (First Reading)
+    const bacaanPertamaMatch = status.match(/Bacaan Pertama Pada\s*:\s*(\d{2}\/\d{2}\/\d{4})/i);
+    if (bacaanPertamaMatch) {
+      details.push({ label: "Bacaan Pertama", value: bacaanPertamaMatch[1] });
+    }
+
+    // Extract Bacaan Kedua (Second Reading)
+    const bacaanKeduaMatch = status.match(/Bacaan Kedua Pada\s*:\s*(\d{2}\/\d{2}\/\d{4})/i);
+    if (bacaanKeduaMatch) {
+      details.push({ label: "Bacaan Kedua", value: bacaanKeduaMatch[1] });
+    }
+
+    // Extract Diluluskan (Passed) date
+    const diluluskanMatch = status.match(/Diluluskan Pada\s*:\s*(\d{2}\/\d{2}\/\d{4})/i);
+    if (diluluskanMatch) {
+      details.push({ label: "Diluluskan", value: diluluskanMatch[1] });
+    }
+
+    // Extract Dibentang Oleh (Tabled by) - get the first occurrence
+    const dibentangMatch = status.match(/Dibentang Oleh\s*:\s*([^D]+?)(?=Diluluskan|Bacaan|Tutup|$)/i);
+    if (dibentangMatch) {
+      details.push({ label: "Dibentang Oleh", value: dibentangMatch[1].trim() });
+    }
+
+    return details;
+  };
+
   const clearFilters = () => {
     setSearchQuery("");
     setStatusFilter("all");
@@ -346,9 +391,22 @@ export default function Bills() {
                           </span>
                         )}
                         <Badge variant="outline" className={getStatusColor(bill.status)}>
-                          {bill.status}
+                          {getStatusLabel(bill.status)}
                         </Badge>
                       </div>
+                      {/* Display parsed status details if available */}
+                      {parseStatusDetails(bill.status).length > 0 && (
+                        <div className={`mt-3 p-3 rounded-md text-sm ${getStatusColor(bill.status)}`}>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+                            {parseStatusDetails(bill.status).map((detail, index) => (
+                              <div key={index}>
+                                <span className="font-medium">{detail.label}:</span>{" "}
+                                <span>{detail.value}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                     <div className="flex gap-2 shrink-0">
                       {bill.hasPdf && (
