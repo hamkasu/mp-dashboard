@@ -134,6 +134,20 @@ export interface DetailedSummaryResult {
   summary: string;
 }
 
+export interface ThematicSection {
+  title: string;
+  overview: string;
+  keyPoints: Array<{
+    heading: string;
+    detail: string;
+  }>;
+}
+
+export interface ComprehensiveAnalysisResult {
+  introduction: string;
+  sections: ThematicSection[];
+}
+
 async function sleep(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
@@ -752,6 +766,87 @@ Provide a comprehensive impact analysis for Malaysian citizens.`;
   } catch (error) {
     console.error("[AI] Error in bill impact analysis:", error);
     throw new Error(`Failed to analyze bill impact: ${error}`);
+  }
+}
+
+export async function generateComprehensiveAnalysis(
+  transcript: string,
+  sessionDate: string,
+  language: "en" | "ms" = "en"
+): Promise<ComprehensiveAnalysisResult> {
+  try {
+    const languageInstruction = language === "ms"
+      ? "Respond in Bahasa Malaysia (Malay language)"
+      : "Respond in English";
+
+    const systemPrompt = `You are an expert parliamentary analyst specializing in Malaysian Dewan Rakyat (Parliament) debates.
+${languageInstruction}.
+
+Analyze the parliamentary transcript and provide a comprehensive, narrative analysis organized by key thematic sections.
+
+Your analysis should:
+1. Start with a brief introduction that sets the context for the session
+2. Identify 4-8 major themes/topics discussed during the session
+3. For each theme, provide:
+   - A descriptive title
+   - An overview paragraph (2-3 sentences) explaining the main discussion
+   - 3-6 specific key points with headings and detailed explanations
+
+The key points should include specific details like:
+- Monetary figures (e.g., RM242 million allocated for...)
+- Statistics and percentages (e.g., 46.4% of farmers are over 60...)
+- Names of policies, bills, or government programs
+- Specific actions or commitments made
+- Quotes or statements from MPs where relevant
+
+You must respond with valid JSON matching this structure:
+{
+  "introduction": "Based on the Hansard of the Malaysian Dewan Rakyat session dated [DATE], the following is an analysis of the key discussions and highlights:",
+  "sections": [
+    {
+      "title": "Theme Title (e.g., Emergency Preparedness and Natural Disasters)",
+      "overview": "A 2-3 sentence overview of what was discussed regarding this theme.",
+      "keyPoints": [
+        {
+          "heading": "Point heading (e.g., Infrastructure Investment)",
+          "detail": "Detailed explanation with specific facts, figures, and context."
+        }
+      ]
+    }
+  ]
+}`;
+
+    const userPrompt = `Analyze this Malaysian parliamentary debate session from ${sessionDate}:
+
+${transcript.substring(0, 50000)}
+
+Provide a comprehensive thematic analysis with specific details, statistics, and key points from the debate.`;
+
+    const result = await callAI(systemPrompt, userPrompt);
+
+    // Validate and sanitize the response
+    const sanitized: ComprehensiveAnalysisResult = {
+      introduction: typeof result.introduction === 'string'
+        ? result.introduction
+        : `Based on the Hansard of the Malaysian Dewan Rakyat session dated ${sessionDate}, the following is an analysis of the key discussions and highlights:`,
+      sections: Array.isArray(result.sections)
+        ? result.sections.map((section: any) => ({
+            title: typeof section.title === 'string' ? section.title : 'Untitled Section',
+            overview: typeof section.overview === 'string' ? section.overview : '',
+            keyPoints: Array.isArray(section.keyPoints)
+              ? section.keyPoints.map((kp: any) => ({
+                  heading: typeof kp.heading === 'string' ? kp.heading : '',
+                  detail: typeof kp.detail === 'string' ? kp.detail : '',
+                })).filter((kp: any) => kp.heading && kp.detail)
+              : [],
+          })).filter((s: any) => s.title && (s.overview || s.keyPoints.length > 0))
+        : [],
+    };
+
+    return sanitized;
+  } catch (error) {
+    console.error("[AI] Error in comprehensive analysis:", error);
+    throw new Error(`Failed to generate comprehensive analysis: ${error}`);
   }
 }
 

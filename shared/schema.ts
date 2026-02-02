@@ -657,6 +657,30 @@ export const insertHansardDetailedSummarySchema = createInsertSchema(hansardDeta
 export type InsertHansardDetailedSummary = z.infer<typeof insertHansardDetailedSummarySchema>;
 export type HansardDetailedSummary = typeof hansardDetailedSummary.$inferSelect;
 
+export const hansardComprehensiveAnalysis = pgTable("hansard_comprehensive_analysis", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  hansardRecordId: varchar("hansard_record_id").notNull().references(() => hansardRecords.id, { onDelete: "cascade" }),
+  language: text("language").notNull().default("en"),
+  introduction: text("introduction").notNull(),
+  sections: jsonb("sections").$type<Array<{
+    title: string;
+    overview: string;
+    keyPoints: Array<{
+      heading: string;
+      detail: string;
+    }>;
+  }>>().notNull(),
+  analyzedAt: timestamp("analyzed_at").notNull().default(sql`NOW()`),
+});
+
+export const insertHansardComprehensiveAnalysisSchema = createInsertSchema(hansardComprehensiveAnalysis).omit({
+  id: true,
+  analyzedAt: true,
+});
+
+export type InsertHansardComprehensiveAnalysis = z.infer<typeof insertHansardComprehensiveAnalysisSchema>;
+export type HansardComprehensiveAnalysis = typeof hansardComprehensiveAnalysis.$inferSelect;
+
 export const hansardQaCache = pgTable("hansard_qa_cache", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   hansardRecordId: varchar("hansard_record_id").notNull().references(() => hansardRecords.id, { onDelete: "cascade" }),

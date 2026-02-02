@@ -4219,6 +4219,58 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
+  app.post("/api/analyze/comprehensive/:hansardId", mutationRateLimit, async (req, res) => {
+    try {
+      const { hansardId } = req.params;
+      const { language = "en" } = req.body;
+
+      const hansard = await storage.getHansardById(hansardId);
+
+      if (!hansard) {
+        return res.status(404).json({ error: "Hansard record not found" });
+      }
+
+      // Check if analysis already exists for this language
+      const existing = await storage.getComprehensiveAnalysis(hansardId, language);
+      if (existing) {
+        return res.json(existing);
+      }
+
+      // Generate comprehensive analysis using DeepSeek
+      const deepseek = await import("./services/deepseek.js");
+
+      if (!deepseek.isDeepSeekConfigured()) {
+        throw new Error("No AI provider configured. Set GEMINI_API_KEY or other AI keys in .env file");
+      }
+
+      // Extract session date from hansard record
+      const sessionDate = hansard.sessionDate
+        ? new Date(hansard.sessionDate).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })
+        : hansard.sessionNumber;
+
+      console.log(`[AI Comprehensive] Generating for ${hansardId} (${language})`);
+
+      const result = await deepseek.generateComprehensiveAnalysis(
+        hansard.transcript,
+        sessionDate,
+        language as "en" | "ms"
+      );
+
+      // Store in database
+      const analysis = await storage.saveComprehensiveAnalysis({
+        hansardRecordId: hansardId,
+        language,
+        introduction: result.introduction,
+        sections: result.sections,
+      });
+
+      res.json(analysis);
+    } catch (error) {
+      console.error("Error in comprehensive analysis:", error);
+      res.status(500).json({ error: "Failed to generate comprehensive analysis", details: String(error) });
+    }
+  });
+
   app.post("/api/hansard/:hansardId/qa", mutationRateLimit, async (req, res) => {
     try {
       const { hansardId } = req.params;
@@ -4359,13 +4411,15 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   app.get("/api/analyze/:hansardId", async (req, res) => {
     try {
       const { hansardId } = req.params;
-      
-      const [topics, sentiment, speakers, summaryEn, summaryMs] = await Promise.all([
+
+      const [topics, sentiment, speakers, summaryEn, summaryMs, comprehensiveEn, comprehensiveMs] = await Promise.all([
         storage.getTopicAnalysis(hansardId).catch(() => null),
         storage.getSentimentAnalysis(hansardId).catch(() => null),
         storage.getSpeakerAnalysis(hansardId).catch(() => null),
         storage.getDetailedSummary(hansardId, "en").catch(() => null),
         storage.getDetailedSummary(hansardId, "ms").catch(() => null),
+        storage.getComprehensiveAnalysis(hansardId, "en").catch(() => null),
+        storage.getComprehensiveAnalysis(hansardId, "ms").catch(() => null),
       ]);
 
       res.json({
@@ -4375,6 +4429,10 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         detailedSummary: {
           en: summaryEn,
           ms: summaryMs,
+        },
+        comprehensiveAnalysis: {
+          en: comprehensiveEn,
+          ms: comprehensiveMs,
         },
       });
     } catch (error) {
