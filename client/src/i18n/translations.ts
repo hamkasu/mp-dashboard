@@ -736,6 +736,29 @@ export const translations = {
       networkError: "Network error. Please check your connection.",
     },
 
+    // Bills to Watch
+    billsToWatch: {
+      title: "Bills to Watch",
+      subtitle: "Key legislation currently in the parliamentary pipeline",
+      featured: "Featured",
+      otherBills: "Other Bills Under Watch",
+      readMore: "Read more",
+      showLess: "Show less",
+      messageYourMp: "Message Your MP",
+      trackProgress: "Track at Parlimen.gov.my",
+      lastUpdated: "Last updated",
+      source: "Source: Official government statements",
+      dismiss: "Dismiss this section",
+      status: {
+        drafting: "Drafting",
+        consultation: "Consultation",
+        tabled: "Tabled",
+        committee: "Committee",
+        pending: "Pending",
+        passed: "Passed",
+      },
+    },
+
     // Feedback
     feedback: {
       button: "Feedback",
@@ -1440,6 +1463,29 @@ export const translations = {
       unauthorized: "Akses tidak dibenarkan",
       serverError: "Ralat pelayan",
       networkError: "Ralat rangkaian. Sila semak sambungan anda.",
+    },
+
+    // Bills to Watch
+    billsToWatch: {
+      title: "Rang Undang-Undang Untuk Diperhatikan",
+      subtitle: "Perundangan penting yang sedang dalam proses parlimen",
+      featured: "Utama",
+      otherBills: "Lain-lain Rang Undang-Undang Dalam Perhatian",
+      readMore: "Baca lebih lanjut",
+      showLess: "Tunjuk kurang",
+      messageYourMp: "Hubungi MP Anda",
+      trackProgress: "Jejak di Parlimen.gov.my",
+      lastUpdated: "Dikemas kini",
+      source: "Sumber: Kenyataan rasmi kerajaan",
+      dismiss: "Tutup seksyen ini",
+      status: {
+        drafting: "Penggubalan",
+        consultation: "Perundingan",
+        tabled: "Dibentang",
+        committee: "Jawatankuasa",
+        pending: "Menunggu",
+        passed: "Diluluskan",
+      },
     },
 
     // Feedback
