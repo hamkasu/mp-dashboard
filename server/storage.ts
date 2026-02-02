@@ -144,6 +144,8 @@ export interface IStorage {
   deleteSpeakerAnalysis(hansardRecordId: string): Promise<void>;
   getDetailedSummary(hansardRecordId: string, language: string): Promise<any | undefined>;
   saveDetailedSummary(data: any): Promise<any>;
+  getComprehensiveAnalysis(hansardRecordId: string, language: string): Promise<any | undefined>;
+  saveComprehensiveAnalysis(data: any): Promise<any>;
   getHansardRecordsMissingSummaries(language?: string): Promise<{ id: string; sessionNumber: string; sessionDate: Date | null }[]>;
   getHansardSummaryStatus(): Promise<{ total: number; withEnglish: number; withMalay: number; missing: number }>;
   getQaCache(hansardRecordId: string, question: string): Promise<any | undefined>;
@@ -1697,6 +1699,14 @@ export class MemStorage implements IStorage {
     return data;
   }
 
+  async getComprehensiveAnalysis(hansardRecordId: string, language: string): Promise<any | undefined> {
+    return undefined;
+  }
+
+  async saveComprehensiveAnalysis(data: any): Promise<any> {
+    return data;
+  }
+
   async getHansardRecordsMissingSummaries(language: string = "en"): Promise<{ id: string; sessionNumber: string; sessionDate: Date | null }[]> {
     // In memory storage, return all records (no summaries tracked)
     return Array.from(this.hansardRecords.values()).map(r => ({
@@ -2989,6 +2999,20 @@ export class DbStorage implements IStorage {
   async saveDetailedSummary(data: any): Promise<any> {
     const { hansardDetailedSummary } = await import("@shared/schema");
     const result = await db.insert(hansardDetailedSummary).values(data).returning();
+    return result[0];
+  }
+
+  async getComprehensiveAnalysis(hansardRecordId: string, language: string): Promise<any | undefined> {
+    const { hansardComprehensiveAnalysis } = await import("@shared/schema");
+    const result = await db.select().from(hansardComprehensiveAnalysis)
+      .where(sql`${hansardComprehensiveAnalysis.hansardRecordId} = ${hansardRecordId} AND ${hansardComprehensiveAnalysis.language} = ${language}`)
+      .limit(1);
+    return result[0];
+  }
+
+  async saveComprehensiveAnalysis(data: any): Promise<any> {
+    const { hansardComprehensiveAnalysis } = await import("@shared/schema");
+    const result = await db.insert(hansardComprehensiveAnalysis).values(data).returning();
     return result[0];
   }
 
