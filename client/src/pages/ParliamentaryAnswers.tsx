@@ -66,8 +66,8 @@ export default function ParliamentaryAnswers() {
   const { t } = useLanguage();
   const [searchQuery, setSearchQuery] = useState("");
   const [searchDialogOpen, setSearchDialogOpen] = useState(false);
-  const [sortColumn, setSortColumn] = useState<SortColumn | null>(null);
-  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+  const [sortColumn, setSortColumn] = useState<SortColumn | null>('dateAsked');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [currentPage, setCurrentPage] = useState(1);
 
   const { data: answersData, isLoading, error, refetch, isFetching } = useQuery<AnswersResponse>({
