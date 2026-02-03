@@ -906,13 +906,16 @@ Provide an extremely detailed and thorough thematic analysis. Extract ALL specif
 
 This analysis should be comprehensive enough for a researcher or journalist to understand exactly what was discussed without reading the original transcript.`;
 
-    // Use Claude if configured for comprehensive analysis (produces better detailed output)
+    // Use Claude if configured (best quality), then Groq (free & fast), then fallback
     let result;
     if (ANTHROPIC_API_KEY) {
       console.log("[AI Comprehensive] Using Claude for detailed analysis");
       result = await callWithRetry(() => callAnthropic(systemPrompt, userPrompt, 16000));
+    } else if (GROQ_API_KEY) {
+      console.log("[AI Comprehensive] Using Groq (Llama 3.3 70B) for detailed analysis");
+      result = await callWithRetry(() => callGroq(systemPrompt, userPrompt));
     } else {
-      console.log("[AI Comprehensive] Claude not configured, falling back to default AI provider");
+      console.log("[AI Comprehensive] Falling back to default AI provider");
       result = await callAI(systemPrompt, userPrompt);
     }
 
