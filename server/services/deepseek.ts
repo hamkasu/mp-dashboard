@@ -14,18 +14,21 @@ const GROQ_API_KEY = process.env.GROQ_API_KEY;
 const TOGETHER_API_KEY = process.env.TOGETHER_API_KEY;
 const CLOUDFLARE_API_KEY = process.env.CLOUDFLARE_API_KEY;
 const CLOUDFLARE_ACCOUNT_ID = process.env.CLOUDFLARE_ACCOUNT_ID;
+const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 
 // API Base URLs
 const OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1";
 const GROQ_BASE_URL = "https://api.groq.com/openai/v1";
 const TOGETHER_BASE_URL = "https://api.together.xyz/v1";
 const CLOUDFLARE_BASE_URL = "https://api.cloudflare.com/client/v4/accounts";
+const ANTHROPIC_BASE_URL = "https://api.anthropic.com/v1";
 
 // Model configurations
 const AI_MODEL = "google/gemini-2.0-flash-exp:free";
 const GROQ_MODEL = "llama-3.3-70b-versatile";
 const TOGETHER_MODEL = "meta-llama/Llama-3.3-70B-Instruct-Turbo-Free";
 const CLOUDFLARE_MODEL = "@cf/meta/llama-3.1-8b-instruct";
+const ANTHROPIC_MODEL = "claude-sonnet-4-20250514";
 
 // Gemini key rotation state
 let currentGeminiKeyIndex = 0;
@@ -432,6 +435,63 @@ async function callCloudflare(
   return JSON.parse(jsonMatch[0]);
 }
 
+async function callAnthropic(
+  systemPrompt: string,
+  userPrompt: string,
+  maxTokens: number = 8000
+): Promise<any> {
+  if (!ANTHROPIC_API_KEY) {
+    throw new Error("ANTHROPIC_API_KEY not configured");
+  }
+
+  const response = await fetch(`${ANTHROPIC_BASE_URL}/messages`, {
+    method: "POST",
+    headers: {
+      "x-api-key": ANTHROPIC_API_KEY,
+      "anthropic-version": "2023-06-01",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: ANTHROPIC_MODEL,
+      max_tokens: maxTokens,
+      system: systemPrompt,
+      messages: [
+        { role: "user", content: userPrompt }
+      ],
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error("[Anthropic] API error:", errorText);
+    throw new Error(`Anthropic API error: ${response.status}`);
+  }
+
+  const data = await response.json();
+  const content = data.content?.[0]?.text;
+
+  if (!content) {
+    throw new Error("No content in Anthropic response");
+  }
+
+  // Claude may wrap JSON in markdown code blocks, extract it
+  const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/) || content.match(/(\{[\s\S]*\})/);
+  if (jsonMatch) {
+    try {
+      return JSON.parse(jsonMatch[1] || jsonMatch[0]);
+    } catch {
+      // If JSON parsing fails, try to parse the whole content
+      return JSON.parse(content);
+    }
+  }
+
+  return JSON.parse(content);
+}
+
+export function isAnthropicConfigured(): boolean {
+  return !!ANTHROPIC_API_KEY;
+}
+
 async function callAI(
   systemPrompt: string,
   userPrompt: string,
@@ -779,50 +839,85 @@ export async function generateComprehensiveAnalysis(
       ? "Respond in Bahasa Malaysia (Malay language)"
       : "Respond in English";
 
-    const systemPrompt = `You are an expert parliamentary analyst specializing in Malaysian Dewan Rakyat (Parliament) debates.
+    const systemPrompt = `You are an expert parliamentary analyst and researcher specializing in Malaysian Dewan Rakyat (Parliament) debates and legislative proceedings.
 ${languageInstruction}.
 
-Analyze the parliamentary transcript and provide a comprehensive, narrative analysis organized by key thematic sections.
+Your task is to provide an extremely comprehensive, detailed, and thorough analysis of the parliamentary transcript. This should be a professional-quality analysis suitable for researchers, journalists, policy analysts, and citizens who want deep understanding of the proceedings.
 
-Your analysis should:
-1. Start with a brief introduction that sets the context for the session
-2. Identify 4-8 major themes/topics discussed during the session
-3. For each theme, provide:
-   - A descriptive title
-   - An overview paragraph (2-3 sentences) explaining the main discussion
-   - 3-6 specific key points with headings and detailed explanations
+Your analysis MUST include:
 
-The key points should include specific details like:
-- Monetary figures (e.g., RM242 million allocated for...)
-- Statistics and percentages (e.g., 46.4% of farmers are over 60...)
-- Names of policies, bills, or government programs
-- Specific actions or commitments made
-- Quotes or statements from MPs where relevant
+1. INTRODUCTION: Set the context with session details (date, parliament term, session number if mentioned)
+
+2. DOCUMENT STRUCTURE OVERVIEW: Identify the main sections of the session (e.g., Oral Questions, Motions, Debates)
+
+3. DETAILED THEMATIC SECTIONS (6-10 sections): For each major topic/theme discussed:
+   - Descriptive title
+   - Comprehensive overview (3-5 sentences) explaining the context and significance
+   - 4-8 detailed key points, each with:
+     * Clear heading
+     * Detailed explanation including:
+       - Specific monetary figures (RM amounts, budgets, allocations)
+       - Statistics, percentages, and numerical data
+       - Names of ministers, MPs, and their constituencies
+       - Specific policies, bills, acts, or government programs mentioned
+       - Targets, goals, and timelines stated
+       - Ministerial commitments and responses
+       - Quotes or key statements where impactful
+
+4. Extract specific details such as:
+   - Investment amounts and budget allocations
+   - Technology and infrastructure improvements
+   - Policy changes and reforms discussed
+   - Concerns raised by MPs
+   - Government responses and commitments
+   - Statistical data cited in debates
 
 You must respond with valid JSON matching this structure:
 {
-  "introduction": "Based on the Hansard of the Malaysian Dewan Rakyat session dated [DATE], the following is an analysis of the key discussions and highlights:",
+  "introduction": "Based on the Hansard of the Malaysian Dewan Rakyat session dated [DATE], the following is a comprehensive analysis of the key discussions and highlights:",
   "sections": [
     {
       "title": "Theme Title (e.g., Emergency Preparedness and Natural Disasters)",
-      "overview": "A 2-3 sentence overview of what was discussed regarding this theme.",
+      "overview": "A comprehensive 3-5 sentence overview explaining the context, significance, and main points of discussion regarding this theme.",
       "keyPoints": [
         {
           "heading": "Point heading (e.g., Infrastructure Investment)",
-          "detail": "Detailed explanation with specific facts, figures, and context."
+          "detail": "Detailed explanation with specific facts, figures, names, policies, and context. Include monetary values, statistics, ministerial responses, and specific commitments made."
         }
       ]
     }
   ]
-}`;
+}
 
-    const userPrompt = `Analyze this Malaysian parliamentary debate session from ${sessionDate}:
+Be thorough, specific, and include as much factual detail from the transcript as possible. Avoid generic statements - always cite specific data, names, and figures from the debate.`;
 
-${transcript.substring(0, 50000)}
+    const userPrompt = `Analyze this Malaysian parliamentary debate session from ${sessionDate} in comprehensive detail:
 
-Provide a comprehensive thematic analysis with specific details, statistics, and key points from the debate.`;
+${transcript.substring(0, 100000)}
 
-    const result = await callAI(systemPrompt, userPrompt);
+Provide an extremely detailed and thorough thematic analysis. Extract ALL specific details including:
+- All monetary figures and budget amounts mentioned
+- All statistics and percentages cited
+- Names of MPs, ministers, and their portfolios/constituencies
+- Specific policies, bills, and government programs
+- Targets, timelines, and commitments made
+- Key quotes and statements
+- Technical details about systems, technologies, or processes discussed
+
+This analysis should be comprehensive enough for a researcher or journalist to understand exactly what was discussed without reading the original transcript.`;
+
+    // Use Claude if configured (best quality), then Groq (free & fast), then fallback
+    let result;
+    if (ANTHROPIC_API_KEY) {
+      console.log("[AI Comprehensive] Using Claude for detailed analysis");
+      result = await callWithRetry(() => callAnthropic(systemPrompt, userPrompt, 16000));
+    } else if (GROQ_API_KEY) {
+      console.log("[AI Comprehensive] Using Groq (Llama 3.3 70B) for detailed analysis");
+      result = await callWithRetry(() => callGroq(systemPrompt, userPrompt));
+    } else {
+      console.log("[AI Comprehensive] Falling back to default AI provider");
+      result = await callAI(systemPrompt, userPrompt);
+    }
 
     // Validate and sanitize the response
     const sanitized: ComprehensiveAnalysisResult = {
@@ -860,6 +955,7 @@ export function isGeminiConfigured(): boolean {
 
 export function getConfiguredProviders(): string[] {
   const providers: string[] = [];
+  if (ANTHROPIC_API_KEY) providers.push("Claude (Anthropic)");
   if (GEMINI_API_KEYS.length > 0) providers.push(`Gemini (${GEMINI_API_KEYS.length} keys)`);
   if (OPENROUTER_API_KEY) providers.push("OpenRouter");
   if (GROQ_API_KEY) providers.push("Groq");
