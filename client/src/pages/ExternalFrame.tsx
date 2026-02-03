@@ -75,8 +75,8 @@ export default function ExternalFrame() {
           </Button>
         </div>
 
-        {/* Iframe container */}
-        <div className="flex-1">
+        {/* Iframe container - header is 64px, toolbar is ~40px */}
+        <div className="h-[calc(100vh-104px)]">
           <iframe
             src={site.url}
             className="w-full h-full border-0"
