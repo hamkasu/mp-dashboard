@@ -2,14 +2,18 @@
  * Copyright by Calmic Sdn Bhd
  */
 
+import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Header } from "@/components/Header";
 import { PageMeta } from "@/components/PageMeta";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Users, Globe, FileText, TrendingUp } from "lucide-react";
-import { format } from "date-fns";
+import { format, startOfWeek, startOfMonth } from "date-fns";
 import { getQueryFn } from "@/lib/queryClient";
 import { useLanguage } from "@/i18n/LanguageContext";
+
+type TimePeriod = "daily" | "weekly" | "monthly";
 
 interface AnalyticsSummary {
   totalVisits: number;
@@ -38,6 +42,17 @@ interface TimelineData {
 
 export default function Analytics() {
   const { t } = useLanguage();
+  const [timePeriod, setTimePeriod] = useState<TimePeriod>("daily");
+
+  // Calculate days based on time period
+  const daysParam = useMemo(() => {
+    switch (timePeriod) {
+      case "daily": return 14;
+      case "weekly": return 49; // 7 weeks
+      case "monthly": return 365; // 12 months
+      default: return 14;
+    }
+  }, [timePeriod]);
 
   // Check if user is logged in
   const { data: user } = useQuery<{ id: number; username: string; role: string } | null>({
@@ -55,8 +70,56 @@ export default function Analytics() {
   });
 
   const { data: timeline, isLoading: timelineLoading } = useQuery<TimelineData[]>({
-    queryKey: ["/api/analytics/timeline"],
+    queryKey: ["/api/analytics/timeline", daysParam],
+    queryFn: () => fetch(`/api/analytics/timeline?days=${daysParam}`).then(res => res.json()),
   });
+
+  // Aggregate timeline data based on time period
+  const aggregatedTimeline = useMemo(() => {
+    if (!timeline) return [];
+
+    if (timePeriod === "daily") {
+      return timeline;
+    }
+
+    const aggregated = new Map<string, { date: string; count: number; label: string }>();
+
+    timeline.forEach((day) => {
+      const date = new Date(day.date);
+      let key: string;
+      let label: string;
+
+      if (timePeriod === "weekly") {
+        const weekStart = startOfWeek(date, { weekStartsOn: 1 }); // Start on Monday
+        key = format(weekStart, "yyyy-MM-dd");
+        label = format(weekStart, "MMM dd");
+      } else {
+        // monthly
+        const monthStart = startOfMonth(date);
+        key = format(monthStart, "yyyy-MM");
+        label = format(monthStart, "MMM yyyy");
+      }
+
+      const existing = aggregated.get(key);
+      if (existing) {
+        existing.count += day.count;
+      } else {
+        aggregated.set(key, { date: key, count: day.count, label });
+      }
+    });
+
+    return Array.from(aggregated.values()).sort((a, b) => a.date.localeCompare(b.date));
+  }, [timeline, timePeriod]);
+
+  // Get the description based on time period
+  const getTimelineDescription = () => {
+    switch (timePeriod) {
+      case "daily": return t('analytics.dailyVisitorCount');
+      case "weekly": return t('analytics.weeklyVisitorCount');
+      case "monthly": return t('analytics.monthlyVisitorCount');
+      default: return t('analytics.dailyVisitorCount');
+    }
+  };
 
   if (summaryLoading || recentLoading || timelineLoading) {
     return (
@@ -147,31 +210,61 @@ export default function Analytics() {
       </div>
 
       {/* Timeline Chart */}
-      {timeline && timeline.length > 0 && (
+      {aggregatedTimeline && aggregatedTimeline.length > 0 && (
         <Card data-testid="card-timeline">
           <CardHeader>
-            <CardTitle>{t('analytics.visitsOverTime')}</CardTitle>
-            <CardDescription>{t('analytics.dailyVisitorCount')}</CardDescription>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div>
+                <CardTitle>{t('analytics.visitsOverTime')}</CardTitle>
+                <CardDescription>{getTimelineDescription()}</CardDescription>
+              </div>
+              <div className="flex gap-1">
+                <Button
+                  variant={timePeriod === "daily" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setTimePeriod("daily")}
+                  data-testid="btn-daily"
+                >
+                  {t('analytics.daily')}
+                </Button>
+                <Button
+                  variant={timePeriod === "weekly" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setTimePeriod("weekly")}
+                  data-testid="btn-weekly"
+                >
+                  {t('analytics.weekly')}
+                </Button>
+                <Button
+                  variant={timePeriod === "monthly" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setTimePeriod("monthly")}
+                  data-testid="btn-monthly"
+                >
+                  {t('analytics.monthly')}
+                </Button>
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              {timeline.map((day) => (
-                <div key={day.date} className="flex items-center gap-4">
+              {aggregatedTimeline.map((item) => (
+                <div key={item.date} className="flex items-center gap-4">
                   <div className="w-24 text-sm text-muted-foreground">
-                    {format(new Date(day.date), "MMM dd")}
+                    {'label' in item ? item.label : format(new Date(item.date), "MMM dd")}
                   </div>
                   <div className="flex-1">
                     <div className="h-8 bg-primary/10 rounded-md relative overflow-hidden">
                       <div
                         className="h-full bg-primary rounded-md transition-all"
                         style={{
-                          width: `${Math.min(100, (day.count / (Math.max(...timeline.map(d => d.count)) || 1)) * 100)}%`
+                          width: `${Math.min(100, (item.count / (Math.max(...aggregatedTimeline.map(d => d.count)) || 1)) * 100)}%`
                         }}
                       />
                     </div>
                   </div>
                   <div className="w-16 text-right text-sm font-medium">
-                    {day.count}
+                    {item.count.toLocaleString()}
                   </div>
                 </div>
               ))}
