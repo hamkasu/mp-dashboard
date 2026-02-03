@@ -9497,5 +9497,220 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
+  // ========== MYMP.org.my Biography Data Import ==========
+  // Admin endpoint to import MP biography data from MYMP.org.my
+  // Data must be manually collected (not scraped) to respect MYMP terms
+
+  // Schema for MYMP data import validation
+  const mympImportSchema = z.object({
+    mpId: z.string().optional(), // If not provided, match by name + constituency
+    name: z.string().optional(),
+    constituency: z.string().optional(),
+    parliamentCode: z.string().optional(),
+    mympSlug: z.string().optional(),
+    mympUrl: z.string().url().optional(),
+    bioSummary: z.string().optional(),
+    birthDate: z.string().optional(), // ISO date string
+    hometown: z.string().optional(),
+    education: z.array(z.string()).optional(),
+    politicalHistory: z.array(z.object({
+      party: z.string(),
+      startYear: z.number(),
+      endYear: z.number().optional(),
+      notes: z.string().optional(),
+    })).optional(),
+    nonPoliticalAffiliations: z.array(z.string()).optional(),
+    careerHistory: z.array(z.string()).optional(),
+    mympLoyaltyScore: z.number().min(0).max(100).optional(),
+    mympAvailabilityScore: z.number().min(0).max(100).optional(),
+    mympEthicsScore: z.number().min(0).max(100).optional(),
+    wikipediaUrl: z.string().url().optional(),
+  });
+
+  // Batch import MYMP data for multiple MPs
+  app.post("/api/admin/import-mymp-data", requireAdmin, mutationRateLimit, auditMiddleware('mymp-import'), async (req, res) => {
+    try {
+      const { mps: mpsData, overwrite = false } = req.body;
+      const username = getCurrentUsername(req);
+
+      if (!Array.isArray(mpsData) || mpsData.length === 0) {
+        return res.status(400).json({ error: "Request body must contain 'mps' array with MP data" });
+      }
+
+      const results = {
+        success: [] as string[],
+        failed: [] as { identifier: string; error: string }[],
+        skipped: [] as string[],
+      };
+
+      for (const mpData of mpsData) {
+        try {
+          // Validate the data
+          const validated = mympImportSchema.parse(mpData);
+
+          // Find the MP by ID, parliament code, or name+constituency
+          let mp;
+          if (validated.mpId) {
+            mp = await storage.getMp(validated.mpId);
+          } else if (validated.parliamentCode) {
+            mp = await storage.getMpByParliamentCode(validated.parliamentCode);
+          } else if (validated.name && validated.constituency) {
+            mp = await storage.getMpByNameAndConstituency(validated.name, validated.constituency);
+          }
+
+          if (!mp) {
+            results.failed.push({
+              identifier: validated.mpId || validated.parliamentCode || `${validated.name}/${validated.constituency}`,
+              error: "MP not found",
+            });
+            continue;
+          }
+
+          // Check if MP already has MYMP data and overwrite is false
+          if (!overwrite && mp.bioSummary) {
+            results.skipped.push(mp.name);
+            continue;
+          }
+
+          // Build update object with only provided fields
+          const updateData: Record<string, any> = {
+            mympDataUpdatedAt: new Date(),
+          };
+
+          if (validated.mympSlug !== undefined) updateData.mympSlug = validated.mympSlug;
+          if (validated.mympUrl !== undefined) updateData.mympUrl = validated.mympUrl;
+          if (validated.bioSummary !== undefined) updateData.bioSummary = validated.bioSummary;
+          if (validated.birthDate !== undefined) updateData.birthDate = new Date(validated.birthDate);
+          if (validated.hometown !== undefined) updateData.hometown = validated.hometown;
+          if (validated.education !== undefined) updateData.education = validated.education;
+          if (validated.politicalHistory !== undefined) updateData.politicalHistory = validated.politicalHistory;
+          if (validated.nonPoliticalAffiliations !== undefined) updateData.nonPoliticalAffiliations = validated.nonPoliticalAffiliations;
+          if (validated.careerHistory !== undefined) updateData.careerHistory = validated.careerHistory;
+          if (validated.mympLoyaltyScore !== undefined) updateData.mympLoyaltyScore = validated.mympLoyaltyScore;
+          if (validated.mympAvailabilityScore !== undefined) updateData.mympAvailabilityScore = validated.mympAvailabilityScore;
+          if (validated.mympEthicsScore !== undefined) updateData.mympEthicsScore = validated.mympEthicsScore;
+          if (validated.wikipediaUrl !== undefined) updateData.wikipediaUrl = validated.wikipediaUrl;
+
+          // Update the MP
+          await db.update(mps).set(updateData).where(eq(mps.id, mp.id));
+
+          results.success.push(mp.name);
+        } catch (error) {
+          const identifier = mpData.mpId || mpData.parliamentCode || `${mpData.name}/${mpData.constituency}` || "unknown";
+          results.failed.push({
+            identifier,
+            error: error instanceof z.ZodError ? error.errors.map(e => e.message).join(", ") : String(error),
+          });
+        }
+      }
+
+      logAudit("mymp-import", username || "system", {
+        action: "batch_import",
+        successCount: results.success.length,
+        failedCount: results.failed.length,
+        skippedCount: results.skipped.length,
+      });
+
+      res.json({
+        message: "MYMP data import completed",
+        results,
+        summary: {
+          total: mpsData.length,
+          success: results.success.length,
+          failed: results.failed.length,
+          skipped: results.skipped.length,
+        },
+      });
+    } catch (error) {
+      console.error("Error importing MYMP data:", error);
+      res.status(500).json({ error: "Failed to import MYMP data" });
+    }
+  });
+
+  // Update single MP's MYMP data
+  app.patch("/api/admin/mps/:id/mymp", requireAdmin, mutationRateLimit, auditMiddleware('mymp-update'), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const username = getCurrentUsername(req);
+
+      const mp = await storage.getMp(id);
+      if (!mp) {
+        return res.status(404).json({ error: "MP not found" });
+      }
+
+      // Validate the data
+      const validated = mympImportSchema.parse(req.body);
+
+      // Build update object
+      const updateData: Record<string, any> = {
+        mympDataUpdatedAt: new Date(),
+      };
+
+      if (validated.mympSlug !== undefined) updateData.mympSlug = validated.mympSlug;
+      if (validated.mympUrl !== undefined) updateData.mympUrl = validated.mympUrl;
+      if (validated.bioSummary !== undefined) updateData.bioSummary = validated.bioSummary;
+      if (validated.birthDate !== undefined) updateData.birthDate = new Date(validated.birthDate);
+      if (validated.hometown !== undefined) updateData.hometown = validated.hometown;
+      if (validated.education !== undefined) updateData.education = validated.education;
+      if (validated.politicalHistory !== undefined) updateData.politicalHistory = validated.politicalHistory;
+      if (validated.nonPoliticalAffiliations !== undefined) updateData.nonPoliticalAffiliations = validated.nonPoliticalAffiliations;
+      if (validated.careerHistory !== undefined) updateData.careerHistory = validated.careerHistory;
+      if (validated.mympLoyaltyScore !== undefined) updateData.mympLoyaltyScore = validated.mympLoyaltyScore;
+      if (validated.mympAvailabilityScore !== undefined) updateData.mympAvailabilityScore = validated.mympAvailabilityScore;
+      if (validated.mympEthicsScore !== undefined) updateData.mympEthicsScore = validated.mympEthicsScore;
+      if (validated.wikipediaUrl !== undefined) updateData.wikipediaUrl = validated.wikipediaUrl;
+
+      await db.update(mps).set(updateData).where(eq(mps.id, id));
+
+      logAudit("mymp-update", username || "system", {
+        action: "update_single",
+        mpId: id,
+        mpName: mp.name,
+        fieldsUpdated: Object.keys(updateData),
+      });
+
+      res.json({
+        success: true,
+        message: `MYMP data updated for ${mp.name}`,
+        updatedFields: Object.keys(updateData),
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Validation error", details: error.errors });
+      }
+      console.error("Error updating MYMP data:", error);
+      res.status(500).json({ error: "Failed to update MYMP data" });
+    }
+  });
+
+  // Get MYMP data status for all MPs (for admin dashboard)
+  app.get("/api/admin/mymp-status", requireAdmin, async (_req, res) => {
+    try {
+      const allMps = await storage.getAllMps();
+
+      const status = allMps.map(mp => ({
+        id: mp.id,
+        name: mp.name,
+        constituency: mp.constituency,
+        parliamentCode: mp.parliamentCode,
+        hasMympData: !!(mp.bioSummary || mp.mympSlug),
+        mympSlug: mp.mympSlug,
+        mympUrl: mp.mympUrl,
+        lastUpdated: mp.mympDataUpdatedAt,
+      }));
+
+      const summary = {
+        total: allMps.length,
+        withMympData: status.filter(s => s.hasMympData).length,
+        withoutMympData: status.filter(s => !s.hasMympData).length,
+      };
+
+      res.json({ status, summary });
+    } catch (error) {
+      console.error("Error fetching MYMP status:", error);
+      res.status(500).json({ error: "Failed to fetch MYMP status" });
+    }
+  });
+
   // Server is now passed in from index.ts, no need to create it here
 }

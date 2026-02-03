@@ -49,6 +49,7 @@ const ReportCardAdmin = lazy(() => import("@/pages/ReportCardAdmin"));
 const MPMessagesAdmin = lazy(() => import("@/pages/MPMessagesAdmin"));
 const AIAgentsAdmin = lazy(() => import("@/pages/AIAgentsAdmin"));
 const MA63Dashboard = lazy(() => import("@/pages/MA63Dashboard"));
+const MYMPImportAdmin = lazy(() => import("@/pages/MYMPImportAdmin"));
 
 // Loading component
 function PageLoader() {
@@ -101,6 +102,7 @@ function Router() {
         <Route path="/report-card-admin" component={ReportCardAdmin} />
         <Route path="/mp-messages-admin" component={MPMessagesAdmin} />
         <Route path="/ai-agents-admin" component={AIAgentsAdmin} />
+        <Route path="/mymp-import-admin" component={MYMPImportAdmin} />
         <Route component={NotFound} />
       </Switch>
     </Suspense>

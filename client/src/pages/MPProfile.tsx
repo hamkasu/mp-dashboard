@@ -19,6 +19,7 @@ import { Summarizer } from "@/components/Summarizer";
 import { HansardParticipation15th } from "@/components/HansardParticipation15th";
 import { HansardSpeakingRecord } from "@/components/HansardSpeakingRecord";
 import { ContactMPDialog } from "@/components/ContactMPDialog";
+import { MPBiography } from "@/components/MPBiography";
 import type { Mp, CourtCase, SprmInvestigation, LegislativeProposal, DebateParticipation, ParliamentaryQuestion, ParliamentaryOralAnswer, HansardRecord } from "@shared/schema";
 import { calculateTotalSalary, calculateYearlyBreakdown, formatCurrency, getPublicationName, getProxiedPhotoUrl } from "@/lib/utils";
 import { getMinisterialSalary, getCabinetRoleType, ALLOWANCE_RATES } from "@/lib/allowanceCalculator";
@@ -1142,6 +1143,9 @@ export default function MPProfile() {
               </CardContent>
             </Card>
           )}
+
+          {/* Biography Section (MYMP.org.my integration) */}
+          <MPBiography mp={mp} />
 
           {/* Legislative Activity Summary */}
           <div className="space-y-3">
