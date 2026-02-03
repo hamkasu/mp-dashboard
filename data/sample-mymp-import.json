@@ -1,0 +1,162 @@
+{
+  "description": "Sample MYMP.org.my import data for MP biographies",
+  "notes": {
+    "source": "Data manually collected from https://mymp.org.my (volunteer project)",
+    "ethical_guidelines": [
+      "Do NOT scrape MYMP automatically - respect their terms of service",
+      "Always credit MYMP as the source of biography data",
+      "Link back to original MYMP profile page",
+      "No commercial resale of this data",
+      "Update manually and periodically, not in real-time"
+    ],
+    "data_format": {
+      "parliamentCode": "Official parliament code (e.g., P001) - preferred for matching",
+      "name": "Full name as registered - used with constituency for matching",
+      "constituency": "Constituency name - used with name for matching",
+      "mympSlug": "URL slug from MYMP (e.g., 'syed-saddiq' from https://mymp.org.my/p/syed-saddiq)",
+      "birthDate": "ISO 8601 date format (YYYY-MM-DD)",
+      "politicalHistory": "Array of party affiliations with years",
+      "education": "Array of education credentials",
+      "careerHistory": "Pre-politics career history",
+      "scores": "Optional MYMP scores (0-100 scale)"
+    }
+  },
+  "mps": [
+    {
+      "parliamentCode": "P102",
+      "name": "Syed Saddiq Syed Abdul Rahman",
+      "constituency": "Muar",
+      "mympSlug": "syed-saddiq",
+      "mympUrl": "https://mymp.org.my/p/syed-saddiq?locale=en",
+      "bioSummary": "YB Syed Saddiq Syed Abdul Rahman is the founder and President of MUDA (Malaysian United Democratic Alliance) and former Minister of Youth and Sports. He is known for being the youngest Cabinet Minister in Malaysian history when appointed in 2018 at age 25.",
+      "birthDate": "1992-12-06",
+      "hometown": "Muar, Johor",
+      "education": [
+        "Bachelor of Arts in International and Global Studies, University of Western Australia",
+        "SMK Tinggi Muar"
+      ],
+      "careerHistory": [
+        "World-class debater (Best Speaker, World Universities Debating Championship 2015)",
+        "Political Secretary to former PM Mahathir Mohamad"
+      ],
+      "politicalHistory": [
+        { "party": "PPBM/Bersatu", "startYear": 2016, "endYear": 2020, "notes": "Founding member" },
+        { "party": "MUDA", "startYear": 2020, "notes": "Founder and President" }
+      ],
+      "nonPoliticalAffiliations": [
+        "Former President of Malaysian United Democratic Alliance (MUDA)"
+      ],
+      "wikipediaUrl": "https://en.wikipedia.org/wiki/Syed_Saddiq"
+    },
+    {
+      "parliamentCode": "P145",
+      "name": "Dato' Sri Mohamed Khaled Nordin",
+      "constituency": "Kota Tinggi",
+      "mympSlug": "khaled-nordin",
+      "mympUrl": "https://mymp.org.my/p/khaled-nordin?locale=en",
+      "bioSummary": "YB Dato' Sri Mohamed Khaled Nordin is a senior UMNO politician and the current Minister of Defence. He has served in various capacities including Minister of Higher Education and Menteri Besar of Johor.",
+      "birthDate": "1958-11-30",
+      "hometown": "Muar, Johor",
+      "education": [
+        "Bachelor of Arts (Hons), University of Malaya",
+        "Master in Public Administration, University of Southern California"
+      ],
+      "careerHistory": [
+        "Administrative and Diplomatic Service officer",
+        "Director-General of Public Service Department"
+      ],
+      "politicalHistory": [
+        { "party": "UMNO", "startYear": 1987, "notes": "Current member, former Johor UMNO Chief" },
+        { "party": "BN", "startYear": 1987, "notes": "Barisan Nasional component" }
+      ],
+      "nonPoliticalAffiliations": [],
+      "wikipediaUrl": "https://en.wikipedia.org/wiki/Mohamed_Khaled_Nordin"
+    },
+    {
+      "parliamentCode": "P109",
+      "name": "Rafizi Ramli",
+      "constituency": "Pandan",
+      "mympSlug": "rafizi-ramli",
+      "mympUrl": "https://mymp.org.my/p/rafizi-ramli?locale=en",
+      "bioSummary": "YB Rafizi Ramli is a Malaysian politician and economist serving as the Minister of Economy. He is known for his role as a whistleblower in exposing the 1MDB scandal and as Vice President of PKR.",
+      "birthDate": "1977-01-11",
+      "hometown": "Kuala Pilah, Negeri Sembilan",
+      "education": [
+        "Bachelor of Engineering (Electrical), University of Leeds, UK",
+        "Master of Business Administration (Finance), University of Leeds, UK"
+      ],
+      "careerHistory": [
+        "Process engineer at Shell",
+        "Senior consultant at Accenture",
+        "Founded Invoke Solutions (data analytics)"
+      ],
+      "politicalHistory": [
+        { "party": "PKR", "startYear": 2010, "notes": "Vice President since 2022" },
+        { "party": "PH", "startYear": 2010, "notes": "Pakatan Harapan coalition" }
+      ],
+      "nonPoliticalAffiliations": [
+        "Founder of INVOKE Malaysia"
+      ],
+      "wikipediaUrl": "https://en.wikipedia.org/wiki/Rafizi_Ramli"
+    },
+    {
+      "parliamentCode": "P115",
+      "name": "Hannah Yeoh",
+      "constituency": "Segambut",
+      "mympSlug": "hannah-yeoh",
+      "mympUrl": "https://mymp.org.my/p/hannah-yeoh?locale=en",
+      "bioSummary": "YB Hannah Yeoh Tseow Suan is a Malaysian politician currently serving as Minister of Youth and Sports. She was the first female Speaker of the Selangor State Assembly and is known for her advocacy on women's rights and social issues.",
+      "birthDate": "1979-03-22",
+      "hometown": "Kuala Lumpur",
+      "education": [
+        "Bachelor of Laws (LLB), University of Tasmania",
+        "Certificate in Legal Practice (CLP), Malaysia"
+      ],
+      "careerHistory": [
+        "Practicing lawyer before entering politics"
+      ],
+      "politicalHistory": [
+        { "party": "DAP", "startYear": 2007, "notes": "Current National Publicity Secretary" },
+        { "party": "PH", "startYear": 2007, "notes": "Pakatan Harapan coalition" }
+      ],
+      "nonPoliticalAffiliations": [
+        "Advocate for gender equality and children's rights"
+      ],
+      "wikipediaUrl": "https://en.wikipedia.org/wiki/Hannah_Yeoh"
+    },
+    {
+      "parliamentCode": "P122",
+      "name": "Wong Chen",
+      "constituency": "Subang",
+      "mympSlug": "wong-chen",
+      "mympUrl": "https://mymp.org.my/p/wong-chen?locale=en",
+      "bioSummary": "YB Wong Chen is a Malaysian lawyer and politician from PKR. He is known for his work on constitutional law, human rights, and parliamentary reforms.",
+      "birthDate": "1967-06-15",
+      "hometown": "Subang Jaya, Selangor",
+      "education": [
+        "Bachelor of Laws (LLB), University of London (External)",
+        "Certificate in Legal Practice, Malaysia"
+      ],
+      "careerHistory": [
+        "Senior partner at law firm",
+        "Constitutional law practitioner"
+      ],
+      "politicalHistory": [
+        { "party": "PKR", "startYear": 2013, "notes": "Current member" },
+        { "party": "PH", "startYear": 2013, "notes": "Pakatan Harapan coalition" }
+      ],
+      "nonPoliticalAffiliations": [
+        "Constitutional law advocate"
+      ],
+      "wikipediaUrl": "https://en.wikipedia.org/wiki/Wong_Chen"
+    }
+  ],
+  "import_instructions": {
+    "api_endpoint": "POST /api/admin/import-mymp-data",
+    "request_body": {
+      "mps": "The 'mps' array from this file",
+      "overwrite": "Set to true to overwrite existing MYMP data, false to skip MPs that already have data"
+    },
+    "example_curl": "curl -X POST https://myparliament.calmic.com.my/api/admin/import-mymp-data -H 'Content-Type: application/json' -H 'Cookie: admin_session=...' -d '{\"mps\": [...], \"overwrite\": false}'"
+  }
+}

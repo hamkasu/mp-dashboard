@@ -16,6 +16,8 @@ import { normalizeParliamentTerm } from "../shared/utils";
 export interface IStorage {
   // MP methods
   getMp(id: string): Promise<Mp | undefined>;
+  getMpByParliamentCode(parliamentCode: string): Promise<Mp | undefined>;
+  getMpByNameAndConstituency(name: string, constituency: string): Promise<Mp | undefined>;
   getAllMps(): Promise<Mp[]>;
   createMp(mp: InsertMp): Promise<Mp>;
   updateMp(id: string, updates: Partial<InsertMp>): Promise<Mp | undefined>;
@@ -216,6 +218,19 @@ export class MemStorage implements IStorage {
 
   async getMp(id: string): Promise<Mp | undefined> {
     return this.mps.get(id);
+  }
+
+  async getMpByParliamentCode(parliamentCode: string): Promise<Mp | undefined> {
+    const allMps = Array.from(this.mps.values());
+    return allMps.find(mp => mp.parliamentCode === parliamentCode);
+  }
+
+  async getMpByNameAndConstituency(name: string, constituency: string): Promise<Mp | undefined> {
+    const allMps = Array.from(this.mps.values());
+    return allMps.find(mp =>
+      mp.name.toLowerCase() === name.toLowerCase() &&
+      mp.constituency.toLowerCase() === constituency.toLowerCase()
+    );
   }
 
   async getAllMps(): Promise<Mp[]> {
@@ -1874,6 +1889,22 @@ export class DbStorage implements IStorage {
   // MP methods
   async getMp(id: string): Promise<Mp | undefined> {
     const result = await db.select().from(mps).where(eq(mps.id, id));
+    return result[0];
+  }
+
+  async getMpByParliamentCode(parliamentCode: string): Promise<Mp | undefined> {
+    const result = await db.select().from(mps).where(eq(mps.parliamentCode, parliamentCode));
+    return result[0];
+  }
+
+  async getMpByNameAndConstituency(name: string, constituency: string): Promise<Mp | undefined> {
+    // Use case-insensitive matching with LOWER()
+    const result = await db.select().from(mps).where(
+      and(
+        sql`LOWER(${mps.name}) = LOWER(${name})`,
+        sql`LOWER(${mps.constituency}) = LOWER(${constituency})`
+      )
+    );
     return result[0];
   }
 

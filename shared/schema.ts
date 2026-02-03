@@ -69,6 +69,22 @@ export const mps = pgTable("mps", {
   electionMajority: integer("election_majority"),
   electionTurnoutPercent: integer("election_turnout_percent"), // percentage * 100 (e.g. 7652 = 76.52%)
   electionVotePercentage: integer("election_vote_percentage"), // percentage * 100 (e.g. 5358 = 53.58%)
+  // MYMP.org.my Biography Integration
+  // Data sourced manually from https://mymp.org.my (volunteer-run MP directory)
+  mympSlug: text("mymp_slug"), // URL slug for MYMP profile (e.g., "syed-saddiq")
+  mympUrl: text("mymp_url"), // Full MYMP profile URL
+  bioSummary: text("bio_summary"), // Biography summary from MYMP
+  birthDate: timestamp("birth_date"), // Date of birth
+  hometown: text("hometown"), // Place of origin/hometown
+  education: jsonb("education").$type<string[]>().default(sql`'[]'::jsonb`), // Education history
+  politicalHistory: jsonb("political_history").$type<Array<{ party: string; startYear: number; endYear?: number; notes?: string }>>().default(sql`'[]'::jsonb`), // Political journey
+  nonPoliticalAffiliations: jsonb("non_political_affiliations").$type<string[]>().default(sql`'[]'::jsonb`), // NGOs, associations
+  careerHistory: jsonb("career_history").$type<string[]>().default(sql`'[]'::jsonb`), // Career before politics
+  mympLoyaltyScore: integer("mymp_loyalty_score"), // Optional: MYMP loyalty score (0-10 scaled to 0-100)
+  mympAvailabilityScore: integer("mymp_availability_score"), // Optional: MYMP availability score
+  mympEthicsScore: integer("mymp_ethics_score"), // Optional: MYMP ethics score
+  wikipediaUrl: text("wikipedia_url"), // Wikipedia link if available
+  mympDataUpdatedAt: timestamp("mymp_data_updated_at"), // When MYMP data was last synced
 });
 
 export const insertMpSchema = createInsertSchema(mps).omit({
