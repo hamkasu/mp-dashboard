@@ -3,7 +3,8 @@
  * Updated: Consolidated Navigation Menu with Submenus
  */
 
-import { Search, Menu, FileText, BookOpen, UserCheck, Calculator, BarChart3, ExternalLink, AlertCircle, GraduationCap, Scale, Shield, MessageSquare, Gavel, Building2, MessageSquareText, Award, Handshake, ChevronDown, Users, Activity, LayoutDashboard, Settings, UserPlus, UserX, Upload, TrendingUp } from "lucide-react";
+import { Search, Menu, FileText, BookOpen, UserCheck, Calculator, BarChart3, ExternalLink, AlertCircle, GraduationCap, Scale, Shield, MessageSquare, Gavel, Building2, MessageSquareText, Award, Handshake, ChevronDown, Users, Activity, LayoutDashboard, Settings, UserPlus, UserX, Upload, TrendingUp, Heart } from "lucide-react";
+import { useState } from "react";
 import { FeedbackModal } from "@/components/FeedbackModal";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,6 +19,14 @@ import {
   DropdownMenuPortal,
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Link, useLocation } from "wouter";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { useLanguage } from "@/i18n/LanguageContext";
@@ -29,7 +38,25 @@ interface HeaderProps {
 
 export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
   const [, setLocation] = useLocation();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const [donateOpen, setDonateOpen] = useState(false);
+
+  const donateContent = {
+    en: {
+      buttonText: "Donate",
+      modalTitle: "Support MyParliament Dashboard",
+      modalDescription: "Scan the QR code below to make a donation via DuitNow",
+      thankYou: "Thank you for your support!"
+    },
+    ms: {
+      buttonText: "Derma",
+      modalTitle: "Sokong Papan Pemuka MyParliament",
+      modalDescription: "Imbas kod QR di bawah untuk membuat sumbangan melalui DuitNow",
+      thankYou: "Terima kasih atas sokongan anda!"
+    }
+  };
+
+  const currentDonateContent = donateContent[language as keyof typeof donateContent] || donateContent.en;
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shadow-sm">
@@ -407,6 +434,44 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
               <MessageSquareText className="h-5 w-5" />
             </Button>
           </FeedbackModal>
+          <Dialog open={donateOpen} onOpenChange={setDonateOpen}>
+            <DialogTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1 text-rose-600 border-rose-200 hover:bg-rose-50 hover:text-rose-700 dark:text-rose-400 dark:border-rose-800 dark:hover:bg-rose-950"
+                data-testid="button-donate"
+              >
+                <Heart className="h-4 w-4" />
+                <span className="hidden sm:inline">{currentDonateContent.buttonText}</span>
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-2xl">
+              <DialogHeader>
+                <DialogTitle className="text-center text-xl">
+                  {currentDonateContent.modalTitle}
+                </DialogTitle>
+                <DialogDescription className="text-center">
+                  {currentDonateContent.modalDescription}
+                </DialogDescription>
+              </DialogHeader>
+              <div className="flex flex-col items-center justify-center space-y-4 py-4">
+                <div className="bg-white p-4 rounded-lg shadow-md">
+                  <img
+                    src="/duitnow-qr.png"
+                    alt="DuitNow QR Code - CALMIC SDN. BHD."
+                    className="w-[36rem] h-[36rem] object-contain"
+                  />
+                </div>
+                <p className="text-sm text-center text-muted-foreground font-medium">
+                  CALMIC SDN. BHD.
+                </p>
+                <p className="text-sm text-center text-primary font-semibold">
+                  {currentDonateContent.thankYou}
+                </p>
+              </div>
+            </DialogContent>
+          </Dialog>
           <LanguageSwitcher />
         </div>
       </div>
