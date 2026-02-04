@@ -553,24 +553,6 @@ export default function Home() {
         {/* Main Content */}
         <main className="flex-1 px-4 md:px-6 lg:px-8 py-6 md:py-8">
           <div className="space-y-6 md:space-y-8">
-            {/* Relocation Notice */}
-            <Card className="border-amber-200 dark:border-amber-900 bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-950/20 dark:to-yellow-950/20" data-testid="relocation-notice">
-              <CardContent className="pt-6">
-                <div className="flex items-start gap-3">
-                  <div className="flex-shrink-0 mt-0.5">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-amber-600 dark:text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-amber-900 dark:text-amber-100">
-                      We will be moving to our permanent address soon. Stay tuned for updates!
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
             {/* Featured Cards: Royal Address, MP Spotlight & Weekly Poll */}
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
               <div className="relative">
