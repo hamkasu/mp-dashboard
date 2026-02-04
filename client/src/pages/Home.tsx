@@ -15,7 +15,6 @@ import { RoyalAddress } from "@/components/RoyalAddress";
 import { MPSpotlight } from "@/components/MPSpotlight";
 import { PollWidget } from "@/components/PollWidget";
 import { BillsToWatch } from "@/components/BillsToWatch";
-import { DonationPrompt } from "@/components/DonationPrompt";
 import { Footer } from "@/components/Footer";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -571,9 +570,6 @@ export default function Home() {
                 </div>
               </CardContent>
             </Card>
-
-            {/* Donation Prompt */}
-            <DonationPrompt />
 
             {/* Featured Cards: Royal Address, MP Spotlight & Weekly Poll */}
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
