@@ -66,6 +66,14 @@ export function DonateButton() {
               <DialogTitle className="text-center text-xl">
                 {currentContent.modalTitle}
               </DialogTitle>
+              <div className="text-center space-y-2 mt-2 p-3 bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30 rounded-md border border-amber-200 dark:border-amber-800">
+                <p className="text-sm font-medium text-amber-900 dark:text-amber-100">
+                  {currentContent.title}
+                </p>
+                <p className="text-xs text-amber-800 dark:text-amber-200 leading-relaxed">
+                  {currentContent.subtitle}
+                </p>
+              </div>
               <DialogDescription className="text-center">
                 {currentContent.modalDescription}
               </DialogDescription>
