@@ -11,7 +11,6 @@ import { PageMeta } from "@/components/PageMeta";
 import { StatisticsCards } from "@/components/StatisticsCards";
 import { FilterSidebar } from "@/components/FilterSidebar";
 import { MPGrid } from "@/components/MPGrid";
-import { DonateButton } from "@/components/DonateButton";
 import { RoyalAddress } from "@/components/RoyalAddress";
 import { MPSpotlight } from "@/components/MPSpotlight";
 import { PollWidget } from "@/components/PollWidget";
@@ -813,8 +812,6 @@ export default function Home() {
               hasPartyFilter={selectedParties.length > 0} 
             />
 
-            {/* Donate Section */}
-            <DonateButton />
 
             {/* MP Grid */}
             {sortBy === "inappropriate-language" && languageAnalysisLoading ? (
