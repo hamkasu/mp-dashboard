@@ -274,6 +274,10 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
                       <Award className="w-4 h-4 mr-2" />
                       Report Card Admin
                     </DropdownMenuItem>
+                    <DropdownMenuItem onSelect={() => setLocation("/feedback-admin")} data-testid="submenu-feedback-admin">
+                      <MessageSquareText className="w-4 h-4 mr-2" />
+                      Feedback Admin
+                    </DropdownMenuItem>
                   </DropdownMenuSubContent>
                 </DropdownMenuPortal>
               </DropdownMenuSub>
