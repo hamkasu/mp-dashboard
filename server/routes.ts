@@ -4629,6 +4629,34 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
+  // Admin endpoint to check parliament website accessibility
+  app.get("/api/admin/parliament-status", requireAdmin, async (req, res) => {
+    try {
+      const { HansardScraper } = await import('./hansard-scraper');
+      const scraper = new HansardScraper();
+      const accessibility = await scraper.checkWebsiteAccessibility();
+
+      res.json({
+        isAccessible: accessibility.isAccessible,
+        error: accessibility.error || null,
+        denyReason: accessibility.denyReason || null,
+        message: accessibility.isAccessible
+          ? 'Parliament website is accessible'
+          : accessibility.denyReason === 'host_not_allowed'
+            ? 'Parliament website is blocking requests from this server. The server IP may need to be whitelisted by the Parliament IT department.'
+            : `Parliament website is not accessible: ${accessibility.error}`,
+        checkedAt: new Date().toISOString()
+      });
+    } catch (error: any) {
+      res.status(500).json({
+        isAccessible: false,
+        error: error.message || 'Unknown error',
+        message: `Failed to check parliament website status: ${error.message}`,
+        checkedAt: new Date().toISOString()
+      });
+    }
+  });
+
   // Admin endpoint to get Hansard sync logs
   app.get("/api/admin/hansard-sync-logs", requireAdmin, async (req, res) => {
     try {

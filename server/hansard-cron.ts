@@ -42,6 +42,21 @@ export async function runHansardSync(options: { triggeredBy: 'manual' | 'schedul
   try {
     console.log(`\n🔄 [Hansard Sync] Starting sync (${options.triggeredBy}) at ${startTime.toISOString()}`);
 
+    // Create scraper instance
+    const scraper = new HansardScraper();
+
+    // Check if parliament website is accessible before proceeding
+    console.log(`🔍 [Hansard Sync] Checking parliament website accessibility...`);
+    const accessibility = await scraper.checkWebsiteAccessibility();
+    if (!accessibility.isAccessible) {
+      const errorMsg = accessibility.denyReason === 'host_not_allowed'
+        ? `Parliament website (parlimen.gov.my) is blocking requests from this server. The server IP may need to be whitelisted by the Parliament IT department. Reason: ${accessibility.denyReason}`
+        : `Parliament website is not accessible: ${accessibility.error}`;
+      console.error(`❌ [Hansard Sync] ${errorMsg}`);
+      throw new Error(errorMsg);
+    }
+    console.log(`✅ [Hansard Sync] Parliament website is accessible`);
+
     // Get the latest hansard record from the database
     const latestRecord = await storage.getLatestHansardRecord();
     const latestDate = latestRecord ? new Date(latestRecord.sessionDate) : null;
@@ -54,7 +69,6 @@ export async function runHansardSync(options: { triggeredBy: 'manual' | 'schedul
     }
 
     // Fetch new hansard metadata from parliament website
-    const scraper = new HansardScraper();
     console.log(`🔍 [Hansard Sync] Fetching hansard metadata from parliament website...`);
     const allMetadata = await scraper.getHansardListForParliament15(1000);
     

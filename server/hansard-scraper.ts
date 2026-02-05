@@ -69,6 +69,35 @@ export class HansardScraper {
   private visitedNodes = new Set<string>();
 
   /**
+   * Check if the parliament website is accessible
+   * @returns Object with isAccessible boolean and error message if blocked
+   */
+  async checkWebsiteAccessibility(): Promise<{ isAccessible: boolean; error?: string; denyReason?: string }> {
+    try {
+      const url = `${this.baseUrl}/hansard-dewan-rakyat.html?uweb=dr&lang=bm&arkib=yes&ajx=0`;
+      const response = await axios.get(url, {
+        headers: this.headers,
+        timeout: 15000,
+        httpsAgent
+      });
+      return { isAccessible: true };
+    } catch (error: any) {
+      if (error.response?.status === 403) {
+        const denyReason = error.response?.headers?.['x-deny-reason'] || 'unknown';
+        return {
+          isAccessible: false,
+          error: `Parliament website blocked access (403 Forbidden)`,
+          denyReason
+        };
+      }
+      return {
+        isAccessible: false,
+        error: error.message || 'Unknown error'
+      };
+    }
+  }
+
+  /**
    * Fetch XML tree data from parliament website archive
    * @param nodeId - Node ID to fetch children for (null for root)
    * @returns Array of tree nodes
@@ -107,6 +136,14 @@ export class HansardScraper {
           myurl: item.userdata?.['@_name'] === 'myurl' ? item.userdata['#text'] : undefined
         }));
       } catch (error: any) {
+        // Check for 403 Forbidden - indicates host is blocked
+        if (error.response?.status === 403) {
+          const denyReason = error.response?.headers?.['x-deny-reason'] || 'unknown';
+          const errorMsg = `Parliament website blocked access (403 Forbidden, reason: ${denyReason}). The server IP may be blocked by parlimen.gov.my.`;
+          console.error(`  ❌ ${errorMsg}`);
+          throw new Error(errorMsg);
+        }
+
         if (attempt < maxRetries) {
           console.log(`  Retry ${attempt}/${maxRetries} for node ${nodeId || 'root'}...`);
           await this.delay(retryDelay);
@@ -285,7 +322,12 @@ export class HansardScraper {
       console.log(`  Extracted ${result.text.length} characters`);
       return result.text;
     } catch (error: any) {
-      if (error.response) {
+      if (error.response?.status === 403) {
+        const denyReason = error.response?.headers?.['x-deny-reason'] || 'unknown';
+        const errorMsg = `Parliament website blocked access (403 Forbidden, reason: ${denyReason}). The server IP may be blocked by parlimen.gov.my.`;
+        console.error(`  ✗ ${errorMsg}`);
+        throw new Error(errorMsg);
+      } else if (error.response) {
         console.error(`  ✗ HTTP Error ${error.response.status} for ${pdfUrl}`);
         console.error(`  Response headers:`, error.response.headers);
       } else if (error.code === 'ETIMEDOUT' || error.code === 'ECONNABORTED') {
@@ -328,7 +370,12 @@ export class HansardScraper {
         originalFilename
       };
     } catch (error: any) {
-      if (error.response) {
+      if (error.response?.status === 403) {
+        const denyReason = error.response?.headers?.['x-deny-reason'] || 'unknown';
+        const errorMsg = `Parliament website blocked access (403 Forbidden, reason: ${denyReason}). The server IP may be blocked by parlimen.gov.my.`;
+        console.error(`  ✗ ${errorMsg}`);
+        throw new Error(errorMsg);
+      } else if (error.response) {
         console.error(`  ✗ HTTP Error ${error.response.status} for ${pdfUrl}`);
         console.error(`  Response headers:`, error.response.headers);
       } else if (error.code === 'ETIMEDOUT' || error.code === 'ECONNABORTED') {

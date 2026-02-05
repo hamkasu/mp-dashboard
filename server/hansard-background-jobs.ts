@@ -55,9 +55,22 @@ export async function runHansardDownloadJob(
       console.log(`[Job] Deleted ${deletedCount} existing Hansard records`);
     }
     
+    // Check if parliament website is accessible
+    jobTracker.updateProgress(jobId, 0, 'Checking parliament website accessibility...');
+    const scraper = new HansardScraper();
+    console.log('[Job] Checking parliament website accessibility...');
+    const accessibility = await scraper.checkWebsiteAccessibility();
+    if (!accessibility.isAccessible) {
+      const errorMsg = accessibility.denyReason === 'host_not_allowed'
+        ? `Parliament website (parlimen.gov.my) is blocking requests from this server. The server IP may need to be whitelisted by the Parliament IT department. Reason: ${accessibility.denyReason}`
+        : `Parliament website is not accessible: ${accessibility.error}`;
+      console.error(`[Job] ❌ ${errorMsg}`);
+      throw new Error(errorMsg);
+    }
+    console.log('[Job] ✅ Parliament website is accessible');
+
     // Fetch Hansard list
     jobTracker.updateProgress(jobId, 0, 'Fetching Hansard list from parliament website...');
-    const scraper = new HansardScraper();
     console.log('[Job] Fetching Hansard list for 15th Parliament...');
     const hansardList = await scraper.getHansardListForParliament15(maxRecords);
     console.log(`[Job] Found ${hansardList.length} Hansard records to process`);

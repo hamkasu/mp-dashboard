@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, Download, Trash2, AlertTriangle, CheckCircle2, RefreshCw, Upload, FileText, X, Database, Clock, History, Share2, Sparkles, StopCircle, Users, Edit, UserX, Vote, DollarSign } from "lucide-react";
+import { Loader2, Download, Trash2, AlertTriangle, CheckCircle2, RefreshCw, Upload, FileText, X, Database, Clock, History, Share2, Sparkles, StopCircle, Users, Edit, UserX, Vote, DollarSign, Wifi, WifiOff } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { UnmatchedSpeakersManager } from "@/components/UnmatchedSpeakersManager";
@@ -131,6 +131,18 @@ export default function HansardAdmin() {
   const { data: syncLogs, isLoading: syncLogsLoading, refetch: refetchSyncLogs } = useQuery<SyncLogsResponse>({
     queryKey: ["/api/admin/hansard-sync-logs"],
     refetchInterval: 60000, // Refresh every minute
+  });
+
+  // Query for parliament website status
+  const { data: parliamentStatus, isLoading: parliamentStatusLoading, refetch: refetchParliamentStatus } = useQuery<{
+    isAccessible: boolean;
+    error: string | null;
+    denyReason: string | null;
+    message: string;
+    checkedAt: string;
+  }>({
+    queryKey: ["/api/admin/parliament-status"],
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
   });
 
   // Fetch all MPs for status update
@@ -2013,6 +2025,79 @@ export default function HansardAdmin() {
             >
               Re-analyze All Records
             </Button>
+          </CardContent>
+        </Card>
+
+        {/* Parliament Website Status Card */}
+        <Card className={parliamentStatus?.isAccessible === false ? "border-red-200 dark:border-red-900" : ""}>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              {parliamentStatus?.isAccessible ? (
+                <Wifi className="h-5 w-5 text-green-500" />
+              ) : (
+                <WifiOff className="h-5 w-5 text-red-500" />
+              )}
+              Parliament Website Status
+            </CardTitle>
+            <CardDescription>
+              Connection status to parlimen.gov.my for Hansard data sync
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-muted-foreground">
+                {parliamentStatusLoading ? "Checking..." : (parliamentStatus?.isAccessible ? "Website accessible" : "Website blocked")}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => refetchParliamentStatus()}
+                disabled={parliamentStatusLoading}
+              >
+                <RefreshCw className={`h-4 w-4 mr-2 ${parliamentStatusLoading ? 'animate-spin' : ''}`} />
+                Check Status
+              </Button>
+            </div>
+
+            {parliamentStatus && (
+              <Alert className={parliamentStatus.isAccessible ? "border-green-500" : "border-red-500 bg-red-50 dark:bg-red-950"}>
+                {parliamentStatus.isAccessible ? (
+                  <CheckCircle2 className="h-4 w-4 text-green-500" />
+                ) : (
+                  <AlertTriangle className="h-4 w-4 text-red-500" />
+                )}
+                <AlertDescription>
+                  <div className="font-medium">
+                    {parliamentStatus.isAccessible ? "Connection OK" : "Connection Blocked"}
+                  </div>
+                  <div className="text-sm mt-1">
+                    {parliamentStatus.message}
+                  </div>
+                  {parliamentStatus.denyReason && (
+                    <div className="text-xs mt-1 text-muted-foreground">
+                      Reason: {parliamentStatus.denyReason}
+                    </div>
+                  )}
+                  <div className="text-xs mt-2 text-muted-foreground">
+                    Last checked: {new Date(parliamentStatus.checkedAt).toLocaleString('en-MY', { timeZone: 'Asia/Kuala_Lumpur' })}
+                  </div>
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {parliamentStatus && !parliamentStatus.isAccessible && (
+              <Alert className="border-orange-500 bg-orange-50 dark:bg-orange-950">
+                <AlertTriangle className="h-4 w-4 text-orange-500" />
+                <AlertDescription>
+                  <div className="font-medium">Hansard Sync Disabled</div>
+                  <div className="text-sm mt-1">
+                    The parliament website (parlimen.gov.my) is blocking requests from this server.
+                    Automatic and manual Hansard sync will not work until the server IP is whitelisted
+                    by the Parliament IT department or a proxy is configured.
+                  </div>
+                </AlertDescription>
+              </Alert>
+            )}
           </CardContent>
         </Card>
 
