@@ -795,15 +795,15 @@ export const translations = {
     // Election Statistics
     electionStats: {
       title: "2022 Election Results",
-      description: "Total votes received by winning MPs in the 15th General Election (GE15)",
-      totalVotes: "Total Votes Cast",
+      description: "Popular vote results from the 15th General Election (GE15) held on 19 November 2022",
+      totalVotes: "Total Valid Votes",
       governmentVotes: "Government Coalition",
       oppositionVotes: "Opposition Coalition",
       ofTotal: "of total",
       government: "Government",
       opposition: "Opposition",
-      votesForWinningMPs: "votes for winning MPs",
-      note: "Note: These are votes received by winning MPs only, not total votes cast in the election.",
+      validVotes: "valid votes cast",
+      note: "Source: Wikipedia. Government = PH + BN + GPS + GRS. Opposition = PN + Others.",
     },
 
     // Feedback
@@ -1571,15 +1571,15 @@ export const translations = {
     // Election Statistics
     electionStats: {
       title: "Keputusan Pilihan Raya 2022",
-      description: "Jumlah undi yang diterima oleh Ahli Parlimen yang menang dalam Pilihan Raya Umum ke-15 (PRU15)",
-      totalVotes: "Jumlah Undi",
+      description: "Keputusan undi popular daripada Pilihan Raya Umum ke-15 (PRU15) pada 19 November 2022",
+      totalVotes: "Jumlah Undi Sah",
       governmentVotes: "Gabungan Kerajaan",
       oppositionVotes: "Gabungan Pembangkang",
       ofTotal: "daripada jumlah",
       government: "Kerajaan",
       opposition: "Pembangkang",
-      votesForWinningMPs: "undi untuk Ahli Parlimen yang menang",
-      note: "Nota: Ini adalah undi yang diterima oleh Ahli Parlimen yang menang sahaja, bukan jumlah undi keseluruhan dalam pilihan raya.",
+      validVotes: "undi sah",
+      note: "Sumber: Wikipedia. Kerajaan = PH + BN + GPS + GRS. Pembangkang = PN + Lain-lain.",
     },
 
     // Feedback

@@ -73,7 +73,7 @@ export function ElectionStatsCard({ stats, isLoading }: ElectionStatsCardProps) 
                 {stats.totalVotes.toLocaleString('en-MY')}
               </p>
               <p className="text-xs text-muted-foreground mt-1">
-                {t('electionStats.votesForWinningMPs')}
+                {t('electionStats.validVotes')}
               </p>
             </div>
 
