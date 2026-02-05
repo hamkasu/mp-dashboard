@@ -9,6 +9,7 @@ import { Header } from "@/components/Header";
 import { SearchDialog } from "@/components/SearchDialog";
 import { PageMeta } from "@/components/PageMeta";
 import { StatisticsCards } from "@/components/StatisticsCards";
+import { ElectionStatsCard } from "@/components/ElectionStatsCard";
 import { FilterSidebar } from "@/components/FilterSidebar";
 import { MPGrid } from "@/components/MPGrid";
 import { RoyalAddress } from "@/components/RoyalAddress";
@@ -131,6 +132,12 @@ export default function Home() {
     stateCount: number;
     averageAttendanceRate?: number;
     totalCumulativeCosts?: number;
+    electionStats?: {
+      year: number;
+      totalVotes: number;
+      governmentVotes: number;
+      oppositionVotes: number;
+    };
   }>({
     queryKey: ["/api/stats"],
   });
@@ -786,6 +793,13 @@ export default function Home() {
                 </CardContent>
               </Card>
             )}
+
+            {/* 2022 Election Statistics */}
+            <ElectionStatsCard
+              stats={stats?.electionStats}
+              isLoading={statsLoading}
+            />
+
             {/* Statistics */}
             <StatisticsCards 
               stats={stats || defaultStats} 

@@ -792,6 +792,20 @@ export const translations = {
       },
     },
 
+    // Election Statistics
+    electionStats: {
+      title: "2022 Election Results",
+      description: "Total votes received by winning MPs in the 15th General Election (GE15)",
+      totalVotes: "Total Votes Cast",
+      governmentVotes: "Government Coalition",
+      oppositionVotes: "Opposition Coalition",
+      ofTotal: "of total",
+      government: "Government",
+      opposition: "Opposition",
+      votesForWinningMPs: "votes for winning MPs",
+      note: "Note: These are votes received by winning MPs only, not total votes cast in the election.",
+    },
+
     // Feedback
     feedback: {
       button: "Feedback",
@@ -1552,6 +1566,20 @@ export const translations = {
         pending: "Menunggu",
         passed: "Diluluskan",
       },
+    },
+
+    // Election Statistics
+    electionStats: {
+      title: "Keputusan Pilihan Raya 2022",
+      description: "Jumlah undi yang diterima oleh Ahli Parlimen yang menang dalam Pilihan Raya Umum ke-15 (PRU15)",
+      totalVotes: "Jumlah Undi",
+      governmentVotes: "Gabungan Kerajaan",
+      oppositionVotes: "Gabungan Pembangkang",
+      ofTotal: "daripada jumlah",
+      government: "Kerajaan",
+      opposition: "Pembangkang",
+      votesForWinningMPs: "undi untuk Ahli Parlimen yang menang",
+      note: "Nota: Ini adalah undi yang diterima oleh Ahli Parlimen yang menang sahaja, bukan jumlah undi keseluruhan dalam pilihan raya.",
     },
 
     // Feedback

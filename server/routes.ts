@@ -866,6 +866,29 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         return sum + totalForMP;
       }, 0);
 
+      // Calculate 2022 election statistics (GE15)
+      // Define government coalition parties (Unity Government)
+      const governmentParties = ['PH', 'BN', 'GPS', 'GRS', 'WARISAN', 'UPKO', 'PBRS', 'STAR'];
+
+      // Calculate total votes, government votes, and opposition votes from the 2022 election
+      let totalElectionVotes = 0;
+      let governmentVotes = 0;
+      let oppositionVotes = 0;
+
+      allMps.forEach(mp => {
+        if (mp.electionVotesReceived && mp.electionYear === 2022) {
+          totalElectionVotes += mp.electionVotesReceived;
+
+          // Check if MP's party is in government coalition
+          const partyUpper = mp.party.toUpperCase();
+          if (governmentParties.includes(partyUpper)) {
+            governmentVotes += mp.electionVotesReceived;
+          } else {
+            oppositionVotes += mp.electionVotesReceived;
+          }
+        }
+      });
+
       res.json({
         totalMps: mps.length,
         partyBreakdown: partyBreakdown.sort((a, b) => b.count - a.count),
@@ -873,6 +896,13 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         stateCount: uniqueStates.size,
         averageAttendanceRate: Math.round(averageAttendanceRate * 10) / 10,
         totalCumulativeCosts: Math.round(totalCumulativeCosts),
+        // 2022 Election statistics (GE15)
+        electionStats: {
+          year: 2022,
+          totalVotes: totalElectionVotes,
+          governmentVotes: governmentVotes,
+          oppositionVotes: oppositionVotes,
+        },
       });
     } catch (error) {
       console.error("Error calculating stats:", error);
