@@ -16,6 +16,7 @@ import { RoyalAddress } from "@/components/RoyalAddress";
 import { MPSpotlight } from "@/components/MPSpotlight";
 import { PollWidget } from "@/components/PollWidget";
 import { BillsToWatch } from "@/components/BillsToWatch";
+import { ParliamentVideos } from "@/components/ParliamentVideos";
 import { Footer } from "@/components/Footer";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -580,6 +581,12 @@ export default function Home() {
             <div className="relative">
               <div className="absolute -inset-1 bg-gradient-to-r from-orange-500/20 to-amber-500/10 rounded-lg blur opacity-25 pointer-events-none" />
               <BillsToWatch />
+            </div>
+
+            {/* Parliament Videos Section */}
+            <div className="relative">
+              <div className="absolute -inset-1 bg-gradient-to-r from-red-500/20 to-rose-500/10 rounded-lg blur opacity-25 pointer-events-none" />
+              <ParliamentVideos />
             </div>
 
             {/* SEO Landing Section */}
