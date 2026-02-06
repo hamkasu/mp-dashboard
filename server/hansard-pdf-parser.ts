@@ -240,6 +240,26 @@ export class HansardPdfParser {
     };
   }
 
+  /**
+   * Clean PDF-extracted section text for reliable regex matching.
+   * PDF text extraction can insert page headers (e.g., "DR 5.2.2026  iii")
+   * mid-entry when text spans page boundaries, breaking constituency
+   * extraction regex.
+   */
+  private cleanSectionText(section: string): string {
+    return section
+      // Remove page headers like "DR 5.2.2026" or "DR.05.02.2026"
+      .replace(/\bDR[\.\s]*\d+[\.\s]*\d+[\.\s]*\d+\b/gi, '')
+      // Remove standalone Roman numeral page numbers (i, ii, iii, iv, v, etc.)
+      .replace(/^\s*[ivxlcdm]+\s*$/gmi, '')
+      // Replace Unicode smart quotes with ASCII equivalents
+      .replace(/[\u2018\u2019\u201A\u201B]/g, "'")
+      .replace(/[\u201C\u201D\u201E\u201F]/g, '"')
+      // Collapse newlines and multiple spaces to single space
+      .replace(/\n+/g, ' ')
+      .replace(/\s+/g, ' ');
+  }
+
   private parseAttendance(text: string): AttendanceData {
     const attendedConstituencies: string[] = [];
     const absentConstituencies: string[] = [];
@@ -248,14 +268,18 @@ export class HansardPdfParser {
     const attendedStart = text.indexOf('Ahli-Ahli Yang Hadir:');
     if (attendedStart !== -1) {
       const attendedEnd = Math.min(
-        text.indexOf('Senator Yang Turut Hadir:', attendedStart) !== -1 
+        text.indexOf('Senator Yang Turut Hadir:', attendedStart) !== -1
           ? text.indexOf('Senator Yang Turut Hadir:', attendedStart)
           : Number.MAX_SAFE_INTEGER,
         text.indexOf('Ahli-Ahli Yang Tidak Hadir:', attendedStart) !== -1
           ? text.indexOf('Ahli-Ahli Yang Tidak Hadir:', attendedStart)
           : Number.MAX_SAFE_INTEGER
       );
-      const attendedSection = text.substring(attendedStart, attendedEnd === Number.MAX_SAFE_INTEGER ? undefined : attendedEnd);
+      const rawAttendedSection = text.substring(attendedStart, attendedEnd === Number.MAX_SAFE_INTEGER ? undefined : attendedEnd);
+
+      // Clean PDF artifacts (page headers, smart quotes, line breaks) so
+      // constituency names that span page boundaries are not broken
+      const attendedSection = this.cleanSectionText(rawAttendedSection);
 
       // Remove Yang di-Pertua Dewan Rakyat (Speaker of the House) entry —
       // the Speaker is presiding, not attending as a regular MP
@@ -279,7 +303,7 @@ export class HansardPdfParser {
     const absentStart = text.indexOf('Ahli-Ahli Yang Tidak Hadir:');
     if (absentStart !== -1) {
       const absentEnd = Math.min(
-        text.indexOf('PERTANYAAN', absentStart) !== -1 
+        text.indexOf('PERTANYAAN', absentStart) !== -1
           ? text.indexOf('PERTANYAAN', absentStart)
           : Number.MAX_SAFE_INTEGER,
         text.indexOf('USUL:', absentStart) !== -1
@@ -289,8 +313,11 @@ export class HansardPdfParser {
           ? text.indexOf('RANG UNDANG-UNDANG', absentStart)
           : Number.MAX_SAFE_INTEGER
       );
-      const absentSection = text.substring(absentStart, absentEnd === Number.MAX_SAFE_INTEGER ? undefined : absentEnd);
-      
+      const rawAbsentSection = text.substring(absentStart, absentEnd === Number.MAX_SAFE_INTEGER ? undefined : absentEnd);
+
+      // Clean PDF artifacts before regex extraction
+      const absentSection = this.cleanSectionText(rawAbsentSection);
+
       // Flexible regex to handle: multi-word names, hyphens, apostrophes, mixed case
       const constituencyRegex = /\(([A-Za-z][A-Za-z\s\-'\.]+?)\)/g;
       let match;
