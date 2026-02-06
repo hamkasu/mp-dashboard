@@ -5863,6 +5863,207 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
+  // Admin Visitor Data - comprehensive visitor information (protected)
+  app.get("/api/admin/visitor-data", requireAdmin, async (req, res) => {
+    try {
+      const { visitorAnalytics } = await import("@shared/schema");
+      const { sql, count, countDistinct, desc, eq, and, gte, lte, like, ilike } = await import("drizzle-orm");
+
+      const page = Math.max(1, parseInt(req.query.page as string) || 1);
+      const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string) || 50));
+      const offset = (page - 1) * limit;
+      const search = (req.query.search as string) || "";
+      const countryFilter = (req.query.country as string) || "";
+      const dateFrom = (req.query.dateFrom as string) || "";
+      const dateTo = (req.query.dateTo as string) || "";
+
+      // Build filter conditions
+      const conditions = [];
+      if (search) {
+        conditions.push(sql`(${visitorAnalytics.path} ILIKE ${'%' + search + '%'} OR ${visitorAnalytics.ip} ILIKE ${'%' + search + '%'} OR ${visitorAnalytics.city} ILIKE ${'%' + search + '%'} OR ${visitorAnalytics.referrer} ILIKE ${'%' + search + '%'})`);
+      }
+      if (countryFilter) {
+        conditions.push(eq(visitorAnalytics.country, countryFilter));
+      }
+      if (dateFrom) {
+        conditions.push(gte(visitorAnalytics.timestamp, new Date(dateFrom)));
+      }
+      if (dateTo) {
+        const endDate = new Date(dateTo);
+        endDate.setHours(23, 59, 59, 999);
+        conditions.push(lte(visitorAnalytics.timestamp, endDate));
+      }
+
+      const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+      // Get total count for pagination
+      const [totalResult] = await db
+        .select({ value: count() })
+        .from(visitorAnalytics)
+        .where(whereClause);
+
+      // Get paginated visitor data
+      const visitors = await db
+        .select()
+        .from(visitorAnalytics)
+        .where(whereClause)
+        .orderBy(desc(visitorAnalytics.timestamp))
+        .limit(limit)
+        .offset(offset);
+
+      // Get summary statistics
+      const now = new Date();
+      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const weekStart = new Date(todayStart);
+      weekStart.setDate(weekStart.getDate() - 7);
+      const monthStart = new Date(todayStart);
+      monthStart.setDate(monthStart.getDate() - 30);
+
+      const [totalAll] = await db.select({ value: count() }).from(visitorAnalytics);
+      const [uniqueAll] = await db.select({ value: countDistinct(visitorAnalytics.ip) }).from(visitorAnalytics);
+      const [todayCount] = await db.select({ value: count() }).from(visitorAnalytics).where(gte(visitorAnalytics.timestamp, todayStart));
+      const [weekCount] = await db.select({ value: count() }).from(visitorAnalytics).where(gte(visitorAnalytics.timestamp, weekStart));
+      const [monthCount] = await db.select({ value: count() }).from(visitorAnalytics).where(gte(visitorAnalytics.timestamp, monthStart));
+
+      // Get top referrers
+      const topReferrers = await db
+        .select({
+          referrer: visitorAnalytics.referrer,
+          count: count(),
+        })
+        .from(visitorAnalytics)
+        .where(sql`${visitorAnalytics.referrer} IS NOT NULL AND ${visitorAnalytics.referrer} != ''`)
+        .groupBy(visitorAnalytics.referrer)
+        .orderBy(desc(count()))
+        .limit(10);
+
+      // Get country list for filter dropdown
+      const countries = await db
+        .select({
+          country: visitorAnalytics.country,
+          count: count(),
+        })
+        .from(visitorAnalytics)
+        .where(sql`${visitorAnalytics.country} IS NOT NULL`)
+        .groupBy(visitorAnalytics.country)
+        .orderBy(desc(count()));
+
+      // Get top cities
+      const topCities = await db
+        .select({
+          city: visitorAnalytics.city,
+          country: visitorAnalytics.country,
+          count: count(),
+        })
+        .from(visitorAnalytics)
+        .where(sql`${visitorAnalytics.city} IS NOT NULL`)
+        .groupBy(visitorAnalytics.city, visitorAnalytics.country)
+        .orderBy(desc(count()))
+        .limit(15);
+
+      // Get hourly distribution (last 24h)
+      const hourlyDistribution = await db
+        .select({
+          hour: sql<string>`EXTRACT(HOUR FROM ${visitorAnalytics.timestamp})`,
+          count: count(),
+        })
+        .from(visitorAnalytics)
+        .where(gte(visitorAnalytics.timestamp, new Date(now.getTime() - 24 * 60 * 60 * 1000)))
+        .groupBy(sql`EXTRACT(HOUR FROM ${visitorAnalytics.timestamp})`)
+        .orderBy(sql`EXTRACT(HOUR FROM ${visitorAnalytics.timestamp})`);
+
+      res.json({
+        visitors,
+        pagination: {
+          page,
+          limit,
+          total: totalResult.value,
+          totalPages: Math.ceil(totalResult.value / limit),
+        },
+        summary: {
+          totalVisits: totalAll.value,
+          uniqueVisitors: uniqueAll.value,
+          todayVisits: todayCount.value,
+          weekVisits: weekCount.value,
+          monthVisits: monthCount.value,
+        },
+        topReferrers,
+        countries,
+        topCities,
+        hourlyDistribution,
+      });
+    } catch (error) {
+      console.error("Admin visitor data error:", error);
+      res.status(500).json({ error: "Failed to fetch visitor data" });
+    }
+  });
+
+  // Admin Visitor Data - Export CSV (protected)
+  app.get("/api/admin/visitor-data/export", requireAdmin, async (req, res) => {
+    try {
+      const { visitorAnalytics } = await import("@shared/schema");
+      const { sql, desc, eq, and, gte, lte } = await import("drizzle-orm");
+
+      const search = (req.query.search as string) || "";
+      const countryFilter = (req.query.country as string) || "";
+      const dateFrom = (req.query.dateFrom as string) || "";
+      const dateTo = (req.query.dateTo as string) || "";
+
+      const conditions = [];
+      if (search) {
+        conditions.push(sql`(${visitorAnalytics.path} ILIKE ${'%' + search + '%'} OR ${visitorAnalytics.ip} ILIKE ${'%' + search + '%'} OR ${visitorAnalytics.city} ILIKE ${'%' + search + '%'})`);
+      }
+      if (countryFilter) {
+        conditions.push(eq(visitorAnalytics.country, countryFilter));
+      }
+      if (dateFrom) {
+        conditions.push(gte(visitorAnalytics.timestamp, new Date(dateFrom)));
+      }
+      if (dateTo) {
+        const endDate = new Date(dateTo);
+        endDate.setHours(23, 59, 59, 999);
+        conditions.push(lte(visitorAnalytics.timestamp, endDate));
+      }
+
+      const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+      const visitors = await db
+        .select()
+        .from(visitorAnalytics)
+        .where(whereClause)
+        .orderBy(desc(visitorAnalytics.timestamp))
+        .limit(10000);
+
+      // Generate CSV
+      const csvHeader = "Timestamp,Path,IP,Country,City,Region,Timezone,User Agent,Referrer\n";
+      const csvRows = visitors.map(v => {
+        const escapeCsv = (val: string | null) => {
+          if (!val) return "";
+          const escaped = val.replace(/"/g, '""');
+          return escaped.includes(",") || escaped.includes('"') || escaped.includes("\n") ? `"${escaped}"` : escaped;
+        };
+        return [
+          v.timestamp ? new Date(v.timestamp).toISOString() : "",
+          escapeCsv(v.path),
+          escapeCsv(v.ip),
+          escapeCsv(v.country),
+          escapeCsv(v.city),
+          escapeCsv(v.region),
+          escapeCsv(v.timezone),
+          escapeCsv(v.userAgent),
+          escapeCsv(v.referrer),
+        ].join(",");
+      }).join("\n");
+
+      res.setHeader("Content-Type", "text/csv");
+      res.setHeader("Content-Disposition", `attachment; filename=visitor-data-${new Date().toISOString().split('T')[0]}.csv`);
+      res.send(csvHeader + csvRows);
+    } catch (error) {
+      console.error("Visitor data export error:", error);
+      res.status(500).json({ error: "Failed to export visitor data" });
+    }
+  });
+
 // Hansard Question Analyzer Routes
 
   // Upload and parse Hansard PDF for questions
