@@ -18,14 +18,12 @@ import { useLanguage } from "@/i18n/LanguageContext";
 import {
   ExternalLink,
   ListVideo,
-  Play,
   Youtube,
 } from "lucide-react";
 
 const CHANNEL_URL = "https://www.youtube.com/@PARLIMENMALAYSIA1";
 const DEWAN_RAKYAT_PLAYLIST_ID = "PLxiPX8J3gm-ch1Kg70LSif9fGZrVpUq4M";
 const DEWAN_RAKYAT_PLAYLIST_URL = `https://www.youtube.com/playlist?list=${DEWAN_RAKYAT_PLAYLIST_ID}`;
-const LIVE_STREAM_URL = `${CHANNEL_URL}/live`;
 
 interface PlaylistLink {
   id: string;
@@ -90,34 +88,6 @@ export function ParliamentVideos() {
       </CardHeader>
 
       <CardContent className="space-y-4">
-        {/* Hero Link - Watch Live / Latest Session */}
-        <a
-          href={LIVE_STREAM_URL}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="group block relative w-full rounded-lg overflow-hidden bg-gradient-to-br from-red-950 via-red-900 to-red-800 aspect-video hover:shadow-lg transition-shadow"
-          aria-label={t("parliamentVideos.watchLiveAriaLabel")}
-        >
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-white">
-            <div className="rounded-full bg-red-600 p-4 group-hover:bg-red-500 group-hover:scale-110 transition-all shadow-lg">
-              <Play className="h-8 w-8 fill-white" />
-            </div>
-            <div className="text-center px-4">
-              <p className="text-lg sm:text-xl font-bold">
-                {t("parliamentVideos.watchLive")}
-              </p>
-              <p className="text-sm text-red-200 mt-1">
-                {t("parliamentVideos.watchLiveSubtitle")}
-              </p>
-            </div>
-          </div>
-          {/* Subtle branding */}
-          <div className="absolute bottom-3 right-3 flex items-center gap-1.5 text-red-300/70">
-            <Youtube className="h-4 w-4" />
-            <span className="text-xs font-medium">PARLIMEN MALAYSIA</span>
-          </div>
-        </a>
-
         {/* Playlists Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           {PLAYLISTS.map((playlist) => (
