@@ -105,6 +105,24 @@ export default function HansardAdmin() {
   const [byElectionDate, setByElectionDate] = useState("");
   const [byElectionNotes, setByElectionNotes] = useState("");
 
+  // Edit MP Details states
+  const [editMpId, setEditMpId] = useState("");
+  const [editMpForm, setEditMpForm] = useState<{
+    name: string; party: string; parliamentCode: string; constituency: string;
+    state: string; gender: string; title: string; role: string;
+    photoUrl: string; email: string; telephone: string; fax: string;
+    mobileNumber: string; contactAddress: string; serviceAddress: string;
+    facebookUrl: string; instagramUrl: string; twitterUrl: string; tiktokUrl: string;
+    isMinister: boolean; isDeputyMinister: boolean; ministerialPosition: string;
+  }>({
+    name: "", party: "", parliamentCode: "", constituency: "",
+    state: "", gender: "", title: "", role: "",
+    photoUrl: "", email: "", telephone: "", fax: "",
+    mobileNumber: "", contactAddress: "", serviceAddress: "",
+    facebookUrl: "", instagramUrl: "", twitterUrl: "", tiktokUrl: "",
+    isMinister: false, isDeputyMinister: false, ministerialPosition: "",
+  });
+
   // Constituency Attendance Audit states
   const [auditConstituency, setAuditConstituency] = useState("");
   const [auditResult, setAuditResult] = useState<{
@@ -187,6 +205,70 @@ export default function HansardAdmin() {
       toast({
         title: "Error",
         description: error.message || "Failed to update MP status",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Fetch selected MP details for editing
+  const { data: editMpData, isLoading: editMpLoading } = useQuery<any>({
+    queryKey: ["/api/mps", editMpId],
+    queryFn: async () => {
+      const res = await fetch(`/api/mps/${editMpId}`);
+      if (!res.ok) throw new Error("Failed to fetch MP details");
+      return res.json();
+    },
+    enabled: !!editMpId,
+  });
+
+  // Populate form when MP data is loaded
+  useEffect(() => {
+    if (editMpData) {
+      setEditMpForm({
+        name: editMpData.name || "",
+        party: editMpData.party || "",
+        parliamentCode: editMpData.parliamentCode || "",
+        constituency: editMpData.constituency || "",
+        state: editMpData.state || "",
+        gender: editMpData.gender || "",
+        title: editMpData.title || "",
+        role: editMpData.role || "",
+        photoUrl: editMpData.photoUrl || "",
+        email: editMpData.email || "",
+        telephone: editMpData.telephone || "",
+        fax: editMpData.fax || "",
+        mobileNumber: editMpData.mobileNumber || "",
+        contactAddress: editMpData.contactAddress || "",
+        serviceAddress: editMpData.serviceAddress || "",
+        facebookUrl: editMpData.facebookUrl || "",
+        instagramUrl: editMpData.instagramUrl || "",
+        twitterUrl: editMpData.twitterUrl || "",
+        tiktokUrl: editMpData.tiktokUrl || "",
+        isMinister: editMpData.isMinister || false,
+        isDeputyMinister: editMpData.isDeputyMinister || false,
+        ministerialPosition: editMpData.ministerialPosition || "",
+      });
+    }
+  }, [editMpData]);
+
+  // Update MP details mutation
+  const updateMpDetailsMutation = useMutation({
+    mutationFn: async (data: { id: string; updates: Record<string, any> }) => {
+      return await apiRequest("PATCH", `/api/admin/mps/${data.id}`, data.updates);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "MP details updated successfully",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/mps"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/mps", editMpId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update MP details",
         variant: "destructive",
       });
     },
@@ -1087,6 +1169,354 @@ export default function HansardAdmin() {
             >
               Clear
             </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Edit MP Details Section */}
+      <Card className="border-blue-500">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Edit className="h-5 w-5" />
+            Edit MP Details
+          </CardTitle>
+          <CardDescription>
+            Select an MP to edit their profile information, contact details, and social media links
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {/* MP Selection */}
+            <div className="space-y-2">
+              <Label htmlFor="edit-mp-select">Select MP to Edit *</Label>
+              <Select value={editMpId} onValueChange={(val) => setEditMpId(val)}>
+                <SelectTrigger id="edit-mp-select">
+                  <SelectValue placeholder="Choose an MP to edit..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {allMps
+                    .sort((a, b) => a.name.localeCompare(b.name))
+                    .map((mp) => (
+                      <SelectItem key={mp.id} value={mp.id}>
+                        {mp.name} - {mp.constituency} ({mp.party})
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {editMpId && editMpLoading && (
+              <div className="flex items-center gap-2 text-muted-foreground py-4">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Loading MP details...
+              </div>
+            )}
+
+            {editMpId && editMpData && !editMpLoading && (
+              <div className="space-y-6 border-t pt-4">
+                {/* Basic Information */}
+                <div>
+                  <h3 className="font-medium mb-3">Basic Information</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-name">Full Name</Label>
+                      <Input
+                        id="edit-name"
+                        value={editMpForm.name}
+                        onChange={(e) => setEditMpForm(f => ({ ...f, name: e.target.value }))}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-title">Title</Label>
+                      <Select value={editMpForm.title} onValueChange={(val) => setEditMpForm(f => ({ ...f, title: val }))}>
+                        <SelectTrigger id="edit-title">
+                          <SelectValue placeholder="Select title..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="YB">YB</SelectItem>
+                          <SelectItem value="YAB">YAB</SelectItem>
+                          <SelectItem value="Datuk">Datuk</SelectItem>
+                          <SelectItem value="Datuk Seri">Datuk Seri</SelectItem>
+                          <SelectItem value="Tan Sri">Tan Sri</SelectItem>
+                          <SelectItem value="Tun">Tun</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-gender">Gender</Label>
+                      <Select value={editMpForm.gender} onValueChange={(val) => setEditMpForm(f => ({ ...f, gender: val }))}>
+                        <SelectTrigger id="edit-gender">
+                          <SelectValue placeholder="Select gender..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Male">Male</SelectItem>
+                          <SelectItem value="Female">Female</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-party">Political Party</Label>
+                      <Input
+                        id="edit-party"
+                        value={editMpForm.party}
+                        onChange={(e) => setEditMpForm(f => ({ ...f, party: e.target.value }))}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-role">Role</Label>
+                      <Input
+                        id="edit-role"
+                        value={editMpForm.role}
+                        onChange={(e) => setEditMpForm(f => ({ ...f, role: e.target.value }))}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-photo-url">Photo URL</Label>
+                      <Input
+                        id="edit-photo-url"
+                        value={editMpForm.photoUrl}
+                        onChange={(e) => setEditMpForm(f => ({ ...f, photoUrl: e.target.value }))}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Constituency Information */}
+                <div>
+                  <h3 className="font-medium mb-3">Constituency Information</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-parliament-code">Parliament Code</Label>
+                      <Input
+                        id="edit-parliament-code"
+                        value={editMpForm.parliamentCode}
+                        onChange={(e) => setEditMpForm(f => ({ ...f, parliamentCode: e.target.value }))}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-constituency">Constituency</Label>
+                      <Input
+                        id="edit-constituency"
+                        value={editMpForm.constituency}
+                        onChange={(e) => setEditMpForm(f => ({ ...f, constituency: e.target.value }))}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-state">State</Label>
+                      <Input
+                        id="edit-state"
+                        value={editMpForm.state}
+                        onChange={(e) => setEditMpForm(f => ({ ...f, state: e.target.value }))}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Ministerial Status */}
+                <div>
+                  <h3 className="font-medium mb-3">Ministerial Status</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-is-minister">Is Minister</Label>
+                      <Select value={editMpForm.isMinister ? "true" : "false"} onValueChange={(val) => setEditMpForm(f => ({ ...f, isMinister: val === "true" }))}>
+                        <SelectTrigger id="edit-is-minister">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="false">No</SelectItem>
+                          <SelectItem value="true">Yes</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-is-deputy-minister">Is Deputy Minister</Label>
+                      <Select value={editMpForm.isDeputyMinister ? "true" : "false"} onValueChange={(val) => setEditMpForm(f => ({ ...f, isDeputyMinister: val === "true" }))}>
+                        <SelectTrigger id="edit-is-deputy-minister">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="false">No</SelectItem>
+                          <SelectItem value="true">Yes</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-ministerial-position">Ministerial Position</Label>
+                      <Input
+                        id="edit-ministerial-position"
+                        placeholder="e.g., Minister of Finance"
+                        value={editMpForm.ministerialPosition}
+                        onChange={(e) => setEditMpForm(f => ({ ...f, ministerialPosition: e.target.value }))}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Contact Information */}
+                <div>
+                  <h3 className="font-medium mb-3">Contact Information</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-email">Email</Label>
+                      <Input
+                        id="edit-email"
+                        type="email"
+                        value={editMpForm.email}
+                        onChange={(e) => setEditMpForm(f => ({ ...f, email: e.target.value }))}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-telephone">Telephone</Label>
+                      <Input
+                        id="edit-telephone"
+                        value={editMpForm.telephone}
+                        onChange={(e) => setEditMpForm(f => ({ ...f, telephone: e.target.value }))}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-fax">Fax</Label>
+                      <Input
+                        id="edit-fax"
+                        value={editMpForm.fax}
+                        onChange={(e) => setEditMpForm(f => ({ ...f, fax: e.target.value }))}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-mobile">Mobile Number</Label>
+                      <Input
+                        id="edit-mobile"
+                        value={editMpForm.mobileNumber}
+                        onChange={(e) => setEditMpForm(f => ({ ...f, mobileNumber: e.target.value }))}
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 gap-4 mt-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-contact-address">Contact Address</Label>
+                      <Textarea
+                        id="edit-contact-address"
+                        value={editMpForm.contactAddress}
+                        onChange={(e) => setEditMpForm(f => ({ ...f, contactAddress: e.target.value }))}
+                        rows={2}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-service-address">Service Address</Label>
+                      <Textarea
+                        id="edit-service-address"
+                        value={editMpForm.serviceAddress}
+                        onChange={(e) => setEditMpForm(f => ({ ...f, serviceAddress: e.target.value }))}
+                        rows={2}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Social Media */}
+                <div>
+                  <h3 className="font-medium mb-3">Social Media</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-facebook">Facebook URL</Label>
+                      <Input
+                        id="edit-facebook"
+                        value={editMpForm.facebookUrl}
+                        onChange={(e) => setEditMpForm(f => ({ ...f, facebookUrl: e.target.value }))}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-instagram">Instagram URL</Label>
+                      <Input
+                        id="edit-instagram"
+                        value={editMpForm.instagramUrl}
+                        onChange={(e) => setEditMpForm(f => ({ ...f, instagramUrl: e.target.value }))}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-twitter">Twitter/X URL</Label>
+                      <Input
+                        id="edit-twitter"
+                        value={editMpForm.twitterUrl}
+                        onChange={(e) => setEditMpForm(f => ({ ...f, twitterUrl: e.target.value }))}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-tiktok">TikTok URL</Label>
+                      <Input
+                        id="edit-tiktok"
+                        value={editMpForm.tiktokUrl}
+                        onChange={(e) => setEditMpForm(f => ({ ...f, tiktokUrl: e.target.value }))}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Submit Buttons */}
+                <div className="flex gap-3">
+                  <Button
+                    onClick={() => {
+                      updateMpDetailsMutation.mutate({
+                        id: editMpId,
+                        updates: {
+                          name: editMpForm.name,
+                          party: editMpForm.party,
+                          parliamentCode: editMpForm.parliamentCode,
+                          constituency: editMpForm.constituency,
+                          state: editMpForm.state,
+                          gender: editMpForm.gender,
+                          title: editMpForm.title || undefined,
+                          role: editMpForm.role || undefined,
+                          photoUrl: editMpForm.photoUrl || undefined,
+                          email: editMpForm.email || undefined,
+                          telephone: editMpForm.telephone || undefined,
+                          fax: editMpForm.fax || undefined,
+                          mobileNumber: editMpForm.mobileNumber || undefined,
+                          contactAddress: editMpForm.contactAddress || undefined,
+                          serviceAddress: editMpForm.serviceAddress || undefined,
+                          facebookUrl: editMpForm.facebookUrl || undefined,
+                          instagramUrl: editMpForm.instagramUrl || undefined,
+                          twitterUrl: editMpForm.twitterUrl || undefined,
+                          tiktokUrl: editMpForm.tiktokUrl || undefined,
+                          isMinister: editMpForm.isMinister,
+                          isDeputyMinister: editMpForm.isDeputyMinister,
+                          ministerialPosition: editMpForm.ministerialPosition || undefined,
+                        },
+                      });
+                    }}
+                    disabled={updateMpDetailsMutation.isPending}
+                  >
+                    {updateMpDetailsMutation.isPending ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle2 className="mr-2 h-4 w-4" />
+                        Save Changes
+                      </>
+                    )}
+                  </Button>
+
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setEditMpId("");
+                      setEditMpForm({
+                        name: "", party: "", parliamentCode: "", constituency: "",
+                        state: "", gender: "", title: "", role: "",
+                        photoUrl: "", email: "", telephone: "", fax: "",
+                        mobileNumber: "", contactAddress: "", serviceAddress: "",
+                        facebookUrl: "", instagramUrl: "", twitterUrl: "", tiktokUrl: "",
+                        isMinister: false, isDeputyMinister: false, ministerialPosition: "",
+                      });
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
