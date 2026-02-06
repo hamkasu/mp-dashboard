@@ -21,6 +21,11 @@ const externalSites: Record<string, { url: string; titleKey: string; name: strin
     titleKey: "nav.mcchr",
     name: "MCCHR",
   },
+  "parliament-videos": {
+    url: "https://www.youtube.com/@PARLIMENMALAYSIA1",
+    titleKey: "parliamentVideos.title",
+    name: "Parliament Videos",
+  },
 };
 
 export default function ExternalFrame() {

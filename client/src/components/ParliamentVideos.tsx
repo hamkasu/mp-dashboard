@@ -4,7 +4,8 @@
  * Parliament Videos Component
  *
  * Links to official Dewan Rakyat parliament videos from the PARLIMEN MALAYSIA YouTube channel.
- * Uses direct links to YouTube (embedding is disabled by the channel).
+ * The hero card opens the YouTube channel within the MyParliament frame (/external/parliament-videos).
+ * Playlist links open directly on YouTube.
  *
  * Source channel: https://www.youtube.com/@PARLIMENMALAYSIA1
  * Dewan Rakyat playlist: https://www.youtube.com/playlist?list=PLxiPX8J3gm-ch1Kg70LSif9fGZrVpUq4M
@@ -14,6 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/i18n/LanguageContext";
+import { Link } from "wouter";
 import {
   ExternalLink,
   ListVideo,
@@ -24,7 +26,6 @@ import {
 const CHANNEL_URL = "https://www.youtube.com/@PARLIMENMALAYSIA1";
 const DEWAN_RAKYAT_PLAYLIST_ID = "PLxiPX8J3gm-ch1Kg70LSif9fGZrVpUq4M";
 const DEWAN_RAKYAT_PLAYLIST_URL = `https://www.youtube.com/playlist?list=${DEWAN_RAKYAT_PLAYLIST_ID}`;
-const LIVE_STREAM_URL = `${CHANNEL_URL}/live`;
 
 interface PlaylistLink {
   id: string;
@@ -89,11 +90,9 @@ export function ParliamentVideos() {
       </CardHeader>
 
       <CardContent className="space-y-4">
-        {/* Hero Link - Watch Live / Latest Session */}
-        <a
-          href={LIVE_STREAM_URL}
-          target="_blank"
-          rel="noopener noreferrer"
+        {/* Hero Link - Opens YouTube channel within MyParliament frame */}
+        <Link
+          href="/external/parliament-videos"
           className="group block relative w-full rounded-lg overflow-hidden bg-gradient-to-br from-red-950 via-red-900 to-red-800 aspect-video hover:shadow-lg transition-shadow"
           aria-label={t("parliamentVideos.watchLiveAriaLabel")}
         >
@@ -115,7 +114,7 @@ export function ParliamentVideos() {
             <Youtube className="h-4 w-4" />
             <span className="text-xs font-medium">PARLIMEN MALAYSIA</span>
           </div>
-        </a>
+        </Link>
 
         {/* Playlists Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -152,16 +151,10 @@ export function ParliamentVideos() {
             className="gap-2 text-xs"
             asChild
           >
-            <a
-              href={CHANNEL_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label={t("parliamentVideos.watchAllAriaLabel")}
-            >
+            <Link href="/external/parliament-videos">
               <Youtube className="h-3.5 w-3.5 text-red-600" />
               {t("parliamentVideos.watchAll")}
-              <ExternalLink className="h-3 w-3" />
-            </a>
+            </Link>
           </Button>
           <Button
             variant="outline"
