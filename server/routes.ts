@@ -7222,11 +7222,11 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       console.log(`✅ MP status updated successfully: ${mp.name}`);
 
       // Log the action
-      await logAudit(
-        getCurrentUsername(req),
+      logAudit(
+        req,
         'UPDATE_MP_STATUS',
         `Updated MP status for ${mp.name} (${mp.constituency})`,
-        { mpId, termEndDate, byElectionDate, byElectionNotes }
+        mpId
       );
 
       res.json({
@@ -7351,11 +7351,11 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       }
 
       // Log the action
-      await logAudit(
-        getCurrentUsername(req),
+      logAudit(
+        req,
         'CREATE_MP',
         `Created new MP: ${name} (${constituency}, ${parliamentCode})`,
-        { mpId: newMp.id, name, constituency, parliamentCode, replacesFormerMpId }
+        newMp.id
       );
 
       res.status(201).json({
@@ -7444,11 +7444,11 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         .returning();
 
       // Log the action
-      await logAudit(
-        getCurrentUsername(req),
+      logAudit(
+        req,
         'UPDATE_MP_DETAILS',
         `Updated MP details for ${mp.name} (${mp.constituency}): ${Object.keys(updateData).join(', ')}`,
-        { mpId: id, fieldsUpdated: Object.keys(updateData), previousValues: Object.fromEntries(Object.keys(updateData).map(k => [k, (mp as any)[k]])) }
+        id
       );
 
       res.json({
@@ -10009,12 +10009,11 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         }
       }
 
-      logAudit("mymp-import", username || "system", {
-        action: "batch_import",
-        successCount: results.success.length,
-        failedCount: results.failed.length,
-        skippedCount: results.skipped.length,
-      });
+      logAudit(
+        req,
+        'MYMP_IMPORT',
+        `Batch import: ${results.success.length} success, ${results.failed.length} failed, ${results.skipped.length} skipped`
+      );
 
       res.json({
         message: "MYMP data import completed",
@@ -10067,12 +10066,12 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
 
       await db.update(mps).set(updateData).where(eq(mps.id, id));
 
-      logAudit("mymp-update", username || "system", {
-        action: "update_single",
-        mpId: id,
-        mpName: mp.name,
-        fieldsUpdated: Object.keys(updateData),
-      });
+      logAudit(
+        req,
+        'MYMP_UPDATE',
+        `Updated MYMP data for ${mp.name}: ${Object.keys(updateData).join(', ')}`,
+        id
+      );
 
       res.json({
         success: true,
