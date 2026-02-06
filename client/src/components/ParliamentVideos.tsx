@@ -4,8 +4,8 @@
  * Parliament Videos Component
  *
  * Links to official Dewan Rakyat parliament videos from the PARLIMEN MALAYSIA YouTube channel.
- * The hero card opens the YouTube channel within the MyParliament frame (/external/parliament-videos).
- * Playlist links open directly on YouTube.
+ * YouTube blocks iframe embedding (X-Frame-Options: SAMEORIGIN), so all links open YouTube
+ * directly in a new tab.
  *
  * Source channel: https://www.youtube.com/@PARLIMENMALAYSIA1
  * Dewan Rakyat playlist: https://www.youtube.com/playlist?list=PLxiPX8J3gm-ch1Kg70LSif9fGZrVpUq4M
@@ -15,11 +15,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/i18n/LanguageContext";
-import { Link } from "wouter";
 import {
   ExternalLink,
   ListVideo,
-  Play,
   Youtube,
 } from "lucide-react";
 
@@ -90,32 +88,6 @@ export function ParliamentVideos() {
       </CardHeader>
 
       <CardContent className="space-y-4">
-        {/* Hero Link - Opens YouTube channel within MyParliament frame */}
-        <Link
-          href="/external/parliament-videos"
-          className="group block relative w-full rounded-lg overflow-hidden bg-gradient-to-br from-red-950 via-red-900 to-red-800 aspect-video hover:shadow-lg transition-shadow"
-          aria-label={t("parliamentVideos.watchLiveAriaLabel")}
-        >
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-white">
-            <div className="rounded-full bg-red-600 p-4 group-hover:bg-red-500 group-hover:scale-110 transition-all shadow-lg">
-              <Play className="h-8 w-8 fill-white" />
-            </div>
-            <div className="text-center px-4">
-              <p className="text-lg sm:text-xl font-bold">
-                {t("parliamentVideos.watchLive")}
-              </p>
-              <p className="text-sm text-red-200 mt-1">
-                {t("parliamentVideos.watchLiveSubtitle")}
-              </p>
-            </div>
-          </div>
-          {/* Subtle branding */}
-          <div className="absolute bottom-3 right-3 flex items-center gap-1.5 text-red-300/70">
-            <Youtube className="h-4 w-4" />
-            <span className="text-xs font-medium">PARLIMEN MALAYSIA</span>
-          </div>
-        </Link>
-
         {/* Playlists Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           {PLAYLISTS.map((playlist) => (
@@ -151,10 +123,16 @@ export function ParliamentVideos() {
             className="gap-2 text-xs"
             asChild
           >
-            <Link href="/external/parliament-videos">
+            <a
+              href={CHANNEL_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={t("parliamentVideos.watchAllAriaLabel")}
+            >
               <Youtube className="h-3.5 w-3.5 text-red-600" />
               {t("parliamentVideos.watchAll")}
-            </Link>
+              <ExternalLink className="h-3 w-3" />
+            </a>
           </Button>
           <Button
             variant="outline"
