@@ -7168,6 +7168,99 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
+  // Admin endpoint to edit/update an existing MP's details
+  app.patch("/api/admin/mps/:id", requireAdmin, mutationRateLimit, auditMiddleware('mp-update'), async (req, res) => {
+    try {
+      const { id } = req.params;
+
+      // Find the MP first
+      const [mp] = await db.select().from(mps).where(eq(mps.id, id)).limit(1);
+      if (!mp) {
+        return res.status(404).json({ error: "MP not found" });
+      }
+
+      // Validate and extract allowed fields
+      const {
+        name, party, parliamentCode, constituency, state, gender, title, role,
+        photoUrl, email, telephone, fax, mobileNumber, contactAddress, serviceAddress,
+        facebookUrl, instagramUrl, twitterUrl, tiktokUrl,
+        isMinister, isDeputyMinister, ministerialPosition,
+        mpAllowance, ministerSalary,
+        entertainmentAllowance, handphoneAllowance, computerAllowance,
+        dressWearAllowance, parliamentSittingAllowance,
+      } = req.body;
+
+      const updateData: Record<string, any> = {};
+
+      // Core fields
+      if (name !== undefined) updateData.name = name;
+      if (party !== undefined) updateData.party = party;
+      if (parliamentCode !== undefined) updateData.parliamentCode = parliamentCode;
+      if (constituency !== undefined) updateData.constituency = constituency;
+      if (state !== undefined) updateData.state = state;
+      if (gender !== undefined) updateData.gender = gender;
+      if (title !== undefined) updateData.title = title;
+      if (role !== undefined) updateData.role = role;
+
+      // Contact information
+      if (photoUrl !== undefined) updateData.photoUrl = photoUrl || null;
+      if (email !== undefined) updateData.email = email || null;
+      if (telephone !== undefined) updateData.telephone = telephone || null;
+      if (fax !== undefined) updateData.fax = fax || null;
+      if (mobileNumber !== undefined) updateData.mobileNumber = mobileNumber || null;
+      if (contactAddress !== undefined) updateData.contactAddress = contactAddress || null;
+      if (serviceAddress !== undefined) updateData.serviceAddress = serviceAddress || null;
+
+      // Social media
+      if (facebookUrl !== undefined) updateData.facebookUrl = facebookUrl || null;
+      if (instagramUrl !== undefined) updateData.instagramUrl = instagramUrl || null;
+      if (twitterUrl !== undefined) updateData.twitterUrl = twitterUrl || null;
+      if (tiktokUrl !== undefined) updateData.tiktokUrl = tiktokUrl || null;
+
+      // Ministerial status
+      if (isMinister !== undefined) updateData.isMinister = isMinister;
+      if (isDeputyMinister !== undefined) updateData.isDeputyMinister = isDeputyMinister;
+      if (ministerialPosition !== undefined) updateData.ministerialPosition = ministerialPosition || null;
+
+      // Allowances
+      if (mpAllowance !== undefined) updateData.mpAllowance = mpAllowance;
+      if (ministerSalary !== undefined) updateData.ministerSalary = ministerSalary;
+      if (entertainmentAllowance !== undefined) updateData.entertainmentAllowance = entertainmentAllowance;
+      if (handphoneAllowance !== undefined) updateData.handphoneAllowance = handphoneAllowance;
+      if (computerAllowance !== undefined) updateData.computerAllowance = computerAllowance;
+      if (dressWearAllowance !== undefined) updateData.dressWearAllowance = dressWearAllowance;
+      if (parliamentSittingAllowance !== undefined) updateData.parliamentSittingAllowance = parliamentSittingAllowance;
+
+      if (Object.keys(updateData).length === 0) {
+        return res.status(400).json({ error: "No valid fields provided for update" });
+      }
+
+      console.log(`📝 Updating MP details for ${mp.name} (${mp.constituency}): ${Object.keys(updateData).join(', ')}`);
+
+      const [updated] = await db.update(mps)
+        .set(updateData)
+        .where(eq(mps.id, id))
+        .returning();
+
+      // Log the action
+      await logAudit(
+        getCurrentUsername(req),
+        'UPDATE_MP_DETAILS',
+        `Updated MP details for ${mp.name} (${mp.constituency}): ${Object.keys(updateData).join(', ')}`,
+        { mpId: id, fieldsUpdated: Object.keys(updateData), previousValues: Object.fromEntries(Object.keys(updateData).map(k => [k, (mp as any)[k]])) }
+      );
+
+      res.json({
+        message: "MP details updated successfully",
+        mp: updated
+      });
+
+    } catch (error) {
+      console.error("Error updating MP details:", error);
+      res.status(500).json({ error: "Failed to update MP details", details: String(error) });
+    }
+  });
+
   // ======================
   // Blog Posts API
   // ======================
