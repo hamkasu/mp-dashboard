@@ -260,6 +260,49 @@ export class HansardPdfParser {
       .replace(/\s+/g, ' ');
   }
 
+  /**
+   * Extract constituency names from a section of the Hansard attendance list.
+   * Uses entry-based parsing: splits on numbered entries (e.g., "1.", "2."),
+   * then extracts the LAST parenthetical from each entry (the constituency).
+   * This is resilient to page headers embedded mid-entry by PDF extraction.
+   */
+  private extractConstituenciesFromSection(section: string, excludeSpeaker: boolean = false): string[] {
+    const constituencies: string[] = [];
+
+    // Clean PDF artifacts (page headers, smart quotes, line breaks)
+    const cleaned = this.cleanSectionText(section);
+
+    // Remove Yang di-Pertua Dewan Rakyat (Speaker presides, not attending as MP)
+    const text = excludeSpeaker
+      ? cleaned.replace(/\d+\.\s*Yang di-Pertua Dewan Rakyat[^)]*\([^)]+\)/gi, '')
+      : cleaned;
+
+    // Split into individual numbered entries: "1. ...", "2. ...", etc.
+    const entries = text.split(/(?=\d+\.\s+)/);
+
+    for (const entry of entries) {
+      if (!entry.trim() || !/^\d+\./.test(entry.trim())) continue;
+
+      // Find ALL parenthetical groups in this entry using permissive [^)]+
+      // This handles page headers embedded inside parens (digits, colons, etc.)
+      const parens = [...entry.matchAll(/\(([^)]+)\)/g)];
+      if (parens.length === 0) continue;
+
+      // The LAST parenthetical is the constituency
+      // (earlier ones may be ministerial portfolios like "(Undang-Undang dan Reformasi Institusi)")
+      const rawConstituency = parens[parens.length - 1][1]
+        .replace(/\s+/g, ' ')
+        .trim();
+
+      // Validate: must start with a letter and be a plausible constituency name
+      if (rawConstituency && /^[A-Za-z]/.test(rawConstituency) && !constituencies.includes(rawConstituency)) {
+        constituencies.push(rawConstituency);
+      }
+    }
+
+    return constituencies;
+  }
+
   private parseAttendance(text: string): AttendanceData {
     const attendedConstituencies: string[] = [];
     const absentConstituencies: string[] = [];
@@ -276,27 +319,7 @@ export class HansardPdfParser {
           : Number.MAX_SAFE_INTEGER
       );
       const rawAttendedSection = text.substring(attendedStart, attendedEnd === Number.MAX_SAFE_INTEGER ? undefined : attendedEnd);
-
-      // Clean PDF artifacts (page headers, smart quotes, line breaks) so
-      // constituency names that span page boundaries are not broken
-      const attendedSection = this.cleanSectionText(rawAttendedSection);
-
-      // Remove Yang di-Pertua Dewan Rakyat (Speaker of the House) entry —
-      // the Speaker is presiding, not attending as a regular MP
-      const cleanedAttendedSection = attendedSection.replace(
-        /\d+\.\s*Yang di-Pertua Dewan Rakyat[^)]*\([^)]+\)/gi, ''
-      );
-
-      // Extract constituencies from entries like "Menteri..., Datuk ... (Constituency)"
-      // Flexible regex to handle: multi-word names, hyphens, apostrophes, mixed case
-      const constituencyRegex = /\(([A-Za-z][A-Za-z\s\-'\.]+?)\)/g;
-      let match;
-      while ((match = constituencyRegex.exec(cleanedAttendedSection)) !== null) {
-        const constituency = match[1].trim();
-        if (constituency && !attendedConstituencies.includes(constituency)) {
-          attendedConstituencies.push(constituency);
-        }
-      }
+      attendedConstituencies.push(...this.extractConstituenciesFromSection(rawAttendedSection, true));
     }
 
     // Find "Ahli-Ahli Yang Tidak Hadir" section
@@ -314,19 +337,7 @@ export class HansardPdfParser {
           : Number.MAX_SAFE_INTEGER
       );
       const rawAbsentSection = text.substring(absentStart, absentEnd === Number.MAX_SAFE_INTEGER ? undefined : absentEnd);
-
-      // Clean PDF artifacts before regex extraction
-      const absentSection = this.cleanSectionText(rawAbsentSection);
-
-      // Flexible regex to handle: multi-word names, hyphens, apostrophes, mixed case
-      const constituencyRegex = /\(([A-Za-z][A-Za-z\s\-'\.]+?)\)/g;
-      let match;
-      while ((match = constituencyRegex.exec(absentSection)) !== null) {
-        const constituency = match[1].trim();
-        if (constituency && !absentConstituencies.includes(constituency)) {
-          absentConstituencies.push(constituency);
-        }
-      }
+      absentConstituencies.push(...this.extractConstituenciesFromSection(rawAbsentSection));
     }
 
     // Match constituencies to MP IDs
