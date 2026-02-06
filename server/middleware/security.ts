@@ -312,7 +312,7 @@ export function auditLog(
     method: req.method,
     path: req.path,
     ip: req.ip || req.socket?.remoteAddress || 'unknown',
-    userAgent: req.headers['user-agent'] || 'unknown',
+    userAgent: req.headers?.['user-agent'] || 'unknown',
     success,
     errorMessage,
   };
