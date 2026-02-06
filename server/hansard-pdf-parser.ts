@@ -308,14 +308,28 @@ export class HansardPdfParser {
     const absentConstituencies: string[] = [];
 
     // Find "Ahli-Ahli Yang Hadir" section
-    const attendedStart = text.indexOf('Ahli-Ahli Yang Hadir:');
-    if (attendedStart !== -1) {
+    const headerPos = text.indexOf('Ahli-Ahli Yang Hadir:');
+    if (headerPos !== -1) {
+      // PDF text extraction can place header text AFTER body entries from the same page.
+      // E.g., entries 1-37 may appear BEFORE "Ahli-Ahli Yang Hadir:" in the extracted text,
+      // with entries 38+ appearing after it. We need to scan backwards to find entries
+      // that precede the header.
+      let attendedStart = headerPos;
+      const lookbackSize = 20000; // generous lookback for page 1 entries
+      const textBefore = text.substring(Math.max(0, headerPos - lookbackSize), headerPos);
+      // Find the first numbered entry (e.g., "1. Yang di-Pertua..." or "1. Perdana Menteri...")
+      const firstEntryMatch = textBefore.match(/\b1\.\s+(?:Yang di-Pertua|Perdana|Menteri|Dato|Datuk|Tuan|Puan)/);
+      if (firstEntryMatch && firstEntryMatch.index !== undefined) {
+        attendedStart = Math.max(0, headerPos - lookbackSize) + firstEntryMatch.index;
+        console.log(`📄 Attendance section: found ${headerPos - attendedStart} chars of entries before header (PDF extraction order issue)`);
+      }
+
       const attendedEnd = Math.min(
-        text.indexOf('Senator Yang Turut Hadir:', attendedStart) !== -1
-          ? text.indexOf('Senator Yang Turut Hadir:', attendedStart)
+        text.indexOf('Senator Yang Turut Hadir:', headerPos) !== -1
+          ? text.indexOf('Senator Yang Turut Hadir:', headerPos)
           : Number.MAX_SAFE_INTEGER,
-        text.indexOf('Ahli-Ahli Yang Tidak Hadir:', attendedStart) !== -1
-          ? text.indexOf('Ahli-Ahli Yang Tidak Hadir:', attendedStart)
+        text.indexOf('Ahli-Ahli Yang Tidak Hadir:', headerPos) !== -1
+          ? text.indexOf('Ahli-Ahli Yang Tidak Hadir:', headerPos)
           : Number.MAX_SAFE_INTEGER
       );
       const rawAttendedSection = text.substring(attendedStart, attendedEnd === Number.MAX_SAFE_INTEGER ? undefined : attendedEnd);
