@@ -769,6 +769,21 @@ export const translations = {
       networkError: "Network error. Please check your connection.",
     },
 
+    // Parliament Videos
+    parliamentVideos: {
+      title: "Parliament Videos",
+      subtitle: "Watch official Dewan Rakyat sessions from the Parliament of Malaysia YouTube channel",
+      live: "LIVE",
+      lastUpdated: "Updated",
+      watchAll: "Watch all sessions on YouTube",
+      fullPlaylist: "Dewan Rakyat Full Sessions Playlist",
+      source: "Source: PARLIMEN MALAYSIA YouTube (Official Parliament Channel, parlimen.gov.my)",
+      videoAriaLabel: "Parliament session video",
+      selectVideo: "Select video",
+      watchAllAriaLabel: "Watch all Dewan Rakyat sessions on the official YouTube channel",
+      fullPlaylistAriaLabel: "View the full Dewan Rakyat sessions playlist on YouTube",
+    },
+
     // Bills to Watch
     billsToWatch: {
       title: "Bills to Watch",
@@ -1543,6 +1558,21 @@ export const translations = {
       unauthorized: "Akses tidak dibenarkan",
       serverError: "Ralat pelayan",
       networkError: "Ralat rangkaian. Sila semak sambungan anda.",
+    },
+
+    // Parliament Videos
+    parliamentVideos: {
+      title: "Video Parlimen",
+      subtitle: "Tonton sesi rasmi Dewan Rakyat dari saluran YouTube Parlimen Malaysia",
+      live: "LANGSUNG",
+      lastUpdated: "Dikemas kini",
+      watchAll: "Tonton semua sesi di YouTube",
+      fullPlaylist: "Senarai Main Sesi Penuh Dewan Rakyat",
+      source: "Sumber: YouTube PARLIMEN MALAYSIA (Saluran Rasmi Parlimen, parlimen.gov.my)",
+      videoAriaLabel: "Video sesi parlimen",
+      selectVideo: "Pilih video",
+      watchAllAriaLabel: "Tonton semua sesi Dewan Rakyat di saluran YouTube rasmi",
+      fullPlaylistAriaLabel: "Lihat senarai main penuh sesi Dewan Rakyat di YouTube",
     },
 
     // Bills to Watch
