@@ -256,12 +256,18 @@ export class HansardPdfParser {
           : Number.MAX_SAFE_INTEGER
       );
       const attendedSection = text.substring(attendedStart, attendedEnd === Number.MAX_SAFE_INTEGER ? undefined : attendedEnd);
-      
+
+      // Remove Yang di-Pertua Dewan Rakyat (Speaker of the House) entry —
+      // the Speaker is presiding, not attending as a regular MP
+      const cleanedAttendedSection = attendedSection.replace(
+        /\d+\.\s*Yang di-Pertua Dewan Rakyat[^)]*\([^)]+\)/gi, ''
+      );
+
       // Extract constituencies from entries like "Menteri..., Datuk ... (Constituency)"
       // Flexible regex to handle: multi-word names, hyphens, apostrophes, mixed case
       const constituencyRegex = /\(([A-Za-z][A-Za-z\s\-'\.]+?)\)/g;
       let match;
-      while ((match = constituencyRegex.exec(attendedSection)) !== null) {
+      while ((match = constituencyRegex.exec(cleanedAttendedSection)) !== null) {
         const constituency = match[1].trim();
         if (constituency && !attendedConstituencies.includes(constituency)) {
           attendedConstituencies.push(constituency);
