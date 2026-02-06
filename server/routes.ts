@@ -5475,6 +5475,92 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
+  // Debug endpoint: inspect raw PDF text and parser results for a specific Hansard session
+  app.get("/api/admin/debug-attendance/:sessionNumber", requireAdmin, async (req, res) => {
+    try {
+      const { sessionNumber } = req.params;
+
+      // Find the Hansard record
+      const [record] = await db.select().from(hansardRecords)
+        .where(eq(hansardRecords.sessionNumber, sessionNumber))
+        .limit(1);
+
+      if (!record) {
+        return res.status(404).json({ error: `No record found for session ${sessionNumber}` });
+      }
+
+      // Get the PDF
+      const [pdfFile] = await db.select().from(hansardPdfFiles)
+        .where(eq(hansardPdfFiles.hansardRecordId, record.id))
+        .limit(1);
+
+      if (!pdfFile?.pdfData) {
+        return res.status(404).json({ error: "No PDF file available for this session" });
+      }
+
+      // Extract raw text
+      const { PDFParse } = await import('pdf-parse');
+      const parser = new PDFParse({ data: pdfFile.pdfData });
+      const result = await parser.getText();
+      const fullText = result.text;
+
+      // Find the "Ahli-Ahli Yang Hadir" section boundaries
+      const attendedStart = fullText.indexOf('Ahli-Ahli Yang Hadir:');
+      const senatorStart = fullText.indexOf('Senator Yang Turut Hadir:', attendedStart !== -1 ? attendedStart : 0);
+      const absentStart = fullText.indexOf('Ahli-Ahli Yang Tidak Hadir:', attendedStart !== -1 ? attendedStart : 0);
+
+      let attendedEnd = Number.MAX_SAFE_INTEGER;
+      if (senatorStart !== -1) attendedEnd = Math.min(attendedEnd, senatorStart);
+      if (absentStart !== -1) attendedEnd = Math.min(attendedEnd, absentStart);
+
+      const rawAttendedSection = attendedStart !== -1
+        ? fullText.substring(attendedStart, attendedEnd === Number.MAX_SAFE_INTEGER ? undefined : attendedEnd)
+        : '';
+
+      // Count numbered entries in the raw text
+      const numberedEntries = rawAttendedSection.match(/\d+\.\s+/g);
+
+      // Re-parse using the actual parser
+      const allMps = await db.select().from(mps);
+      const pdfParser = new HansardPdfParser(allMps);
+      const parsed = await pdfParser.parseHansardPdf(pdfFile.pdfData, pdfFile.originalFilename);
+
+      // DB stored values
+      const storedAttendedMpIds = (record.attendedMpIds || []) as string[];
+      const storedAbsentMpIds = (record.absentMpIds || []) as string[];
+
+      res.json({
+        sessionNumber: record.sessionNumber,
+        sessionDate: record.sessionDate,
+        // Raw text analysis
+        rawTextLength: fullText.length,
+        attendedSectionFound: attendedStart !== -1,
+        attendedSectionLength: rawAttendedSection.length,
+        numberedEntriesInRawText: numberedEntries?.length || 0,
+        // First 500 chars of attended section (for debugging)
+        attendedSectionPreview: rawAttendedSection.substring(0, 500),
+        // Last 500 chars of attended section
+        attendedSectionTail: rawAttendedSection.substring(Math.max(0, rawAttendedSection.length - 500)),
+        // Parser results
+        parsedAttendedConstituencies: parsed.attendance.attendedConstituencies,
+        parsedAttendedCount: parsed.attendance.attendedConstituencies.length,
+        parsedAbsentConstituencies: parsed.attendance.absentConstituencies,
+        parsedAbsentCount: parsed.attendance.absentConstituencies.length,
+        parsedAttendedMpIds: parsed.attendance.attendedMpIds.length,
+        parsedAbsentMpIds: parsed.attendance.absentMpIds.length,
+        speakerStatsConstituenciesAttended: parsed.speakerStats.constituenciesAttended,
+        // DB stored values
+        dbConstituenciesPresent: record.constituenciesPresent,
+        dbConstituenciesAbsent: record.constituenciesAbsent,
+        dbAttendedMpIdsCount: storedAttendedMpIds.length,
+        dbAbsentMpIdsCount: storedAbsentMpIds.length,
+      });
+    } catch (error) {
+      console.error("Error in debug-attendance:", error);
+      res.status(500).json({ error: String(error) });
+    }
+  });
+
   // Constituency Attendance Audit - Get detailed attendance for a specific constituency
   app.get("/api/admin/constituency-attendance-audit", requireAdmin, async (req, res) => {
     try {
