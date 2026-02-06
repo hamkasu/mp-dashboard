@@ -648,7 +648,13 @@ export default function HansardAdmin() {
       return await res.json();
     },
     onSuccess: (data: any) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/hansard-records"] });
+      // Invalidate all hansard-related queries, including /search with various params
+      queryClient.invalidateQueries({
+        predicate: (query) => {
+          const key = query.queryKey[0];
+          return typeof key === 'string' && key.startsWith('/api/hansard-records');
+        }
+      });
       queryClient.invalidateQueries({ queryKey: ["/api/mps"] });
       queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
       toast({
