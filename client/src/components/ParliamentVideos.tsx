@@ -3,9 +3,8 @@
  *
  * Parliament Videos Component
  *
- * Displays official Dewan Rakyat parliament videos from the PARLIMEN MALAYSIA YouTube channel.
- * Uses privacy-enhanced mode (youtube-nocookie.com) for embedding.
- * Embeds the official Dewan Rakyat playlist which auto-shows latest session videos.
+ * Links to official Dewan Rakyat parliament videos from the PARLIMEN MALAYSIA YouTube channel.
+ * Uses direct links to YouTube (embedding is disabled by the channel).
  *
  * Source channel: https://www.youtube.com/@PARLIMENMALAYSIA1
  * Dewan Rakyat playlist: https://www.youtube.com/playlist?list=PLxiPX8J3gm-ch1Kg70LSif9fGZrVpUq4M
@@ -18,15 +17,59 @@ import { useLanguage } from "@/i18n/LanguageContext";
 import {
   ExternalLink,
   ListVideo,
+  Play,
   Youtube,
 } from "lucide-react";
 
 const CHANNEL_URL = "https://www.youtube.com/@PARLIMENMALAYSIA1";
 const DEWAN_RAKYAT_PLAYLIST_ID = "PLxiPX8J3gm-ch1Kg70LSif9fGZrVpUq4M";
 const DEWAN_RAKYAT_PLAYLIST_URL = `https://www.youtube.com/playlist?list=${DEWAN_RAKYAT_PLAYLIST_ID}`;
+const LIVE_STREAM_URL = `${CHANNEL_URL}/live`;
+
+interface PlaylistLink {
+  id: string;
+  playlistId: string;
+  titleEn: string;
+  titleMs: string;
+  countLabel: string;
+}
+
+// ============================================================================
+// PLAYLIST DATA - Edit this section to add/remove featured playlists
+// ============================================================================
+const PLAYLISTS: PlaylistLink[] = [
+  {
+    id: "dewan-rakyat",
+    playlistId: "PLxiPX8J3gm-ch1Kg70LSif9fGZrVpUq4M",
+    titleEn: "Dewan Rakyat Sessions",
+    titleMs: "Sesi Dewan Rakyat",
+    countLabel: "929+",
+  },
+  {
+    id: "dewan-negara",
+    playlistId: "PLxiPX8J3gm-e85RFD5qFoJPe36MJhfrep",
+    titleEn: "Dewan Negara Sessions",
+    titleMs: "Sesi Dewan Negara",
+    countLabel: "300+",
+  },
+  {
+    id: "sidang-media",
+    playlistId: "PLxiPX8J3gm-fKhyF0hUBANoFRAFRDkUa1",
+    titleEn: "Media Sessions (DR & DN)",
+    titleMs: "Sidang Media (DR & DN)",
+    countLabel: "200+",
+  },
+  {
+    id: "kamar-khas",
+    playlistId: "PLxiPX8J3gm-edN3c7jPMFOB6MzPNm7hAb",
+    titleEn: "Kamar Khas (Special Chamber)",
+    titleMs: "Kamar Khas",
+    countLabel: "100+",
+  },
+];
 
 export function ParliamentVideos() {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
 
   return (
     <Card className="overflow-hidden border-red-200/50 dark:border-red-900/30">
@@ -37,7 +80,7 @@ export function ParliamentVideos() {
             {t("parliamentVideos.title")}
           </CardTitle>
           <Badge variant="secondary" className="text-xs">
-            929+ {t("parliamentVideos.videos")}
+            2,700+ {t("parliamentVideos.videos")}
           </Badge>
         </div>
         <p className="text-sm text-muted-foreground">
@@ -46,25 +89,60 @@ export function ParliamentVideos() {
       </CardHeader>
 
       <CardContent className="space-y-4">
-        {/* Embedded Playlist Player - auto-shows latest videos from official playlist */}
-        <section aria-label={t("parliamentVideos.title")}>
-          <figure>
-            <div className="relative w-full rounded-lg overflow-hidden bg-black aspect-video">
-              <iframe
-                src={`https://www.youtube-nocookie.com/embed/videoseries?list=${DEWAN_RAKYAT_PLAYLIST_ID}&rel=0&modestbranding=1`}
-                title={t("parliamentVideos.playlistEmbedTitle")}
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-                className="absolute inset-0 w-full h-full"
-                loading="lazy"
-                aria-label={t("parliamentVideos.videoAriaLabel")}
-              />
+        {/* Hero Link - Watch Live / Latest Session */}
+        <a
+          href={LIVE_STREAM_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="group block relative w-full rounded-lg overflow-hidden bg-gradient-to-br from-red-950 via-red-900 to-red-800 aspect-video hover:shadow-lg transition-shadow"
+          aria-label={t("parliamentVideos.watchLiveAriaLabel")}
+        >
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-white">
+            <div className="rounded-full bg-red-600 p-4 group-hover:bg-red-500 group-hover:scale-110 transition-all shadow-lg">
+              <Play className="h-8 w-8 fill-white" />
             </div>
-            <figcaption className="mt-2 text-xs text-muted-foreground">
-              {t("parliamentVideos.playlistCaption")}
-            </figcaption>
-          </figure>
-        </section>
+            <div className="text-center px-4">
+              <p className="text-lg sm:text-xl font-bold">
+                {t("parliamentVideos.watchLive")}
+              </p>
+              <p className="text-sm text-red-200 mt-1">
+                {t("parliamentVideos.watchLiveSubtitle")}
+              </p>
+            </div>
+          </div>
+          {/* Subtle branding */}
+          <div className="absolute bottom-3 right-3 flex items-center gap-1.5 text-red-300/70">
+            <Youtube className="h-4 w-4" />
+            <span className="text-xs font-medium">PARLIMEN MALAYSIA</span>
+          </div>
+        </a>
+
+        {/* Playlists Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          {PLAYLISTS.map((playlist) => (
+            <a
+              key={playlist.id}
+              href={`https://www.youtube.com/playlist?list=${playlist.playlistId}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-3 rounded-md border p-3 hover:bg-accent/50 transition-colors group"
+              aria-label={language === "ms" ? playlist.titleMs : playlist.titleEn}
+            >
+              <div className="shrink-0 rounded-md bg-red-100 dark:bg-red-950/50 p-2 text-red-600 group-hover:bg-red-200 dark:group-hover:bg-red-900/50 transition-colors">
+                <ListVideo className="h-4 w-4" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium leading-tight truncate">
+                  {language === "ms" ? playlist.titleMs : playlist.titleEn}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {playlist.countLabel} {t("parliamentVideos.videos")}
+                </p>
+              </div>
+              <ExternalLink className="h-3.5 w-3.5 shrink-0 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+            </a>
+          ))}
+        </div>
 
         {/* Action Links */}
         <div className="flex flex-col sm:flex-row gap-2">
