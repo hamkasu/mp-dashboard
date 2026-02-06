@@ -140,6 +140,7 @@ export async function aggregateAttendanceForAllMps(): Promise<{
     totalParliamentDays: number;
     mpName: string;
     swornInDate: Date;
+    termEndDate: Date | null;
   }>();
 
   allMps.forEach(mp => {
@@ -147,7 +148,8 @@ export async function aggregateAttendanceForAllMps(): Promise<{
       daysAttended: 0,
       totalParliamentDays: 0,
       mpName: mp.name,
-      swornInDate: new Date(mp.swornInDate)
+      swornInDate: new Date(mp.swornInDate),
+      termEndDate: mp.termEndDate ? new Date(mp.termEndDate) : null
     });
   });
 
@@ -160,12 +162,16 @@ export async function aggregateAttendanceForAllMps(): Promise<{
     const absentSet = new Set(absentMpIds);
     
     // Check if this record has attendance data recorded
-    const hasAttendanceData = attendedMpIds.length > 0;
+    // Must check both lists: a session could have only absent MPs recorded
+    // (e.g., if the "Hadir" section was missing from the PDF but "Tidak Hadir" was found)
+    const hasAttendanceData = attendedMpIds.length > 0 || absentMpIds.length > 0;
 
     // For each MP, check if they were sworn in before this session
     for (const [mpId, mpData] of Array.from(mpAttendanceData.entries())) {
-      // Only count sessions after MP was sworn in
-      if (sessionDate >= mpData.swornInDate) {
+      // Only count sessions while MP was actively serving
+      // (after sworn in and before term ended, if applicable)
+      if (sessionDate >= mpData.swornInDate &&
+          (mpData.termEndDate === null || sessionDate <= mpData.termEndDate)) {
         // Count this as a parliament day for this MP (all Hansard records = parliament sitting days)
         mpData.totalParliamentDays++;
 

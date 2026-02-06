@@ -303,11 +303,14 @@ export class HansardPdfParser {
       ))
       .map(mp => mp.id);
 
+    const attendedSet = new Set(attendedMpIds);
     const absentMpIds = this.allMps
-      .filter(mp => absentConstituencies.some(c => 
+      .filter(mp => absentConstituencies.some(c =>
         this.normalizeConstituency(c) === this.normalizeConstituency(mp.constituency)
       ))
-      .map(mp => mp.id);
+      .map(mp => mp.id)
+      // Remove any MP that also appears in the attended list (PDF parsing overlap)
+      .filter(id => !attendedSet.has(id));
 
     // Find unmatched constituencies for debugging
     const unmatchedAttended = attendedConstituencies.filter(c => 
@@ -317,11 +320,19 @@ export class HansardPdfParser {
       !this.allMps.some(mp => this.normalizeConstituency(c) === this.normalizeConstituency(mp.constituency))
     );
 
+    // Detect overlap between attended and absent constituency lists from PDF
+    const overlappingConstituencies = attendedConstituencies.filter(c =>
+      absentConstituencies.some(a => this.normalizeConstituency(c) === this.normalizeConstituency(a))
+    );
+
     console.log(`📊 Attendance parsed:`);
     console.log(`   - Found ${attendedConstituencies.length} attended constituencies`);
     console.log(`   - Found ${absentConstituencies.length} absent constituencies`);
     console.log(`   - Matched ${attendedMpIds.length} attended MPs`);
     console.log(`   - Matched ${absentMpIds.length} absent MPs`);
+    if (overlappingConstituencies.length > 0) {
+      console.log(`   - ⚠️ Overlap detected (resolved to attended): ${overlappingConstituencies.join(', ')}`);
+    }
     if (unmatchedAttended.length > 0) {
       console.log(`   - ⚠️ Unmatched attended constituencies: ${unmatchedAttended.slice(0, 10).join(', ')}${unmatchedAttended.length > 10 ? '...' : ''}`);
     }
