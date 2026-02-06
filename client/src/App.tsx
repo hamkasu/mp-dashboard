@@ -51,6 +51,7 @@ const AIAgentsAdmin = lazy(() => import("@/pages/AIAgentsAdmin"));
 const MA63Dashboard = lazy(() => import("@/pages/MA63Dashboard"));
 const MYMPImportAdmin = lazy(() => import("@/pages/MYMPImportAdmin"));
 const FeedbackAdmin = lazy(() => import("@/pages/FeedbackAdmin"));
+const VisitorDataAdmin = lazy(() => import("@/pages/VisitorDataAdmin"));
 const ExternalFrame = lazy(() => import("@/pages/ExternalFrame"));
 
 // Loading component
@@ -106,6 +107,7 @@ function Router() {
         <Route path="/ai-agents-admin" component={AIAgentsAdmin} />
         <Route path="/mymp-import-admin" component={MYMPImportAdmin} />
         <Route path="/feedback-admin" component={FeedbackAdmin} />
+        <Route path="/visitor-data-admin" component={VisitorDataAdmin} />
         <Route path="/external/:site" component={ExternalFrame} />
         <Route component={NotFound} />
       </Switch>
