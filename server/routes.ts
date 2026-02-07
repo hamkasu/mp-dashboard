@@ -10116,5 +10116,55 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
+  // ============================================================================
+  // Bills to Watch API endpoints
+  // ============================================================================
+
+  // Get all bills to watch (public)
+  app.get("/api/bills-to-watch", async (_req, res) => {
+    try {
+      const { getBillsToWatch, getLastRefreshTime } = await import("./bills-to-watch-cron");
+      const billsData = await getBillsToWatch();
+      const lastRefresh = await getLastRefreshTime();
+
+      res.json({
+        bills: billsData,
+        lastRefresh,
+      });
+    } catch (error: any) {
+      console.error("Error fetching bills to watch:", error);
+      res.status(500).json({ error: "Failed to fetch bills to watch", details: error.message });
+    }
+  });
+
+  // Get last refresh time for bills to watch (admin)
+  app.get("/api/admin/bills-to-watch/last-refresh", requireAdmin, async (_req, res) => {
+    try {
+      const { getLastRefreshTime } = await import("./bills-to-watch-cron");
+      const lastRefresh = await getLastRefreshTime();
+      res.json({ lastRefresh });
+    } catch (error: any) {
+      console.error("Error fetching last refresh time:", error);
+      res.status(500).json({ error: "Failed to fetch last refresh time" });
+    }
+  });
+
+  // Manually trigger bills-to-watch refresh (admin)
+  app.post("/api/admin/bills-to-watch/refresh", requireAdmin, async (_req, res) => {
+    try {
+      const { refreshBillsToWatch } = await import("./bills-to-watch-cron");
+      const result = await refreshBillsToWatch();
+
+      res.json({
+        success: true,
+        message: "Bills to Watch refreshed successfully",
+        ...result,
+      });
+    } catch (error: any) {
+      console.error("Error refreshing bills to watch:", error);
+      res.status(500).json({ error: "Failed to refresh bills to watch", details: error.message });
+    }
+  });
+
   // Server is now passed in from index.ts, no need to create it here
 }

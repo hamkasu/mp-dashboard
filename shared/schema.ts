@@ -1662,3 +1662,32 @@ export type PollWithResults = Poll & {
   hasVoted?: boolean;
   userVotedOptionId?: string;
 };
+
+// Bills to Watch table - curated key legislation for the homepage card
+export const billsToWatch = pgTable("bills_to_watch", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  titleEn: text("title_en").notNull(),
+  titleMs: text("title_ms").notNull(),
+  billNumber: text("bill_number"),
+  status: text("status").notNull().default("pending"),
+  summaryEn: text("summary_en").notNull(),
+  summaryMs: text("summary_ms").notNull(),
+  detailsEn: text("details_en"),
+  detailsMs: text("details_ms"),
+  isFeatured: boolean("is_featured").notNull().default(false),
+  icon: text("icon").notNull().default("scroll"),
+  tags: jsonb("tags").$type<string[]>().default(sql`'[]'::jsonb`),
+  sourceUrl: text("source_url"),
+  sortOrder: integer("sort_order").notNull().default(0),
+  createdAt: timestamp("created_at").notNull().default(sql`NOW()`),
+  updatedAt: timestamp("updated_at").notNull().default(sql`NOW()`),
+});
+
+export const insertBillToWatchSchema = createInsertSchema(billsToWatch).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertBillToWatch = z.infer<typeof insertBillToWatchSchema>;
+export type BillToWatch = typeof billsToWatch.$inferSelect;
