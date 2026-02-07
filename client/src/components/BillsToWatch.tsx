@@ -4,19 +4,16 @@
  * Bills to Watch Component
  *
  * A dynamic section highlighting pending/controversial bills in Malaysian Parliament.
- *
- * To update bill data:
- * 1. Edit the BILLS_DATA array below
- * 2. Each bill has: id, titleEn, titleMs, status, summaryEn, summaryMs, isFeatured, icon, tags
- * 3. The featured bill (isFeatured: true) appears prominently at the top
- * 4. Update LAST_UPDATED when making changes
+ * Data is fetched from the API and refreshed daily via cron job.
  */
 
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useLanguage } from "@/i18n/LanguageContext";
 import {
   ScrollText,
@@ -35,124 +32,31 @@ import {
 } from "lucide-react";
 import { Link } from "wouter";
 
-// Last updated date - change this when updating bill data
-const LAST_UPDATED = "February 2026";
-
 // Bill status types
 type BillStatus = "drafting" | "consultation" | "tabled" | "committee" | "pending" | "passed";
 
-interface Bill {
+interface BillToWatch {
   id: string;
   titleEn: string;
   titleMs: string;
-  billNumber?: string;
-  status: BillStatus;
+  billNumber?: string | null;
+  status: string;
   summaryEn: string;
   summaryMs: string;
-  detailsEn?: string;
-  detailsMs?: string;
-  isFeatured?: boolean;
-  icon: "scale" | "shield" | "search" | "building" | "book" | "scroll" | "users";
+  detailsEn?: string | null;
+  detailsMs?: string | null;
+  isFeatured: boolean;
+  icon: string;
   tags: string[];
-  sourceUrl?: string;
+  sourceUrl?: string | null;
+  sortOrder: number;
+  updatedAt: string;
 }
 
-// ============================================================================
-// BILL DATA - Edit this section to update bills
-// ============================================================================
-const BILLS_DATA: Bill[] = [
-  {
-    id: "political-financing",
-    titleEn: "Political Financing Bill",
-    titleMs: "RUU Pembiayaan Politik",
-    status: "drafting",
-    isFeatured: true,
-    icon: "scale",
-    tags: ["Reform", "Anti-Corruption", "High Priority"],
-    summaryEn: "Landmark reform to regulate party funding, curb money politics, and increase transparency in political donations.",
-    summaryMs: "Pembaharuan penting untuk mengawal selia pembiayaan parti, membendung politik wang, dan meningkatkan ketelusan dalam derma politik.",
-    detailsEn: `20+ stakeholder sessions completed by BHEUU. Public perception study (IIUM-led) ends late Feb 2026.
-
-Key proposals:
-• Mandatory public disclosure of party finances
-• Donation caps: RM50k/individual, RM100k/company, RM500k/large groups
-• Protect small donor anonymity (disclose donations >RM10k only)
-• Possible public funding for parties
-• Restrictions to end "donations-for-contracts" perception
-
-Opposition raises concerns about enforcement and fear-of-reprisal for donors.`,
-    detailsMs: `20+ sesi pemegang taruh telah selesai oleh BHEUU. Kajian persepsi awam (diketuai IIUM) berakhir akhir Feb 2026.
-
-Cadangan utama:
-• Pendedahan mandatori kewangan parti kepada awam
-• Had derma: RM50k/individu, RM100k/syarikat, RM500k/kumpulan besar
-• Lindungi kerahsiaan penderma kecil (dedahkan derma >RM10k sahaja)
-• Kemungkinan pembiayaan awam untuk parti
-• Sekatan untuk menamatkan persepsi "derma-untuk-kontrak"
-
-Pembangkang membangkitkan kebimbangan mengenai penguatkuasaan dan ketakutan pembalasan terhadap penderma.`,
-  },
-  {
-    id: "pm-term-limit",
-    titleEn: "Prime Minister Term Limit Bill",
-    titleMs: "RUU Had Penggal Perdana Menteri",
-    status: "consultation",
-    icon: "shield",
-    tags: ["Constitutional", "Reform"],
-    summaryEn: "Constitutional amendment to limit PM tenure to 2 terms or maximum 10 years. High reform priority; politically sensitive due to power dynamics.",
-    summaryMs: "Pindaan perlembagaan untuk mengehadkan tempoh PM kepada 2 penggal atau maksimum 10 tahun. Keutamaan pembaharuan tinggi; sensitif politik kerana dinamik kuasa.",
-  },
-  {
-    id: "ag-separation",
-    titleEn: "Attorney-General/Public Prosecutor Separation Bill",
-    titleMs: "RUU Pengasingan Peguam Negara/Pendakwa Raya",
-    status: "consultation",
-    icon: "scale",
-    tags: ["Judicial Reform", "Independence"],
-    summaryEn: "Split AG's advisory role from prosecution to reduce political interference in legal proceedings. Controversial among legal establishment.",
-    summaryMs: "Mengasingkan peranan nasihat Peguam Negara daripada pendakwaan untuk mengurangkan campur tangan politik dalam prosiding undang-undang. Kontroversi dalam kalangan badan kehakiman.",
-  },
-  {
-    id: "ombudsman",
-    titleEn: "Ombudsman Bill",
-    titleMs: "RUU Ombudsman",
-    status: "consultation",
-    icon: "search",
-    tags: ["Oversight", "Accountability"],
-    summaryEn: "Establish independent oversight body to investigate maladministration. Debate expected on scope and independence from executive.",
-    summaryMs: "Menubuhkan badan pengawasan bebas untuk menyiasat salah tadbir. Perdebatan dijangka mengenai skop dan kebebasan daripada eksekutif.",
-  },
-  {
-    id: "foi",
-    titleEn: "Freedom of Information Bill",
-    titleMs: "RUU Kebebasan Maklumat",
-    status: "consultation",
-    icon: "search",
-    tags: ["Transparency", "3R Sensitive"],
-    summaryEn: "Enhance transparency and public access to government information. Sensitive regarding national security and 3R (race, religion, royalty) matters.",
-    summaryMs: "Meningkatkan ketelusan dan akses awam kepada maklumat kerajaan. Sensitif berkenaan keselamatan negara dan perkara 3R (kaum, agama, raja).",
-  },
-  {
-    id: "urban-renewal",
-    titleEn: "Urban Renewal Bill 2025 (URA)",
-    titleMs: "RUU Pembaharuan Bandar 2025 (URA)",
-    status: "pending",
-    icon: "building",
-    tags: ["Property", "Development"],
-    summaryEn: "Stalled bill involving land and property powers. Potential controversy over development rights and landowner protections.",
-    summaryMs: "Rang undang-undang tertangguh melibatkan kuasa tanah dan harta. Potensi kontroversi mengenai hak pembangunan dan perlindungan pemilik tanah.",
-  },
-  {
-    id: "mufti-ft",
-    titleEn: "Mufti (Federal Territories) Bill 2024",
-    titleMs: "RUU Mufti (Wilayah Persekutuan) 2024",
-    status: "pending",
-    icon: "book",
-    tags: ["Religious", "3R Sensitive"],
-    summaryEn: "Defines authority of religious officials in Federal Territories. Highly sensitive due to 3R implications and moral/faith debates.",
-    summaryMs: "Mentakrifkan kuasa pegawai agama di Wilayah Persekutuan. Sangat sensitif kerana implikasi 3R dan perdebatan moral/keimanan.",
-  },
-];
+interface BillsToWatchResponse {
+  bills: BillToWatch[];
+  lastRefresh: string | null;
+}
 
 // ============================================================================
 // Component Implementation
@@ -167,7 +71,7 @@ const STATUS_CONFIG: Record<BillStatus, { labelEn: string; labelMs: string; clas
   passed: { labelEn: "Passed", labelMs: "Diluluskan", className: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300" },
 };
 
-const ICON_MAP = {
+const ICON_MAP: Record<string, typeof Scale> = {
   scale: Scale,
   shield: ShieldCheck,
   search: FileSearch,
@@ -186,13 +90,57 @@ export function BillsToWatch({ className }: BillsToWatchProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isDismissed, setIsDismissed] = useState(false);
 
+  const { data, isLoading } = useQuery<BillsToWatchResponse>({
+    queryKey: ["/api/bills-to-watch"],
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    retry: 2,
+  });
+
   if (isDismissed) return null;
 
   const isMs = language === 'ms';
-  const featuredBill = BILLS_DATA.find(b => b.isFeatured);
-  const otherBills = BILLS_DATA.filter(b => !b.isFeatured);
-
   const getText = (en: string, ms: string) => isMs ? ms : en;
+
+  const billsData = data?.bills || [];
+  const lastRefresh = data?.lastRefresh;
+  const featuredBill = billsData.find(b => b.isFeatured);
+  const otherBills = billsData.filter(b => !b.isFeatured);
+
+  const formatLastUpdated = (isoString: string | null | undefined) => {
+    if (!isoString) return isMs ? "Februari 2026" : "February 2026";
+    const date = new Date(isoString);
+    return date.toLocaleDateString(isMs ? 'ms-MY' : 'en-MY', {
+      year: 'numeric',
+      month: 'long',
+    });
+  };
+
+  // Show loading skeleton
+  if (isLoading) {
+    return (
+      <Card className={`relative overflow-hidden border-orange-200/50 dark:border-orange-900/30 bg-gradient-to-br from-orange-50/80 via-amber-50/50 to-yellow-50/30 dark:from-orange-950/20 dark:via-amber-950/10 dark:to-yellow-950/5 ${className}`}>
+        <CardHeader className="pb-4">
+          <div className="flex items-start gap-3">
+            <div className="bg-gradient-to-br from-orange-500 to-amber-600 text-white p-2.5 rounded-xl">
+              <ScrollText className="h-5 w-5" />
+            </div>
+            <div className="flex-1">
+              <Skeleton className="h-7 w-48 mb-2" />
+              <Skeleton className="h-4 w-72" />
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="pt-0 space-y-4">
+          <Skeleton className="h-32 w-full rounded-xl" />
+          <Skeleton className="h-16 w-full rounded-lg" />
+          <Skeleton className="h-16 w-full rounded-lg" />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // If no data at all, don't render
+  if (billsData.length === 0) return null;
 
   return (
     <Card
@@ -238,7 +186,7 @@ export function BillsToWatch({ className }: BillsToWatchProps) {
             <div className="flex items-start gap-3 mb-3">
               <div className="bg-orange-100 dark:bg-orange-900/30 p-2 rounded-lg shrink-0">
                 {(() => {
-                  const IconComponent = ICON_MAP[featuredBill.icon];
+                  const IconComponent = ICON_MAP[featuredBill.icon] || ScrollText;
                   return <IconComponent className="h-5 w-5 text-orange-600 dark:text-orange-400" />;
                 })()}
               </div>
@@ -247,8 +195,11 @@ export function BillsToWatch({ className }: BillsToWatchProps) {
                   <h3 className="font-bold text-lg text-foreground">
                     {getText(featuredBill.titleEn, featuredBill.titleMs)}
                   </h3>
-                  <Badge className={`text-xs ${STATUS_CONFIG[featuredBill.status].className}`}>
-                    {getText(STATUS_CONFIG[featuredBill.status].labelEn, STATUS_CONFIG[featuredBill.status].labelMs)}
+                  <Badge className={`text-xs ${STATUS_CONFIG[featuredBill.status as BillStatus]?.className || STATUS_CONFIG.pending.className}`}>
+                    {getText(
+                      STATUS_CONFIG[featuredBill.status as BillStatus]?.labelEn || featuredBill.status,
+                      STATUS_CONFIG[featuredBill.status as BillStatus]?.labelMs || featuredBill.status
+                    )}
                   </Badge>
                 </div>
                 <div className="flex flex-wrap gap-1.5 mb-2">
@@ -307,7 +258,7 @@ export function BillsToWatch({ className }: BillsToWatchProps) {
           <ScrollArea className="max-h-[280px]">
             <ul className="space-y-2" role="list">
               {otherBills.map(bill => {
-                const IconComponent = ICON_MAP[bill.icon];
+                const IconComponent = ICON_MAP[bill.icon] || ScrollText;
                 return (
                   <li
                     key={bill.id}
@@ -321,8 +272,11 @@ export function BillsToWatch({ className }: BillsToWatchProps) {
                         <span className="font-medium text-sm text-foreground">
                           {getText(bill.titleEn, bill.titleMs)}
                         </span>
-                        <Badge className={`text-xs ${STATUS_CONFIG[bill.status].className}`}>
-                          {getText(STATUS_CONFIG[bill.status].labelEn, STATUS_CONFIG[bill.status].labelMs)}
+                        <Badge className={`text-xs ${STATUS_CONFIG[bill.status as BillStatus]?.className || STATUS_CONFIG.pending.className}`}>
+                          {getText(
+                            STATUS_CONFIG[bill.status as BillStatus]?.labelEn || bill.status,
+                            STATUS_CONFIG[bill.status as BillStatus]?.labelMs || bill.status
+                          )}
                         </Badge>
                       </div>
                       <p className="text-xs text-muted-foreground line-clamp-2">
@@ -371,8 +325,8 @@ export function BillsToWatch({ className }: BillsToWatchProps) {
         <div className="flex items-center justify-between pt-2 border-t border-orange-200/30 dark:border-orange-800/20">
           <p className="text-xs text-muted-foreground">
             {isMs
-              ? `Dikemas kini: ${LAST_UPDATED} • Sumber: Kenyataan rasmi kerajaan`
-              : `Last updated: ${LAST_UPDATED} • Source: Official government statements`}
+              ? `Dikemas kini: ${formatLastUpdated(lastRefresh)} • Sumber: Kenyataan rasmi kerajaan`
+              : `Last updated: ${formatLastUpdated(lastRefresh)} • Source: Official government statements`}
           </p>
         </div>
       </CardContent>
