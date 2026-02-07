@@ -13,7 +13,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, Vote, BarChart2, Calendar, Loader2 } from "lucide-react";
+import { CheckCircle2, Vote, BarChart2, Calendar, Loader2, History } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { useLanguage } from "@/i18n/LanguageContext";
@@ -66,6 +66,17 @@ export function PollWidget({ className }: PollWidgetProps) {
     refetchInterval: 60000, // Refetch every minute to get updated vote counts
   });
 
+  // Fetch most recent closed poll as fallback when no active poll
+  const { data: recentData, isLoading: recentLoading } = useQuery({
+    queryKey: ["recent-closed-poll"],
+    queryFn: async () => {
+      const res = await fetch("/api/polls?status=closed&limit=1");
+      if (!res.ok) throw new Error("Failed to fetch recent poll");
+      return res.json();
+    },
+    enabled: !isLoading && !data?.poll, // Only fetch when active poll is absent
+  });
+
   // Vote mutation
   const voteMutation = useMutation({
     mutationFn: async (optionId: string) => {
@@ -78,6 +89,7 @@ export function PollWidget({ className }: PollWidgetProps) {
     },
     onSuccess: (data) => {
       queryClient.setQueryData(["active-poll"], { poll: data.poll });
+      queryClient.invalidateQueries({ queryKey: ["recent-closed-poll"] });
       toast({
         title: language === "ms" ? "Undi berjaya!" : "Vote recorded!",
         description: language === "ms"
@@ -94,7 +106,10 @@ export function PollWidget({ className }: PollWidgetProps) {
     },
   });
 
-  const poll: Poll | null = data?.poll;
+  const activePoll: Poll | null = data?.poll;
+  const recentClosedPoll: Poll | null = recentData?.polls?.[0] ?? null;
+  const poll = activePoll || recentClosedPoll;
+  const isShowingPastPoll = !activePoll && !!recentClosedPoll;
   const hasVoted = poll?.hasVoted || false;
   const showResults = hasVoted || poll?.status === "closed";
 
@@ -128,7 +143,7 @@ export function PollWidget({ className }: PollWidgetProps) {
     return categoryLabels[category]?.[language] || category;
   };
 
-  if (isLoading) {
+  if (isLoading || recentLoading) {
     return (
       <Card className={className}>
         <CardHeader>
@@ -169,8 +184,14 @@ export function PollWidget({ className }: PollWidgetProps) {
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2 text-lg">
-            <Vote className="h-5 w-5 text-primary" />
-            {language === "ms" ? "Undian Mingguan" : "Weekly Poll"}
+            {isShowingPastPoll ? (
+              <History className="h-5 w-5 text-muted-foreground" />
+            ) : (
+              <Vote className="h-5 w-5 text-primary" />
+            )}
+            {isShowingPastPoll
+              ? (language === "ms" ? "Undian Lepas" : "Previous Poll")
+              : (language === "ms" ? "Undian Mingguan" : "Weekly Poll")}
           </CardTitle>
           <Badge variant="secondary" className="text-xs">
             {getCategoryLabel(poll.category)}
