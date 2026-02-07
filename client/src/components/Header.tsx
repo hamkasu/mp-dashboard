@@ -3,7 +3,7 @@
  * Updated: Consolidated Navigation Menu with Submenus
  */
 
-import { Search, Menu, FileText, BookOpen, UserCheck, Calculator, BarChart3, ExternalLink, AlertCircle, GraduationCap, Scale, Shield, MessageSquare, Gavel, Building2, MessageSquareText, Award, Handshake, ChevronDown, Users, Activity, LayoutDashboard, Settings, UserPlus, UserX, Upload, TrendingUp, Heart, ScrollText } from "lucide-react";
+import { Search, Menu, FileText, BookOpen, UserCheck, Calculator, BarChart3, ExternalLink, AlertCircle, GraduationCap, Scale, Shield, MessageSquare, Gavel, Building2, MessageSquareText, Award, Handshake, ChevronDown, Users, Activity, LayoutDashboard, Settings, UserPlus, UserX, Upload, TrendingUp, Heart, ScrollText, Eye } from "lucide-react";
 import { useState } from "react";
 import { FeedbackModal } from "@/components/FeedbackModal";
 import { Button } from "@/components/ui/button";
@@ -281,6 +281,11 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
                     <DropdownMenuItem onSelect={() => setLocation("/bills-to-watch-admin")} data-testid="submenu-bills-to-watch-admin">
                       <ScrollText className="w-4 h-4 mr-2" />
                       Bills to Watch Admin
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onSelect={() => setLocation("/visitor-data-admin")} data-testid="submenu-visitor-data-admin">
+                      <Eye className="w-4 h-4 mr-2" />
+                      Visitor Data
                     </DropdownMenuItem>
                   </DropdownMenuSubContent>
                 </DropdownMenuPortal>
