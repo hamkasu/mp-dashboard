@@ -342,36 +342,40 @@ export default function HansardPage() {
                       </Button>
                     }
                   />
-                  <HansardQAButton
-                    hansardRecord={record as any}
-                    sectionType="menteri"
-                    trigger={
-                      <Button
-                        data-testid={`button-qa-menteri-${record.id}`}
-                        variant="outline"
-                        size="sm"
-                        className="gap-2"
-                      >
-                        <MessageSquareText className="w-4 h-4" />
-                        Waktu Pertanyaan-Pertanyaan Menteri
-                      </Button>
-                    }
-                  />
-                  <HansardQAButton
-                    hansardRecord={record as any}
-                    sectionType="lisan"
-                    trigger={
-                      <Button
-                        data-testid={`button-qa-lisan-${record.id}`}
-                        variant="outline"
-                        size="sm"
-                        className="gap-2"
-                      >
-                        <MessageSquareText className="w-4 h-4" />
-                        Pertanyaan-Pertanyaan Bagi Jawab Lisan
-                      </Button>
-                    }
-                  />
+                  {record.transcript?.toUpperCase().includes("WAKTU PERTANYAAN-PERTANYAAN MENTERI") && (
+                    <HansardQAButton
+                      hansardRecord={record as any}
+                      sectionType="menteri"
+                      trigger={
+                        <Button
+                          data-testid={`button-qa-menteri-${record.id}`}
+                          variant="outline"
+                          size="sm"
+                          className="gap-2"
+                        >
+                          <MessageSquareText className="w-4 h-4" />
+                          Waktu Pertanyaan-Pertanyaan Menteri
+                        </Button>
+                      }
+                    />
+                  )}
+                  {record.transcript?.toUpperCase().includes("PERTANYAAN-PERTANYAAN BAGI JAWAB LISAN") && (
+                    <HansardQAButton
+                      hansardRecord={record as any}
+                      sectionType="lisan"
+                      trigger={
+                        <Button
+                          data-testid={`button-qa-lisan-${record.id}`}
+                          variant="outline"
+                          size="sm"
+                          className="gap-2"
+                        >
+                          <MessageSquareText className="w-4 h-4" />
+                          Pertanyaan-Pertanyaan Bagi Jawab Lisan
+                        </Button>
+                      }
+                    />
+                  )}
 
                   {user && user.role === "admin" && (
                     <>

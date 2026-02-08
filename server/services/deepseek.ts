@@ -982,18 +982,17 @@ function extractQASections(transcript: string, sectionType: QASectionType): stri
   };
 
   // The end boundary: the other section or common subsequent sections
-  // Note: avoid short/generic keywords like "USUL" that can match inside Malay words
+  // Note: avoid "USUL"/"USUL-USUL" — they appear frequently in Malay body text
+  // (e.g. "usul-usul pokok yang dibangkitkan") and cause premature section cutoff
   const endKeywords: Record<QASectionType, string[]> = {
     menteri: [
       "PERTANYAAN-PERTANYAAN BAGI JAWAB LISAN",
       "PERTANYAAN BAGI JAWAB LISAN",
       "RANG UNDANG-UNDANG",
-      "USUL-USUL",
       "ATURAN URUSAN MESYUARAT",
     ],
     lisan: [
       "RANG UNDANG-UNDANG",
-      "USUL-USUL",
       "ATURAN URUSAN MESYUARAT",
       "PERTANYAAN-PERTANYAAN BAGI JAWAB BERTULIS",
     ],
