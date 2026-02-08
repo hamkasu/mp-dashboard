@@ -959,11 +959,60 @@ export interface QAAnalysisResult {
   totalQuestions: number;
 }
 
+/**
+ * Extract Q&A (Pertanyaan/Soalan) sections from a Hansard transcript.
+ * Searches for known section headers and extracts the relevant text
+ * instead of blindly sending the first N characters.
+ */
+function extractQASections(transcript: string): string {
+  const keywords = [
+    "PERTANYAAN-PERTANYAAN BAGI JAWAB LISAN",
+    "PERTANYAAN BAGI JAWAB LISAN",
+    "WAKTU PERTANYAAN-PERTANYAAN MENTERI",
+    "WAKTU PERTANYAAN MENTERI",
+    "PERTANYAAN-PERTANYAAN MENTERI",
+    "JAWAB LISAN",
+    "PERTANYAAN",
+    "SOALAN",
+  ];
+
+  const upperTranscript = transcript.toUpperCase();
+
+  // Find the earliest Q&A section start
+  let sectionStart = -1;
+  let matchedKeyword = "";
+  for (const keyword of keywords) {
+    const idx = upperTranscript.indexOf(keyword);
+    if (idx !== -1 && (sectionStart === -1 || idx < sectionStart)) {
+      sectionStart = idx;
+      matchedKeyword = keyword;
+    }
+  }
+
+  if (sectionStart === -1) {
+    // No Q&A section found - send a larger chunk of transcript as fallback
+    console.log("[AI Q&A] No Q&A section headers found, sending full transcript");
+    return transcript.substring(0, 80000);
+  }
+
+  console.log(`[AI Q&A] Found section "${matchedKeyword}" at position ${sectionStart} of ${transcript.length}`);
+
+  // Extract from section start, up to 80K chars to capture full Q&A content
+  const extracted = transcript.substring(sectionStart, sectionStart + 80000);
+
+  // Also include the first 2000 chars for session context (date, sitting info)
+  const header = transcript.substring(0, 2000);
+
+  return header + "\n\n---\n\n" + extracted;
+}
+
 export async function analyzeQASections(
   transcript: string,
   sessionNumber: string
 ): Promise<QAAnalysisResult> {
   try {
+    const qaText = extractQASections(transcript);
+
     const systemPrompt = `You are an expert in analyzing official Malaysian Hansard PDFs from the Dewan Rakyat. Your task is to analyze the transcript and summarize the "Soalan" or "Pertanyaan" parts (questions sections, including Waktu Pertanyaan-Pertanyaan Menteri and Pertanyaan-Pertanyaan Bagi Jawab Lisan).
 
 For each question found, extract:
@@ -994,9 +1043,9 @@ You must respond with valid JSON matching this structure:
 
     const userPrompt = `Analyze the following Hansard transcript from session ${sessionNumber} and extract all parliamentary questions (Soalan/Pertanyaan) with their details:
 
-${transcript.substring(0, 50000)}`;
+${qaText}`;
 
-    const result = await callAI(systemPrompt, userPrompt);
+    const result = await callAI(systemPrompt, userPrompt, false);
 
     const sanitized: QAAnalysisResult = {
       sessionInfo: typeof result.sessionInfo === "string" ? result.sessionInfo : `Session ${sessionNumber}`,
