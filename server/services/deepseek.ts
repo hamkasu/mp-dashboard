@@ -496,7 +496,8 @@ export function isAnthropicConfigured(): boolean {
 async function callAI(
   systemPrompt: string,
   userPrompt: string,
-  useCache: boolean = true
+  useCache: boolean = true,
+  excludeProviders: string[] = []
 ): Promise<any> {
   // Check cache first
   const cacheKey = generateCacheKey(systemPrompt, userPrompt);
@@ -516,7 +517,7 @@ async function callAI(
     { name: "Cloudflare", key: !!(CLOUDFLARE_API_KEY && CLOUDFLARE_ACCOUNT_ID), fn: callCloudflare },
   ];
 
-  const availableProviders = providers.filter(p => p.key);
+  const availableProviders = providers.filter(p => p.key && !excludeProviders.includes(p.name));
 
   if (availableProviders.length === 0) {
     throw new Error("No AI provider configured. Set at least one of: GEMINI_API_KEY, OPENROUTER_API_KEY, GROQ_API_KEY, TOGETHER_API_KEY, or CLOUDFLARE_API_KEY");
@@ -1122,7 +1123,9 @@ You must respond with valid JSON matching this structure:
 
 ${qaText}`;
 
-    const result = await callAI(systemPrompt, userPrompt, false);
+    // Q&A analysis sends large transcripts (up to 80k chars) — skip providers
+    // with small context windows or strict payload size limits
+    const result = await callAI(systemPrompt, userPrompt, false, ["Groq", "Cloudflare"]);
 
     const sanitized: QAAnalysisResult = {
       sessionInfo: typeof result.sessionInfo === "string" ? result.sessionInfo : `Session ${sessionNumber}`,
