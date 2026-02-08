@@ -998,11 +998,21 @@ function extractQASections(transcript: string, sectionType: QASectionType): stri
   const keywords = sectionKeywords[sectionType];
   const upperTranscript = transcript.toUpperCase();
 
-  // Find the target section start
+  // Helper: find the second occurrence of a keyword if available.
+  // The first occurrence is often in the KANDUNGAN (table of contents),
+  // while the second is the actual section header in the body.
+  function findSectionIndex(haystack: string, needle: string): number {
+    const first = haystack.indexOf(needle);
+    if (first === -1) return -1;
+    const second = haystack.indexOf(needle, first + needle.length);
+    return second !== -1 ? second : first;
+  }
+
+  // Find the target section start (prefer second occurrence to skip TOC)
   let sectionStart = -1;
   let matchedKeyword = "";
   for (const keyword of keywords) {
-    const idx = upperTranscript.indexOf(keyword);
+    const idx = findSectionIndex(upperTranscript, keyword);
     if (idx !== -1 && (sectionStart === -1 || idx < sectionStart)) {
       sectionStart = idx;
       matchedKeyword = keyword;
@@ -1013,7 +1023,7 @@ function extractQASections(transcript: string, sectionType: QASectionType): stri
     // Fallback: try generic keywords
     const fallbackKeywords = ["PERTANYAAN", "SOALAN"];
     for (const keyword of fallbackKeywords) {
-      const idx = upperTranscript.indexOf(keyword);
+      const idx = findSectionIndex(upperTranscript, keyword);
       if (idx !== -1 && (sectionStart === -1 || idx < sectionStart)) {
         sectionStart = idx;
         matchedKeyword = keyword;
@@ -1035,7 +1045,29 @@ function extractQASections(transcript: string, sectionType: QASectionType): stri
     }
   }
 
-  console.log(`[AI Q&A] Found "${matchedKeyword}" at ${sectionStart}, end at ${sectionEnd} (${sectionEnd - sectionStart} chars)`);
+  let extractedLength = sectionEnd - sectionStart;
+
+  // Safety check: if the extracted section is too small (< 500 chars),
+  // we likely matched a TOC entry rather than the actual section.
+  // Try scanning forward from the current position to find the real section.
+  if (extractedLength < 500) {
+    console.log(`[AI Q&A] Extracted section too small (${extractedLength} chars) - likely TOC match, scanning forward...`);
+    const nextStart = upperTranscript.indexOf(matchedKeyword, sectionStart + matchedKeyword.length);
+    if (nextStart !== -1) {
+      sectionStart = nextStart;
+      sectionEnd = sectionStart + 80000;
+      for (const endKw of endKeywords[sectionType]) {
+        const endIdx = upperTranscript.indexOf(endKw, sectionStart + matchedKeyword.length + 100);
+        if (endIdx !== -1 && endIdx < sectionEnd) {
+          sectionEnd = endIdx;
+        }
+      }
+      extractedLength = sectionEnd - sectionStart;
+      console.log(`[AI Q&A] Re-scanned: found "${matchedKeyword}" at ${sectionStart}, end at ${sectionEnd} (${extractedLength} chars)`);
+    }
+  }
+
+  console.log(`[AI Q&A] Found "${matchedKeyword}" at ${sectionStart}, end at ${sectionEnd} (${extractedLength} chars)`);
 
   const extracted = transcript.substring(sectionStart, sectionEnd);
   const header = transcript.substring(0, 2000);
