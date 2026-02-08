@@ -352,7 +352,7 @@ export default function HansardPage() {
                         className="gap-2"
                       >
                         <MessageSquareText className="w-4 h-4" />
-                        Q&A
+                        Waktu Pertanyaan-Pertanyaan Menteri
                       </Button>
                     }
                   />
