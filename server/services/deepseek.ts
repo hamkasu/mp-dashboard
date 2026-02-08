@@ -506,8 +506,9 @@ async function callAI(
     }
   }
 
-  // Provider configuration with priority order
+  // Provider configuration with priority order (Claude first for best quality)
   const providers = [
+    { name: "Claude", key: !!ANTHROPIC_API_KEY, fn: (sp: string, up: string) => callAnthropic(sp, up) },
     { name: "Gemini", key: GEMINI_API_KEYS.length > 0, fn: callGemini },
     { name: "OpenRouter", key: !!OPENROUTER_API_KEY, fn: callOpenRouter },
     { name: "Groq", key: !!GROQ_API_KEY, fn: callGroq },
@@ -518,7 +519,7 @@ async function callAI(
   const availableProviders = providers.filter(p => p.key);
 
   if (availableProviders.length === 0) {
-    throw new Error("No AI provider configured. Set at least one of: GEMINI_API_KEY, OPENROUTER_API_KEY, GROQ_API_KEY, TOGETHER_API_KEY, or CLOUDFLARE_API_KEY");
+    throw new Error("No AI provider configured. Set at least one of: ANTHROPIC_API_KEY, GEMINI_API_KEY, OPENROUTER_API_KEY, GROQ_API_KEY, TOGETHER_API_KEY, or CLOUDFLARE_API_KEY");
   }
 
   // Try each provider in sequence until one succeeds
