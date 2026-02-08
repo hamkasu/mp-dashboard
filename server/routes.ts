@@ -4402,16 +4402,30 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         }
       }
 
-      if (!hansard.transcript || hansard.transcript.trim().length === 0) {
-        return res.status(400).json({ error: "No transcript available for this record" });
+      // Extract full text from the stored PDF binary (transcript field is truncated to 10k chars)
+      const { eq, and } = await import("drizzle-orm");
+      const [pdfFile] = await db.select().from(hansardPdfFiles)
+        .where(and(
+          eq(hansardPdfFiles.hansardRecordId, hansardId),
+          eq(hansardPdfFiles.isPrimary, true)
+        ))
+        .limit(1);
+
+      if (!pdfFile?.pdfData) {
+        return res.status(400).json({ error: "No PDF file available for this record" });
       }
+
+      const { PDFParse } = await import('pdf-parse');
+      const pdfParser = new PDFParse({ data: pdfFile.pdfData });
+      const pdfResult = await pdfParser.getText();
+      const fullText = pdfResult.text;
+
+      console.log(`[AI Q&A Analysis] Extracted ${fullText.length} chars from PDF for ${hansardId}${force ? " (forced)" : ""}`);
 
       const deepseek = await import("./services/deepseek.js");
 
-      console.log(`[AI Q&A Analysis] Analyzing questions for ${hansardId}${force ? " (forced)" : ""}`);
-
       const result = await deepseek.analyzeQASections(
-        hansard.transcript,
+        fullText,
         hansard.sessionNumber || hansardId
       );
 
