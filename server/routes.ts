@@ -4376,6 +4376,36 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
+  // Analyze Q&A (Soalan/Pertanyaan) sections from Hansard
+  app.post("/api/hansard/:hansardId/qa-analysis", mutationRateLimit, async (req, res) => {
+    try {
+      const { hansardId } = req.params;
+
+      const hansard = await storage.getHansardById(hansardId);
+      if (!hansard) {
+        return res.status(404).json({ error: "Hansard record not found" });
+      }
+
+      if (!hansard.transcript || hansard.transcript.trim().length === 0) {
+        return res.status(400).json({ error: "No transcript available for this record" });
+      }
+
+      const deepseek = await import("./services/deepseek.js");
+
+      console.log(`[AI Q&A Analysis] Analyzing questions for ${hansardId}`);
+
+      const result = await deepseek.analyzeQASections(
+        hansard.transcript,
+        hansard.sessionNumber || hansardId
+      );
+
+      res.json(result);
+    } catch (error) {
+      console.error("Error in Q&A analysis:", error);
+      res.status(500).json({ error: "Failed to analyze Q&A sections", details: String(error) });
+    }
+  });
+
   // Get topic-specific summary with caching
   app.post("/api/hansard/:hansardId/topic-summary", mutationRateLimit, async (req, res) => {
     try {

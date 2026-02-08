@@ -12,7 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Search, FileText, Calendar, Download, Sparkles, CheckCircle, Users, UserX, MapPin, Trash2, BarChart3, Edit } from "lucide-react";
+import { Search, FileText, Calendar, Download, Sparkles, CheckCircle, Users, UserX, MapPin, Trash2, BarChart3, Edit, MessageSquareText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest, getQueryFn } from "@/lib/queryClient";
 import type { HansardRecord } from "@shared/schema";
@@ -40,6 +40,7 @@ import { ConstituencyAttendance } from "@/components/ConstituencyAttendance";
 import { HansardAnalysisDialog } from "@/components/HansardAnalysisDialog";
 import { HansardAIInsights } from "@/components/HansardAIInsights";
 import { AttendanceEditor } from "@/components/AttendanceEditor";
+import { HansardQAButton } from "@/components/HansardQAButton";
 
 export default function HansardPage() {
   const { t } = useLanguage();
@@ -338,6 +339,20 @@ export default function HansardPage() {
                         {record.summary && (
                           <CheckCircle className="w-3.5 h-3.5 text-green-300" />
                         )}
+                      </Button>
+                    }
+                  />
+                  <HansardQAButton
+                    hansardRecord={record as any}
+                    trigger={
+                      <Button
+                        data-testid={`button-qa-${record.id}`}
+                        variant="outline"
+                        size="sm"
+                        className="gap-2"
+                      >
+                        <MessageSquareText className="w-4 h-4" />
+                        Q&A
                       </Button>
                     }
                   />
