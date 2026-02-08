@@ -945,6 +945,80 @@ This analysis should be comprehensive enough for a researcher or journalist to u
   }
 }
 
+export interface QAAnalysisQuestion {
+  no: number;
+  questioner: string;
+  ministerTargeted: string;
+  topic: string;
+  summary: string;
+}
+
+export interface QAAnalysisResult {
+  sessionInfo: string;
+  questions: QAAnalysisQuestion[];
+  totalQuestions: number;
+}
+
+export async function analyzeQASections(
+  transcript: string,
+  sessionNumber: string
+): Promise<QAAnalysisResult> {
+  try {
+    const systemPrompt = `You are an expert in analyzing official Malaysian Hansard PDFs from the Dewan Rakyat. Your task is to analyze the transcript and summarize the "Soalan" or "Pertanyaan" parts (questions sections, including Waktu Pertanyaan-Pertanyaan Menteri and Pertanyaan-Pertanyaan Bagi Jawab Lisan).
+
+For each question found, extract:
+- Question number (e.g., 1, 2)
+- Questioner name and constituency (e.g., "Dato' Rosol bin Wahid [Hulu Terengganu]")
+- Minister targeted (e.g., "Minister of Domestic Trade and Cost of Living")
+- Topic (short summary from the question text)
+- Summary of the main response and any supplementaries (concise, 100-200 words)
+
+Handle variations: Modern PDFs (2026) have structured lists; older ones may be less formatted.
+Handle Malay text (UTF-8 encoding); no translation needed.
+If no questions section is found, return an empty questions array.
+
+You must respond with valid JSON matching this structure:
+{
+  "sessionInfo": "Brief description of the session",
+  "questions": [
+    {
+      "no": 1,
+      "questioner": "Name [Constituency]",
+      "ministerTargeted": "Minister of ...",
+      "topic": "Short topic description",
+      "summary": "Concise summary of question and response (100-200 words)"
+    }
+  ],
+  "totalQuestions": 0
+}`;
+
+    const userPrompt = `Analyze the following Hansard transcript from session ${sessionNumber} and extract all parliamentary questions (Soalan/Pertanyaan) with their details:
+
+${transcript.substring(0, 50000)}`;
+
+    const result = await callAI(systemPrompt, userPrompt);
+
+    const sanitized: QAAnalysisResult = {
+      sessionInfo: typeof result.sessionInfo === "string" ? result.sessionInfo : `Session ${sessionNumber}`,
+      questions: Array.isArray(result.questions)
+        ? result.questions.map((q: any, idx: number) => ({
+            no: typeof q.no === "number" ? q.no : idx + 1,
+            questioner: typeof q.questioner === "string" ? q.questioner : "Unknown",
+            ministerTargeted: typeof q.ministerTargeted === "string" ? q.ministerTargeted : "Unknown",
+            topic: typeof q.topic === "string" ? q.topic : "Unknown",
+            summary: typeof q.summary === "string" ? q.summary : "",
+          }))
+        : [],
+      totalQuestions: typeof result.totalQuestions === "number" ? result.totalQuestions : (result.questions?.length || 0),
+    };
+
+    return sanitized;
+  } catch (error) {
+    console.error("[AI] Error in Q&A analysis:", error);
+    throw new Error(`Failed to analyze Q&A sections: ${error}`);
+  }
+}
+
 export function isDeepSeekConfigured(): boolean {
   return !!(GEMINI_API_KEYS.length > 0 || OPENROUTER_API_KEY || GROQ_API_KEY || TOGETHER_API_KEY || (CLOUDFLARE_API_KEY && CLOUDFLARE_ACCOUNT_ID));
 }
