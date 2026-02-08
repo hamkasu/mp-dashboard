@@ -959,26 +959,46 @@ export interface QAAnalysisResult {
   totalQuestions: number;
 }
 
+export type QASectionType = "menteri" | "lisan";
+
 /**
  * Extract Q&A (Pertanyaan/Soalan) sections from a Hansard transcript.
  * Searches for known section headers and extracts the relevant text
  * instead of blindly sending the first N characters.
  */
-function extractQASections(transcript: string): string {
-  const keywords = [
-    "PERTANYAAN-PERTANYAAN BAGI JAWAB LISAN",
-    "PERTANYAAN BAGI JAWAB LISAN",
-    "WAKTU PERTANYAAN-PERTANYAAN MENTERI",
-    "WAKTU PERTANYAAN MENTERI",
-    "PERTANYAAN-PERTANYAAN MENTERI",
-    "JAWAB LISAN",
-    "PERTANYAAN",
-    "SOALAN",
-  ];
+function extractQASections(transcript: string, sectionType: QASectionType): string {
+  const sectionKeywords: Record<QASectionType, string[]> = {
+    menteri: [
+      "WAKTU PERTANYAAN-PERTANYAAN MENTERI",
+      "WAKTU PERTANYAAN MENTERI",
+      "PERTANYAAN-PERTANYAAN MENTERI",
+    ],
+    lisan: [
+      "PERTANYAAN-PERTANYAAN BAGI JAWAB LISAN",
+      "PERTANYAAN BAGI JAWAB LISAN",
+      "JAWAB LISAN",
+    ],
+  };
 
+  // The end boundary: the other section or common subsequent sections
+  const endKeywords: Record<QASectionType, string[]> = {
+    menteri: [
+      "PERTANYAAN-PERTANYAAN BAGI JAWAB LISAN",
+      "PERTANYAAN BAGI JAWAB LISAN",
+      "RANG UNDANG-UNDANG",
+      "USUL",
+    ],
+    lisan: [
+      "RANG UNDANG-UNDANG",
+      "USUL",
+      "ATURAN URUSAN MESYUARAT",
+    ],
+  };
+
+  const keywords = sectionKeywords[sectionType];
   const upperTranscript = transcript.toUpperCase();
 
-  // Find the earliest Q&A section start
+  // Find the target section start
   let sectionStart = -1;
   let matchedKeyword = "";
   for (const keyword of keywords) {
@@ -990,17 +1010,34 @@ function extractQASections(transcript: string): string {
   }
 
   if (sectionStart === -1) {
-    // No Q&A section found - send a larger chunk of transcript as fallback
-    console.log("[AI Q&A] No Q&A section headers found, sending full transcript");
+    // Fallback: try generic keywords
+    const fallbackKeywords = ["PERTANYAAN", "SOALAN"];
+    for (const keyword of fallbackKeywords) {
+      const idx = upperTranscript.indexOf(keyword);
+      if (idx !== -1 && (sectionStart === -1 || idx < sectionStart)) {
+        sectionStart = idx;
+        matchedKeyword = keyword;
+      }
+    }
+  }
+
+  if (sectionStart === -1) {
+    console.log(`[AI Q&A] No ${sectionType} section headers found, sending full transcript`);
     return transcript.substring(0, 80000);
   }
 
-  console.log(`[AI Q&A] Found section "${matchedKeyword}" at position ${sectionStart} of ${transcript.length}`);
+  // Find end boundary
+  let sectionEnd = sectionStart + 80000;
+  for (const endKw of endKeywords[sectionType]) {
+    const endIdx = upperTranscript.indexOf(endKw, sectionStart + matchedKeyword.length + 100);
+    if (endIdx !== -1 && endIdx < sectionEnd) {
+      sectionEnd = endIdx;
+    }
+  }
 
-  // Extract from section start, up to 80K chars to capture full Q&A content
-  const extracted = transcript.substring(sectionStart, sectionStart + 80000);
+  console.log(`[AI Q&A] Found "${matchedKeyword}" at ${sectionStart}, end at ${sectionEnd} (${sectionEnd - sectionStart} chars)`);
 
-  // Also include the first 2000 chars for session context (date, sitting info)
+  const extracted = transcript.substring(sectionStart, sectionEnd);
   const header = transcript.substring(0, 2000);
 
   return header + "\n\n---\n\n" + extracted;
@@ -1008,14 +1045,19 @@ function extractQASections(transcript: string): string {
 
 export async function analyzeQASections(
   transcript: string,
-  sessionNumber: string
+  sessionNumber: string,
+  sectionType: QASectionType = "menteri"
 ): Promise<QAAnalysisResult> {
   try {
-    const qaText = extractQASections(transcript);
+    const qaText = extractQASections(transcript, sectionType);
 
-    const systemPrompt = `You are an expert in analyzing official Malaysian Hansard PDFs from the Dewan Rakyat. Your task is to analyze the transcript and summarize the "Soalan" or "Pertanyaan" parts (questions sections, including Waktu Pertanyaan-Pertanyaan Menteri and Pertanyaan-Pertanyaan Bagi Jawab Lisan).
+    const sectionLabel = sectionType === "menteri"
+      ? "Waktu Pertanyaan-Pertanyaan Menteri (Minister's Question Time)"
+      : "Pertanyaan-Pertanyaan Bagi Jawab Lisan (Oral Questions)";
 
-For each question found, extract:
+    const systemPrompt = `You are an expert in analyzing official Malaysian Hansard PDFs from the Dewan Rakyat. Your task is to analyze the transcript and summarize ONLY the "${sectionLabel}" section.
+
+For each question found in this section, extract:
 - Question number (e.g., 1, 2)
 - Questioner name and constituency (e.g., "Dato' Rosol bin Wahid [Hulu Terengganu]")
 - Minister targeted (e.g., "Minister of Domestic Trade and Cost of Living")
@@ -1041,7 +1083,7 @@ You must respond with valid JSON matching this structure:
   "totalQuestions": 0
 }`;
 
-    const userPrompt = `Analyze the following Hansard transcript from session ${sessionNumber} and extract all parliamentary questions (Soalan/Pertanyaan) with their details:
+    const userPrompt = `Analyze the following Hansard transcript from session ${sessionNumber} and extract all parliamentary questions from the "${sectionLabel}" section:
 
 ${qaText}`;
 

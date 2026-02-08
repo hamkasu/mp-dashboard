@@ -44,16 +44,31 @@ interface QAAnalysisResult {
   analyzedAt?: string;
 }
 
+type QASectionType = "menteri" | "lisan";
+
+const sectionLabels: Record<QASectionType, { title: string; description: string }> = {
+  menteri: {
+    title: "Waktu Pertanyaan-Pertanyaan Menteri",
+    description: "Minister's Question Time - questions directed to Ministers",
+  },
+  lisan: {
+    title: "Pertanyaan-Pertanyaan Bagi Jawab Lisan",
+    description: "Oral Questions - questions for oral answers in Parliament",
+  },
+};
+
 interface HansardQAButtonProps {
   hansardRecord: HansardRecordWithPdf;
   trigger: React.ReactNode;
+  sectionType?: QASectionType;
 }
 
-export function HansardQAButton({ hansardRecord, trigger }: HansardQAButtonProps) {
+export function HansardQAButton({ hansardRecord, trigger, sectionType = "menteri" }: HansardQAButtonProps) {
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
 
-  const cacheQueryKey = `/api/hansard/${hansardRecord.id}/qa-analysis`;
+  const labels = sectionLabels[sectionType];
+  const cacheQueryKey = `/api/hansard/${hansardRecord.id}/qa-analysis?sectionType=${sectionType}`;
 
   // Fetch cached results when dialog opens
   const { data: cachedResult, isLoading: cacheLoading } = useQuery<QAAnalysisResult | null>({
@@ -64,14 +79,16 @@ export function HansardQAButton({ hansardRecord, trigger }: HansardQAButtonProps
   // Mutation for triggering analysis (initial or re-analyze)
   const analysisMutation = useMutation({
     mutationFn: async (force: boolean = false) => {
-      const res = await apiRequest("POST", `/api/hansard/${hansardRecord.id}/qa-analysis`, force ? { force: true } : undefined);
+      const body: Record<string, unknown> = { sectionType };
+      if (force) body.force = true;
+      const res = await apiRequest("POST", `/api/hansard/${hansardRecord.id}/qa-analysis`, body);
       return await res.json();
     },
     onSuccess: (data: QAAnalysisResult) => {
       // Update the cache query with fresh results
       queryClient.setQueryData([cacheQueryKey], data);
       toast({
-        title: data.cached ? "Q&A Analysis Loaded" : "Q&A Analysis Complete",
+        title: data.cached ? "Analysis Loaded" : "Analysis Complete",
         description: `Found ${data.totalQuestions} question(s) in this session`,
       });
     },
@@ -108,10 +125,10 @@ export function HansardQAButton({ hansardRecord, trigger }: HansardQAButtonProps
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <MessageSquareText className="w-5 h-5" />
-            Q&A Analysis - {hansardRecord.sessionNumber}
+            {labels.title} - {hansardRecord.sessionNumber}
           </DialogTitle>
           <DialogDescription>
-            Parliamentary questions (Soalan/Pertanyaan) extracted from this Hansard session
+            {labels.description}
           </DialogDescription>
         </DialogHeader>
 
@@ -213,7 +230,7 @@ export function HansardQAButton({ hansardRecord, trigger }: HansardQAButtonProps
                 <div className="text-center py-12">
                   <MessageSquareText className="w-12 h-12 mx-auto mb-4 text-muted-foreground opacity-50" />
                   <p className="text-sm text-muted-foreground">
-                    No parliamentary questions (Soalan/Pertanyaan) found in this session
+                    No parliamentary questions found in this section
                   </p>
                 </div>
               )}

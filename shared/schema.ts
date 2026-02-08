@@ -718,6 +718,7 @@ export type HansardQaCache = typeof hansardQaCache.$inferSelect;
 export const hansardQaAnalysisCache = pgTable("hansard_qa_analysis_cache", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   hansardRecordId: varchar("hansard_record_id").notNull().references(() => hansardRecords.id, { onDelete: "cascade" }),
+  sectionType: varchar("section_type").notNull().default("menteri"),
   sessionInfo: text("session_info").notNull(),
   questions: jsonb("questions").$type<Array<{
     no: number;
