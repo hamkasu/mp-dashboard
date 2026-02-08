@@ -152,9 +152,9 @@ export interface IStorage {
   getHansardSummaryStatus(): Promise<{ total: number; withEnglish: number; withMalay: number; missing: number }>;
   getQaCache(hansardRecordId: string, question: string): Promise<any | undefined>;
   saveQaCache(data: any): Promise<any>;
-  getQaAnalysisCache(hansardRecordId: string): Promise<any | undefined>;
+  getQaAnalysisCache(hansardRecordId: string, sectionType: string): Promise<any | undefined>;
   saveQaAnalysisCache(data: any): Promise<any>;
-  deleteQaAnalysisCache(hansardRecordId: string): Promise<void>;
+  deleteQaAnalysisCache(hansardRecordId: string, sectionType: string): Promise<void>;
   getHansardById(id: string): Promise<HansardRecord | undefined>;
 
   // DUN Member methods
@@ -1747,7 +1747,7 @@ export class MemStorage implements IStorage {
     return data;
   }
 
-  async getQaAnalysisCache(hansardRecordId: string): Promise<any | undefined> {
+  async getQaAnalysisCache(hansardRecordId: string, sectionType: string): Promise<any | undefined> {
     return undefined;
   }
 
@@ -1755,7 +1755,7 @@ export class MemStorage implements IStorage {
     return data;
   }
 
-  async deleteQaAnalysisCache(hansardRecordId: string): Promise<void> {
+  async deleteQaAnalysisCache(hansardRecordId: string, sectionType: string): Promise<void> {
     // no-op for MemStorage
   }
 
@@ -3121,10 +3121,10 @@ export class DbStorage implements IStorage {
     return result[0];
   }
 
-  async getQaAnalysisCache(hansardRecordId: string): Promise<any | undefined> {
+  async getQaAnalysisCache(hansardRecordId: string, sectionType: string): Promise<any | undefined> {
     const { hansardQaAnalysisCache } = await import("@shared/schema");
     const result = await db.select().from(hansardQaAnalysisCache)
-      .where(eq(hansardQaAnalysisCache.hansardRecordId, hansardRecordId))
+      .where(sql`${hansardQaAnalysisCache.hansardRecordId} = ${hansardRecordId} AND ${hansardQaAnalysisCache.sectionType} = ${sectionType}`)
       .limit(1);
     return result[0];
   }
@@ -3135,10 +3135,10 @@ export class DbStorage implements IStorage {
     return result[0];
   }
 
-  async deleteQaAnalysisCache(hansardRecordId: string): Promise<void> {
+  async deleteQaAnalysisCache(hansardRecordId: string, sectionType: string): Promise<void> {
     const { hansardQaAnalysisCache } = await import("@shared/schema");
     await db.delete(hansardQaAnalysisCache)
-      .where(eq(hansardQaAnalysisCache.hansardRecordId, hansardRecordId));
+      .where(sql`${hansardQaAnalysisCache.hansardRecordId} = ${hansardRecordId} AND ${hansardQaAnalysisCache.sectionType} = ${sectionType}`);
   }
 
   // DUN Member methods

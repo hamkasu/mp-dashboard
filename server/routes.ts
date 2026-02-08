@@ -4380,7 +4380,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   app.post("/api/hansard/:hansardId/qa-analysis", mutationRateLimit, async (req, res) => {
     try {
       const { hansardId } = req.params;
-      const { force } = req.body || {};
+      const { force, sectionType = "menteri" } = req.body || {};
 
       const hansard = await storage.getHansardById(hansardId);
       if (!hansard) {
@@ -4389,9 +4389,9 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
 
       // Check database cache first (unless force re-analyze)
       if (!force) {
-        const cached = await storage.getQaAnalysisCache(hansardId);
+        const cached = await storage.getQaAnalysisCache(hansardId, sectionType);
         if (cached) {
-          console.log(`[AI Q&A Analysis] Cache hit for ${hansardId}`);
+          console.log(`[AI Q&A Analysis] Cache hit for ${hansardId} (${sectionType})`);
           return res.json({
             sessionInfo: cached.sessionInfo,
             questions: cached.questions,
@@ -4420,23 +4420,25 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       const pdfResult = await pdfParser.getText();
       const fullText = pdfResult.text;
 
-      console.log(`[AI Q&A Analysis] Extracted ${fullText.length} chars from PDF for ${hansardId}${force ? " (forced)" : ""}`);
+      console.log(`[AI Q&A Analysis] Extracted ${fullText.length} chars from PDF for ${hansardId} (${sectionType})${force ? " (forced)" : ""}`);
 
       const deepseek = await import("./services/deepseek.js");
 
       const result = await deepseek.analyzeQASections(
         fullText,
-        hansard.sessionNumber || hansardId
+        hansard.sessionNumber || hansardId,
+        sectionType as "menteri" | "lisan"
       );
 
       // Delete existing cache entry if re-analyzing
       if (force) {
-        await storage.deleteQaAnalysisCache(hansardId);
+        await storage.deleteQaAnalysisCache(hansardId, sectionType);
       }
 
       // Save to database
       const saved = await storage.saveQaAnalysisCache({
         hansardRecordId: hansardId,
+        sectionType,
         sessionInfo: result.sessionInfo,
         questions: result.questions,
         totalQuestions: result.totalQuestions,
@@ -4457,7 +4459,8 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   app.get("/api/hansard/:hansardId/qa-analysis", async (req, res) => {
     try {
       const { hansardId } = req.params;
-      const cached = await storage.getQaAnalysisCache(hansardId);
+      const sectionType = (req.query.sectionType as string) || "menteri";
+      const cached = await storage.getQaAnalysisCache(hansardId, sectionType);
       if (cached) {
         return res.json({
           sessionInfo: cached.sessionInfo,
