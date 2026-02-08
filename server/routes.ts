@@ -48,7 +48,7 @@ import { db } from "./db";
 import { eq, sql } from "drizzle-orm";
 import { normalizeParliamentTerm } from "@shared/utils";
 import { jobTracker } from "./job-tracker";
-import { runHansardDownloadJob } from "./hansard-background-jobs";
+import { runHansardDownloadJob, runPreviousParliamentsDownloadJob } from "./hansard-background-jobs";
 import {
   mutationRateLimit,
   uploadRateLimit,
@@ -3836,6 +3836,31 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     } catch (error) {
       console.error("Error starting Hansard download job:", error);
       res.status(500).json({ error: "Failed to start download job" });
+    }
+  });
+
+  // Trigger download of hansard records from previous parliaments (1st-14th)
+  app.post("/api/hansard-records/download-previous", requireAdmin, mutationRateLimit, auditMiddleware('hansard-download-previous'), async (req, res) => {
+    try {
+      const { maxRecords = 5000 } = req.body;
+
+      // Create a background job
+      const jobId = jobTracker.createJob(maxRecords, 'Initializing previous parliaments download...');
+
+      // Start the background job (don't await it)
+      runPreviousParliamentsDownloadJob(jobId, maxRecords).catch(error => {
+        console.error('[Background Job] Uncaught error:', error);
+      });
+
+      // Return immediately with the job ID
+      res.json({
+        jobId,
+        message: 'Previous parliaments download started in background',
+        statusUrl: `/api/jobs/${jobId}`
+      });
+    } catch (error) {
+      console.error("Error starting previous parliaments download job:", error);
+      res.status(500).json({ error: "Failed to start previous parliaments download job" });
     }
   });
 

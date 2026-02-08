@@ -447,6 +447,39 @@ export default function HansardAdmin() {
     }
   };
 
+  const previousParliamentsMutation = useMutation({
+    mutationFn: async (maxRecords: number) => {
+      const res = await apiRequest("POST", "/api/hansard-records/download-previous", {
+        maxRecords,
+      });
+      return await res.json();
+    },
+    onSuccess: (data: { jobId: string; message: string }) => {
+      toast({
+        title: "Download Started",
+        description: "Downloading hansards from previous parliaments in background...",
+      });
+
+      const interval = setInterval(() => pollJobStatus(data.jobId), 2000);
+      setPollingInterval(interval);
+      pollJobStatus(data.jobId);
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to start previous parliaments download",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleDownloadPreviousParliaments = () => {
+    if (confirm("This will download hansard records from all previous parliaments (1st-14th). Existing records will be skipped. This may take a very long time. Continue?")) {
+      setDownloadStatus(null);
+      previousParliamentsMutation.mutate(5000);
+    }
+  };
+
   const refreshMpDataMutation = useMutation({
     mutationFn: async () => {
       const res = await apiRequest("POST", "/api/admin/refresh-mp-data");
@@ -1770,6 +1803,51 @@ export default function HansardAdmin() {
               </AlertDescription>
             </Alert>
           )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <History className="h-5 w-5" />
+            Download Previous Parliaments
+          </CardTitle>
+          <CardDescription>
+            Download hansard records from Parliaments 1-14 (historical archive)
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <p className="text-sm text-muted-foreground">
+              This will download hansard records from all previous parliaments (1st through 14th).
+              Existing records will be skipped automatically.
+            </p>
+            <Alert>
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription>
+                This operation downloads a large volume of historical data and may take a very long time.
+                It will NOT delete any existing records.
+              </AlertDescription>
+            </Alert>
+          </div>
+          <Button
+            onClick={handleDownloadPreviousParliaments}
+            disabled={previousParliamentsMutation.isPending || jobStatus?.status === 'running'}
+            variant="outline"
+            className="w-full"
+          >
+            {previousParliamentsMutation.isPending || jobStatus?.status === 'running' ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                {jobStatus?.status === 'running' ? 'Processing...' : 'Starting...'}
+              </>
+            ) : (
+              <>
+                <Download className="mr-2 h-4 w-4" />
+                Download Previous Parliaments
+              </>
+            )}
+          </Button>
         </CardContent>
       </Card>
 
