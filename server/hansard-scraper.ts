@@ -207,7 +207,7 @@ export class HansardScraper {
           const sessionDate = this.parseMalayDate(node.text);
           if (sessionDate) {
             const sessionNumber = `DR.${sessionDate.getDate()}.${sessionDate.getMonth() + 1}.${sessionDate.getFullYear()}`;
-            
+
             if (!collected.has(sessionNumber)) {
               collected.set(sessionNumber, {
                 sessionNumber,
@@ -217,6 +217,73 @@ export class HansardScraper {
                 pdfUrl
               });
               console.log(`  Found: ${sessionNumber} - ${node.text} (total: ${collected.size})`);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  /**
+   * Recursively traverse the archive tree for previous (non-15th) parliaments
+   * Collects records from all parliaments except the 15th
+   */
+  private async traversePreviousParliamentsTree(
+    nodeId: string | null,
+    parliamentTerm: string,
+    penggal: string,
+    mesyuarat: string,
+    collected: Map<string, HansardMetadata>
+  ): Promise<void> {
+    if (nodeId && this.visitedNodes.has(nodeId)) {
+      return;
+    }
+
+    if (nodeId) {
+      this.visitedNodes.add(nodeId);
+    }
+
+    const nodes = await this.fetchTreeLevel(nodeId);
+
+    for (const node of nodes) {
+      const level = node.level;
+
+      // Level 2: Parliament entries
+      if (level === 2) {
+        // Process all parliaments EXCEPT the 15th
+        if (!this.is15thParliament(node.text)) {
+          const normalizedTerm = normalizeParliamentTerm(node.text);
+          console.log(`✅ Processing previous parliament: ${node.text} -> ${normalizedTerm}`);
+          await this.traversePreviousParliamentsTree(node.id, normalizedTerm, '', '', collected);
+        } else {
+          console.log(`⏭️  Skipping 15th Parliament (use refresh instead): ${node.text}`);
+        }
+      }
+      // Level 3: Penggal
+      else if (level === 3) {
+        await this.traversePreviousParliamentsTree(node.id, parliamentTerm, node.text, '', collected);
+      }
+      // Level 4: Mesyuarat
+      else if (level === 4) {
+        await this.traversePreviousParliamentsTree(node.id, parliamentTerm, penggal, node.text, collected);
+      }
+      // Level 5: Individual date with PDF link
+      else if (level === 5) {
+        const pdfUrl = this.extractPdfUrlFromMyurl(node.myurl || '');
+        if (pdfUrl) {
+          const sessionDate = this.parseMalayDate(node.text);
+          if (sessionDate) {
+            const sessionNumber = `DR.${sessionDate.getDate()}.${sessionDate.getMonth() + 1}.${sessionDate.getFullYear()}`;
+
+            if (!collected.has(sessionNumber)) {
+              collected.set(sessionNumber, {
+                sessionNumber,
+                sessionDate,
+                parliamentTerm,
+                sitting: mesyuarat,
+                pdfUrl
+              });
+              console.log(`  Found: ${sessionNumber} - ${node.text} [${parliamentTerm}] (total: ${collected.size})`);
             }
           }
         }
@@ -261,6 +328,38 @@ export class HansardScraper {
   async getHansardListForParliament15(maxRecords: number = 100): Promise<HansardMetadata[]> {
     // Use the new tree-based approach instead of pagination
     return this.getHansardListFromArchiveTree(maxRecords);
+  }
+
+  /**
+   * Get Hansard list for all previous parliaments (excluding the 15th)
+   * Traverses the full archive tree and returns records from parliaments 1-14
+   * @param maxRecords - Optional limit on number of records to return (after sorting)
+   */
+  async getHansardListForPreviousParliaments(maxRecords: number = 5000): Promise<HansardMetadata[]> {
+    console.log('🌳 Traversing archive tree for previous parliaments (excluding 15th)...');
+    this.visitedNodes.clear();
+    const collected = new Map<string, HansardMetadata>();
+
+    try {
+      await this.traversePreviousParliamentsTree(null, '', '', '', collected);
+      console.log(`✅ Tree traversal complete. Found ${collected.size} unique records from previous parliaments.`);
+
+      // Sort by date (newest first)
+      const allRecords = Array.from(collected.values()).sort((a, b) =>
+        b.sessionDate.getTime() - a.sessionDate.getTime()
+      );
+
+      const records = allRecords.slice(0, maxRecords);
+      console.log(`📊 Returning ${records.length} records from previous parliaments (sorted by date, newest first)`);
+
+      return records;
+    } catch (error) {
+      console.error('❌ Error traversing archive tree for previous parliaments:', error);
+      const allRecords = Array.from(collected.values()).sort((a, b) =>
+        b.sessionDate.getTime() - a.sessionDate.getTime()
+      );
+      return allRecords.slice(0, maxRecords);
+    }
   }
 
   async downloadAndExtractPdf(pdfUrl: string): Promise<string | null> {
