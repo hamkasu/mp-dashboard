@@ -225,6 +225,7 @@ async function callGeminiWithKeyRotation(
         config: {
           systemInstruction: systemPrompt,
           responseMimeType: "application/json",
+          maxOutputTokens: 8000,
         },
         contents: userPrompt,
       });
@@ -283,7 +284,7 @@ async function callOpenRouter(
         { role: "user", content: userPrompt }
       ],
       temperature: 0.3,
-      max_tokens: 4000,
+      max_tokens: 8000,
       response_format: { type: "json_object" }
     }),
   });
@@ -325,7 +326,7 @@ async function callGroq(
         { role: "user", content: userPrompt }
       ],
       temperature: 0.3,
-      max_tokens: 4000,
+      max_tokens: 8000,
       response_format: { type: "json_object" }
     }),
   });
@@ -367,7 +368,7 @@ async function callTogether(
         { role: "user", content: userPrompt }
       ],
       temperature: 0.3,
-      max_tokens: 4000,
+      max_tokens: 8000,
       response_format: { type: "json_object" }
     }),
   });
@@ -981,17 +982,20 @@ function extractQASections(transcript: string, sectionType: QASectionType): stri
   };
 
   // The end boundary: the other section or common subsequent sections
+  // Note: avoid short/generic keywords like "USUL" that can match inside Malay words
   const endKeywords: Record<QASectionType, string[]> = {
     menteri: [
       "PERTANYAAN-PERTANYAAN BAGI JAWAB LISAN",
       "PERTANYAAN BAGI JAWAB LISAN",
       "RANG UNDANG-UNDANG",
-      "USUL",
+      "USUL-USUL",
+      "ATURAN URUSAN MESYUARAT",
     ],
     lisan: [
       "RANG UNDANG-UNDANG",
-      "USUL",
+      "USUL-USUL",
       "ATURAN URUSAN MESYUARAT",
+      "PERTANYAAN-PERTANYAAN BAGI JAWAB BERTULIS",
     ],
   };
 
