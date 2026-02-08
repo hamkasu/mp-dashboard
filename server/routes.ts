@@ -4380,10 +4380,26 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   app.post("/api/hansard/:hansardId/qa-analysis", mutationRateLimit, async (req, res) => {
     try {
       const { hansardId } = req.params;
+      const { force } = req.body || {};
 
       const hansard = await storage.getHansardById(hansardId);
       if (!hansard) {
         return res.status(404).json({ error: "Hansard record not found" });
+      }
+
+      // Check database cache first (unless force re-analyze)
+      if (!force) {
+        const cached = await storage.getQaAnalysisCache(hansardId);
+        if (cached) {
+          console.log(`[AI Q&A Analysis] Cache hit for ${hansardId}`);
+          return res.json({
+            sessionInfo: cached.sessionInfo,
+            questions: cached.questions,
+            totalQuestions: cached.totalQuestions,
+            cached: true,
+            analyzedAt: cached.analyzedAt,
+          });
+        }
       }
 
       if (!hansard.transcript || hansard.transcript.trim().length === 0) {
@@ -4392,17 +4408,55 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
 
       const deepseek = await import("./services/deepseek.js");
 
-      console.log(`[AI Q&A Analysis] Analyzing questions for ${hansardId}`);
+      console.log(`[AI Q&A Analysis] Analyzing questions for ${hansardId}${force ? " (forced)" : ""}`);
 
       const result = await deepseek.analyzeQASections(
         hansard.transcript,
         hansard.sessionNumber || hansardId
       );
 
-      res.json(result);
+      // Delete existing cache entry if re-analyzing
+      if (force) {
+        await storage.deleteQaAnalysisCache(hansardId);
+      }
+
+      // Save to database
+      const saved = await storage.saveQaAnalysisCache({
+        hansardRecordId: hansardId,
+        sessionInfo: result.sessionInfo,
+        questions: result.questions,
+        totalQuestions: result.totalQuestions,
+      });
+
+      res.json({
+        ...result,
+        cached: false,
+        analyzedAt: saved.analyzedAt,
+      });
     } catch (error) {
       console.error("Error in Q&A analysis:", error);
       res.status(500).json({ error: "Failed to analyze Q&A sections", details: String(error) });
+    }
+  });
+
+  // Get cached Q&A analysis without triggering new analysis
+  app.get("/api/hansard/:hansardId/qa-analysis", async (req, res) => {
+    try {
+      const { hansardId } = req.params;
+      const cached = await storage.getQaAnalysisCache(hansardId);
+      if (cached) {
+        return res.json({
+          sessionInfo: cached.sessionInfo,
+          questions: cached.questions,
+          totalQuestions: cached.totalQuestions,
+          cached: true,
+          analyzedAt: cached.analyzedAt,
+        });
+      }
+      return res.json(null);
+    } catch (error) {
+      console.error("Error fetching Q&A analysis cache:", error);
+      res.status(500).json({ error: "Failed to fetch Q&A analysis" });
     }
   });
 

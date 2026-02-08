@@ -3,8 +3,8 @@
  */
 
 import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -24,7 +24,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Loader2, MessageSquareText, AlertCircle } from "lucide-react";
+import { Loader2, MessageSquareText, AlertCircle, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { HansardRecordWithPdf } from "@shared/schema";
 
@@ -40,6 +40,8 @@ interface QAAnalysisResult {
   sessionInfo: string;
   questions: QAQuestion[];
   totalQuestions: number;
+  cached?: boolean;
+  analyzedAt?: string;
 }
 
 interface HansardQAButtonProps {
@@ -50,17 +52,26 @@ interface HansardQAButtonProps {
 export function HansardQAButton({ hansardRecord, trigger }: HansardQAButtonProps) {
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
-  const [result, setResult] = useState<QAAnalysisResult | null>(null);
 
+  const cacheQueryKey = `/api/hansard/${hansardRecord.id}/qa-analysis`;
+
+  // Fetch cached results when dialog opens
+  const { data: cachedResult, isLoading: cacheLoading } = useQuery<QAAnalysisResult | null>({
+    queryKey: [cacheQueryKey],
+    enabled: open,
+  });
+
+  // Mutation for triggering analysis (initial or re-analyze)
   const analysisMutation = useMutation({
-    mutationFn: async () => {
-      const res = await apiRequest("POST", `/api/hansard/${hansardRecord.id}/qa-analysis`);
+    mutationFn: async (force: boolean = false) => {
+      const res = await apiRequest("POST", `/api/hansard/${hansardRecord.id}/qa-analysis`, force ? { force: true } : undefined);
       return await res.json();
     },
     onSuccess: (data: QAAnalysisResult) => {
-      setResult(data);
+      // Update the cache query with fresh results
+      queryClient.setQueryData([cacheQueryKey], data);
       toast({
-        title: "Q&A Analysis Complete",
+        title: data.cached ? "Q&A Analysis Loaded" : "Q&A Analysis Complete",
         description: `Found ${data.totalQuestions} question(s) in this session`,
       });
     },
@@ -75,9 +86,19 @@ export function HansardQAButton({ hansardRecord, trigger }: HansardQAButtonProps
 
   const handleOpen = (isOpen: boolean) => {
     setOpen(isOpen);
-    if (isOpen && !result && !analysisMutation.isPending) {
-      analysisMutation.mutate();
-    }
+  };
+
+  // Trigger analysis if no cached result and dialog is open
+  const result = cachedResult;
+  const isLoading = cacheLoading || analysisMutation.isPending;
+  const needsAnalysis = open && !cacheLoading && !result && !analysisMutation.isPending && !analysisMutation.isError;
+
+  if (needsAnalysis) {
+    analysisMutation.mutate(false);
+  }
+
+  const handleReanalyze = () => {
+    analysisMutation.mutate(true);
   };
 
   return (
@@ -95,15 +116,17 @@ export function HansardQAButton({ hansardRecord, trigger }: HansardQAButtonProps
         </DialogHeader>
 
         <div className="flex-1 overflow-hidden">
-          {analysisMutation.isPending && (
+          {isLoading && !result && (
             <div className="flex flex-col items-center justify-center py-16 gap-4">
               <Loader2 className="w-8 h-8 animate-spin text-primary" />
               <p className="text-sm text-muted-foreground">
-                Analyzing parliamentary questions...
+                {cacheLoading ? "Checking for cached results..." : "Analyzing parliamentary questions..."}
               </p>
-              <p className="text-xs text-muted-foreground">
-                This may take a moment as the AI parses the transcript
-              </p>
+              {!cacheLoading && (
+                <p className="text-xs text-muted-foreground">
+                  This may take a moment as the AI parses the transcript
+                </p>
+              )}
             </div>
           )}
 
@@ -116,7 +139,7 @@ export function HansardQAButton({ hansardRecord, trigger }: HansardQAButtonProps
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => analysisMutation.mutate()}
+                onClick={() => analysisMutation.mutate(false)}
               >
                 Try Again
               </Button>
@@ -128,19 +151,33 @@ export function HansardQAButton({ hansardRecord, trigger }: HansardQAButtonProps
               <div className="flex items-center justify-between">
                 <div className="space-y-1">
                   <p className="text-sm text-muted-foreground">{result.sessionInfo}</p>
-                  <Badge variant="secondary">
-                    {result.totalQuestions} Question{result.totalQuestions !== 1 ? "s" : ""} Found
-                  </Badge>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="secondary">
+                      {result.totalQuestions} Question{result.totalQuestions !== 1 ? "s" : ""} Found
+                    </Badge>
+                    {result.cached && (
+                      <Badge variant="outline" className="text-xs">
+                        Cached
+                      </Badge>
+                    )}
+                    {result.analyzedAt && (
+                      <span className="text-xs text-muted-foreground">
+                        Analyzed: {new Date(result.analyzedAt).toLocaleDateString()}
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => analysisMutation.mutate()}
+                  onClick={handleReanalyze}
                   disabled={analysisMutation.isPending}
                 >
                   {analysisMutation.isPending ? (
                     <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                  ) : null}
+                  ) : (
+                    <RefreshCw className="w-4 h-4 mr-2" />
+                  )}
                   Re-analyze
                 </Button>
               </div>

@@ -715,6 +715,29 @@ export const insertHansardQaCacheSchema = createInsertSchema(hansardQaCache).omi
 export type InsertHansardQaCache = z.infer<typeof insertHansardQaCacheSchema>;
 export type HansardQaCache = typeof hansardQaCache.$inferSelect;
 
+export const hansardQaAnalysisCache = pgTable("hansard_qa_analysis_cache", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  hansardRecordId: varchar("hansard_record_id").notNull().references(() => hansardRecords.id, { onDelete: "cascade" }),
+  sessionInfo: text("session_info").notNull(),
+  questions: jsonb("questions").$type<Array<{
+    no: number;
+    questioner: string;
+    ministerTargeted: string;
+    topic: string;
+    summary: string;
+  }>>().notNull(),
+  totalQuestions: integer("total_questions").notNull().default(0),
+  analyzedAt: timestamp("analyzed_at").notNull().default(sql`NOW()`),
+});
+
+export const insertHansardQaAnalysisCacheSchema = createInsertSchema(hansardQaAnalysisCache).omit({
+  id: true,
+  analyzedAt: true,
+});
+
+export type InsertHansardQaAnalysisCache = z.infer<typeof insertHansardQaAnalysisCacheSchema>;
+export type HansardQaAnalysisCache = typeof hansardQaAnalysisCache.$inferSelect;
+
 // Court Case News Articles table for scraped news review queue
 export const courtCaseNewsArticles = pgTable("court_case_news_articles", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
