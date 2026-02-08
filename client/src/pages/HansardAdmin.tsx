@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Loader2, Download, Trash2, AlertTriangle, CheckCircle2, RefreshCw, Upload, FileText, X, Database, Clock, History, Share2, Sparkles, StopCircle, Users, Edit, UserX, Vote, DollarSign } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -132,11 +133,20 @@ export default function HansardAdmin() {
     absentSessions: Array<{ sessionNumber: string; sessionDate: string }>;
   } | null>(null);
 
-  // Cleanup polling interval on unmount
+  // Delete verification dialog states
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [deleteCountdown, setDeleteCountdown] = useState(0);
+  const deleteCountdownRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Cleanup polling interval and delete countdown on unmount
   useEffect(() => {
     return () => {
       if (pollingInterval) {
         clearInterval(pollingInterval);
+      }
+      if (deleteCountdownRef.current) {
+        clearInterval(deleteCountdownRef.current);
       }
     };
   }, [pollingInterval]);
@@ -421,10 +431,33 @@ export default function HansardAdmin() {
     },
   });
 
-  const handleDelete = () => {
-    if (confirm(`Are you sure you want to delete all ${hansardRecords?.length || 0} hansard records? This action cannot be undone.`)) {
-      deleteMutation.mutate();
-    }
+  const handleDeleteOpen = () => {
+    setDeleteConfirmText("");
+    setDeleteCountdown(5);
+    setDeleteDialogOpen(true);
+    // Start countdown
+    if (deleteCountdownRef.current) clearInterval(deleteCountdownRef.current);
+    deleteCountdownRef.current = setInterval(() => {
+      setDeleteCountdown((prev) => {
+        if (prev <= 1) {
+          if (deleteCountdownRef.current) clearInterval(deleteCountdownRef.current);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  };
+
+  const handleDeleteClose = () => {
+    setDeleteDialogOpen(false);
+    setDeleteConfirmText("");
+    setDeleteCountdown(0);
+    if (deleteCountdownRef.current) clearInterval(deleteCountdownRef.current);
+  };
+
+  const handleDeleteConfirm = () => {
+    deleteMutation.mutate();
+    handleDeleteClose();
   };
 
   const handleCleanupOrphaned = () => {
@@ -1882,7 +1915,7 @@ export default function HansardAdmin() {
                     </Alert>
                   </div>
                   <Button
-                    onClick={handleDelete}
+                    onClick={handleDeleteOpen}
                     disabled={deleteMutation.isPending || isLoading || !hansardRecords || hansardRecords.length === 0}
                     variant="destructive"
                     className="w-full"
@@ -1904,6 +1937,59 @@ export default function HansardAdmin() {
               )}
             </CardContent>
           </Card>
+
+          {/* Delete verification dialog */}
+          <Dialog open={deleteDialogOpen} onOpenChange={(open) => { if (!open) handleDeleteClose(); }}>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2 text-destructive">
+                  <AlertTriangle className="h-5 w-5" />
+                  Confirm Deletion
+                </DialogTitle>
+                <DialogDescription>
+                  You are about to permanently delete <strong>{hansardRecords?.length || 0}</strong> hansard records. This action cannot be undone.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-2">
+                <Alert variant="destructive">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertDescription>
+                    All hansard records, including attendance data and voting records linked to these sessions, will be permanently removed.
+                  </AlertDescription>
+                </Alert>
+                <div className="space-y-2">
+                  <Label htmlFor="delete-confirm-input">
+                    Type <strong className="text-destructive">DELETE ALL</strong> to confirm:
+                  </Label>
+                  <Input
+                    id="delete-confirm-input"
+                    value={deleteConfirmText}
+                    onChange={(e) => setDeleteConfirmText(e.target.value)}
+                    placeholder="Type DELETE ALL"
+                    autoComplete="off"
+                  />
+                </div>
+                {deleteCountdown > 0 && (
+                  <p className="text-sm text-muted-foreground text-center">
+                    Delete button will be enabled in <strong>{deleteCountdown}</strong> second{deleteCountdown !== 1 ? 's' : ''}...
+                  </p>
+                )}
+              </div>
+              <DialogFooter className="gap-2 sm:gap-0">
+                <Button variant="outline" onClick={handleDeleteClose}>
+                  Cancel
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={handleDeleteConfirm}
+                  disabled={deleteConfirmText !== "DELETE ALL" || deleteCountdown > 0}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  {deleteCountdown > 0 ? `Wait ${deleteCountdown}s...` : "Permanently Delete All"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
 
           <Card>
             <CardHeader>
