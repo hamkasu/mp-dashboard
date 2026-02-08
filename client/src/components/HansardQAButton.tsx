@@ -196,12 +196,12 @@ export function HansardQAButton({ hansardRecord, trigger }: HansardQAButtonProps
                     </TableHeader>
                     <TableBody>
                       {result.questions.map((q, idx) => (
-                        <TableRow key={idx}>
-                          <TableCell className="font-medium">{q.no}</TableCell>
-                          <TableCell className="text-sm">{q.questioner}</TableCell>
-                          <TableCell className="text-sm">{q.ministerTargeted}</TableCell>
-                          <TableCell className="text-sm font-medium">{q.topic}</TableCell>
-                          <TableCell className="text-sm text-muted-foreground">
+                        <TableRow key={idx} className="align-top">
+                          <TableCell className="font-medium align-top">{q.no}</TableCell>
+                          <TableCell className="text-sm align-top">{q.questioner}</TableCell>
+                          <TableCell className="text-sm align-top">{q.ministerTargeted}</TableCell>
+                          <TableCell className="text-sm font-medium align-top">{q.topic}</TableCell>
+                          <TableCell className="text-sm text-muted-foreground align-top">
                             {q.summary}
                           </TableCell>
                         </TableRow>
