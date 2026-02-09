@@ -1715,3 +1715,62 @@ export const insertBillToWatchSchema = createInsertSchema(billsToWatch).omit({
 
 export type InsertBillToWatch = z.infer<typeof insertBillToWatchSchema>;
 export type BillToWatch = typeof billsToWatch.$inferSelect;
+
+// ============================================================================
+// GigHalal Authentication Tables
+// Social login + email/password for Malaysian freelancer platform
+// ============================================================================
+
+// GigHalal users table — supports email/password + social OAuth providers
+export const gigUsers = pgTable("gig_users", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  // Profile
+  username: text("username").notNull(),
+  email: text("email"),
+  phone: text("phone"),
+  displayName: text("display_name"),
+  avatarUrl: text("avatar_url"),
+  accountType: text("account_type").notNull().default("freelancer"), // freelancer | employer
+
+  // Email/password auth (nullable for social-only users)
+  passwordHash: text("password_hash"),
+
+  // OAuth provider data
+  authProvider: text("auth_provider").notNull().default("email"), // email | facebook | google | apple | whatsapp
+  providerId: text("provider_id"), // External provider user ID
+  providerData: jsonb("provider_data").$type<Record<string, unknown>>(),
+
+  // SOCSO opt-in
+  socsoAutoRegister: boolean("socso_auto_register").notNull().default(false),
+
+  // Status
+  isActive: boolean("is_active").notNull().default(true),
+  emailVerified: boolean("email_verified").notNull().default(false),
+  phoneVerified: boolean("phone_verified").notNull().default(false),
+  lastLoginAt: timestamp("last_login_at"),
+  createdAt: timestamp("created_at").notNull().default(sql`NOW()`),
+  updatedAt: timestamp("updated_at").notNull().default(sql`NOW()`),
+});
+
+export const insertGigUserSchema = createInsertSchema(gigUsers).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  lastLoginAt: true,
+});
+
+export type InsertGigUser = z.infer<typeof insertGigUserSchema>;
+export type GigUser = typeof gigUsers.$inferSelect;
+
+// WhatsApp OTP verification codes
+export const whatsappOtpCodes = pgTable("whatsapp_otp_codes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  phone: text("phone").notNull(),
+  code: text("code").notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  verified: boolean("verified").notNull().default(false),
+  attempts: integer("attempts").notNull().default(0),
+  createdAt: timestamp("created_at").notNull().default(sql`NOW()`),
+});
+
+export type WhatsappOtpCode = typeof whatsappOtpCodes.$inferSelect;
