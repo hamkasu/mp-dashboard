@@ -6,6 +6,7 @@
 import { Search, Menu, FileText, BookOpen, UserCheck, Calculator, BarChart3, ExternalLink, AlertCircle, GraduationCap, Scale, Shield, MessageSquare, Gavel, Building2, MessageSquareText, Award, Handshake, ChevronDown, Users, Activity, LayoutDashboard, Settings, UserPlus, UserX, Upload, TrendingUp, Heart, ScrollText, Eye } from "lucide-react";
 import { useState } from "react";
 import { FeedbackModal } from "@/components/FeedbackModal";
+import { FundamentalRightsPopup } from "@/components/FundamentalRightsPopup";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -292,6 +293,14 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
               </DropdownMenuSub>
             </DropdownMenuContent>
           </DropdownMenu>
+
+          {/* Fundamental Rights Quick-View */}
+          <FundamentalRightsPopup>
+            <Button variant="outline" size="sm" className="gap-1 hidden md:flex" data-testid="button-rights-popup">
+              <Shield className="w-4 h-4" />
+              {t('nav.fundamentalRights')}
+            </Button>
+          </FundamentalRightsPopup>
         </div>
 
         {/* Right: Mobile Menu + Search + Feedback + Language */}
