@@ -35,7 +35,8 @@ import {
   ChevronRight,
   ExternalLink,
   Download,
-  Eye
+  Eye,
+  BookOpen
 } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts";
 
@@ -245,6 +246,48 @@ const ma63Data = {
         ms: "Pelancaran Dashboard MA63 rasmi dijadualkan (portal BHESS/JPM)"
       },
       type: "upcoming"
+    }
+  ],
+
+  hansardDocuments: [
+    {
+      id: "DR-24071974",
+      date: "24 July 1974",
+      dateMs: "24 Julai 1974",
+      title: { en: "Dewan Rakyat Hansard - 24 July 1974", ms: "Hansard Dewan Rakyat - 24 Julai 1974" },
+      description: {
+        en: "Parliamentary proceedings of the Dewan Rakyat session on 24 July 1974 (3rd Parliament)",
+        ms: "Prosiding parlimen sesi Dewan Rakyat pada 24 Julai 1974 (Parlimen ke-3)"
+      },
+      pdfUrl: "https://www.parlimen.gov.my/files/hindex/pdf/DR-24071974.pdf",
+      parliament: "3rd Parliament",
+      parliamentMs: "Parlimen ke-3"
+    },
+    {
+      id: "DR-25071974",
+      date: "25 July 1974",
+      dateMs: "25 Julai 1974",
+      title: { en: "Dewan Rakyat Hansard - 25 July 1974", ms: "Hansard Dewan Rakyat - 25 Julai 1974" },
+      description: {
+        en: "Parliamentary proceedings of the Dewan Rakyat session on 25 July 1974 (3rd Parliament)",
+        ms: "Prosiding parlimen sesi Dewan Rakyat pada 25 Julai 1974 (Parlimen ke-3)"
+      },
+      pdfUrl: "https://www.parlimen.gov.my/files/hindex/pdf/DR-25071974.pdf",
+      parliament: "3rd Parliament",
+      parliamentMs: "Parlimen ke-3"
+    },
+    {
+      id: "DR-26071974",
+      date: "26 July 1974",
+      dateMs: "26 Julai 1974",
+      title: { en: "Dewan Rakyat Hansard - 26 July 1974", ms: "Hansard Dewan Rakyat - 26 Julai 1974" },
+      description: {
+        en: "Parliamentary proceedings of the Dewan Rakyat session on 26 July 1974 (3rd Parliament)",
+        ms: "Prosiding parlimen sesi Dewan Rakyat pada 26 Julai 1974 (Parlimen ke-3)"
+      },
+      pdfUrl: "https://www.parlimen.gov.my/files/hindex/pdf/DR-26071974.pdf",
+      parliament: "3rd Parliament",
+      parliamentMs: "Parlimen ke-3"
     }
   ],
 
@@ -481,7 +524,7 @@ export default function MA63Dashboard() {
     trackAndFetchVisitorCount();
   }, []);
 
-  const { summary, categories, timeline, priorityWatchlist } = ma63Data;
+  const { summary, categories, timeline, priorityWatchlist, hansardDocuments } = ma63Data;
 
   // Prepare data for pie chart
   const pieData = [
@@ -813,6 +856,66 @@ export default function MA63Dashboard() {
                   })}
                 </tbody>
               </table>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Hansard Documents */}
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <BookOpen className="h-5 w-5 text-primary" />
+              {language === 'ms' ? 'Dokumen Hansard' : 'Hansard Documents'}
+            </CardTitle>
+            <CardDescription>
+              {language === 'ms'
+                ? 'Rekod rasmi prosiding Dewan Rakyat berkaitan MA63'
+                : 'Official Dewan Rakyat proceedings records related to MA63'}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {hansardDocuments.map((doc) => (
+                <div
+                  key={doc.id}
+                  className="p-4 rounded-lg border bg-card hover:bg-muted/50 transition-colors"
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="p-2 rounded-md bg-primary/10 shrink-0">
+                      <FileText className="h-5 w-5 text-primary" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-semibold text-sm mb-1">
+                        {language === 'ms' ? doc.title.ms : doc.title.en}
+                      </h4>
+                      <p className="text-xs text-muted-foreground mb-2">
+                        {language === 'ms' ? doc.description.ms : doc.description.en}
+                      </p>
+                      <div className="flex flex-wrap items-center gap-2 mb-3">
+                        <Badge variant="secondary" className="text-xs">
+                          <Calendar className="h-3 w-3 mr-1" />
+                          {language === 'ms' ? doc.dateMs : doc.date}
+                        </Badge>
+                        <Badge variant="outline" className="text-xs">
+                          <Landmark className="h-3 w-3 mr-1" />
+                          {language === 'ms' ? doc.parliamentMs : doc.parliament}
+                        </Badge>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        asChild
+                        className="gap-1.5 w-full"
+                      >
+                        <a href={doc.pdfUrl} target="_blank" rel="noopener noreferrer">
+                          <Download className="h-3.5 w-3.5" />
+                          {language === 'ms' ? 'Muat Turun PDF' : 'Download PDF'}
+                        </a>
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           </CardContent>
         </Card>
