@@ -70,6 +70,25 @@ export class AgentService {
   }
 
   /**
+   * Execute an agent and return a flattened result
+   * Convenience wrapper used by cron jobs and admin routes
+   */
+  static async runAgent(
+    agentType: AgentType,
+    options: {
+      targetId?: string;
+      targetType?: "hansard" | "bill" | "mp" | "constituency" | "global";
+      parameters?: Record<string, any>;
+      triggeredBy?: string;
+      triggeredByUserId?: string;
+      onProgress?: ProgressCallback;
+    }
+  ): Promise<AgentResult & { executionId: string }> {
+    const { executionId, result } = await this.executeAgent(agentType, options);
+    return { ...result, executionId };
+  }
+
+  /**
    * Get execution by ID
    */
   static async getExecution(executionId: string) {
