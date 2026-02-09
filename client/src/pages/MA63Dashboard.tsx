@@ -600,6 +600,66 @@ export default function MA63Dashboard() {
           </div>
         </div>
 
+        {/* Hansard Documents */}
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <BookOpen className="h-5 w-5 text-primary" />
+              {language === 'ms' ? 'Dokumen Hansard' : 'Hansard Documents'}
+            </CardTitle>
+            <CardDescription>
+              {language === 'ms'
+                ? 'Rekod rasmi prosiding Dewan Rakyat berkaitan MA63'
+                : 'Official Dewan Rakyat proceedings records related to MA63'}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {hansardDocuments.map((doc) => (
+                <div
+                  key={doc.id}
+                  className="p-4 rounded-lg border bg-card hover:bg-muted/50 transition-colors"
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="p-2 rounded-md bg-primary/10 shrink-0">
+                      <FileText className="h-5 w-5 text-primary" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-semibold text-sm mb-1">
+                        {language === 'ms' ? doc.title.ms : doc.title.en}
+                      </h4>
+                      <p className="text-xs text-muted-foreground mb-2">
+                        {language === 'ms' ? doc.description.ms : doc.description.en}
+                      </p>
+                      <div className="flex flex-wrap items-center gap-2 mb-3">
+                        <Badge variant="secondary" className="text-xs">
+                          <Calendar className="h-3 w-3 mr-1" />
+                          {language === 'ms' ? doc.dateMs : doc.date}
+                        </Badge>
+                        <Badge variant="outline" className="text-xs">
+                          <Landmark className="h-3 w-3 mr-1" />
+                          {language === 'ms' ? doc.parliamentMs : doc.parliament}
+                        </Badge>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        asChild
+                        className="gap-1.5 w-full"
+                      >
+                        <a href={doc.pdfUrl} target="_blank" rel="noopener noreferrer">
+                          <Download className="h-3.5 w-3.5" />
+                          {language === 'ms' ? 'Muat Turun PDF' : 'Download PDF'}
+                        </a>
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
         {/* KPI Stats Row */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
           <Card className="col-span-2 md:col-span-1">
@@ -856,66 +916,6 @@ export default function MA63Dashboard() {
                   })}
                 </tbody>
               </table>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Hansard Documents */}
-        <Card className="mb-8">
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <BookOpen className="h-5 w-5 text-primary" />
-              {language === 'ms' ? 'Dokumen Hansard' : 'Hansard Documents'}
-            </CardTitle>
-            <CardDescription>
-              {language === 'ms'
-                ? 'Rekod rasmi prosiding Dewan Rakyat berkaitan MA63'
-                : 'Official Dewan Rakyat proceedings records related to MA63'}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {hansardDocuments.map((doc) => (
-                <div
-                  key={doc.id}
-                  className="p-4 rounded-lg border bg-card hover:bg-muted/50 transition-colors"
-                >
-                  <div className="flex items-start gap-3">
-                    <div className="p-2 rounded-md bg-primary/10 shrink-0">
-                      <FileText className="h-5 w-5 text-primary" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h4 className="font-semibold text-sm mb-1">
-                        {language === 'ms' ? doc.title.ms : doc.title.en}
-                      </h4>
-                      <p className="text-xs text-muted-foreground mb-2">
-                        {language === 'ms' ? doc.description.ms : doc.description.en}
-                      </p>
-                      <div className="flex flex-wrap items-center gap-2 mb-3">
-                        <Badge variant="secondary" className="text-xs">
-                          <Calendar className="h-3 w-3 mr-1" />
-                          {language === 'ms' ? doc.dateMs : doc.date}
-                        </Badge>
-                        <Badge variant="outline" className="text-xs">
-                          <Landmark className="h-3 w-3 mr-1" />
-                          {language === 'ms' ? doc.parliamentMs : doc.parliament}
-                        </Badge>
-                      </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        asChild
-                        className="gap-1.5 w-full"
-                      >
-                        <a href={doc.pdfUrl} target="_blank" rel="noopener noreferrer">
-                          <Download className="h-3.5 w-3.5" />
-                          {language === 'ms' ? 'Muat Turun PDF' : 'Download PDF'}
-                        </a>
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              ))}
             </div>
           </CardContent>
         </Card>
