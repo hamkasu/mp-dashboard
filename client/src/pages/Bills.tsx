@@ -84,6 +84,9 @@ export default function Bills() {
   const fromDatabase = billsData?.fromDatabase;
 
   const filteredBills = bills.filter((bill) => {
+    // Exclude incomplete/bad scraped data (no bill number and generic title)
+    if (!bill.billNumber && bill.title.trim().toLowerCase() === "bill") return false;
+
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       const matchesSearch =
