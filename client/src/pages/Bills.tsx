@@ -422,6 +422,21 @@ export default function Bills() {
                       )}
                     </div>
                     <div className="flex gap-2 shrink-0">
+                      <Button
+                        data-testid={`button-download-${bill.id}`}
+                        variant="outline"
+                        size="sm"
+                        asChild
+                      >
+                        <a
+                          href={bill.fullTextUrl || "https://www.parlimen.gov.my/bills-dewan-rakyat.html?uweb=dr&"}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          <Download className="w-4 h-4 mr-2" />
+                          Download
+                        </a>
+                      </Button>
                       {bill.hasPdf && (
                         <Button
                           data-testid={`button-pdf-${bill.id}`}
@@ -430,21 +445,8 @@ export default function Bills() {
                           asChild
                         >
                           <a href={`/api/bills/${bill.id}/pdf`} target="_blank" rel="noopener noreferrer">
-                            <Download className="w-4 h-4 mr-2" />
+                            <FileText className="w-4 h-4 mr-2" />
                             PDF
-                          </a>
-                        </Button>
-                      )}
-                      {bill.fullTextUrl && (
-                        <Button
-                          data-testid={`button-external-${bill.id}`}
-                          variant="outline"
-                          size="sm"
-                          asChild
-                        >
-                          <a href={bill.fullTextUrl} target="_blank" rel="noopener noreferrer">
-                            <ExternalLink className="w-4 h-4 mr-2" />
-                            Source
                           </a>
                         </Button>
                       )}
