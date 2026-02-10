@@ -114,8 +114,19 @@ export default function Bills() {
 
     return true;
   }).sort((a, b) => {
-    // Sort bills in ascending order by bill number
-    // Extract number and year from format like "D.R.43/2025"
+    // Sort unpassed bills first, then by bill number
+    const isPassed = (status: string) => {
+      const s = status.toLowerCase();
+      return s.includes("passed") || s.includes("lulus");
+    };
+
+    const aPassed = isPassed(a.status);
+    const bPassed = isPassed(b.status);
+    if (aPassed !== bPassed) {
+      return aPassed ? 1 : -1;
+    }
+
+    // Within each group, sort by year (ascending) then number (ascending)
     const parseBillNumber = (billNumber: string | null | undefined): { num: number, year: number } => {
       if (!billNumber) return { num: Infinity, year: Infinity };
       const match = billNumber.match(/(\d+)\/(\d{4})/);
@@ -126,7 +137,6 @@ export default function Bills() {
     const aData = parseBillNumber(a.billNumber);
     const bData = parseBillNumber(b.billNumber);
 
-    // Sort by year first (ascending), then by number (ascending)
     if (aData.year !== bData.year) {
       return aData.year - bData.year;
     }
