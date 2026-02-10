@@ -18,6 +18,7 @@ import { corsConfig } from "./middleware/cors";
 import { responseSizeLimiter } from "./middleware/response-limiter";
 import { memoryMonitor, startMemoryLogging, getMemoryStatus } from "./middleware/memory-monitor";
 import { setupAuth } from "./simple-auth";
+import { setupGigSocialAuth } from "./gig-social-auth";
 import { runStartupTasks } from "./startup-tasks";
 import { isDatabaseAvailable } from "./db";
 
@@ -95,6 +96,9 @@ app.use(trackVisitorAnalytics());
 
 // Setup authentication (session, auth routes)
 setupAuth(app);
+
+// Setup GigHalal social authentication (Facebook, Apple, WhatsApp OTP)
+setupGigSocialAuth(app);
 
 app.use((req, res, next) => {
   const start = Date.now();

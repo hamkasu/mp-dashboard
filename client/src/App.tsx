@@ -54,6 +54,7 @@ const FeedbackAdmin = lazy(() => import("@/pages/FeedbackAdmin"));
 const VisitorDataAdmin = lazy(() => import("@/pages/VisitorDataAdmin"));
 const BillsToWatchAdmin = lazy(() => import("@/pages/BillsToWatchAdmin"));
 const ExternalFrame = lazy(() => import("@/pages/ExternalFrame"));
+const GigRegister = lazy(() => import("@/pages/GigRegister"));
 
 // Loading component
 function PageLoader() {
@@ -111,6 +112,9 @@ function Router() {
         <Route path="/visitor-data-admin" component={VisitorDataAdmin} />
         <Route path="/bills-to-watch-admin" component={BillsToWatchAdmin} />
         <Route path="/external/:site" component={ExternalFrame} />
+        {/* GigHalal registration/login */}
+        <Route path="/daftar" component={GigRegister} />
+        <Route path="/gig/register" component={GigRegister} />
         <Route component={NotFound} />
       </Switch>
     </Suspense>
