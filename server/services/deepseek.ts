@@ -280,9 +280,9 @@ async function callOpenRouter(
       "X-Title": "MyParliament Dashboard",
     },
     body: JSON.stringify({
-      model: "google/gemini-2.0-flash-lite:free",
+      model: "google/gemini-2.0-flash-lite-001",
       messages: [
-        { role: "system", content: systemPrompt },
+        { role: "system", content: systemPrompt + "\n\nYou must respond with valid JSON only." },
         { role: "user", content: userPrompt }
       ],
       temperature: 0.3,
@@ -304,7 +304,22 @@ async function callOpenRouter(
     throw new Error("No content in OpenRouter response");
   }
 
-  return JSON.parse(content);
+  // Handle potential markdown wrapping
+  const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/) || content.match(/(\{[\s\S]*\})/);
+  if (jsonMatch) {
+    try {
+      return JSON.parse(jsonMatch[1] || jsonMatch[0]);
+    } catch (e) {
+      console.error("[OpenRouter] JSON parse error after match:", e);
+    }
+  }
+
+  try {
+    return JSON.parse(content);
+  } catch (e) {
+    console.error("[OpenRouter] Final JSON parse error:", e);
+    throw new Error("Failed to parse AI response as JSON");
+  }
 }
 
 async function callGroq(
