@@ -220,7 +220,7 @@ async function callGeminiWithKeyRotation(
     currentGeminiKeyIndex = (currentGeminiKeyIndex + 1) % geminiInstances.length;
 
     try {
-      const genModel = ai.getGenerativeModel({ 
+      const model = ai.getGenerativeModel({ 
         model: "gemini-2.0-flash-lite",
         generationConfig: {
           responseMimeType: "application/json",
@@ -229,7 +229,7 @@ async function callGeminiWithKeyRotation(
       });
 
       const fullPrompt = `${systemPrompt}\n\n${userPrompt}`;
-      const result = await genModel.generateContent(fullPrompt);
+      const result = await model.generateContent(fullPrompt);
       const response = await result.response;
       const content = response.text();
 
