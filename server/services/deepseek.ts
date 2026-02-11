@@ -24,11 +24,11 @@ const CLOUDFLARE_BASE_URL = "https://api.cloudflare.com/client/v4/accounts";
 const ANTHROPIC_BASE_URL = "https://api.anthropic.com/v1";
 
 // Model configurations
-const AI_MODEL = "google/gemini-2.0-flash-exp:free";
+const AI_MODEL = "google/gemini-2.0-flash-lite:free";
 const GROQ_MODEL = "llama-3.3-70b-versatile";
 const TOGETHER_MODEL = "meta-llama/Llama-3.3-70B-Instruct-Turbo-Free";
 const CLOUDFLARE_MODEL = "@cf/meta/llama-3.1-8b-instruct";
-const ANTHROPIC_MODEL = "claude-sonnet-4-20250514";
+const ANTHROPIC_MODEL = "claude-3-5-sonnet-20240620";
 
 // Gemini key rotation state
 let currentGeminiKeyIndex = 0;
@@ -220,17 +220,19 @@ async function callGeminiWithKeyRotation(
     currentGeminiKeyIndex = (currentGeminiKeyIndex + 1) % geminiInstances.length;
 
     try {
-      const response = await ai.models.generateContent({
-        model: "gemini-2.5-flash",
-        config: {
-          systemInstruction: systemPrompt,
+      const genModel = ai.getGenerativeModel({ 
+        model: "gemini-2.0-flash-lite",
+        generationConfig: {
           responseMimeType: "application/json",
           maxOutputTokens: 8000,
-        },
-        contents: userPrompt,
+        }
       });
 
-      const content = response.text;
+      const fullPrompt = `${systemPrompt}\n\n${userPrompt}`;
+      const result = await genModel.generateContent(fullPrompt);
+      const response = await result.response;
+      const content = response.text();
+
       if (!content) {
         throw new Error("No content in Gemini response");
       }
@@ -278,7 +280,7 @@ async function callOpenRouter(
       "X-Title": "MyParliament Dashboard",
     },
     body: JSON.stringify({
-      model: AI_MODEL,
+      model: "google/gemini-2.0-flash-lite:free",
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt }
