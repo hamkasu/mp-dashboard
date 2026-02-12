@@ -38,7 +38,7 @@ export function PWAInstallPrompt() {
 
     // Check if mobile device (only show install prompt on mobile)
     const mobileCheck = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
-      (window.innerWidth <= 768 && 'ontouchstart' in window);
+      (typeof window !== 'undefined' && window.innerWidth <= 768 && 'ontouchstart' in window);
     setIsMobile(mobileCheck);
 
     // Don't show prompt on desktop

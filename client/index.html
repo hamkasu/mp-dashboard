@@ -95,8 +95,11 @@
         let refreshing = false;
         navigator.serviceWorker.addEventListener('controllerchange', () => {
           if (refreshing) return;
-          refreshing = true;
-          window.location.reload();
+          console.log('Controller changed, checking for refresh need...');
+          // Optional: Only reload if we're not in a critical state or let the user decide
+          // For now, let's keep it but ensure it doesn't loop
+          // refreshing = true;
+          // window.location.reload();
         });
       }
     </script>
