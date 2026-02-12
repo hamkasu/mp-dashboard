@@ -2039,7 +2039,10 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   app.get("/api/hansard-records/search", async (req, res) => {
     try {
       const { query, startDate, endDate, sessionNumber } = req.query;
-      const limit = parseInt(req.query.limit as string) || 25;
+      const page = Math.max(1, parseInt(req.query.page as string) || 1);
+      const limit = Math.max(1, parseInt(req.query.limit as string) || 25);
+      const offset = (page - 1) * limit;
+
       let records = await storage.getAllHansardRecords();
       
       if (query && typeof query === 'string') {
@@ -2069,30 +2072,46 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         );
       }
       
-      // Check which records have PDFs attached
-      const { eq, and } = await import("drizzle-orm");
-      
-      // Apply pagination limit if specified
-      const limitedRecords = records.slice(0, limit);
+      const totalItems = records.length;
+      const totalPages = Math.ceil(totalItems / limit);
 
-      const recordsWithPdfStatus = await Promise.all(
-        limitedRecords.map(async (record) => {
-          const [pdfFile] = await db.select({ id: hansardPdfFiles.id })
-            .from(hansardPdfFiles)
-            .where(and(
-              eq(hansardPdfFiles.hansardRecordId, record.id),
-              eq(hansardPdfFiles.isPrimary, true)
-            ))
-            .limit(1);
-          
-          return {
-            ...fixHansardPdfUrls(record, req),
-            hasPdf: !!pdfFile
-          };
-        })
-      );
+      // Apply pagination limit if specified
+      const paginatedRecords = records.slice(offset, offset + limit);
+
+      const { eq, and, inArray } = await import("drizzle-orm");
       
-      res.json(recordsWithPdfStatus);
+      let recordsWithPdfStatus = [];
+      if (paginatedRecords.length > 0) {
+        const recordIds = paginatedRecords.map(r => r.id);
+        const pdfFiles = await db
+          .select({
+            hansardRecordId: hansardPdfFiles.hansardRecordId,
+            id: hansardPdfFiles.id,
+          })
+          .from(hansardPdfFiles)
+          .where(and(
+            inArray(hansardPdfFiles.hansardRecordId, recordIds),
+            eq(hansardPdfFiles.isPrimary, true)
+          ));
+
+        const recordsWithPdfs = new Set(pdfFiles.map(pdf => pdf.hansardRecordId));
+
+        recordsWithPdfStatus = paginatedRecords.map((record) => ({
+          ...fixHansardPdfUrls(record, req),
+          hasPdf: recordsWithPdfs.has(record.id)
+        }));
+      }
+      
+      res.json({
+        data: recordsWithPdfStatus,
+        pagination: {
+          page,
+          limit,
+          totalItems,
+          totalPages,
+          hasMore: page < totalPages
+        }
+      });
     } catch (error) {
       console.error("Error searching Hansard records:", error);
       res.status(500).json({ error: "Failed to search Hansard records" });
