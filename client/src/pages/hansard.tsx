@@ -64,7 +64,8 @@ export default function HansardPage() {
     if (startDate) params.set("startDate", startDate);
     if (endDate) params.set("endDate", endDate);
     const queryString = params.toString();
-    return queryString ? `/api/hansard-records/search?${queryString}` : "/api/hansard-records/search";
+    const finalUrl = queryString ? `/api/hansard-records/search?${queryString}` : "/api/hansard-records/search";
+    return `${finalUrl}${finalUrl.includes('?') ? '&' : '?'}limit=25`;
   }, [searchQuery, startDate, endDate]);
 
   const { data: filteredRecords, isLoading, isError } = useQuery<HansardRecord[]>({

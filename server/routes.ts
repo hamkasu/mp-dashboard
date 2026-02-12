@@ -2039,6 +2039,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   app.get("/api/hansard-records/search", async (req, res) => {
     try {
       const { query, startDate, endDate, sessionNumber } = req.query;
+      const limit = parseInt(req.query.limit as string) || 25;
       let records = await storage.getAllHansardRecords();
       
       if (query && typeof query === 'string') {
@@ -2070,8 +2071,12 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       
       // Check which records have PDFs attached
       const { eq, and } = await import("drizzle-orm");
+      
+      // Apply pagination limit if specified
+      const limitedRecords = records.slice(0, limit);
+
       const recordsWithPdfStatus = await Promise.all(
-        records.map(async (record) => {
+        limitedRecords.map(async (record) => {
           const [pdfFile] = await db.select({ id: hansardPdfFiles.id })
             .from(hansardPdfFiles)
             .where(and(
