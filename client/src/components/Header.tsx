@@ -3,7 +3,7 @@
  * Updated: Consolidated Navigation Menu with Submenus
  */
 
-import { Search, Menu, FileText, BookOpen, UserCheck, Calculator, BarChart3, ExternalLink, AlertCircle, GraduationCap, Scale, Shield, MessageSquare, Gavel, Building2, MessageSquareText, Award, Handshake, ChevronDown, Users, Activity, LayoutDashboard, Settings, UserPlus, UserX, Upload, TrendingUp, Heart, ScrollText, Eye } from "lucide-react";
+import { Search, Menu, FileText, BookOpen, UserCheck, Calculator, BarChart3, ExternalLink, AlertCircle, GraduationCap, Scale, Shield, MessageSquare, Gavel, Building2, MessageSquareText, Award, Handshake, ChevronDown, Users, Activity, LayoutDashboard, Settings, UserPlus, UserX, Upload, TrendingUp, Heart, ScrollText, Eye, Briefcase } from "lucide-react";
 import { useState } from "react";
 import { FeedbackModal } from "@/components/FeedbackModal";
 import { FundamentalRightsPopup } from "@/components/FundamentalRightsPopup";
@@ -221,6 +221,11 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
               <DropdownMenuSeparator />
 
               {/* External Links */}
+              <DropdownMenuItem onSelect={() => window.open("https://gighala.calmic.com.my?utm_source=myparliament&utm_medium=header_menu&utm_campaign=cross_promo", "_blank")} data-testid="menu-gighala">
+                <Briefcase className="w-4 h-4 mr-2" />
+                {t('nav.gigHala')}
+                <ExternalLink className="w-3 h-3 ml-auto opacity-50" />
+              </DropdownMenuItem>
               <DropdownMenuItem onSelect={() => window.open("https://open.dosm.gov.my/ms-MY/dashboard/kawasanku", "_blank")} data-testid="menu-kawanku">
                 <ExternalLink className="w-4 h-4 mr-2" />
                 {t('nav.kawanku')}
@@ -402,6 +407,11 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
 
               <DropdownMenuSeparator />
 
+              <DropdownMenuItem onSelect={() => window.open("https://gighala.calmic.com.my?utm_source=myparliament&utm_medium=mobile_menu&utm_campaign=cross_promo", "_blank")}>
+                <Briefcase className="w-4 h-4 mr-2" />
+                {t('nav.gigHala')}
+                <ExternalLink className="w-3 h-3 ml-auto opacity-50" />
+              </DropdownMenuItem>
               <DropdownMenuItem onSelect={() => window.open("https://open.dosm.gov.my/ms-MY/dashboard/kawasanku", "_blank")}>
                 <ExternalLink className="w-4 h-4 mr-2" />
                 {t('nav.kawanku')}
@@ -460,6 +470,17 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
               <MessageSquareText className="h-5 w-5" />
             </Button>
           </FeedbackModal>
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1 text-emerald-600 border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700 dark:text-emerald-400 dark:border-emerald-800 dark:hover:bg-emerald-950"
+            data-testid="button-gighala"
+            onClick={() => window.open("https://gighala.calmic.com.my?utm_source=myparliament&utm_medium=header_button&utm_campaign=cross_promo", "_blank", "noopener,noreferrer")}
+            title={t('nav.gigHalaTagline')}
+          >
+            <Briefcase className="h-4 w-4" />
+            <span className="hidden sm:inline">{t('nav.gigHala')}</span>
+          </Button>
           <Dialog open={donateOpen} onOpenChange={setDonateOpen}>
             <DialogTrigger asChild>
               <Button

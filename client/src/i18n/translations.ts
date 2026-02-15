@@ -67,6 +67,8 @@ export const translations = {
       malayParliament: "Malaysian Parliament",
       dewanRakyatDashboard: "Dewan Rakyat Dashboard",
       ma63Dashboard: "MA63 Dashboard",
+      gigHala: "GigHala",
+      gigHalaTagline: "Malaysia's #1 Halal Gig Platform",
     },
 
     // MP Spotlight
@@ -915,6 +917,8 @@ export const translations = {
       malayParliament: "Parlimen Malaysia",
       dewanRakyatDashboard: "Papan Pemuka Dewan Rakyat",
       ma63Dashboard: "Papan Pemuka MA63",
+      gigHala: "GigHala",
+      gigHalaTagline: "Platform Gig Halal #1 Malaysia",
     },
 
     // Filters & Sorting
