@@ -326,3 +326,70 @@
     inset: -1px;
   }
 }
+
+/* ===== CNY 2026 Festive Theme (temporary - remove after Feb 24, 2026) ===== */
+
+/* Lantern swinging animation */
+@keyframes cny-lantern-swing {
+  0%, 100% { transform: rotate(-5deg); }
+  50% { transform: rotate(5deg); }
+}
+
+.cny-lantern-swing {
+  animation: cny-lantern-swing 3s ease-in-out infinite;
+  transform-origin: top center;
+}
+
+/* Sparkle twinkling animation */
+@keyframes cny-sparkle {
+  0%, 100% { opacity: 0.3; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.5); }
+}
+
+.cny-sparkle {
+  animation: cny-sparkle 2s ease-in-out infinite;
+}
+
+/* Firework burst animation */
+@keyframes cny-firework-burst {
+  0% { opacity: 0; transform: scale(0); }
+  10% { opacity: 1; transform: scale(0.5); }
+  50% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1.2); }
+}
+
+@keyframes cny-firework-particle-expand {
+  0% { height: 0; opacity: 1; }
+  50% { height: 12px; opacity: 1; }
+  100% { height: 12px; opacity: 0; }
+}
+
+.cny-firework {
+  width: 24px;
+  height: 24px;
+  animation: cny-firework-burst 4s ease-out infinite;
+}
+
+.cny-firework-particle {
+  width: 2px;
+  height: 0;
+  background: linear-gradient(to top, #FFD700, #FCA5A5);
+  border-radius: 1px;
+  transform-origin: bottom center;
+  left: 50%;
+  bottom: 50%;
+  margin-left: -1px;
+  animation: cny-firework-particle-expand 4s ease-out infinite;
+}
+
+/* Subtle banner entrance */
+@keyframes cny-banner-enter {
+  from { transform: translateY(-100%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.cny-banner {
+  animation: cny-banner-enter 0.5s ease-out;
+}
+
+/* ===== End CNY 2026 Festive Theme ===== */
