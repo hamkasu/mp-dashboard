@@ -393,3 +393,58 @@
 }
 
 /* ===== End CNY 2026 Festive Theme ===== */
+
+/* ===== Ramadan 2026 Festive Theme (temporary - remove after March 21, 2026) ===== */
+
+/* Lantern swinging animation */
+@keyframes ramadan-lantern-swing {
+  0%, 100% { transform: rotate(-4deg); }
+  50% { transform: rotate(4deg); }
+}
+
+.ramadan-lantern-swing {
+  animation: ramadan-lantern-swing 4s ease-in-out infinite;
+  transform-origin: top center;
+}
+
+/* Sparkle twinkling animation */
+@keyframes ramadan-sparkle {
+  0%, 100% { opacity: 0.3; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.5); }
+}
+
+.ramadan-sparkle {
+  animation: ramadan-sparkle 2.5s ease-in-out infinite;
+}
+
+/* Star twinkling animation */
+@keyframes ramadan-twinkle {
+  0%, 100% { opacity: 0.2; transform: scale(0.8); }
+  50% { opacity: 1; transform: scale(1.2); }
+}
+
+.ramadan-twinkle {
+  animation: ramadan-twinkle 3s ease-in-out infinite;
+}
+
+/* Crescent moon subtle glow */
+@keyframes ramadan-glow {
+  0%, 100% { filter: drop-shadow(0 0 2px rgba(255,215,0,0.3)); }
+  50% { filter: drop-shadow(0 0 6px rgba(255,215,0,0.6)); }
+}
+
+.ramadan-glow {
+  animation: ramadan-glow 3s ease-in-out infinite;
+}
+
+/* Banner entrance */
+@keyframes ramadan-banner-enter {
+  from { transform: translateY(-100%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.ramadan-banner {
+  animation: ramadan-banner-enter 0.5s ease-out;
+}
+
+/* ===== End Ramadan 2026 Festive Theme ===== */
