@@ -294,6 +294,9 @@ async function callOpenRouter(
   if (!response.ok) {
     const errorText = await response.text();
     console.error("[OpenRouter] API error:", errorText);
+    if (response.status === 402) {
+      throw new Error("OpenRouter API credits exhausted. Please top up your OpenRouter account or configure an alternative AI provider.");
+    }
     throw new Error(`OpenRouter API error: ${response.status}`);
   }
 

@@ -4129,7 +4129,14 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       res.json(analysis);
     } catch (error) {
       console.error("Error in topic extraction:", error);
-      res.status(500).json({ error: "Failed to extract topics", details: String(error) });
+      const message = String(error);
+      if (message.includes("credits exhausted") || message.includes("402")) {
+        return res.status(503).json({
+          error: "AI service temporarily unavailable",
+          details: "The AI provider's API credits have been exhausted. Please try again later or contact the administrator.",
+        });
+      }
+      res.status(500).json({ error: "Failed to extract topics", details: message });
     }
   });
 
@@ -4178,7 +4185,14 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       res.json(analysis);
     } catch (error) {
       console.error("Error in sentiment analysis:", error);
-      res.status(500).json({ error: "Failed to analyze sentiment", details: String(error) });
+      const message = String(error);
+      if (message.includes("credits exhausted") || message.includes("402")) {
+        return res.status(503).json({
+          error: "AI service temporarily unavailable",
+          details: "The AI provider's API credits have been exhausted. Please try again later or contact the administrator.",
+        });
+      }
+      res.status(500).json({ error: "Failed to analyze sentiment", details: message });
     }
   });
 
@@ -4236,7 +4250,14 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       res.json(analysis);
     } catch (error) {
       console.error("Error in speaker analysis:", error);
-      res.status(500).json({ error: "Failed to analyze speakers", details: String(error) });
+      const message = String(error);
+      if (message.includes("credits exhausted") || message.includes("402")) {
+        return res.status(503).json({
+          error: "AI service temporarily unavailable",
+          details: "The AI provider's API credits have been exhausted. Please try again later or contact the administrator.",
+        });
+      }
+      res.status(500).json({ error: "Failed to analyze speakers", details: message });
     }
   });
 
@@ -4475,7 +4496,14 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       });
     } catch (error) {
       console.error("Error in Q&A analysis:", error);
-      res.status(500).json({ error: "Failed to analyze Q&A sections", details: String(error) });
+      const message = String(error);
+      if (message.includes("credits exhausted") || message.includes("402")) {
+        return res.status(503).json({
+          error: "AI service temporarily unavailable",
+          details: "The AI provider's API credits have been exhausted. Please try again later or contact the administrator.",
+        });
+      }
+      res.status(500).json({ error: "Failed to analyze Q&A sections", details: message });
     }
   });
 
