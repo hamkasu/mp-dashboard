@@ -7089,7 +7089,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       if (!isAIConfigured()) {
         return res.status(400).json({
           error: "AI service not configured",
-          message: "Set OPENROUTER_API_KEY environment variable to enable AI analysis"
+          message: "Set at least one AI provider key (GEMINI_API_KEY, OPENROUTER_API_KEY, GROQ_API_KEY, TOGETHER_API_KEY, or CLOUDFLARE_API_KEY) to enable AI analysis"
         });
       }
 

@@ -158,7 +158,15 @@ async function sleep(ms: number): Promise<void> {
 function isRetryableError(error: any): { retryable: boolean; reason: string } {
   const message = error.message || '';
   const status = error.status;
-  
+
+  // Auth/billing errors should never be retried — skip to next provider immediately
+  if (status === 401 || status === 402 || status === 403 ||
+      message.includes('401') || message.includes('402') || message.includes('403') ||
+      message.includes('credits exhausted') || message.includes('unauthorized') ||
+      message.includes('forbidden')) {
+    return { retryable: false, reason: 'auth/billing error' };
+  }
+
   if (status === 429 || message.includes('429') || message.includes('rate limit')) {
     return { retryable: true, reason: 'rate limited' };
   }
@@ -171,7 +179,7 @@ function isRetryableError(error: any): { retryable: boolean; reason: string } {
   if (status === 504 || message.includes('504') || message.includes('timeout')) {
     return { retryable: true, reason: 'timeout' };
   }
-  
+
   return { retryable: false, reason: '' };
 }
 
@@ -513,7 +521,7 @@ export function isAnthropicConfigured(): boolean {
   return !!ANTHROPIC_API_KEY;
 }
 
-async function callAI(
+export async function callAI(
   systemPrompt: string,
   userPrompt: string,
   useCache: boolean = true,
@@ -544,29 +552,30 @@ async function callAI(
   }
 
   // Try each provider in sequence until one succeeds
+  const providerErrors: string[] = [];
   for (const provider of availableProviders) {
     try {
       console.log(`[AI] Trying ${provider.name} API`);
       const result = await callWithRetry(async () => provider.fn(systemPrompt, userPrompt));
-      
+
       // Cache successful response
       if (useCache) {
         setCachedResponse(cacheKey, result);
       }
-      
+
       return result;
-    } catch (error) {
-      console.error(`[AI] ${provider.name} failed:`, error);
-      // If this is the last provider, throw the error
-      if (provider === availableProviders[availableProviders.length - 1]) {
-        throw error;
+    } catch (error: any) {
+      const errorMsg = error.message || String(error);
+      providerErrors.push(`${provider.name}: ${errorMsg}`);
+      console.error(`[AI] ${provider.name} failed:`, errorMsg);
+      // Continue to next provider
+      if (provider !== availableProviders[availableProviders.length - 1]) {
+        console.log(`[AI] Falling back to next provider...`);
       }
-      // Otherwise, try the next provider
-      console.log(`[AI] Falling back to next provider...`);
     }
   }
 
-  throw new Error("All AI providers failed");
+  throw new Error(`All AI providers failed: ${providerErrors.join("; ")}`);
 }
 
 export async function extractTopics(
@@ -928,16 +937,28 @@ Provide an extremely detailed and thorough thematic analysis. Extract ALL specif
 
 This analysis should be comprehensive enough for a researcher or journalist to understand exactly what was discussed without reading the original transcript.`;
 
-    // Use Claude if configured (best quality), then Groq (free & fast), then fallback
+    // Try best providers first (Claude > Groq), fall back to all providers on failure
     let result;
-    if (ANTHROPIC_API_KEY) {
-      console.log("[AI Comprehensive] Using Claude for detailed analysis");
-      result = await callWithRetry(() => callAnthropic(systemPrompt, userPrompt, 16000));
-    } else if (GROQ_API_KEY) {
-      console.log("[AI Comprehensive] Using Groq (Llama 3.3 70B) for detailed analysis");
-      result = await callWithRetry(() => callGroq(systemPrompt, userPrompt));
-    } else {
-      console.log("[AI Comprehensive] Falling back to default AI provider");
+    const preferredAttempts: Array<{ name: string; key: boolean; fn: () => Promise<any> }> = [
+      { name: "Claude", key: !!ANTHROPIC_API_KEY, fn: () => callAnthropic(systemPrompt, userPrompt, 16000) },
+      { name: "Groq", key: !!GROQ_API_KEY, fn: () => callGroq(systemPrompt, userPrompt) },
+    ];
+
+    let succeeded = false;
+    for (const attempt of preferredAttempts) {
+      if (!attempt.key) continue;
+      try {
+        console.log(`[AI Comprehensive] Trying ${attempt.name} for detailed analysis`);
+        result = await callWithRetry(attempt.fn);
+        succeeded = true;
+        break;
+      } catch (error: any) {
+        console.error(`[AI Comprehensive] ${attempt.name} failed:`, error.message);
+      }
+    }
+
+    if (!succeeded) {
+      console.log("[AI Comprehensive] Falling back to default AI provider chain");
       result = await callAI(systemPrompt, userPrompt);
     }
 
@@ -1143,9 +1164,15 @@ You must respond with valid JSON matching this structure:
 
 ${qaText}`;
 
-    // Q&A analysis sends large transcripts (up to 80k chars) — skip providers
-    // with small context windows or strict payload size limits
-    const result = await callAI(systemPrompt, userPrompt, false, ["Groq", "Cloudflare"]);
+    // Q&A analysis sends large transcripts (up to 80k chars) — prefer providers
+    // with large context windows, but fall back to all providers if preferred ones fail
+    let result;
+    try {
+      result = await callAI(systemPrompt, userPrompt, false, ["Groq", "Cloudflare"]);
+    } catch (preferredError) {
+      console.log("[AI Q&A] Preferred providers failed, trying all available providers...");
+      result = await callAI(systemPrompt, userPrompt, false);
+    }
 
     const sanitized: QAAnalysisResult = {
       sessionInfo: typeof result.sessionInfo === "string" ? result.sessionInfo : `Session ${sessionNumber}`,
