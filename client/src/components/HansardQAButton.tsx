@@ -93,9 +93,20 @@ export function HansardQAButton({ hansardRecord, trigger, sectionType = "menteri
       });
     },
     onError: (error: Error) => {
+      let description = error.message;
+      // Parse JSON error responses for a cleaner message
+      try {
+        const jsonStart = description.indexOf("{");
+        if (jsonStart !== -1) {
+          const parsed = JSON.parse(description.slice(jsonStart));
+          description = parsed.details || parsed.error || description;
+        }
+      } catch {
+        // Use original message if parsing fails
+      }
       toast({
         title: "Analysis Failed",
-        description: error.message,
+        description,
         variant: "destructive",
       });
     },
@@ -151,7 +162,19 @@ export function HansardQAButton({ hansardRecord, trigger, sectionType = "menteri
             <div className="flex flex-col items-center justify-center py-16 gap-4">
               <AlertCircle className="w-8 h-8 text-destructive" />
               <p className="text-sm text-destructive">
-                {analysisMutation.error?.message || "Failed to analyze Q&A sections"}
+                {(() => {
+                  const msg = analysisMutation.error?.message || "Failed to analyze Q&A sections";
+                  try {
+                    const jsonStart = msg.indexOf("{");
+                    if (jsonStart !== -1) {
+                      const parsed = JSON.parse(msg.slice(jsonStart));
+                      return parsed.details || parsed.error || msg;
+                    }
+                  } catch {
+                    // fall through
+                  }
+                  return msg;
+                })()}
               </p>
               <Button
                 variant="outline"
