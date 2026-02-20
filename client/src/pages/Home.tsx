@@ -36,7 +36,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { ExternalLink, AlertTriangle, Eye, ChevronLeft, ChevronRight, ChevronDown, UserX, TrendingUp, Info } from "lucide-react";
+import { ExternalLink, AlertTriangle, Eye, ChevronLeft, ChevronRight, ChevronDown, UserX, TrendingUp, Info, Newspaper } from "lucide-react";
 import { Link } from "wouter";
 import type { Mp, SprmInvestigation, LegislativeProposal, ParliamentaryQuestion } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
@@ -587,6 +587,35 @@ export default function Home() {
             <div className="relative">
               <div className="absolute -inset-1 bg-gradient-to-r from-red-500/20 to-rose-500/10 rounded-lg blur opacity-25 pointer-events-none" />
               <ParliamentVideos />
+            </div>
+
+            {/* Media Section */}
+            <div className="relative">
+              <div className="absolute -inset-1 bg-gradient-to-r from-purple-500/20 to-violet-500/10 rounded-lg blur opacity-25 pointer-events-none" />
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <Newspaper className="h-5 w-5 text-purple-600" />
+                    Media
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  <a
+                    href="https://malayznbeat.com/comfort-zone-to-code-how-a-sarawak-founder-reinvented-business-in-malaysia/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-between gap-4 p-3 rounded-lg border hover:bg-accent/50 transition-colors group"
+                  >
+                    <div className="space-y-1 min-w-0">
+                      <p className="text-sm font-medium group-hover:text-primary transition-colors">
+                        Comfort Zone to Code: How a Sarawak Founder Reinvented Business in Malaysia
+                      </p>
+                      <p className="text-xs text-muted-foreground">MalayzNBeat</p>
+                    </div>
+                    <ExternalLink className="h-4 w-4 shrink-0 text-muted-foreground group-hover:text-primary transition-colors" />
+                  </a>
+                </CardContent>
+              </Card>
             </div>
 
             {/* SEO Landing Section */}
