@@ -34,7 +34,7 @@ const TOGETHER_MODEL = "meta-llama/Llama-3.3-70B-Instruct-Turbo-Free";
 const CLOUDFLARE_MODEL = "@cf/meta/llama-3.1-8b-instruct";
 const ANTHROPIC_MODEL = "claude-3-5-sonnet-20240620";
 const CEREBRAS_MODEL = "llama-3.3-70b";
-const SAMBANOVA_MODEL = "Meta-Llama-3.1-8B-Instant";
+const SAMBANOVA_MODEL = "Meta-Llama-3.3-70B-Instruct";
 
 // Gemini key rotation state
 let currentGeminiKeyIndex = 0;
@@ -173,6 +173,14 @@ function isRetryableError(error: any): { retryable: boolean; reason: string } {
     return { retryable: false, reason: 'auth/billing error' };
   }
 
+  // Payload too large / model not found — skip to next provider
+  if (status === 404 || status === 413 ||
+      message.includes('404') || message.includes('413') ||
+      message.includes('too large') || message.includes('not found') ||
+      message.includes('Request too large')) {
+    return { retryable: false, reason: 'request incompatible with provider' };
+  }
+
   if (status === 429 || message.includes('429') || message.includes('rate limit')) {
     return { retryable: true, reason: 'rate limited' };
   }
@@ -234,18 +242,17 @@ async function callGeminiWithKeyRotation(
     currentGeminiKeyIndex = (currentGeminiKeyIndex + 1) % geminiInstances.length;
 
     try {
-      const model = ai.getGenerativeModel({ 
+      const fullPrompt = `${systemPrompt}\n\n${userPrompt}`;
+      const result = await ai.models.generateContent({
         model: "gemini-2.0-flash-lite",
-        generationConfig: {
+        contents: fullPrompt,
+        config: {
           responseMimeType: "application/json",
           maxOutputTokens: 8000,
-        }
+        },
       });
 
-      const fullPrompt = `${systemPrompt}\n\n${userPrompt}`;
-      const result = await model.generateContent(fullPrompt);
-      const response = await result.response;
-      const content = response.text();
+      const content = result.text;
 
       if (!content) {
         throw new Error("No content in Gemini response");
@@ -255,14 +262,13 @@ async function callGeminiWithKeyRotation(
     } catch (error: any) {
       lastError = error;
       const { retryable, reason } = isRetryableError(error);
-      
+
       if (retryable && keyAttempt < keysToTry - 1) {
         console.log(`[AI] Gemini key ${keyIndex + 1} ${reason}, trying next key...`);
-        await sleep(500); // Brief delay before trying next key
+        await sleep(500);
         continue;
       }
-      
-      // If not retryable or no more keys to try, throw the error
+
       throw error;
     }
   }
