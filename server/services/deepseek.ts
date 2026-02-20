@@ -17,6 +17,7 @@ const CLOUDFLARE_ACCOUNT_ID = process.env.CLOUDFLARE_ACCOUNT_ID;
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 const CEREBRAS_API_KEY = process.env.CEREBRAS_API_KEY;
 const SAMBANOVA_API_KEY = process.env.SAMBANOVA_API_KEY;
+const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY;
 
 // API Base URLs
 const OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1";
@@ -26,6 +27,7 @@ const CLOUDFLARE_BASE_URL = "https://api.cloudflare.com/client/v4/accounts";
 const ANTHROPIC_BASE_URL = "https://api.anthropic.com/v1";
 const CEREBRAS_BASE_URL = "https://api.cerebras.ai/v1";
 const SAMBANOVA_BASE_URL = "https://api.sambanova.ai/v1";
+const DEEPSEEK_BASE_URL = "https://api.deepseek.com";
 
 // Model configurations
 const AI_MODEL = "google/gemini-2.0-flash-lite:free";
@@ -35,6 +37,7 @@ const CLOUDFLARE_MODEL = "@cf/meta/llama-3.1-8b-instruct";
 const ANTHROPIC_MODEL = "claude-3-5-sonnet-20240620";
 const CEREBRAS_MODEL = "llama-3.3-70b";
 const SAMBANOVA_MODEL = "Meta-Llama-3.3-70B-Instruct";
+const DEEPSEEK_MODEL = "deepseek-chat";
 
 // Gemini key rotation state
 let currentGeminiKeyIndex = 0;
@@ -568,6 +571,48 @@ async function callSambaNova(
   return JSON.parse(content);
 }
 
+async function callDeepSeek(
+  systemPrompt: string,
+  userPrompt: string
+): Promise<any> {
+  if (!DEEPSEEK_API_KEY) {
+    throw new Error("DEEPSEEK_API_KEY not configured");
+  }
+
+  const response = await fetch(`${DEEPSEEK_BASE_URL}/chat/completions`, {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${DEEPSEEK_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: DEEPSEEK_MODEL,
+      messages: [
+        { role: "system", content: systemPrompt + "\n\nYou must respond with valid JSON only." },
+        { role: "user", content: userPrompt }
+      ],
+      temperature: 0.3,
+      max_tokens: 8000,
+      response_format: { type: "json_object" }
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error("[DeepSeek] API error:", errorText);
+    throw new Error(`DeepSeek API error: ${response.status}`);
+  }
+
+  const data = await response.json();
+  const content = data.choices?.[0]?.message?.content;
+
+  if (!content) {
+    throw new Error("No content in DeepSeek response");
+  }
+
+  return JSON.parse(content);
+}
+
 async function callAnthropic(
   systemPrompt: string,
   userPrompt: string,
@@ -644,6 +689,7 @@ export async function callAI(
   const providers = [
     { name: "Gemini", key: GEMINI_API_KEYS.length > 0, fn: callGemini },
     { name: "OpenRouter", key: !!OPENROUTER_API_KEY, fn: callOpenRouter },
+    { name: "DeepSeek", key: !!DEEPSEEK_API_KEY, fn: callDeepSeek },
     { name: "Groq", key: !!GROQ_API_KEY, fn: callGroq },
     { name: "Cerebras", key: !!CEREBRAS_API_KEY, fn: callCerebras },
     { name: "Together", key: !!TOGETHER_API_KEY, fn: callTogether },
@@ -654,7 +700,7 @@ export async function callAI(
   const availableProviders = providers.filter(p => p.key && !excludeProviders.includes(p.name));
 
   if (availableProviders.length === 0) {
-    throw new Error("No AI provider configured. Set at least one of: GEMINI_API_KEY, OPENROUTER_API_KEY, GROQ_API_KEY, CEREBRAS_API_KEY, TOGETHER_API_KEY, SAMBANOVA_API_KEY, or CLOUDFLARE_API_KEY");
+    throw new Error("No AI provider configured. Set at least one of: GEMINI_API_KEY, OPENROUTER_API_KEY, DEEPSEEK_API_KEY, GROQ_API_KEY, CEREBRAS_API_KEY, TOGETHER_API_KEY, SAMBANOVA_API_KEY, or CLOUDFLARE_API_KEY");
   }
 
   // Try each provider in sequence until one succeeds
@@ -1302,7 +1348,7 @@ ${qaText}`;
 }
 
 export function isDeepSeekConfigured(): boolean {
-  return !!(GEMINI_API_KEYS.length > 0 || OPENROUTER_API_KEY || GROQ_API_KEY || CEREBRAS_API_KEY || TOGETHER_API_KEY || SAMBANOVA_API_KEY || (CLOUDFLARE_API_KEY && CLOUDFLARE_ACCOUNT_ID));
+  return !!(GEMINI_API_KEYS.length > 0 || OPENROUTER_API_KEY || DEEPSEEK_API_KEY || GROQ_API_KEY || CEREBRAS_API_KEY || TOGETHER_API_KEY || SAMBANOVA_API_KEY || (CLOUDFLARE_API_KEY && CLOUDFLARE_ACCOUNT_ID));
 }
 
 export function isGeminiConfigured(): boolean {
@@ -1314,6 +1360,7 @@ export function getConfiguredProviders(): string[] {
   if (ANTHROPIC_API_KEY) providers.push("Claude (Anthropic)");
   if (GEMINI_API_KEYS.length > 0) providers.push(`Gemini (${GEMINI_API_KEYS.length} keys)`);
   if (OPENROUTER_API_KEY) providers.push("OpenRouter");
+  if (DEEPSEEK_API_KEY) providers.push("DeepSeek");
   if (GROQ_API_KEY) providers.push("Groq");
   if (CEREBRAS_API_KEY) providers.push("Cerebras");
   if (TOGETHER_API_KEY) providers.push("Together");
