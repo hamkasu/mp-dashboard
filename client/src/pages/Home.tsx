@@ -561,34 +561,6 @@ export default function Home() {
         {/* Main Content */}
         <main className="flex-1 px-4 md:px-6 lg:px-8 py-6 md:py-8">
           <div className="space-y-6 md:space-y-8">
-            {/* Featured Cards: Royal Address, MP Spotlight & Weekly Poll */}
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-              <div className="relative">
-                <div className="absolute -inset-1 bg-gradient-to-r from-primary/20 to-primary/10 rounded-lg blur opacity-25 pointer-events-none" />
-                <RoyalAddress />
-              </div>
-              <div className="relative">
-                <div className="absolute -inset-1 bg-gradient-to-r from-amber-500/20 to-orange-500/10 rounded-lg blur opacity-25 pointer-events-none" />
-                <MPSpotlight />
-              </div>
-              <div className="relative md:col-span-2 xl:col-span-1">
-                <div className="absolute -inset-1 bg-gradient-to-r from-green-500/20 to-emerald-500/10 rounded-lg blur opacity-25 pointer-events-none" />
-                <PollWidget />
-              </div>
-            </div>
-
-            {/* Bills to Watch Section */}
-            <div className="relative">
-              <div className="absolute -inset-1 bg-gradient-to-r from-orange-500/20 to-amber-500/10 rounded-lg blur opacity-25 pointer-events-none" />
-              <BillsToWatch />
-            </div>
-
-            {/* Parliament Videos Section */}
-            <div className="relative">
-              <div className="absolute -inset-1 bg-gradient-to-r from-red-500/20 to-rose-500/10 rounded-lg blur opacity-25 pointer-events-none" />
-              <ParliamentVideos />
-            </div>
-
             {/* Media Section */}
             <div className="relative">
               <div className="absolute -inset-1 bg-gradient-to-r from-purple-500/20 to-violet-500/10 rounded-lg blur opacity-25 pointer-events-none" />
@@ -616,6 +588,34 @@ export default function Home() {
                   </a>
                 </CardContent>
               </Card>
+            </div>
+
+            {/* Featured Cards: Royal Address, MP Spotlight & Weekly Poll */}
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+              <div className="relative">
+                <div className="absolute -inset-1 bg-gradient-to-r from-primary/20 to-primary/10 rounded-lg blur opacity-25 pointer-events-none" />
+                <RoyalAddress />
+              </div>
+              <div className="relative">
+                <div className="absolute -inset-1 bg-gradient-to-r from-amber-500/20 to-orange-500/10 rounded-lg blur opacity-25 pointer-events-none" />
+                <MPSpotlight />
+              </div>
+              <div className="relative md:col-span-2 xl:col-span-1">
+                <div className="absolute -inset-1 bg-gradient-to-r from-green-500/20 to-emerald-500/10 rounded-lg blur opacity-25 pointer-events-none" />
+                <PollWidget />
+              </div>
+            </div>
+
+            {/* Bills to Watch Section */}
+            <div className="relative">
+              <div className="absolute -inset-1 bg-gradient-to-r from-orange-500/20 to-amber-500/10 rounded-lg blur opacity-25 pointer-events-none" />
+              <BillsToWatch />
+            </div>
+
+            {/* Parliament Videos Section */}
+            <div className="relative">
+              <div className="absolute -inset-1 bg-gradient-to-r from-red-500/20 to-rose-500/10 rounded-lg blur opacity-25 pointer-events-none" />
+              <ParliamentVideos />
             </div>
 
             {/* SEO Landing Section */}
