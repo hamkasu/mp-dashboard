@@ -15,6 +15,8 @@ const TOGETHER_API_KEY = process.env.TOGETHER_API_KEY;
 const CLOUDFLARE_API_KEY = process.env.CLOUDFLARE_API_KEY;
 const CLOUDFLARE_ACCOUNT_ID = process.env.CLOUDFLARE_ACCOUNT_ID;
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
+const CEREBRAS_API_KEY = process.env.CEREBRAS_API_KEY;
+const SAMBANOVA_API_KEY = process.env.SAMBANOVA_API_KEY;
 
 // API Base URLs
 const OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1";
@@ -22,6 +24,8 @@ const GROQ_BASE_URL = "https://api.groq.com/openai/v1";
 const TOGETHER_BASE_URL = "https://api.together.xyz/v1";
 const CLOUDFLARE_BASE_URL = "https://api.cloudflare.com/client/v4/accounts";
 const ANTHROPIC_BASE_URL = "https://api.anthropic.com/v1";
+const CEREBRAS_BASE_URL = "https://api.cerebras.ai/v1";
+const SAMBANOVA_BASE_URL = "https://api.sambanova.ai/v1";
 
 // Model configurations
 const AI_MODEL = "google/gemini-2.0-flash-lite:free";
@@ -29,6 +33,8 @@ const GROQ_MODEL = "llama-3.3-70b-versatile";
 const TOGETHER_MODEL = "meta-llama/Llama-3.3-70B-Instruct-Turbo-Free";
 const CLOUDFLARE_MODEL = "@cf/meta/llama-3.1-8b-instruct";
 const ANTHROPIC_MODEL = "claude-3-5-sonnet-20240620";
+const CEREBRAS_MODEL = "llama-3.3-70b";
+const SAMBANOVA_MODEL = "Meta-Llama-3.1-8B-Instant";
 
 // Gemini key rotation state
 let currentGeminiKeyIndex = 0;
@@ -464,6 +470,98 @@ async function callCloudflare(
   return JSON.parse(jsonMatch[0]);
 }
 
+async function callCerebras(
+  systemPrompt: string,
+  userPrompt: string
+): Promise<any> {
+  if (!CEREBRAS_API_KEY) {
+    throw new Error("CEREBRAS_API_KEY not configured");
+  }
+
+  const response = await fetch(`${CEREBRAS_BASE_URL}/chat/completions`, {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${CEREBRAS_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: CEREBRAS_MODEL,
+      messages: [
+        { role: "system", content: systemPrompt + "\n\nYou must respond with valid JSON only." },
+        { role: "user", content: userPrompt }
+      ],
+      temperature: 0.3,
+      max_tokens: 8000,
+      response_format: { type: "json_object" }
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error("[Cerebras] API error:", errorText);
+    throw new Error(`Cerebras API error: ${response.status}`);
+  }
+
+  const data = await response.json();
+  const content = data.choices?.[0]?.message?.content;
+
+  if (!content) {
+    throw new Error("No content in Cerebras response");
+  }
+
+  return JSON.parse(content);
+}
+
+async function callSambaNova(
+  systemPrompt: string,
+  userPrompt: string
+): Promise<any> {
+  if (!SAMBANOVA_API_KEY) {
+    throw new Error("SAMBANOVA_API_KEY not configured");
+  }
+
+  const response = await fetch(`${SAMBANOVA_BASE_URL}/chat/completions`, {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${SAMBANOVA_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: SAMBANOVA_MODEL,
+      messages: [
+        { role: "system", content: systemPrompt + "\n\nYou must respond with valid JSON only." },
+        { role: "user", content: userPrompt }
+      ],
+      temperature: 0.3,
+      max_tokens: 8000,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error("[SambaNova] API error:", errorText);
+    throw new Error(`SambaNova API error: ${response.status}`);
+  }
+
+  const data = await response.json();
+  const content = data.choices?.[0]?.message?.content;
+
+  if (!content) {
+    throw new Error("No content in SambaNova response");
+  }
+
+  const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/) || content.match(/(\{[\s\S]*\})/);
+  if (jsonMatch) {
+    try {
+      return JSON.parse(jsonMatch[1] || jsonMatch[0]);
+    } catch (e) {
+      console.error("[SambaNova] JSON parse error after match:", e);
+    }
+  }
+
+  return JSON.parse(content);
+}
+
 async function callAnthropic(
   systemPrompt: string,
   userPrompt: string,
@@ -541,14 +639,16 @@ export async function callAI(
     { name: "Gemini", key: GEMINI_API_KEYS.length > 0, fn: callGemini },
     { name: "OpenRouter", key: !!OPENROUTER_API_KEY, fn: callOpenRouter },
     { name: "Groq", key: !!GROQ_API_KEY, fn: callGroq },
+    { name: "Cerebras", key: !!CEREBRAS_API_KEY, fn: callCerebras },
     { name: "Together", key: !!TOGETHER_API_KEY, fn: callTogether },
+    { name: "SambaNova", key: !!SAMBANOVA_API_KEY, fn: callSambaNova },
     { name: "Cloudflare", key: !!(CLOUDFLARE_API_KEY && CLOUDFLARE_ACCOUNT_ID), fn: callCloudflare },
   ];
 
   const availableProviders = providers.filter(p => p.key && !excludeProviders.includes(p.name));
 
   if (availableProviders.length === 0) {
-    throw new Error("No AI provider configured. Set at least one of: GEMINI_API_KEY, OPENROUTER_API_KEY, GROQ_API_KEY, TOGETHER_API_KEY, or CLOUDFLARE_API_KEY");
+    throw new Error("No AI provider configured. Set at least one of: GEMINI_API_KEY, OPENROUTER_API_KEY, GROQ_API_KEY, CEREBRAS_API_KEY, TOGETHER_API_KEY, SAMBANOVA_API_KEY, or CLOUDFLARE_API_KEY");
   }
 
   // Try each provider in sequence until one succeeds
@@ -1196,7 +1296,7 @@ ${qaText}`;
 }
 
 export function isDeepSeekConfigured(): boolean {
-  return !!(GEMINI_API_KEYS.length > 0 || OPENROUTER_API_KEY || GROQ_API_KEY || TOGETHER_API_KEY || (CLOUDFLARE_API_KEY && CLOUDFLARE_ACCOUNT_ID));
+  return !!(GEMINI_API_KEYS.length > 0 || OPENROUTER_API_KEY || GROQ_API_KEY || CEREBRAS_API_KEY || TOGETHER_API_KEY || SAMBANOVA_API_KEY || (CLOUDFLARE_API_KEY && CLOUDFLARE_ACCOUNT_ID));
 }
 
 export function isGeminiConfigured(): boolean {
@@ -1209,7 +1309,9 @@ export function getConfiguredProviders(): string[] {
   if (GEMINI_API_KEYS.length > 0) providers.push(`Gemini (${GEMINI_API_KEYS.length} keys)`);
   if (OPENROUTER_API_KEY) providers.push("OpenRouter");
   if (GROQ_API_KEY) providers.push("Groq");
+  if (CEREBRAS_API_KEY) providers.push("Cerebras");
   if (TOGETHER_API_KEY) providers.push("Together");
+  if (SAMBANOVA_API_KEY) providers.push("SambaNova");
   if (CLOUDFLARE_API_KEY && CLOUDFLARE_ACCOUNT_ID) providers.push("Cloudflare");
   return providers;
 }
