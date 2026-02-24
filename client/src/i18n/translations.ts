@@ -69,6 +69,7 @@ export const translations = {
       ma63Dashboard: "MA63 Dashboard",
       gigHala: "GigHala",
       gigHalaTagline: "Malaysia's #1 Halal Gig Platform",
+      auditReports: "Audit Reports",
     },
 
     // MP Spotlight
@@ -919,6 +920,7 @@ export const translations = {
       ma63Dashboard: "Papan Pemuka MA63",
       gigHala: "GigHala",
       gigHalaTagline: "Platform Gig Halal #1 Malaysia",
+      auditReports: "Laporan Audit",
     },
 
     // Filters & Sorting
