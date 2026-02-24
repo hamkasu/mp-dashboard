@@ -218,6 +218,52 @@ async function seedBillsToWatch(): Promise<number> {
 }
 
 /**
+ * Sync curated content: update existing bills with latest content from SEED_BILLS.
+ * Matches by title_en; updates all curated fields so stale DB records always
+ * reflect the latest editorial copy without needing a DB wipe.
+ */
+async function syncCuratedContent(): Promise<number> {
+  const db = getDb();
+  if (!db) return 0;
+
+  let synced = 0;
+  try {
+    for (const bill of SEED_BILLS) {
+      const existing = await db
+        .select({ id: billsToWatch.id })
+        .from(billsToWatch)
+        .where(eq(billsToWatch.titleEn, bill.titleEn))
+        .limit(1);
+
+      if (existing.length === 0) continue;
+
+      await db
+        .update(billsToWatch)
+        .set({
+          titleMs: bill.titleMs,
+          status: bill.status,
+          icon: bill.icon ?? "scroll",
+          tags: bill.tags ?? [],
+          summaryEn: bill.summaryEn,
+          summaryMs: bill.summaryMs,
+          detailsEn: bill.detailsEn ?? null,
+          detailsMs: bill.detailsMs ?? null,
+          sourceUrl: bill.sourceUrl ?? null,
+          sortOrder: bill.sortOrder ?? 0,
+          updatedAt: new Date(),
+        })
+        .where(eq(billsToWatch.titleEn, bill.titleEn));
+
+      synced++;
+    }
+    console.log(`[Bills to Watch] Synced curated content for ${synced} bills`);
+  } catch (error) {
+    console.error("[Bills to Watch] Error syncing curated content:", error);
+  }
+  return synced;
+}
+
+/**
  * Cross-reference bills_to_watch with scraped bills table to update statuses
  */
 async function crossReferenceWithScrapedBills(): Promise<{ matched: number; updated: number }> {
@@ -278,7 +324,8 @@ function mapScrapedStatus(scrapedStatus: string): string | null {
 }
 
 /**
- * Refresh bills-to-watch data: seed if empty, then cross-reference with scraped bills
+ * Refresh bills-to-watch data: seed if empty, sync curated content, then
+ * cross-reference with scraped bills for live status updates
  */
 export async function refreshBillsToWatch(): Promise<{
   seeded: number;
@@ -289,6 +336,8 @@ export async function refreshBillsToWatch(): Promise<{
   console.log("[Bills to Watch] Starting refresh...");
 
   const seeded = await seedBillsToWatch();
+  // Always sync curated editorial content so existing records stay up-to-date
+  await syncCuratedContent();
   const { matched, updated } = await crossReferenceWithScrapedBills();
 
   // Touch the updated_at on all records to track last refresh time
@@ -375,10 +424,12 @@ export function startBillsToWatchCron() {
 
   console.log("[Bills to Watch Cron] Daily refresh job scheduled for 3:00 AM MYT");
 
-  // Run initial seed on startup
-  seedBillsToWatch().catch(err => {
-    console.error("[Bills to Watch Cron] Error during startup seed:", err);
-  });
+  // Run seed + content sync on startup so latest editorial copy is always live
+  seedBillsToWatch()
+    .then(() => syncCuratedContent())
+    .catch(err => {
+      console.error("[Bills to Watch Cron] Error during startup seed/sync:", err);
+    });
 }
 
 /**
