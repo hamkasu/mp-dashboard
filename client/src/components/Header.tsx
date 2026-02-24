@@ -201,13 +201,9 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
                 </DropdownMenuSubTrigger>
                 <DropdownMenuPortal>
                   <DropdownMenuSubContent>
-                    <DropdownMenuItem onSelect={() => window.open("/LKAN-1-2026-AKTIVITI-KEM-JAB-BDN-BERKANUN-PENGURUSAN-SYRKT-KERAJAAN.pdf", "_blank")} data-testid="submenu-audit-report-full">
-                      <FileText className="w-4 h-4 mr-2" />
-                      LKAN 1/2026 (Full)
-                    </DropdownMenuItem>
                     <DropdownMenuItem onSelect={() => window.open("/LKAN-1-2026-AKTIVITI-KEM-JAB-BDN-BERKANUN-PENGURUSAN-SYRKT-KERAJAAN-compressed.pdf", "_blank")} data-testid="submenu-audit-report-compressed">
                       <FileText className="w-4 h-4 mr-2" />
-                      LKAN 1/2026 (Compressed)
+                      LKAN 1/2026
                     </DropdownMenuItem>
                   </DropdownMenuSubContent>
                 </DropdownMenuPortal>
@@ -414,13 +410,9 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
 
               {/* Audit Reports */}
               <DropdownMenuLabel className="text-xs text-muted-foreground">{t('nav.auditReports')}</DropdownMenuLabel>
-              <DropdownMenuItem onSelect={() => window.open("/LKAN-1-2026-AKTIVITI-KEM-JAB-BDN-BERKANUN-PENGURUSAN-SYRKT-KERAJAAN.pdf", "_blank")}>
-                <FileText className="w-4 h-4 mr-2" />
-                LKAN 1/2026 (Full)
-              </DropdownMenuItem>
               <DropdownMenuItem onSelect={() => window.open("/LKAN-1-2026-AKTIVITI-KEM-JAB-BDN-BERKANUN-PENGURUSAN-SYRKT-KERAJAAN-compressed.pdf", "_blank")}>
                 <FileText className="w-4 h-4 mr-2" />
-                LKAN 1/2026 (Compressed)
+                LKAN 1/2026
               </DropdownMenuItem>
 
               <DropdownMenuSeparator />
