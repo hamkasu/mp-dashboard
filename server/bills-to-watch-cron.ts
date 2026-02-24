@@ -18,13 +18,14 @@ const SEED_BILLS: InsertBillToWatch[] = [
   {
     titleEn: "Political Financing Bill",
     titleMs: "RUU Pembiayaan Politik",
-    status: "drafting",
+    status: "consultation",
     isFeatured: true,
     icon: "scale",
     tags: ["Reform", "Anti-Corruption", "Transparency"],
-    summaryEn: "Landmark reform to regulate political party funding, curb money politics, mandate public disclosure of donations, impose caps on contributions, restrict eligible donors, and end perceived links between funding and government contracts.",
-    summaryMs: "Pembaharuan penting untuk mengawal selia pembiayaan parti politik, membendung politik wang, memandatkan pendedahan awam derma, mengenakan had sumbangan, menyekat penderma yang layak, dan menamatkan persepsi kaitan antara pembiayaan dan kontrak kerajaan.",
-    detailsEn: `Draft shaped by 20+ stakeholder sessions; public perception study (led by IIUM researchers) expected to complete by end-February 2026. Government awaiting results before finalizing for tabling—likely post-study.
+    summaryEn: "Public consultation phase complete. Bill now under final review before Cabinet deliberation, targeting tabling in Parliament by mid-2026.",
+    summaryMs: "Fasa perundingan awam selesai. Rang undang-undang kini dalam semakan akhir sebelum perbincangan Kabinet, menyasarkan pembentangan di Parlimen menjelang pertengahan 2026.",
+    detailsEn: `✓ 20+ stakeholder sessions completed by BHEUU.
+✓ IIUM-led public perception study concluded Feb 2026.
 
 Key proposals:
 • Mandatory public disclosure of party finances
@@ -33,8 +34,11 @@ Key proposals:
 • Possible public funding for parties
 • Restrictions to end "donations-for-contracts" perception
 
+Next steps: Cabinet review expected Q2 2026, followed by tabling in Parliament.
+
 Opposition raises concerns about enforcement and fear-of-reprisal for donors.`,
-    detailsMs: `Draf dibentuk melalui 20+ sesi pemegang taruh; kajian persepsi awam (diketuai penyelidik IIUM) dijangka selesai menjelang akhir Februari 2026. Kerajaan menunggu keputusan sebelum memuktamadkan untuk pembentangan—berkemungkinan selepas kajian.
+    detailsMs: `✓ 20+ sesi pemegang taruh telah selesai oleh BHEUU.
+✓ Kajian persepsi awam diketuai IIUM selesai Feb 2026.
 
 Cadangan utama:
 • Pendedahan mandatori kewangan parti kepada awam
@@ -42,6 +46,8 @@ Cadangan utama:
 • Lindungi kerahsiaan penderma kecil (dedahkan derma >RM10k sahaja)
 • Kemungkinan pembiayaan awam untuk parti
 • Sekatan untuk menamatkan persepsi "derma-untuk-kontrak"
+
+Langkah seterusnya: Semakan Kabinet dijangka S2 2026, diikuti pembentangan di Parlimen.
 
 Pembangkang membangkitkan kebimbangan mengenai penguatkuasaan dan ketakutan pembalasan terhadap penderma.`,
     sourceUrl: "https://www.parlimen.gov.my",

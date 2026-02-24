@@ -1,5 +1,42 @@
--- Update Other Bills Under Watch summaries and details to match Feb 2026 content
--- Reflects the curated descriptions shown in the dashboard's "Other Bills Under Watch" section
+-- Update Bills to Watch summaries and details to match Feb 2026 content
+-- Reflects current status of all curated bills including featured Political Financing Bill
+
+-- ============================================================
+-- Political Financing Bill — IIUM study concluded, status → consultation
+-- ============================================================
+UPDATE bills_to_watch
+SET
+  status = 'consultation',
+  summary_en = 'Public consultation phase complete. Bill now under final review before Cabinet deliberation, targeting tabling in Parliament by mid-2026.',
+  summary_ms = 'Fasa perundingan awam selesai. Rang undang-undang kini dalam semakan akhir sebelum perbincangan Kabinet, menyasarkan pembentangan di Parlimen menjelang pertengahan 2026.',
+  details_en = '✓ 20+ stakeholder sessions completed by BHEUU.
+✓ IIUM-led public perception study concluded Feb 2026.
+
+Key proposals:
+• Mandatory public disclosure of party finances
+• Donation caps: RM50k/individual, RM100k/company, RM500k/large groups
+• Protect small donor anonymity (disclose donations >RM10k only)
+• Possible public funding for parties
+• Restrictions to end "donations-for-contracts" perception
+
+Next steps: Cabinet review expected Q2 2026, followed by tabling in Parliament.
+
+Opposition raises concerns about enforcement and fear-of-reprisal for donors.',
+  details_ms = '✓ 20+ sesi pemegang taruh telah selesai oleh BHEUU.
+✓ Kajian persepsi awam diketuai IIUM selesai Feb 2026.
+
+Cadangan utama:
+• Pendedahan mandatori kewangan parti kepada awam
+• Had derma: RM50k/individu, RM100k/syarikat, RM500k/kumpulan besar
+• Lindungi kerahsiaan penderma kecil (dedahkan derma >RM10k sahaja)
+• Kemungkinan pembiayaan awam untuk parti
+• Sekatan untuk menamatkan persepsi "derma-untuk-kontrak"
+
+Langkah seterusnya: Semakan Kabinet dijangka S2 2026, diikuti pembentangan di Parlimen.
+
+Pembangkang membangkitkan kebimbangan mengenai penguatkuasaan dan ketakutan pembalasan terhadap penderma.',
+  updated_at = NOW()
+WHERE title_en = 'Political Financing Bill';
 
 -- ============================================================
 -- Prime Minister Term Limit Bill — updated summary
