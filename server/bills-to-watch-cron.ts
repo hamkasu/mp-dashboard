@@ -53,8 +53,8 @@ Pembangkang membangkitkan kebimbangan mengenai penguatkuasaan dan ketakutan pemb
     status: "tabled",
     icon: "shield",
     tags: ["Constitutional Reform", "Governance", "Power Limits"],
-    summaryEn: "Constitutional amendment (Constitution (Amendment) Bill 2026) to cap PM tenure at cumulative 10 years or 2 full terms, with automatic cessation upon reaching the limit. Tabled for First Reading on February 23, 2026 by Minister Azalina Othman Said; fulfills GE15 manifesto pledge.",
-    summaryMs: "Pindaan perlembagaan (Rang Undang-Undang Perlembagaan (Pindaan) 2026) untuk mengehadkan tempoh PM kepada 10 tahun kumulatif atau 2 penggal penuh, dengan penamatan automatik apabila mencapai had. Dibentangkan untuk Bacaan Pertama pada 23 Februari 2026 oleh Menteri Azalina Othman Said; memenuhi janji manifesto PRU15.",
+    summaryEn: "Proposes capping PM tenure at cumulative 10 years (or 2 full terms); automatic cessation upon reaching limit. Applies to current and future PMs (excludes service after dissolution in some cases); former PMs with 10+ years ineligible to return. Tabled by Minister Azalina Othman Said; fulfills GE15 promise—politically sensitive but advancing quickly.",
+    summaryMs: "Mencadangkan had tempoh PM kepada 10 tahun kumulatif (atau 2 penggal penuh); penamatan automatik apabila mencapai had. Terpakai kepada PM semasa dan masa hadapan (mengecualikan perkhidmatan selepas pembubaran dalam sesetengah kes); bekas PM yang berkhidmat 10 tahun ke atas tidak layak kembali. Dibentangkan oleh Menteri Azalina Othman Said; memenuhi janji PRU15—sensitif secara politik tetapi bergerak dengan cepat.",
     detailsEn: `Tabled for First Reading on February 23, 2026; Second and Third Readings scheduled in the current parliamentary sitting.
 
 Key provisions:
@@ -84,8 +84,8 @@ Sensitif secara politik tetapi bergerak dengan cepat sebagai sebahagian daripada
     status: "tabled",
     icon: "scale",
     tags: ["Judicial Independence", "Anti-Corruption", "Rule of Law"],
-    summaryEn: "Constitution (Amendment) Bill 2026 to split the AG's advisory role from prosecutorial functions; establishes a distinct Public Prosecutor to reduce political interference in legal proceedings. Tabled for First Reading on February 23, 2026 alongside the PM term limit bill.",
-    summaryMs: "Rang Undang-Undang Perlembagaan (Pindaan) 2026 untuk mengasingkan peranan nasihat Peguam Negara daripada fungsi pendakwaan; menubuhkan Pendakwa Raya yang berasingan untuk mengurangkan campur tangan politik dalam prosiding undang-undang. Dibentangkan untuk Bacaan Pertama pada 23 Februari 2026 bersama RUU had penggal PM.",
+    summaryEn: "Seeks to split AG's advisory role from prosecutorial functions; establishes distinct Public Prosecutor to reduce political interference in legal proceedings. Controversial among legal circles but tabled alongside PM term limit bill—part of broader institutional reforms.",
+    summaryMs: "Bertujuan mengasingkan peranan nasihat Peguam Negara daripada fungsi pendakwaan; menubuhkan Pendakwa Raya yang berasingan untuk mengurangkan campur tangan politik dalam prosiding undang-undang. Kontroversi dalam kalangan badan undang-undang tetapi dibentangkan bersama RUU had penggal PM—sebahagian daripada pembaharuan institusi yang lebih luas.",
     detailsEn: `Tabled for First Reading on February 23, 2026, alongside the Prime Minister Term Limit Bill.
 
 Key objectives:
@@ -113,8 +113,27 @@ Kontroversi dalam kalangan badan undang-undang tetapi merupakan sebahagian darip
     status: "consultation",
     icon: "search",
     tags: ["Oversight", "Anti-Maladministration", "Accountability"],
-    summaryEn: "Establishes independent oversight body to investigate public administration complaints and maladministration. Scope and executive independence still under debate; listed among key reforms to be tabled in 2026 per PM Anwar's statements.",
-    summaryMs: "Menubuhkan badan pengawasan bebas untuk menyiasat aduan pentadbiran awam dan salah tadbir. Skop dan kebebasan eksekutif masih dalam perbahasan; disenaraikan antara pembaharuan utama untuk dibentangkan pada 2026 menurut kenyataan PM Anwar.",
+    summaryEn: "To establish independent body investigating public administration complaints/maladministration. Scope and executive independence still under debate; listed among key reforms to be tabled this year (per PM Anwar statements).",
+    summaryMs: "Untuk menubuhkan badan bebas menyiasat aduan pentadbiran awam/salah tadbir. Skop dan kebebasan eksekutif masih dalam perbahasan; disenaraikan antara pembaharuan utama untuk dibentangkan tahun ini (menurut kenyataan PM Anwar).",
+    detailsEn: `Consultation / In Pipeline stage; promised for 2026 tabling per PM Anwar's statements.
+
+Key objectives:
+• Establish an independent body to investigate public administration complaints
+• Address maladministration by government bodies and agencies
+• Provide citizens a formal channel outside the courts for redress
+• Scope and executive independence still under active debate
+
+Listed among the government's key institutional reforms to be tabled this year.`,
+    detailsMs: `Peringkat Rundingan / Dalam Saluran; dijanjikan untuk pembentangan 2026 menurut kenyataan PM Anwar.
+
+Objektif utama:
+• Menubuhkan badan bebas untuk menyiasat aduan pentadbiran awam
+• Menangani salah tadbir oleh badan dan agensi kerajaan
+• Menyediakan saluran rasmi kepada rakyat di luar mahkamah untuk mendapatkan remedi
+• Skop dan kebebasan eksekutif masih dalam perbahasan aktif
+
+Disenaraikan antara pembaharuan institusi utama kerajaan yang akan dibentangkan tahun ini.`,
+    sourceUrl: "https://www.parlimen.gov.my",
     sortOrder: 3,
   },
   {
@@ -123,8 +142,8 @@ Kontroversi dalam kalangan badan undang-undang tetapi merupakan sebahagian darip
     status: "drafting",
     icon: "search",
     tags: ["Transparency", "Public Access", "Governance"],
-    summaryEn: "Cabinet committee approved in principle; aims to enhance public access to government information with safeguards for national security, intelligence, and 3R issues. Expected tabling in 2026 to promote accountability in project tenders and abuse prevention.",
-    summaryMs: "Jawatankuasa Kabinet meluluskan secara prinsip; bertujuan meningkatkan akses awam kepada maklumat kerajaan dengan perlindungan untuk keselamatan negara, perisikan, dan isu 3R. Jangkaan pembentangan pada 2026 untuk menggalakkan akauntabiliti dalam tender projek dan pencegahan penyalahgunaan.",
+    summaryEn: "Aims to enhance access to government information, with safeguards for national security, intelligence, and race-religion-royalty (3R) issues. Cabinet committee approved in principle; expected tabling this year to promote accountability (e.g., project tenders, abuse prevention). Complements other anti-corruption reforms.",
+    summaryMs: "Bertujuan meningkatkan akses kepada maklumat kerajaan, dengan perlindungan untuk keselamatan negara, perisikan, dan isu bangsa-agama-raja (3R). Jawatankuasa Kabinet meluluskan secara prinsip; jangkaan pembentangan tahun ini untuk menggalakkan akauntabiliti (contoh: tender projek, pencegahan penyalahgunaan). Melengkapi pembaharuan anti-rasuah lain.",
     detailsEn: `Cabinet committee approved in principle; bill currently in drafting stage for expected tabling in 2026.
 
 Key objectives:
