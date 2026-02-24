@@ -192,25 +192,6 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
 
               <DropdownMenuSeparator />
 
-              {/* Audit Reports Section */}
-              <DropdownMenuLabel className="text-xs text-muted-foreground">{t('nav.auditReports')}</DropdownMenuLabel>
-              <DropdownMenuSub>
-                <DropdownMenuSubTrigger data-testid="menu-audit-reports-submenu">
-                  <FileText className="w-4 h-4 mr-2" />
-                  {t('nav.auditReports')}
-                </DropdownMenuSubTrigger>
-                <DropdownMenuPortal>
-                  <DropdownMenuSubContent>
-                    <DropdownMenuItem onSelect={() => window.open("/LKAN-1-2026-AKTIVITI-KEM-JAB-BDN-BERKANUN-PENGURUSAN-SYRKT-KERAJAAN-compressed.pdf", "_blank")} data-testid="submenu-audit-report-compressed">
-                      <FileText className="w-4 h-4 mr-2" />
-                      LKAN 1/2026
-                    </DropdownMenuItem>
-                  </DropdownMenuSubContent>
-                </DropdownMenuPortal>
-              </DropdownMenuSub>
-
-              <DropdownMenuSeparator />
-
               {/* State Assemblies Section */}
               <DropdownMenuLabel className="text-xs text-muted-foreground">State Assemblies</DropdownMenuLabel>
               <DropdownMenuSub>
@@ -325,6 +306,18 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
               {t('nav.fundamentalRights')}
             </Button>
           </FundamentalRightsPopup>
+
+          {/* Audit Reports */}
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1 hidden md:flex"
+            data-testid="button-audit-reports"
+            onClick={() => window.open("/LKAN-1-2026-AKTIVITI-KEM-JAB-BDN-BERKANUN-PENGURUSAN-SYRKT-KERAJAAN-compressed.pdf", "_blank")}
+          >
+            <FileText className="w-4 h-4" />
+            {t('nav.auditReports')}
+          </Button>
         </div>
 
         {/* Right: Mobile Menu + Search + Feedback + Language */}
