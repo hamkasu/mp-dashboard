@@ -18,13 +18,14 @@ const SEED_BILLS: InsertBillToWatch[] = [
   {
     titleEn: "Political Financing Bill",
     titleMs: "RUU Pembiayaan Politik",
-    status: "drafting",
+    status: "consultation",
     isFeatured: true,
     icon: "scale",
     tags: ["Reform", "Anti-Corruption", "High Priority"],
-    summaryEn: "Landmark reform to regulate party funding, curb money politics, and increase transparency in political donations.",
-    summaryMs: "Pembaharuan penting untuk mengawal selia pembiayaan parti, membendung politik wang, dan meningkatkan ketelusan dalam derma politik.",
-    detailsEn: `20+ stakeholder sessions completed by BHEUU. Public perception study (IIUM-led) ends late Feb 2026.
+    summaryEn: "Public consultation phase complete. Bill now under final review before Cabinet deliberation, targeting tabling in Parliament by mid-2026.",
+    summaryMs: "Fasa perundingan awam selesai. Rang undang-undang kini dalam semakan akhir sebelum perbincangan Kabinet, menyasarkan pembentangan di Parlimen menjelang pertengahan 2026.",
+    detailsEn: `✓ 20+ stakeholder sessions completed by BHEUU.
+✓ IIUM-led public perception study concluded Feb 2026.
 
 Key proposals:
 • Mandatory public disclosure of party finances
@@ -33,8 +34,11 @@ Key proposals:
 • Possible public funding for parties
 • Restrictions to end "donations-for-contracts" perception
 
+Next steps: Cabinet review expected Q2 2026, followed by tabling in Parliament.
+
 Opposition raises concerns about enforcement and fear-of-reprisal for donors.`,
-    detailsMs: `20+ sesi pemegang taruh telah selesai oleh BHEUU. Kajian persepsi awam (diketuai IIUM) berakhir akhir Feb 2026.
+    detailsMs: `✓ 20+ sesi pemegang taruh telah selesai oleh BHEUU.
+✓ Kajian persepsi awam diketuai IIUM selesai Feb 2026.
 
 Cadangan utama:
 • Pendedahan mandatori kewangan parti kepada awam
@@ -42,6 +46,8 @@ Cadangan utama:
 • Lindungi kerahsiaan penderma kecil (dedahkan derma >RM10k sahaja)
 • Kemungkinan pembiayaan awam untuk parti
 • Sekatan untuk menamatkan persepsi "derma-untuk-kontrak"
+
+Langkah seterusnya: Semakan Kabinet dijangka S2 2026, diikuti pembentangan di Parlimen.
 
 Pembangkang membangkitkan kebimbangan mengenai penguatkuasaan dan ketakutan pembalasan terhadap penderma.`,
     sortOrder: 0,

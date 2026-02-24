@@ -28,7 +28,8 @@ import {
   BookOpen,
   Clock,
   Flame,
-  X
+  X,
+  CircleDot
 } from "lucide-react";
 import { Link } from "wouter";
 
@@ -219,6 +220,14 @@ export function BillsToWatch({ className }: BillsToWatchProps) {
             <p className="text-sm text-foreground/80 mb-3">
               {getText(featuredBill.summaryEn, featuredBill.summaryMs)}
             </p>
+
+            {/* Latest update pill */}
+            <div className="flex items-center gap-1.5 mb-3">
+              <CircleDot className="h-3.5 w-3.5 text-emerald-500 shrink-0" aria-hidden="true" />
+              <span className="text-xs font-medium text-emerald-700 dark:text-emerald-400">
+                {isMs ? "Kemaskini terbaru: Feb 2026" : "Latest update: Feb 2026"}
+              </span>
+            </div>
 
             {/* Expandable details */}
             {(featuredBill.detailsEn || featuredBill.detailsMs) && (
