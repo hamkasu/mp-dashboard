@@ -767,10 +767,23 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
 
       // Filter to only include active MPs (not deceased or resigned)
       const now = new Date();
-      const mps = allMps.filter(mp => {
+      const activeMpsAll = allMps.filter(mp => {
         if (!mp.termEndDate) return true;
         return new Date(mp.termEndDate) > now;
       });
+
+      // Deduplicate by parliamentCode: keep only the most recently sworn-in active MP
+      // per constituency. This handles edge cases where a by-election replacement was
+      // accidentally added twice (due to the limit(1) bug in create-mp), resulting in
+      // two active records for the same seat.
+      const mpsByCode = new Map<string, typeof activeMpsAll[0]>();
+      for (const mp of activeMpsAll) {
+        const existing = mpsByCode.get(mp.parliamentCode);
+        if (!existing || new Date(mp.swornInDate) > new Date(existing.swornInDate)) {
+          mpsByCode.set(mp.parliamentCode, mp);
+        }
+      }
+      const mps = Array.from(mpsByCode.values());
 
       // Calculate party breakdown
       const partyBreakdown = mps.reduce((acc, mp) => {
@@ -7463,24 +7476,26 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       }
 
       // Check if parliament code is already in use by an active MP
-      const [existingActiveMp] = await db.select()
+      // Query ALL MPs for this code (not just limit(1)) to catch cases where
+      // there is already an inactive original + an active replacement
+      const existingMpsForCode = await db.select()
         .from(mps)
-        .where(eq(mps.parliamentCode, parliamentCode))
-        .limit(1);
+        .where(eq(mps.parliamentCode, parliamentCode));
+
+      const now = new Date();
+      const existingActiveMp = existingMpsForCode.find(
+        mp => !mp.termEndDate || new Date(mp.termEndDate) > now
+      );
 
       if (existingActiveMp) {
-        // Check if it's an active MP (no termEndDate or termEndDate in future)
-        const isActive = !existingActiveMp.termEndDate || new Date(existingActiveMp.termEndDate) > new Date();
-        if (isActive) {
-          return res.status(400).json({
-            error: `Parliament code ${parliamentCode} is already assigned to active MP: ${existingActiveMp.name}`,
-            existingMp: {
-              id: existingActiveMp.id,
-              name: existingActiveMp.name,
-              constituency: existingActiveMp.constituency
-            }
-          });
-        }
+        return res.status(400).json({
+          error: `Parliament code ${parliamentCode} is already assigned to active MP: ${existingActiveMp.name}`,
+          existingMp: {
+            id: existingActiveMp.id,
+            name: existingActiveMp.name,
+            constituency: existingActiveMp.constituency
+          }
+        });
       }
 
       console.log(`📝 Creating new MP: ${name} (${constituency}, ${parliamentCode})`);
