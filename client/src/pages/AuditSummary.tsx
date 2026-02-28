@@ -148,6 +148,7 @@ export default function AuditSummary() {
               <Card key={idx} className="border-l-4 border-l-red-400">
                 <CardHeader className="pb-2">
                   <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-sm font-mono text-muted-foreground w-8 shrink-0">2.{idx + 1}</span>
                     <CardTitle className="text-base">{item.agency}</CardTitle>
                     <Badge variant="outline" className="text-xs text-red-600 border-red-400">
                       {item.type}
