@@ -2586,11 +2586,25 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         }
       }
 
-      const successCount = results.filter(r => r.success).length;
+      const successCount = results.filter(r => r.success && !r.skipped).length;
       console.log(`✅ Upload complete: ${successCount}/${files.length} successful`);
 
+      // Recalculate MP attendance stats after any new hansard was uploaded
+      if (successCount > 0) {
+        try {
+          console.log("🔄 Recalculating MP attendance after hansard upload...");
+          const { aggregateAttendanceForAllMps } = await import('./aggregate-speeches');
+          const attendanceResult = await aggregateAttendanceForAllMps();
+          console.log(`✅ Attendance recalculated: ${attendanceResult.totalMpsUpdated} MPs updated from ${attendanceResult.totalRecordsProcessed} records`);
+        } catch (recalcError) {
+          console.error("Error recalculating MP attendance after upload:", recalcError);
+          // Don't fail the upload response if recalculation fails
+        }
+      }
+
       // Return appropriate status code based on results
-      const statusCode = successCount === 0 ? 400 : successCount === files.length ? 201 : 207;
+      const allSuccessCount = results.filter(r => r.success).length;
+      const statusCode = allSuccessCount === 0 ? 400 : allSuccessCount === files.length ? 201 : 207;
       res.status(statusCode).json({ results });
     } catch (error) {
       console.error("Error processing Hansard PDFs:", error);
@@ -4900,7 +4914,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       // Get all MPs
       const allMps = await db.select().from(mps);
 
-      // Constants for allowance calculations
+      // Constants for allowance calculations (same as /api/stats)
       const DEWAN_RAKYAT_SALARY = 25700;
       const PARLIAMENT_SITTING_PER_DAY = 400;
       const GOVERNMENT_MEETING_PER_DAY = 300;
@@ -4913,6 +4927,12 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         1500 + // Driver
         900;   // Phone Bill
 
+      // Ministerial salaries (after 20% voluntary paycut)
+      const DEPUTY_PRIME_MINISTER_SALARY = 18168.15;
+      const MINISTER_SALARY = 14907.20;
+      const DEPUTY_MINISTER_SALARY = 10847.65;
+      const PARLIAMENTARY_SECRETARY_SALARY = 7187.40;
+
       let totalCosts = 0;
       let totalBaseSalaries = 0;
       let totalMinisterialSalaries = 0;
@@ -4923,21 +4943,41 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       let totalMinisters = 0;
       let totalParliamentDays = 0;
 
+      const now = new Date();
+
       for (const mp of allMps) {
-        // Calculate months since sworn in
         const swornInDate = new Date(mp.swornInDate);
-        const now = new Date();
+
+        // For deceased/resigned MPs, calculate only up to their termEndDate
+        // For active MPs, calculate up to now
+        const endDate = mp.termEndDate ? new Date(mp.termEndDate) : now;
+
         const monthsSinceSwornIn = Math.max(0,
-          (now.getFullYear() - swornInDate.getFullYear()) * 12 +
-          (now.getMonth() - swornInDate.getMonth())
+          (endDate.getFullYear() - swornInDate.getFullYear()) * 12 +
+          (endDate.getMonth() - swornInDate.getMonth())
         );
 
         // Base salary
         const baseSalaryCost = DEWAN_RAKYAT_SALARY * monthsSinceSwornIn;
         totalBaseSalaries += baseSalaryCost;
 
-        // Ministerial salary
-        const ministerialSalaryCost = (mp.ministerSalary || 0) * monthsSinceSwornIn;
+        // Ministerial salary based on role (consistent with /api/stats)
+        let ministerialSalary = 0;
+        if (mp.role) {
+          const roleLower = mp.role.toLowerCase();
+          if (roleLower.includes("prime minister") && !roleLower.includes("deputy")) {
+            ministerialSalary = 0; // PM takes no ministerial salary
+          } else if (roleLower.includes("deputy prime minister") || roleLower.includes("timbalan perdana menteri")) {
+            ministerialSalary = DEPUTY_PRIME_MINISTER_SALARY;
+          } else if (roleLower.includes("deputy minister") || roleLower.includes("timbalan menteri")) {
+            ministerialSalary = DEPUTY_MINISTER_SALARY;
+          } else if (roleLower.includes("minister") || roleLower.includes("menteri")) {
+            ministerialSalary = MINISTER_SALARY;
+          } else if (roleLower.includes("parliamentary secretary") || roleLower.includes("setiausaha parlimen")) {
+            ministerialSalary = PARLIAMENTARY_SECRETARY_SALARY;
+          }
+        }
+        const ministerialSalaryCost = ministerialSalary * monthsSinceSwornIn;
         totalMinisterialSalaries += ministerialSalaryCost;
         if (mp.isMinister) totalMinisters++;
 
@@ -4968,18 +5008,18 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       res.json({
         success: true,
         data: {
-          totalCosts,
+          totalCosts: Math.round(totalCosts),
           breakdown: {
-            totalBaseSalaries,
-            totalMinisterialSalaries,
-            totalFixedAllowances,
-            totalParliamentSittingAllowances,
-            totalGovernmentMeetingAllowances,
+            totalBaseSalaries: Math.round(totalBaseSalaries),
+            totalMinisterialSalaries: Math.round(totalMinisterialSalaries),
+            totalFixedAllowances: Math.round(totalFixedAllowances),
+            totalParliamentSittingAllowances: Math.round(totalParliamentSittingAllowances),
+            totalGovernmentMeetingAllowances: Math.round(totalGovernmentMeetingAllowances),
           },
           statistics: {
             totalMps: totalMpsCount,
             totalMinisters,
-            averageCostPerMp: totalMpsCount > 0 ? totalCosts / totalMpsCount : 0,
+            averageCostPerMp: totalMpsCount > 0 ? Math.round(totalCosts / totalMpsCount) : 0,
             totalParliamentDays,
           }
         }
