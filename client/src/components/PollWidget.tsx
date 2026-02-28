@@ -13,7 +13,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, Vote, BarChart2, Calendar, Loader2, History } from "lucide-react";
+import { CheckCircle2, Vote, BarChart2, Calendar, Loader2, History, ChevronDown, ChevronUp } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { useLanguage } from "@/i18n/LanguageContext";
@@ -54,6 +54,8 @@ export function PollWidget({ className }: PollWidgetProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
+  const [expandedPollId, setExpandedPollId] = useState<string | null>(null);
+  const [showPreviousPolls, setShowPreviousPolls] = useState(false);
 
   // Fetch active poll
   const { data, isLoading, error } = useQuery({
@@ -75,6 +77,17 @@ export function PollWidget({ className }: PollWidgetProps) {
       return res.json();
     },
     enabled: !isLoading && !data?.poll, // Only fetch when active poll is absent
+  });
+
+  // Fetch previous closed polls for "Previous Results" links
+  const { data: previousPollsData } = useQuery({
+    queryKey: ["previous-closed-polls"],
+    queryFn: async () => {
+      const res = await fetch("/api/polls?status=closed&limit=10");
+      if (!res.ok) throw new Error("Failed to fetch previous polls");
+      return res.json();
+    },
+    enabled: !isLoading,
   });
 
   // Vote mutation
@@ -112,6 +125,10 @@ export function PollWidget({ className }: PollWidgetProps) {
   const isShowingPastPoll = !activePoll && !!recentClosedPoll;
   const hasVoted = poll?.hasVoted || false;
   const showResults = hasVoted || poll?.status === "closed";
+
+  // Filter previous polls — exclude the one currently displayed
+  const allClosedPolls: Poll[] = previousPollsData?.polls ?? [];
+  const previousPolls = allClosedPolls.filter((p) => p.id !== poll?.id);
 
   const handleVote = () => {
     if (!selectedOption || !poll) return;
@@ -247,6 +264,86 @@ export function PollWidget({ className }: PollWidgetProps) {
                 {language === "ms" ? "Minggu" : "Week"} {poll.weekNumber}, {poll.year}
               </span>
             </div>
+
+            {/* Previous Poll Results Links */}
+            {previousPolls.length > 0 && (
+              <div className="pt-2 border-t">
+                <button
+                  onClick={() => setShowPreviousPolls((v) => !v)}
+                  className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors w-full"
+                >
+                  <History className="h-3 w-3" />
+                  <span className="flex-1 text-left">
+                    {language === "ms" ? "Keputusan Undian Lepas" : "Previous Poll Results"}
+                  </span>
+                  {showPreviousPolls ? (
+                    <ChevronUp className="h-3 w-3" />
+                  ) : (
+                    <ChevronDown className="h-3 w-3" />
+                  )}
+                </button>
+
+                {showPreviousPolls && (
+                  <div className="mt-2 space-y-2">
+                    {previousPolls.map((prevPoll) => (
+                      <div key={prevPoll.id} className="rounded-md border bg-muted/30">
+                        <button
+                          onClick={() =>
+                            setExpandedPollId((id) =>
+                              id === prevPoll.id ? null : prevPoll.id
+                            )
+                          }
+                          className="flex items-start justify-between gap-2 w-full p-2 text-left hover:bg-muted/50 transition-colors rounded-md"
+                        >
+                          <span className="text-xs font-medium leading-snug flex-1">
+                            {language === "ms" && prevPoll.questionMs
+                              ? prevPoll.questionMs
+                              : prevPoll.question}
+                          </span>
+                          <span className="text-xs text-muted-foreground shrink-0 mt-0.5">
+                            W{prevPoll.weekNumber}/{prevPoll.year}
+                          </span>
+                          {expandedPollId === prevPoll.id ? (
+                            <ChevronUp className="h-3 w-3 shrink-0 text-muted-foreground mt-0.5" />
+                          ) : (
+                            <ChevronDown className="h-3 w-3 shrink-0 text-muted-foreground mt-0.5" />
+                          )}
+                        </button>
+
+                        {expandedPollId === prevPoll.id && (
+                          <div className="px-2 pb-2 space-y-1.5">
+                            {prevPoll.options
+                              .sort((a, b) => b.voteCount - a.voteCount)
+                              .map((option) => {
+                                const pct = option.votePercentage / 100;
+                                return (
+                                  <div key={option.id} className="space-y-0.5">
+                                    <div className="flex items-center justify-between text-xs">
+                                      <span>
+                                        {language === "ms" && option.optionTextMs
+                                          ? option.optionTextMs
+                                          : option.optionText}
+                                      </span>
+                                      <span className="text-muted-foreground ml-2 shrink-0">
+                                        {pct.toFixed(1)}%
+                                      </span>
+                                    </div>
+                                    <Progress value={pct} className="h-1.5" />
+                                  </div>
+                                );
+                              })}
+                            <p className="text-xs text-muted-foreground text-right pt-0.5">
+                              {prevPoll.totalVotes}{" "}
+                              {language === "ms" ? "undi" : "votes"}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         ) : (
           // Show voting view
@@ -296,6 +393,86 @@ export function PollWidget({ className }: PollWidgetProps) {
                 ? "Undian adalah tanpa nama. Anda hanya boleh mengundi sekali."
                 : "Voting is anonymous. You can only vote once."}
             </p>
+
+            {/* Previous Poll Results Links (voting view) */}
+            {previousPolls.length > 0 && (
+              <div className="pt-2 border-t">
+                <button
+                  onClick={() => setShowPreviousPolls((v) => !v)}
+                  className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors w-full"
+                >
+                  <History className="h-3 w-3" />
+                  <span className="flex-1 text-left">
+                    {language === "ms" ? "Keputusan Undian Lepas" : "Previous Poll Results"}
+                  </span>
+                  {showPreviousPolls ? (
+                    <ChevronUp className="h-3 w-3" />
+                  ) : (
+                    <ChevronDown className="h-3 w-3" />
+                  )}
+                </button>
+
+                {showPreviousPolls && (
+                  <div className="mt-2 space-y-2">
+                    {previousPolls.map((prevPoll) => (
+                      <div key={prevPoll.id} className="rounded-md border bg-muted/30">
+                        <button
+                          onClick={() =>
+                            setExpandedPollId((id) =>
+                              id === prevPoll.id ? null : prevPoll.id
+                            )
+                          }
+                          className="flex items-start justify-between gap-2 w-full p-2 text-left hover:bg-muted/50 transition-colors rounded-md"
+                        >
+                          <span className="text-xs font-medium leading-snug flex-1">
+                            {language === "ms" && prevPoll.questionMs
+                              ? prevPoll.questionMs
+                              : prevPoll.question}
+                          </span>
+                          <span className="text-xs text-muted-foreground shrink-0 mt-0.5">
+                            W{prevPoll.weekNumber}/{prevPoll.year}
+                          </span>
+                          {expandedPollId === prevPoll.id ? (
+                            <ChevronUp className="h-3 w-3 shrink-0 text-muted-foreground mt-0.5" />
+                          ) : (
+                            <ChevronDown className="h-3 w-3 shrink-0 text-muted-foreground mt-0.5" />
+                          )}
+                        </button>
+
+                        {expandedPollId === prevPoll.id && (
+                          <div className="px-2 pb-2 space-y-1.5">
+                            {prevPoll.options
+                              .sort((a, b) => b.voteCount - a.voteCount)
+                              .map((option) => {
+                                const pct = option.votePercentage / 100;
+                                return (
+                                  <div key={option.id} className="space-y-0.5">
+                                    <div className="flex items-center justify-between text-xs">
+                                      <span>
+                                        {language === "ms" && option.optionTextMs
+                                          ? option.optionTextMs
+                                          : option.optionText}
+                                      </span>
+                                      <span className="text-muted-foreground ml-2 shrink-0">
+                                        {pct.toFixed(1)}%
+                                      </span>
+                                    </div>
+                                    <Progress value={pct} className="h-1.5" />
+                                  </div>
+                                );
+                              })}
+                            <p className="text-xs text-muted-foreground text-right pt-0.5">
+                              {prevPoll.totalVotes}{" "}
+                              {language === "ms" ? "undi" : "votes"}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
       </CardContent>
