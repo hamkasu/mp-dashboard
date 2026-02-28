@@ -317,6 +317,11 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start">
+              <DropdownMenuItem onSelect={() => setLocation("/audit-summary")} data-testid="menu-audit-summary">
+                <AlertCircle className="w-4 h-4 mr-2" />
+                LKAN 1/2026 - Audit Summary
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
               <DropdownMenuItem onSelect={() => window.open("/LKAN-1-2026-AKTIVITI-KEM-JAB-BDN-BERKANUN-PENGURUSAN-SYRKT-KERAJAAN-compressed.pdf", "_blank")}>
                 <FileText className="w-4 h-4 mr-2" />
                 LKAN 1/2026 - Aktiviti
@@ -412,6 +417,10 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
 
               {/* Audit Reports */}
               <DropdownMenuLabel className="text-xs text-muted-foreground">{t('nav.auditReports')}</DropdownMenuLabel>
+              <DropdownMenuItem onSelect={() => setLocation("/audit-summary")}>
+                <AlertCircle className="w-4 h-4 mr-2" />
+                LKAN 1/2026 - Audit Summary
+              </DropdownMenuItem>
               <DropdownMenuItem onSelect={() => window.open("/LKAN-1-2026-AKTIVITI-KEM-JAB-BDN-BERKANUN-PENGURUSAN-SYRKT-KERAJAAN-compressed.pdf", "_blank")}>
                 <FileText className="w-4 h-4 mr-2" />
                 LKAN 1/2026 - Aktiviti
