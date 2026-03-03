@@ -264,7 +264,7 @@ export function BillsToWatch({ className }: BillsToWatchProps) {
             {isMs ? "Lain-lain Rang Undang-Undang Dalam Perhatian" : "Other Bills Under Watch"}
           </h4>
 
-          <ScrollArea className="max-h-[280px]">
+          <ScrollArea>
             <ul className="space-y-2" role="list">
               {otherBills.map(bill => {
                 const IconComponent = ICON_MAP[bill.icon] || ScrollText;
@@ -288,7 +288,7 @@ export function BillsToWatch({ className }: BillsToWatchProps) {
                           )}
                         </Badge>
                       </div>
-                      <p className="text-xs text-muted-foreground line-clamp-2">
+                      <p className="text-xs text-muted-foreground">
                         {getText(bill.summaryEn, bill.summaryMs)}
                       </p>
                     </div>
