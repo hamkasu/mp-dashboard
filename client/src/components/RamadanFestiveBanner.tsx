@@ -37,50 +37,51 @@ function CrescentStar({ className }: { className?: string }) {
   );
 }
 
-/** Fanous (Ramadan lantern) SVG */
-function Fanous({ className }: { className?: string }) {
+/** Pelita — traditional Malay clay oil lamp */
+function Pelita({ className }: { className?: string }) {
   return (
-    <svg
-      viewBox="0 0 36 60"
-      className={className}
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      {/* Hanging string */}
-      <line x1="18" y1="0" x2="18" y2="10" stroke="#FFD700" strokeWidth="1.5" />
-      {/* Top cap */}
-      <path d="M12 10 L24 10 L22 14 L14 14 Z" fill="#FFD700" />
-      {/* Lantern body - ornate shape */}
-      <path
-        d="M14 14 Q8 24 8 32 Q8 40 14 46 L22 46 Q28 40 28 32 Q28 24 22 14 Z"
-        fill="#065F46"
-      />
-      <path
-        d="M14 14 Q8 24 8 32 Q8 40 14 46 L22 46 Q28 40 28 32 Q28 24 22 14 Z"
-        fill="url(#fanousGlow)"
-      />
-      {/* Decorative bands */}
-      <line x1="9" y1="24" x2="27" y2="24" stroke="#FFD700" strokeWidth="1" opacity="0.7" />
-      <line x1="8.5" y1="32" x2="27.5" y2="32" stroke="#FFD700" strokeWidth="1" opacity="0.7" />
-      <line x1="9" y1="40" x2="27" y2="40" stroke="#FFD700" strokeWidth="1" opacity="0.7" />
-      {/* Center star motif */}
-      <polygon
-        points="18,28 19.2,31 22,31 19.8,33 20.5,36 18,34 15.5,36 16.2,33 14,31 16.8,31"
-        fill="#FFD700"
-        opacity="0.9"
-      />
-      {/* Bottom cap */}
-      <path d="M14 46 L22 46 L20 50 L16 50 Z" fill="#FFD700" />
-      {/* Tassel */}
-      <line x1="16.5" y1="50" x2="15" y2="57" stroke="#FFD700" strokeWidth="1.2" />
-      <line x1="18" y1="50" x2="18" y2="58" stroke="#FFD700" strokeWidth="1.2" />
-      <line x1="19.5" y1="50" x2="21" y2="57" stroke="#FFD700" strokeWidth="1.2" />
+    <svg viewBox="0 0 36 60" className={className} fill="none" xmlns="http://www.w3.org/2000/svg">
       <defs>
-        <radialGradient id="fanousGlow" cx="0.5" cy="0.4" r="0.5">
-          <stop offset="0%" stopColor="#34D399" stopOpacity="0.4" />
-          <stop offset="100%" stopColor="#065F46" stopOpacity="0" />
+        <radialGradient id="pelitaFlameGlow" cx="0.5" cy="1" r="0.8">
+          <stop offset="0%" stopColor="#FF9500" stopOpacity="0.6" />
+          <stop offset="100%" stopColor="#FFD700" stopOpacity="0" />
         </radialGradient>
+        <linearGradient id="pelitaClay" x1="0.2" y1="0" x2="0.8" y2="1">
+          <stop offset="0%" stopColor="#D4863C" />
+          <stop offset="60%" stopColor="#B5632A" />
+          <stop offset="100%" stopColor="#8B4513" />
+        </linearGradient>
       </defs>
+      {/* Hanging string */}
+      <line x1="18" y1="0" x2="18" y2="9" stroke="#FFD700" strokeWidth="1.2" />
+      {/* Hanger ring */}
+      <circle cx="18" cy="11" r="2.5" stroke="#DAA520" strokeWidth="1.2" fill="none" />
+      {/* Flame ambient glow */}
+      <ellipse cx="18" cy="16" rx="8" ry="10" fill="url(#pelitaFlameGlow)" />
+      {/* Outer flame */}
+      <path d="M18 8 Q23 13 22 17 Q21 21 18 22 Q15 21 14 17 Q13 13 18 8 Z" fill="#FF6B00" />
+      {/* Inner flame */}
+      <path d="M18 11 Q21 14 20.5 17 Q20 19.5 18 20.5 Q16 19.5 15.5 17 Q15 14 18 11 Z" fill="#FFD700" />
+      {/* Wick */}
+      <line x1="18" y1="21" x2="18" y2="25" stroke="#7B5535" strokeWidth="1.5" />
+      {/* Bowl rim */}
+      <ellipse cx="18" cy="25" rx="10" ry="2.8" fill="#C8900A" />
+      {/* Oil sheen */}
+      <ellipse cx="18" cy="25" rx="9" ry="2" fill="#F5C842" opacity="0.4" />
+      {/* Bowl body — terracotta clay */}
+      <path d="M8 25 Q5.5 34 7.5 40 Q10 47 18 48 Q26 47 28.5 40 Q30.5 34 28 25 Z" fill="url(#pelitaClay)" />
+      {/* Decorative gold band */}
+      <path d="M9 36 Q13.5 39.5 18 39.5 Q22.5 39.5 27 36" stroke="#FFD700" strokeWidth="1" opacity="0.65" />
+      {/* Traditional star motif */}
+      <polygon
+        points="18,28 19.1,31 22,31 19.8,32.8 20.6,35.5 18,33.8 15.4,35.5 16.2,32.8 14,31 16.9,31"
+        fill="#FFD700"
+        opacity="0.55"
+      />
+      {/* Bottom tip */}
+      <path d="M12 48 Q14.5 52.5 18 53.5 Q21.5 52.5 24 48" fill="#7B3B10" />
+      {/* Base */}
+      <ellipse cx="18" cy="53.5" rx="5" ry="1.8" fill="#6B3210" />
     </svg>
   );
 }
@@ -126,14 +127,14 @@ export function RamadanFestiveBanner() {
   const content = useMemo(
     () => ({
       en: {
-        greeting: "Ramadan Mubarak!",
-        subtitle: "Wishing all Muslims a blessed Ramadan 1447H",
-        wish: "May this holy month bring peace, reflection, and blessings to all",
+        greeting: "Salam Ramadan Al-Mubarak",
+        subtitle: "Selamat Berpuasa — wishing all Muslims a blessed Ramadan 1447H",
+        wish: "May our worship and deeds be accepted in this holy month",
       },
       ms: {
-        greeting: "Ramadan Mubarak!",
-        subtitle: "Selamat menyambut Ramadan 1447H",
-        wish: "Semoga bulan mulia ini membawa keamanan, refleksi, dan keberkatan kepada semua",
+        greeting: "Selamat Menyambut Ramadan",
+        subtitle: "Selamat berpuasa kepada semua umat Islam — 1447H",
+        wish: "Semoga amalan kita diterima dan diberkati Allah SWT",
       },
     }),
     []
@@ -154,17 +155,14 @@ export function RamadanFestiveBanner() {
   };
 
   return (
-    <div className="ramadan-banner relative overflow-hidden bg-gradient-to-r from-emerald-900 via-emerald-800 to-emerald-900 text-white border-b-2 border-yellow-500/60">
-      {/* Background geometric pattern */}
-      <div className="absolute inset-0 opacity-[0.07]">
+    <div className="ramadan-banner relative overflow-hidden bg-gradient-to-r from-green-950 via-emerald-900 to-green-950 text-white border-b-2 border-yellow-400/70">
+      {/* Songket-inspired diamond lattice background */}
+      <div className="absolute inset-0 opacity-[0.55]">
         <div
           className="absolute inset-0"
           style={{
-            backgroundImage: `repeating-conic-gradient(
-              rgba(255,215,0,0.3) 0deg 30deg,
-              transparent 30deg 60deg
-            )`,
-            backgroundSize: "40px 40px",
+            backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24'%3E%3Cpath d='M12 0L24 12L12 24L0 12Z' fill='none' stroke='rgba(255,215,0,0.13)' stroke-width='0.5'/%3E%3Cpath d='M12 5L19 12L12 19L5 12Z' fill='none' stroke='rgba(255,215,0,0.07)' stroke-width='0.3'/%3E%3C/svg%3E")`,
+            backgroundSize: "24px 24px",
           }}
         />
       </div>
@@ -180,8 +178,8 @@ export function RamadanFestiveBanner() {
       <TwinkleStar delay={1.8} left="60%" top="22%" size={5} />
 
       <div className="relative flex items-center justify-center gap-3 px-4 py-3 max-w-7xl mx-auto">
-        {/* Left fanous */}
-        <Fanous className="ramadan-lantern-swing h-14 w-9 hidden sm:block flex-shrink-0" />
+        {/* Left pelita */}
+        <Pelita className="ramadan-lantern-swing ramadan-pelita-glow h-14 w-9 hidden sm:block flex-shrink-0" />
 
         {/* Content */}
         <div className="text-center flex-1 min-w-0">
@@ -200,8 +198,8 @@ export function RamadanFestiveBanner() {
           </p>
         </div>
 
-        {/* Right fanous */}
-        <Fanous className="ramadan-lantern-swing h-14 w-9 hidden sm:block flex-shrink-0" />
+        {/* Right pelita */}
+        <Pelita className="ramadan-lantern-swing ramadan-pelita-glow h-14 w-9 hidden sm:block flex-shrink-0" />
 
         {/* Dismiss button */}
         <button
