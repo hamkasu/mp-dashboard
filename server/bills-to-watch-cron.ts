@@ -22,34 +22,36 @@ const SEED_BILLS: InsertBillToWatch[] = [
     isFeatured: true,
     icon: "scale",
     tags: ["Reform", "Anti-Corruption", "Transparency"],
-    summaryEn: "Public consultation phase complete. Bill now under final review before Cabinet deliberation, targeting tabling in Parliament by mid-2026.",
-    summaryMs: "Fasa perundingan awam selesai. Rang undang-undang kini dalam semakan akhir sebelum perbincangan Kabinet, menyasarkan pembentangan di Parlimen menjelang pertengahan 2026.",
+    summaryEn: "IIUM-led public perception study concluded Feb 28, 2026. Policy parameters now being finalised before Cabinet deliberation; formal drafting not yet started. Tabling in Parliament targeted for second or third session 2026 (earliest June). Passage before GE16 considered unlikely.",
+    summaryMs: "Kajian persepsi awam diketuai IIUM selesai 28 Feb 2026. Parameter dasar kini sedang dimuktamadkan sebelum perbincangan Kabinet; penggubalan rasmi belum bermula. Pembentangan di Parlimen disasarkan untuk sesi kedua atau ketiga 2026 (paling awal Jun). Pelulusan sebelum PRU16 dianggap tidak mungkin.",
     detailsEn: `✓ 20+ stakeholder sessions completed by BHEUU.
-✓ IIUM-led public perception study concluded Feb 2026.
+✓ IIUM-led public perception study concluded Feb 28, 2026.
+✗ Formal drafting not yet started; not tabled in first 2026 session.
 
 Key proposals:
 • Mandatory public disclosure of party finances
 • Donation caps: RM50k/individual, RM100k/company, RM500k/large groups
 • Protect small donor anonymity (disclose donations >RM10k only)
-• Possible public funding for parties
+• Possible public funding for parties via Political Financing Commission
 • Restrictions to end "donations-for-contracts" perception
 
-Next steps: Cabinet review expected Q2 2026, followed by tabling in Parliament.
+Next steps: Cabinet review expected Q2 2026. Bill may be tabled in 2nd session (Jun 22–Jul 16) or 3rd session (Oct 5–Dec 8).
 
-Opposition raises concerns about enforcement and fear-of-reprisal for donors.`,
+Minister Azalina has cautioned that passing this bill before GE16 will be difficult.`,
     detailsMs: `✓ 20+ sesi pemegang taruh telah selesai oleh BHEUU.
-✓ Kajian persepsi awam diketuai IIUM selesai Feb 2026.
+✓ Kajian persepsi awam diketuai IIUM selesai 28 Feb 2026.
+✗ Penggubalan rasmi belum bermula; tidak dibentangkan dalam sesi pertama 2026.
 
 Cadangan utama:
 • Pendedahan mandatori kewangan parti kepada awam
 • Had derma: RM50k/individu, RM100k/syarikat, RM500k/kumpulan besar
 • Lindungi kerahsiaan penderma kecil (dedahkan derma >RM10k sahaja)
-• Kemungkinan pembiayaan awam untuk parti
+• Kemungkinan pembiayaan awam untuk parti melalui Suruhanjaya Pembiayaan Politik
 • Sekatan untuk menamatkan persepsi "derma-untuk-kontrak"
 
-Langkah seterusnya: Semakan Kabinet dijangka S2 2026, diikuti pembentangan di Parlimen.
+Langkah seterusnya: Semakan Kabinet dijangka S2 2026. Rang undang-undang mungkin dibentangkan dalam sesi ke-2 (22 Jun–16 Jul) atau sesi ke-3 (5 Okt–8 Dis).
 
-Pembangkang membangkitkan kebimbangan mengenai penguatkuasaan dan ketakutan pembalasan terhadap penderma.`,
+Menteri Azalina memberi amaran bahawa meluluskan rang undang-undang ini sebelum PRU16 adalah sukar.`,
     sourceUrl: "https://www.parlimen.gov.my",
     sortOrder: 0,
   },
@@ -59,57 +61,79 @@ Pembangkang membangkitkan kebimbangan mengenai penguatkuasaan dan ketakutan pemb
     status: "tabled",
     icon: "shield",
     tags: ["Constitutional Reform", "Governance", "Power Limits"],
-    summaryEn: "Proposes capping PM tenure at cumulative 10 years (or 2 full terms); automatic cessation upon reaching limit. Applies to current and future PMs (excludes service after dissolution in some cases); former PMs with 10+ years ineligible to return. Tabled by Minister Azalina Othman Said; fulfills GE15 promise—politically sensitive but advancing quickly.",
-    summaryMs: "Mencadangkan had tempoh PM kepada 10 tahun kumulatif (atau 2 penggal penuh); penamatan automatik apabila mencapai had. Terpakai kepada PM semasa dan masa hadapan (mengecualikan perkhidmatan selepas pembubaran dalam sesetengah kes); bekas PM yang berkhidmat 10 tahun ke atas tidak layak kembali. Dibentangkan oleh Menteri Azalina Othman Said; memenuhi janji PRU15—sensitif secara politik tetapi bergerak dengan cepat.",
-    detailsEn: `Tabled for First Reading on February 23, 2026; Second and Third Readings scheduled in the current parliamentary sitting.
+    summaryEn: "FAILED by 2 votes on Mar 2, 2026. The constitutional amendment secured 146 votes—just 2 short of the 148 (two-thirds) supermajority required. High absenteeism among MPs (32 absent, 44 present but did not vote) caused the shock defeat. Government may refile in the 2nd sitting (Jun 22–Jul 16) or 3rd sitting (Oct 5–Dec 8) of 2026.",
+    summaryMs: "GAGAL dengan 2 undi pada 2 Mac 2026. Pindaan perlembagaan mendapat 146 undi—hanya 2 kurang daripada majoriti dua pertiga yang diperlukan (148 undi). Ketidakhadiran tinggi ahli parlimen (32 tidak hadir, 44 hadir tetapi tidak mengundi) menyebabkan kekalahan mengejut. Kerajaan mungkin memfailkan semula dalam persidangan ke-2 (22 Jun–16 Jul) atau ke-3 (5 Okt–8 Dis) 2026.",
+    detailsEn: `First Reading: February 23, 2026.
+Vote (Second & Third Readings): March 2, 2026 — FAILED.
+
+Result: 146 votes for, fell 2 short of the 148 (two-thirds of 222) needed for a constitutional amendment.
+• 32 MPs were absent; 44 were present but did not vote.
+• DAP secretary-general Anthony Loke called on voters to punish absent MPs.
+• PM Anwar defended the bill, saying it strengthens checks and balances.
 
 Key provisions:
 • Cumulative 10-year tenure cap or 2 full terms
 • Automatic cessation upon reaching the limit
 • Applies to current and future Prime Ministers
-• Excludes service after dissolution in some cases
-• Former PMs who have served 10+ years are ineligible to return
+• Former PMs who served 10+ years are ineligible to return
 
-Politically sensitive but advancing quickly as part of GE15 reform commitments. Tabled by Minister Azalina Othman Said.`,
-    detailsMs: `Dibentangkan untuk Bacaan Pertama pada 23 Februari 2026; Bacaan Kedua dan Ketiga dijadualkan dalam persidangan parlimen semasa.
+Analysts say the bill can still be passed in the 2nd sitting (Jun 22–Jul 16) or 3rd sitting (Oct 5–Dec 8) of 2026.`,
+    detailsMs: `Bacaan Pertama: 23 Februari 2026.
+Pengundian (Bacaan Kedua & Ketiga): 2 Mac 2026 — GAGAL.
+
+Keputusan: 146 undi memihak, kurang 2 daripada 148 (dua pertiga daripada 222) yang diperlukan untuk pindaan perlembagaan.
+• 32 Ahli Parlimen tidak hadir; 44 hadir tetapi tidak mengundi.
+• Setiausaha Agung DAP Anthony Loke menyeru pengundi menghukum MP yang tidak hadir.
+• PM Anwar mempertahankan rang undang-undang itu, mengatakan ia mengukuhkan semak dan imbang.
 
 Peruntukan utama:
 • Had tempoh kumulatif 10 tahun atau 2 penggal penuh
 • Penamatan automatik apabila mencapai had
 • Terpakai kepada PM semasa dan masa hadapan
-• Mengecualikan perkhidmatan selepas pembubaran dalam sesetengah kes
-• Bekas PM yang telah berkhidmat 10 tahun ke atas tidak layak kembali
+• Bekas PM yang berkhidmat 10 tahun ke atas tidak layak kembali
 
-Sensitif secara politik tetapi bergerak dengan cepat sebagai sebahagian daripada komitmen pembaharuan PRU15. Dibentangkan oleh Menteri Azalina Othman Said.`,
+Penganalisis mengatakan rang undang-undang itu masih boleh diluluskan dalam persidangan ke-2 (22 Jun–16 Jul) atau ke-3 (5 Okt–8 Dis) 2026.`,
     sourceUrl: "https://www.parlimen.gov.my",
     sortOrder: 1,
   },
   {
     titleEn: "Attorney-General/Public Prosecutor Separation Bill",
     titleMs: "RUU Pengasingan Peguam Negara/Pendakwa Raya",
-    status: "tabled",
+    status: "committee",
     icon: "scale",
     tags: ["Judicial Independence", "Anti-Corruption", "Rule of Law"],
-    summaryEn: "Seeks to split AG's advisory role from prosecutorial functions; establishes distinct Public Prosecutor to reduce political interference in legal proceedings. Controversial among legal circles but tabled alongside PM term limit bill—part of broader institutional reforms.",
-    summaryMs: "Bertujuan mengasingkan peranan nasihat Peguam Negara daripada fungsi pendakwaan; menubuhkan Pendakwa Raya yang berasingan untuk mengurangkan campur tangan politik dalam prosiding undang-undang. Kontroversi dalam kalangan badan undang-undang tetapi dibentangkan bersama RUU had penggal PM—sebahagian daripada pembaharuan institusi yang lebih luas.",
-    detailsEn: `Tabled for First Reading on February 23, 2026, alongside the Prime Minister Term Limit Bill.
+    summaryEn: "Referred to special parliamentary committee on Mar 3, 2026 after debate over rushed timeline and accountability gaps. Minister Azalina chairs the committee. Bill amends 6 constitutional articles to create an independent Public Prosecutor. Parliament adjourned; vote expected no earlier than June 2026.",
+    summaryMs: "Dirujuk ke jawatankuasa parlimen khas pada 3 Mac 2026 selepas perdebatan mengenai garis masa yang tergesa-gesa dan jurang akauntabiliti. Menteri Azalina mengerusikan jawatankuasa tersebut. Rang undang-undang meminda 6 perkara perlembagaan untuk mewujudkan Pendakwa Raya bebas. Parlimen ditangguhkan; undi dijangka tidak lebih awal daripada Jun 2026.",
+    detailsEn: `First Reading: February 23, 2026.
+Mar 3, 2026: Dewan Rakyat approved (voice vote) referral to a special parliamentary committee.
+Parliament then adjourned until June 2026.
 
-Key objectives:
-• Split the AG's advisory role (legal advisor to the government) from prosecutorial functions
-• Establish a distinct and independent Public Prosecutor
-• Reduce political interference in criminal proceedings
-• Strengthen rule of law and judicial independence
+Committee chaired by Minister Azalina Othman Said will:
+• Review accountability mechanisms for the new Public Prosecutor role
+• Address concerns about power concentration in the PM and JLSC
+• Explore whether Parliament should have a role in appointing the PP
 
-Controversial among legal circles but part of the government's broader anti-corruption and institutional reform agenda.`,
-    detailsMs: `Dibentangkan untuk Bacaan Pertama pada 23 Februari 2026, bersama dengan RUU Had Penggal Perdana Menteri.
+Key constitutional amendments (6 articles):
+• Article 42: Remove AG from state Pardons Boards
+• Article 132: AG and PP offices removed from federal public service
+• Article 138: JLSC expanded with 3 ex officio members
 
-Objektif utama:
-• Mengasingkan peranan nasihat Peguam Negara (penasihat undang-undang kepada kerajaan) daripada fungsi pendakwaan
-• Menubuhkan Pendakwa Raya yang berasingan dan bebas
-• Mengurangkan campur tangan politik dalam prosiding jenayah
-• Mengukuhkan kedaulatan undang-undang dan kebebasan kehakiman
+Once passed, two further bills will be tabled: one on the PP's remuneration, and an omnibus bill amending 20+ existing laws (Penal Code, CPC, Evidence Act, etc.).`,
+    detailsMs: `Bacaan Pertama: 23 Februari 2026.
+3 Mac 2026: Dewan Rakyat meluluskan (undi suara) rujukan ke jawatankuasa parlimen khas.
+Parlimen kemudian ditangguhkan sehingga Jun 2026.
 
-Kontroversi dalam kalangan badan undang-undang tetapi merupakan sebahagian daripada agenda pembaharuan anti-rasuah dan institusi kerajaan yang lebih luas.`,
+Jawatankuasa dikerusikan oleh Menteri Azalina Othman Said akan:
+• Mengkaji mekanisme akauntabiliti untuk peranan Pendakwa Raya baharu
+• Menangani kebimbangan tentang pemusatan kuasa dalam PM dan JLSC
+• Meneliti sama ada Parlimen perlu berperanan dalam pelantikan PP
+
+Pindaan perlembagaan utama (6 perkara):
+• Perkara 42: Keluarkan Peguam Negara daripada Lembaga Pengampun negeri
+• Perkara 132: Pejabat PN dan PP dikeluarkan daripada perkhidmatan awam persekutuan
+• Perkara 138: JLSC diperluaskan dengan 3 ahli ex officio
+
+Setelah diluluskan, dua rang undang-undang lanjut akan dibentangkan: satu mengenai saraan PP, dan satu rang undang-undang omnibus meminda 20+ undang-undang sedia ada (Kanun Keseksaan, KAJ, Akta Keterangan, dll.).`,
     sourceUrl: "https://www.parlimen.gov.my",
     sortOrder: 2,
   },
@@ -119,26 +143,30 @@ Kontroversi dalam kalangan badan undang-undang tetapi merupakan sebahagian darip
     status: "consultation",
     icon: "search",
     tags: ["Oversight", "Anti-Maladministration", "Accountability"],
-    summaryEn: "To establish independent body investigating public administration complaints/maladministration. Scope and executive independence still under debate; listed among key reforms to be tabled this year (per PM Anwar statements).",
-    summaryMs: "Untuk menubuhkan badan bebas menyiasat aduan pentadbiran awam/salah tadbir. Skop dan kebebasan eksekutif masih dalam perbahasan; disenaraikan antara pembaharuan utama untuk dibentangkan tahun ini (menurut kenyataan PM Anwar).",
-    detailsEn: `Consultation / In Pipeline stage; promised for 2026 tabling per PM Anwar's statements.
+    summaryEn: "Not tabled in the first 2026 parliamentary session (Jan–Mar). Was prioritised but deferred for further engagement. PM Anwar reaffirmed commitment to tabling in 2026. Expected in 2nd session (Jun 22–Jul 16) or 3rd session (Oct–Dec). Civil society warns the bill must not subordinate the FOI function.",
+    summaryMs: "Tidak dibentangkan dalam sesi parlimen pertama 2026 (Jan–Mac). Diprioritaskan tetapi ditangguhkan untuk penglibatan lanjut. PM Anwar mengesahkan semula komitmen untuk membentangkan pada 2026. Dijangka dalam sesi ke-2 (22 Jun–16 Jul) atau ke-3 (Okt–Dis). Masyarakat sivil memberi amaran bahawa rang undang-undang itu tidak boleh mengurangkan fungsi KMI.",
+    detailsEn: `In Pipeline; was among 4 priority reform bills for early 2026 but not tabled in first session.
 
 Key objectives:
-• Establish an independent body to investigate public administration complaints
+• Establish an independent body (Ombudsman Malaysia) to investigate public administration complaints
+• Consolidate functions of Public Complaints Bureau (BPA) and Enforcement Agency Integrity Commission (EAIC)
 • Address maladministration by government bodies and agencies
 • Provide citizens a formal channel outside the courts for redress
-• Scope and executive independence still under active debate
 
-Listed among the government's key institutional reforms to be tabled this year.`,
-    detailsMs: `Peringkat Rundingan / Dalam Saluran; dijanjikan untuk pembentangan 2026 menurut kenyataan PM Anwar.
+Civil society concern: Merging with Ombudsman risks marginalising the FOI oversight mandate; advocates urge a separate, Parliament-accountable FOI Commission.
+
+Next steps: Expected to be tabled in 2nd session (Jun 22–Jul 16) or 3rd session (Oct 5–Dec 8) 2026.`,
+    detailsMs: `Dalam Saluran; antara 4 rang undang-undang pembaharuan keutamaan awal 2026 tetapi tidak dibentangkan dalam sesi pertama.
 
 Objektif utama:
-• Menubuhkan badan bebas untuk menyiasat aduan pentadbiran awam
+• Menubuhkan badan bebas (Ombudsman Malaysia) untuk menyiasat aduan pentadbiran awam
+• Menggabungkan fungsi Biro Pengaduan Awam (BPA) dan Suruhanjaya Integriti Agensi Penguatkuasaan (EAIC)
 • Menangani salah tadbir oleh badan dan agensi kerajaan
 • Menyediakan saluran rasmi kepada rakyat di luar mahkamah untuk mendapatkan remedi
-• Skop dan kebebasan eksekutif masih dalam perbahasan aktif
 
-Disenaraikan antara pembaharuan institusi utama kerajaan yang akan dibentangkan tahun ini.`,
+Kebimbangan masyarakat sivil: Penggabungan dengan Ombudsman berisiko menepikan mandat pengawasan KMI; peguam menyeru Suruhanjaya KMI berasingan yang bertanggungjawab kepada Parlimen.
+
+Langkah seterusnya: Dijangka dibentangkan dalam sesi ke-2 (22 Jun–16 Jul) atau ke-3 (5 Okt–8 Dis) 2026.`,
     sourceUrl: "https://www.parlimen.gov.my",
     sortOrder: 3,
   },
@@ -148,9 +176,9 @@ Disenaraikan antara pembaharuan institusi utama kerajaan yang akan dibentangkan 
     status: "drafting",
     icon: "search",
     tags: ["Transparency", "Public Access", "Governance"],
-    summaryEn: "Aims to enhance access to government information, with safeguards for national security, intelligence, and race-religion-royalty (3R) issues. Cabinet committee approved in principle; expected tabling this year to promote accountability (e.g., project tenders, abuse prevention). Complements other anti-corruption reforms.",
-    summaryMs: "Bertujuan meningkatkan akses kepada maklumat kerajaan, dengan perlindungan untuk keselamatan negara, perisikan, dan isu bangsa-agama-raja (3R). Jawatankuasa Kabinet meluluskan secara prinsip; jangkaan pembentangan tahun ini untuk menggalakkan akauntabiliti (contoh: tender projek, pencegahan penyalahgunaan). Melengkapi pembaharuan anti-rasuah lain.",
-    detailsEn: `Cabinet committee approved in principle; bill currently in drafting stage for expected tabling in 2026.
+    summaryEn: "Not tabled in the first 2026 parliamentary session (Jan–Mar). Cabinet committee approved in principle; PM Anwar reconfirmed commitment for 2026 tabling. Civil society urges an independent Information Commission accountable to Parliament, not the Ombudsman. Expected in 2nd or 3rd session 2026.",
+    summaryMs: "Tidak dibentangkan dalam sesi parlimen pertama 2026 (Jan–Mac). Jawatankuasa Kabinet meluluskan secara prinsip; PM Anwar mengesahkan semula komitmen untuk pembentangan 2026. Masyarakat sivil mendesak Suruhanjaya Maklumat bebas yang bertanggungjawab kepada Parlimen, bukan Ombudsman. Dijangka dalam sesi ke-2 atau ke-3 2026.",
+    detailsEn: `Cabinet committee approved in principle; bill in drafting stage. Not tabled in first 2026 session.
 
 Key objectives:
 • Enhance public access to government information
@@ -158,8 +186,10 @@ Key objectives:
 • Prevent abuse and maladministration
 • Safeguards for national security, intelligence matters, and 3R (race, religion, royalty) issues
 
-Complements other anti-corruption reforms such as the Political Financing Bill and Ombudsman Bill. Expected to strengthen accountability mechanisms across government.`,
-    detailsMs: `Jawatankuasa Kabinet meluluskan secara prinsip; rang undang-undang sedang dalam peringkat penggubalan untuk pembentangan pada 2026.
+Civil society demand: An independent Information Commission of up to 7 members (with gender balance, expertise in information governance, law, human rights) directly accountable to Parliament—not folded under the Ombudsman.
+
+Next steps: Expected to be tabled in 2nd session (Jun 22–Jul 16) or 3rd session (Oct 5–Dec 8) 2026.`,
+    detailsMs: `Jawatankuasa Kabinet meluluskan secara prinsip; rang undang-undang dalam peringkat penggubalan. Tidak dibentangkan dalam sesi pertama 2026.
 
 Objektif utama:
 • Meningkatkan akses awam kepada maklumat kerajaan
@@ -167,7 +197,9 @@ Objektif utama:
 • Mencegah penyalahgunaan dan salah tadbir
 • Perlindungan untuk keselamatan negara, perkara perisikan, dan isu 3R (kaum, agama, raja)
 
-Melengkapi pembaharuan anti-rasuah lain seperti RUU Pembiayaan Politik dan RUU Ombudsman. Dijangka mengukuhkan mekanisme akauntabiliti seluruh kerajaan.`,
+Tuntutan masyarakat sivil: Suruhanjaya Maklumat bebas sehingga 7 ahli (dengan keseimbangan gender, kepakaran dalam tadbir urus maklumat, undang-undang, hak asasi manusia) yang bertanggungjawab terus kepada Parlimen—tidak dimasukkan di bawah Ombudsman.
+
+Langkah seterusnya: Dijangka dibentangkan dalam sesi ke-2 (22 Jun–16 Jul) atau ke-3 (5 Okt–8 Dis) 2026.`,
     sortOrder: 4,
   },
   {
