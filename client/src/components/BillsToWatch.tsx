@@ -108,7 +108,7 @@ export function BillsToWatch({ className }: BillsToWatchProps) {
   const otherBills = billsData.filter(b => !b.isFeatured);
 
   const formatLastUpdated = (isoString: string | null | undefined) => {
-    if (!isoString) return isMs ? "Februari 2026" : "February 2026";
+    if (!isoString) return isMs ? "Mac 2026" : "March 2026";
     const date = new Date(isoString);
     return date.toLocaleDateString(isMs ? 'ms-MY' : 'en-MY', {
       year: 'numeric',
@@ -225,7 +225,7 @@ export function BillsToWatch({ className }: BillsToWatchProps) {
             <div className="flex items-center gap-1.5 mb-3">
               <CircleDot className="h-3.5 w-3.5 text-emerald-500 shrink-0" aria-hidden="true" />
               <span className="text-xs font-medium text-emerald-700 dark:text-emerald-400">
-                {isMs ? "Kemaskini terbaru: Feb 2026" : "Latest update: Feb 2026"}
+                {isMs ? "Kemaskini terbaru: Mac 2026" : "Latest update: Mar 2026"}
               </span>
             </div>
 
@@ -264,7 +264,7 @@ export function BillsToWatch({ className }: BillsToWatchProps) {
             {isMs ? "Lain-lain Rang Undang-Undang Dalam Perhatian" : "Other Bills Under Watch"}
           </h4>
 
-          <ScrollArea className="max-h-[280px]">
+          <ScrollArea>
             <ul className="space-y-2" role="list">
               {otherBills.map(bill => {
                 const IconComponent = ICON_MAP[bill.icon] || ScrollText;
@@ -288,7 +288,7 @@ export function BillsToWatch({ className }: BillsToWatchProps) {
                           )}
                         </Badge>
                       </div>
-                      <p className="text-xs text-muted-foreground line-clamp-2">
+                      <p className="text-xs text-muted-foreground">
                         {getText(bill.summaryEn, bill.summaryMs)}
                       </p>
                     </div>
