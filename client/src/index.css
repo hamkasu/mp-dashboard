@@ -396,6 +396,16 @@
 
 /* ===== Ramadan 2026 Festive Theme (temporary - remove after March 21, 2026) ===== */
 
+/* Pelita (traditional Malay oil lamp) flame glow */
+@keyframes ramadan-pelita-glow {
+  0%, 100% { filter: drop-shadow(0 0 3px rgba(255,140,0,0.4)); }
+  50% { filter: drop-shadow(0 0 9px rgba(255,160,0,0.75)) drop-shadow(0 0 16px rgba(255,200,0,0.2)); }
+}
+
+.ramadan-pelita-glow {
+  animation: ramadan-pelita-glow 1.2s ease-in-out infinite;
+}
+
 /* Lantern swinging animation */
 @keyframes ramadan-lantern-swing {
   0%, 100% { transform: rotate(-4deg); }
