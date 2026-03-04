@@ -327,6 +327,30 @@ export default function HansardAdmin() {
     },
   });
 
+  const triggerDownloadMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/admin/trigger-hansard-check");
+      return await res.json();
+    },
+    onSuccess: (data: any) => {
+      refetchSyncLogs();
+      const r = data.result;
+      toast({
+        title: r.recordsInserted > 0 ? "Download complete" : "No new files",
+        description: r.recordsInserted > 0
+          ? `Inserted ${r.recordsInserted} new record(s) in ${(r.durationMs / 1000).toFixed(1)}s`
+          : "Database is already up to date",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Download failed",
+        description: error.message || "Failed to trigger Hansard download",
+        variant: "destructive",
+      });
+    },
+  });
+
   const pollJobStatus = async (jobId: string) => {
     try {
       const res = await apiRequest("GET", `/api/jobs/${jobId}`);
@@ -2624,7 +2648,7 @@ export default function HansardAdmin() {
               Hansard Sync Logs
             </CardTitle>
             <CardDescription>
-              View history of automatic and manual Hansard sync operations (runs daily at 12:00 PM Malaysia time)
+              View history of automatic and manual Hansard sync operations (runs daily at 12:00, 13:00 and 14:00 MYT)
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -2632,15 +2656,25 @@ export default function HansardAdmin() {
               <span className="text-sm text-muted-foreground">
                 {syncLogsLoading ? "Loading..." : `${syncLogs?.totalLogs || 0} sync operations logged`}
               </span>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => refetchSyncLogs()}
-                disabled={syncLogsLoading}
-              >
-                <RefreshCw className={`h-4 w-4 mr-2 ${syncLogsLoading ? 'animate-spin' : ''}`} />
-                Refresh
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  onClick={() => triggerDownloadMutation.mutate()}
+                  disabled={triggerDownloadMutation.isPending}
+                >
+                  <RefreshCw className={`h-4 w-4 mr-2 ${triggerDownloadMutation.isPending ? 'animate-spin' : ''}`} />
+                  {triggerDownloadMutation.isPending ? "Downloading..." : "Download Now"}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => refetchSyncLogs()}
+                  disabled={syncLogsLoading}
+                >
+                  <RefreshCw className={`h-4 w-4 mr-2 ${syncLogsLoading ? 'animate-spin' : ''}`} />
+                  Refresh
+                </Button>
+              </div>
             </div>
 
             {syncLogs?.latestSync && (
