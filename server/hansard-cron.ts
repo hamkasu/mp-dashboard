@@ -282,6 +282,7 @@ async function downloadAndSaveWithRetry(
 
 let cronJob: ReturnType<typeof cron.schedule> | null = null;
 let cronJob1pm: ReturnType<typeof cron.schedule> | null = null;
+let cronJob2pm: ReturnType<typeof cron.schedule> | null = null;
 
 // Store sync logs in memory (last 50 syncs)
 const MAX_SYNC_LOGS = 50;
@@ -337,7 +338,10 @@ export function startHansardCron(): void {
   // 1:00 PM Malaysia time
   cronJob1pm = cron.schedule('0 13 * * *', runScheduledSync, { timezone: 'Asia/Kuala_Lumpur' });
 
-  console.log('✅ [Hansard Cron] Daily sync scheduled at 12:00 and 13:00 Malaysia time (Asia/Kuala_Lumpur)');
+  // 2:00 PM Malaysia time
+  cronJob2pm = cron.schedule('0 14 * * *', runScheduledSync, { timezone: 'Asia/Kuala_Lumpur' });
+
+  console.log('✅ [Hansard Cron] Daily sync scheduled at 12:00, 13:00 and 14:00 Malaysia time (Asia/Kuala_Lumpur)');
 }
 
 export function stopHansardCron(): void {
@@ -348,6 +352,10 @@ export function stopHansardCron(): void {
   if (cronJob1pm) {
     cronJob1pm.stop();
     cronJob1pm = null;
+  }
+  if (cronJob2pm) {
+    cronJob2pm.stop();
+    cronJob2pm = null;
   }
   console.log('🛑 [Hansard Cron] Cron jobs stopped');
 }
