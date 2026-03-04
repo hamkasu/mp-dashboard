@@ -36,7 +36,7 @@ interface UploadResult {
 }
 
 interface SyncLogEntry {
-  triggeredBy: 'manual' | 'scheduled';
+  triggeredBy: 'manual' | 'scheduled' | 'startup-recovery';
   startTime: string;
   endTime: string;
   durationMs: number;
@@ -2693,6 +2693,10 @@ export default function HansardAdmin() {
                           {log.triggeredBy === 'scheduled' ? (
                             <span className="inline-flex items-center gap-1 text-blue-600">
                               <Clock className="h-3 w-3" /> Auto
+                            </span>
+                          ) : log.triggeredBy === 'startup-recovery' ? (
+                            <span className="inline-flex items-center gap-1 text-orange-600">
+                              🔄 Recovery
                             </span>
                           ) : (
                             <span className="inline-flex items-center gap-1 text-purple-600">
