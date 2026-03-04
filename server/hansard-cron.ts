@@ -280,18 +280,17 @@ async function downloadAndSaveWithRetry(
   throw new Error(`All ${maxRetries} download attempts failed for ${pdfUrl}: ${lastError?.message}`);
 }
 
-let cronJob: ReturnType<typeof cron.schedule> | null = null;
-let cronJob1pm: ReturnType<typeof cron.schedule> | null = null;
-let cronJob2pm: ReturnType<typeof cron.schedule> | null = null;
+// ============================================================================
+// IN-MEMORY SYNC LOG
+// ============================================================================
 
-// Store sync logs in memory (last 50 syncs)
 const MAX_SYNC_LOGS = 50;
 const syncLogs: HansardSyncResult[] = [];
 
 export function addSyncLog(result: HansardSyncResult): void {
-  syncLogs.unshift(result); // Add to beginning (newest first)
+  syncLogs.unshift(result);
   if (syncLogs.length > MAX_SYNC_LOGS) {
-    syncLogs.pop(); // Remove oldest
+    syncLogs.pop();
   }
 }
 
@@ -303,80 +302,13 @@ export function getLatestSyncLog(): HansardSyncResult | null {
   return syncLogs[0] || null;
 }
 
-async function runScheduledSync(): Promise<void> {
-  console.log('\n⏰ [Hansard Cron] Scheduled sync triggered');
-  try {
-    const result = await runHansardSync({ triggeredBy: 'scheduled' });
-    addSyncLog(result);
-    await persistSyncLogToDb(result);
-  } catch (error: any) {
-    const failedResult = {
-      triggeredBy: 'scheduled' as 'scheduled',
-      startTime: new Date(),
-      endTime: new Date(),
-      durationMs: 0,
-      lastKnownSession: null,
-      recordsFound: 0,
-      recordsInserted: 0,
-      recordsSkipped: 0,
-      errors: [{ sessionNumber: 'N/A', error: error.message }]
-    };
-    addSyncLog(failedResult);
-    await persistSyncLogToDb(failedResult);
-  }
-}
-
-export function startHansardCron(): void {
-  if (cronJob) {
-    console.log('⚠️  [Hansard Cron] Cron job already running');
-    return;
-  }
-
-  // 12:00 PM Malaysia time
-  cronJob = cron.schedule('0 12 * * *', runScheduledSync, { timezone: 'Asia/Kuala_Lumpur' });
-
-  // 1:00 PM Malaysia time
-  cronJob1pm = cron.schedule('0 13 * * *', runScheduledSync, { timezone: 'Asia/Kuala_Lumpur' });
-
-  // 2:00 PM Malaysia time
-  cronJob2pm = cron.schedule('0 14 * * *', runScheduledSync, { timezone: 'Asia/Kuala_Lumpur' });
-
-  console.log('✅ [Hansard Cron] Daily sync scheduled at 12:00, 13:00 and 14:00 Malaysia time (Asia/Kuala_Lumpur)');
-}
-
-export function stopHansardCron(): void {
-  if (cronJob) {
-    cronJob.stop();
-    cronJob = null;
-  }
-  if (cronJob1pm) {
-    cronJob1pm.stop();
-    cronJob1pm = null;
-  }
-  if (cronJob2pm) {
-    cronJob2pm.stop();
-    cronJob2pm = null;
-  }
-  console.log('🛑 [Hansard Cron] Cron jobs stopped');
-}
-
 // ============================================================================
-// DATABASE-BACKED SYNC LOGGING & RECOVERY
+// DATABASE-BACKED SYNC LOGGING
 // ============================================================================
 
-/**
- * Persist sync result to database for permanent monitoring
- */
 export async function persistSyncLogToDb(result: HansardSyncResult): Promise<void> {
   try {
-    if (!db) {
-      console.warn('⚠️  [Hansard Cron] Database not available, cannot persist sync log');
-      return;
-    }
-
-    const { eq, desc, sql } = await import('drizzle-orm');
     const { hansardSyncLogs } = await import('@shared/schema');
-
     await db.insert(hansardSyncLogs).values({
       triggeredBy: result.triggeredBy,
       startedAt: result.startTime,
@@ -389,53 +321,106 @@ export async function persistSyncLogToDb(result: HansardSyncResult): Promise<voi
       errors: result.errors,
       success: result.errors.length === 0,
     });
-
     console.log('✅ [Hansard Cron] Sync log persisted to database');
   } catch (error: any) {
-    console.error('❌ [Hansard Cron] Failed to persist sync log to database:', error.message);
+    console.error('❌ [Hansard Cron] Failed to persist sync log:', error.message);
   }
 }
 
-/**
- * Get last sync from database
- */
 export async function getLastSyncFromDb(): Promise<{ startedAt: Date; success: boolean } | null> {
   try {
-    if (!db) {
-      return null;
-    }
-
     const { desc } = await import('drizzle-orm');
     const { hansardSyncLogs } = await import('@shared/schema');
-
-    const result = await db
-      .select()
-      .from(hansardSyncLogs)
-      .orderBy(desc(hansardSyncLogs.startedAt))
-      .limit(1);
-
-    if (result.length === 0) {
-      return null;
-    }
-
-    return {
-      startedAt: new Date(result[0].startedAt),
-      success: result[0].success || false,
-    };
+    const rows = await db.select().from(hansardSyncLogs).orderBy(desc(hansardSyncLogs.startedAt)).limit(1);
+    if (rows.length === 0) return null;
+    return { startedAt: new Date(rows[0].startedAt), success: rows[0].success || false };
   } catch (error: any) {
     console.error('❌ [Hansard Cron] Failed to get last sync from database:', error.message);
     return null;
   }
 }
 
+// ============================================================================
+// CRON SCHEDULING
+// ============================================================================
+
+let scheduledCronJob: ReturnType<typeof cron.schedule> | null = null;
+let isRunning = false;
+
 /**
- * Check if startup recovery is needed and run if necessary
- * This prevents data staleness after server restarts
+ * Run a scheduled sync with concurrency guard.
+ * If a sync is already in progress, the trigger is skipped.
+ */
+async function runScheduledSync(): Promise<void> {
+  if (isRunning) {
+    console.log('⏭️  [Hansard Cron] Sync already in progress, skipping this trigger');
+    return;
+  }
+
+  isRunning = true;
+  const now = new Date().toLocaleTimeString('en-MY', { timeZone: 'Asia/Kuala_Lumpur', hour12: false });
+  console.log(`\n⏰ [Hansard Cron] Scheduled sync triggered at ${now} MYT`);
+
+  try {
+    const result = await runHansardSync({ triggeredBy: 'scheduled' });
+    addSyncLog(result);
+    await persistSyncLogToDb(result);
+  } catch (error: any) {
+    console.error(`❌ [Hansard Cron] Sync failed: ${error.message}`);
+    const failedResult: HansardSyncResult = {
+      triggeredBy: 'scheduled',
+      startTime: new Date(),
+      endTime: new Date(),
+      durationMs: 0,
+      lastKnownSession: null,
+      recordsFound: 0,
+      recordsInserted: 0,
+      recordsSkipped: 0,
+      errors: [{ sessionNumber: 'N/A', error: error.message }],
+    };
+    addSyncLog(failedResult);
+    await persistSyncLogToDb(failedResult);
+  } finally {
+    isRunning = false;
+  }
+}
+
+/**
+ * Start the Hansard download cron.
+ * Runs at 12:00, 13:00, and 14:00 Malaysia time every day.
+ */
+export function startHansardCron(): void {
+  if (scheduledCronJob) {
+    console.log('⚠️  [Hansard Cron] Cron already scheduled, skipping');
+    return;
+  }
+
+  // Single job: fires at minute 0 of hours 12, 13, 14 — Malaysia time
+  scheduledCronJob = cron.schedule('0 12,13,14 * * *', runScheduledSync, {
+    timezone: 'Asia/Kuala_Lumpur',
+  });
+
+  console.log('✅ [Hansard Cron] Daily sync scheduled at 12:00, 13:00 and 14:00 MYT (Asia/Kuala_Lumpur)');
+}
+
+export function stopHansardCron(): void {
+  if (scheduledCronJob) {
+    scheduledCronJob.stop();
+    scheduledCronJob = null;
+    console.log('🛑 [Hansard Cron] Cron job stopped');
+  }
+}
+
+// ============================================================================
+// STARTUP RECOVERY
+// ============================================================================
+
+/**
+ * Run a recovery sync on startup if the last successful sync was more than 36 hours ago.
  */
 export async function checkAndRunStartupRecovery(): Promise<void> {
   try {
     console.log('🔍 [Hansard Cron] Checking if startup recovery is needed...');
-
     const lastSync = await getLastSyncFromDb();
 
     if (!lastSync) {
@@ -444,25 +429,16 @@ export async function checkAndRunStartupRecovery(): Promise<void> {
     }
 
     const hoursSinceLastSync = (Date.now() - lastSync.startedAt.getTime()) / (1000 * 60 * 60);
-
     console.log(`ℹ️  [Hansard Cron] Last sync was ${hoursSinceLastSync.toFixed(1)} hours ago (${lastSync.success ? 'successful' : 'failed'})`);
 
-    // If last sync was more than 36 hours ago, run recovery sync
-    // (36 hours = 1.5 days, allowing for weekends/holidays with some buffer)
     if (hoursSinceLastSync > 36) {
-      console.log('🚨 [Hansard Cron] Last sync was more than 36 hours ago, running startup recovery...');
-
+      console.log('🚨 [Hansard Cron] Last sync was more than 36 hours ago — running startup recovery...');
       const result = await runHansardSync({ triggeredBy: 'startup-recovery' });
-
-      // Add to in-memory logs for API access
       addSyncLog(result);
-
-      // Persist to database
       await persistSyncLogToDb(result);
-
-      console.log(`✅ [Hansard Cron] Startup recovery completed (${result.recordsInserted} new records inserted)`);
+      console.log(`✅ [Hansard Cron] Startup recovery done (${result.recordsInserted} new records inserted)`);
     } else {
-      console.log('✅ [Hansard Cron] No startup recovery needed, last sync is recent');
+      console.log('✅ [Hansard Cron] Startup recovery not needed');
     }
   } catch (error: any) {
     console.error('❌ [Hansard Cron] Startup recovery failed:', error.message);
@@ -470,12 +446,9 @@ export async function checkAndRunStartupRecovery(): Promise<void> {
 }
 
 /**
- * Enhanced cron start with startup recovery
+ * Start cron with an optional startup recovery check.
  */
 export async function startHansardCronWithRecovery(): Promise<void> {
-  // First, check if we need to run a recovery sync
   await checkAndRunStartupRecovery();
-
-  // Then start the regular cron job
   startHansardCron();
 }
