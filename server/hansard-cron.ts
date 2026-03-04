@@ -14,7 +14,7 @@ import { db } from './db';
 import { forceGC, getMemoryUsage } from './middleware/memory-monitor';
 
 export interface HansardSyncResult {
-  triggeredBy: 'manual' | 'scheduled';
+  triggeredBy: 'manual' | 'scheduled' | 'startup-recovery';
   startTime: Date;
   endTime: Date;
   durationMs: number;
@@ -25,7 +25,7 @@ export interface HansardSyncResult {
   errors: Array<{ sessionNumber: string; error: string }>;
 }
 
-export async function runHansardSync(options: { triggeredBy: 'manual' | 'scheduled' }): Promise<HansardSyncResult> {
+export async function runHansardSync(options: { triggeredBy: 'manual' | 'scheduled' | 'startup-recovery' }): Promise<HansardSyncResult> {
   const startTime = new Date();
   const result: HansardSyncResult = {
     triggeredBy: options.triggeredBy,
@@ -377,7 +377,7 @@ export async function persistSyncLogToDb(result: HansardSyncResult): Promise<voi
       recordsInserted: result.recordsInserted,
       recordsSkipped: result.recordsSkipped,
       errors: result.errors,
-      success: result.errors.length === 0 && result.recordsInserted >= 0,
+      success: result.errors.length === 0,
     });
 
     console.log('✅ [Hansard Cron] Sync log persisted to database');
@@ -442,7 +442,7 @@ export async function checkAndRunStartupRecovery(): Promise<void> {
     if (hoursSinceLastSync > 36) {
       console.log('🚨 [Hansard Cron] Last sync was more than 36 hours ago, running startup recovery...');
 
-      const result = await runHansardSync({ triggeredBy: 'startup-recovery' as any });
+      const result = await runHansardSync({ triggeredBy: 'startup-recovery' });
 
       // Add to in-memory logs for API access
       addSyncLog(result);
