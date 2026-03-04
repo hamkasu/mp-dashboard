@@ -73,7 +73,7 @@ export class HansardScraper {
    * @param nodeId - Node ID to fetch children for (null for root)
    * @returns Array of tree nodes
    */
-  private async fetchTreeLevel(nodeId: string | null = null): Promise<TreeNode[]> {
+  private async fetchTreeLevel(nodeId: string | null = null, useArchive: boolean = true): Promise<TreeNode[]> {
     const maxRetries = 3;
     const retryDelay = 2000;
 
@@ -81,9 +81,10 @@ export class HansardScraper {
       try {
         await this.delay(500); // Polite throttling
 
-        const url = nodeId 
-          ? `${this.baseUrl}/hansard-dewan-rakyat.html?uweb=dr&lang=bm&arkib=yes&ajx=1&id=${nodeId}`
-          : `${this.baseUrl}/hansard-dewan-rakyat.html?uweb=dr&lang=bm&arkib=yes&ajx=0`;
+        const archiveParam = useArchive ? '&arkib=yes' : '';
+        const url = nodeId
+          ? `${this.baseUrl}/hansard-dewan-rakyat.html?uweb=dr&lang=bm${archiveParam}&ajx=1&id=${nodeId}`
+          : `${this.baseUrl}/hansard-dewan-rakyat.html?uweb=dr&lang=bm${archiveParam}&ajx=0`;
 
         const response = await axios.get(url, {
           headers: this.headers,
@@ -166,7 +167,8 @@ export class HansardScraper {
     parliamentTerm: string,
     penggal: string,
     mesyuarat: string,
-    collected: Map<string, HansardMetadata>
+    collected: Map<string, HansardMetadata>,
+    useArchive: boolean = true
   ): Promise<void> {
     if (nodeId && this.visitedNodes.has(nodeId)) {
       return; // Avoid cycles
@@ -176,7 +178,7 @@ export class HansardScraper {
       this.visitedNodes.add(nodeId);
     }
 
-    const nodes = await this.fetchTreeLevel(nodeId);
+    const nodes = await this.fetchTreeLevel(nodeId, useArchive);
 
     for (const node of nodes) {
       const level = node.level;
@@ -187,18 +189,18 @@ export class HansardScraper {
         if (this.is15thParliament(node.text)) {
           const normalizedTerm = normalizeParliamentTerm(node.text);
           console.log(`✅ Processing 15th Parliament: ${node.text} -> ${normalizedTerm}`);
-          await this.traverseArchiveTree(node.id, normalizedTerm, '', '', collected);
+          await this.traverseArchiveTree(node.id, normalizedTerm, '', '', collected, useArchive);
         } else {
           console.log(`⏭️  Skipping non-15th Parliament: ${node.text}`);
         }
       }
       // Level 2: Penggal (e.g., "Penggal Pertama")
       else if (level === 3) {
-        await this.traverseArchiveTree(node.id, parliamentTerm, node.text, '', collected);
+        await this.traverseArchiveTree(node.id, parliamentTerm, node.text, '', collected, useArchive);
       }
       // Level 3: Mesyuarat (e.g., "Mesyuarat Pertama (03/02/2025 - 06/03/2025)")
       else if (level === 4) {
-        await this.traverseArchiveTree(node.id, parliamentTerm, penggal, node.text, collected);
+        await this.traverseArchiveTree(node.id, parliamentTerm, penggal, node.text, collected, useArchive);
       }
       // Level 4: Individual date (e.g., "05 Mei 2025") - This is where PDF links are
       else if (level === 5) {
@@ -297,32 +299,39 @@ export class HansardScraper {
    * @param maxRecords - Optional limit on number of records to return (after sorting)
    */
   async getHansardListFromArchiveTree(maxRecords: number = 1000): Promise<HansardMetadata[]> {
-    console.log('🌳 Traversing archive tree structure to collect ALL records...');
-    this.visitedNodes.clear();
     const collected = new Map<string, HansardMetadata>();
 
+    // Pass 1: Archive tree (arkib=yes) — has all historical + recent sessions
+    console.log('🌳 Pass 1: Traversing archive tree (arkib=yes)...');
+    this.visitedNodes.clear();
     try {
-      await this.traverseArchiveTree(null, '', '', '', collected);
-      console.log(`✅ Tree traversal complete. Found ${collected.size} unique records.`);
-      
-      // Sort by date (newest first) to prioritize recent records
-      const allRecords = Array.from(collected.values()).sort((a, b) => 
-        b.sessionDate.getTime() - a.sessionDate.getTime()
-      );
-      
-      // Return up to maxRecords (newest records first)
-      const records = allRecords.slice(0, maxRecords);
-      console.log(`📊 Returning ${records.length} records (sorted by date, newest first)`);
-      
-      return records;
+      await this.traverseArchiveTree(null, '', '', '', collected, true);
+      console.log(`  Archive pass complete. ${collected.size} records so far.`);
     } catch (error) {
-      console.error('❌ Error traversing archive tree:', error);
-      // Even on error, return what we collected, sorted
-      const allRecords = Array.from(collected.values()).sort((a, b) => 
-        b.sessionDate.getTime() - a.sessionDate.getTime()
-      );
-      return allRecords.slice(0, maxRecords);
+      console.error('❌ Error in archive tree pass:', error);
     }
+
+    // Pass 2: Live/current tree (no arkib) — picks up sessions not yet in archive
+    console.log('🌳 Pass 2: Traversing live tree (no arkib) for latest sessions...');
+    this.visitedNodes.clear();
+    const liveSizeBefore = collected.size;
+    try {
+      await this.traverseArchiveTree(null, '', '', '', collected, false);
+      const newFromLive = collected.size - liveSizeBefore;
+      console.log(`  Live pass complete. ${newFromLive} additional records found.`);
+    } catch (error) {
+      console.error('❌ Error in live tree pass:', error);
+    }
+
+    console.log(`✅ Both passes complete. ${collected.size} unique records total.`);
+
+    const allRecords = Array.from(collected.values()).sort((a, b) =>
+      b.sessionDate.getTime() - a.sessionDate.getTime()
+    );
+
+    const records = allRecords.slice(0, maxRecords);
+    console.log(`📊 Returning ${records.length} records (sorted by date, newest first)`);
+    return records;
   }
 
   async getHansardListForParliament15(maxRecords: number = 100): Promise<HansardMetadata[]> {
