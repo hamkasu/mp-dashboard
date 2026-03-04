@@ -281,6 +281,7 @@ async function downloadAndSaveWithRetry(
 }
 
 let cronJob: ReturnType<typeof cron.schedule> | null = null;
+let cronJob1pm: ReturnType<typeof cron.schedule> | null = null;
 
 // Store sync logs in memory (last 50 syncs)
 const MAX_SYNC_LOGS = 50;
@@ -301,53 +302,54 @@ export function getLatestSyncLog(): HansardSyncResult | null {
   return syncLogs[0] || null;
 }
 
+async function runScheduledSync(): Promise<void> {
+  console.log('\n⏰ [Hansard Cron] Scheduled sync triggered');
+  try {
+    const result = await runHansardSync({ triggeredBy: 'scheduled' });
+    addSyncLog(result);
+    await persistSyncLogToDb(result);
+  } catch (error: any) {
+    const failedResult = {
+      triggeredBy: 'scheduled' as 'scheduled',
+      startTime: new Date(),
+      endTime: new Date(),
+      durationMs: 0,
+      lastKnownSession: null,
+      recordsFound: 0,
+      recordsInserted: 0,
+      recordsSkipped: 0,
+      errors: [{ sessionNumber: 'N/A', error: error.message }]
+    };
+    addSyncLog(failedResult);
+    await persistSyncLogToDb(failedResult);
+  }
+}
+
 export function startHansardCron(): void {
   if (cronJob) {
     console.log('⚠️  [Hansard Cron] Cron job already running');
     return;
   }
 
-  // Schedule cron job to run daily at 12 PM Malaysia time (Asia/Kuala_Lumpur)
-  // Cron expression: "0 12 * * *" = At 12:00 every day
-  cronJob = cron.schedule(
-    '0 12 * * *',
-    async () => {
-      console.log('\n⏰ [Hansard Cron] Scheduled sync triggered');
-      try {
-        const result = await runHansardSync({ triggeredBy: 'scheduled' });
-        addSyncLog(result);
-        await persistSyncLogToDb(result); // Persist to database
-      } catch (error: any) {
-        // Log failed sync attempt
-        const failedResult = {
-          triggeredBy: 'scheduled' as 'scheduled',
-          startTime: new Date(),
-          endTime: new Date(),
-          durationMs: 0,
-          lastKnownSession: null,
-          recordsFound: 0,
-          recordsInserted: 0,
-          recordsSkipped: 0,
-          errors: [{ sessionNumber: 'N/A', error: error.message }]
-        };
-        addSyncLog(failedResult);
-        await persistSyncLogToDb(failedResult); // Persist failed attempt to database
-      }
-    },
-    {
-      timezone: 'Asia/Kuala_Lumpur'
-    }
-  );
+  // 12:00 PM Malaysia time
+  cronJob = cron.schedule('0 12 * * *', runScheduledSync, { timezone: 'Asia/Kuala_Lumpur' });
 
-  console.log('✅ [Hansard Cron] Daily sync scheduled at 12:00 Malaysia time (Asia/Kuala_Lumpur)');
+  // 1:00 PM Malaysia time
+  cronJob1pm = cron.schedule('0 13 * * *', runScheduledSync, { timezone: 'Asia/Kuala_Lumpur' });
+
+  console.log('✅ [Hansard Cron] Daily sync scheduled at 12:00 and 13:00 Malaysia time (Asia/Kuala_Lumpur)');
 }
 
 export function stopHansardCron(): void {
   if (cronJob) {
     cronJob.stop();
     cronJob = null;
-    console.log('🛑 [Hansard Cron] Cron job stopped');
   }
+  if (cronJob1pm) {
+    cronJob1pm.stop();
+    cronJob1pm = null;
+  }
+  console.log('🛑 [Hansard Cron] Cron jobs stopped');
 }
 
 // ============================================================================
