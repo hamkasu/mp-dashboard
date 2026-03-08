@@ -99,7 +99,7 @@ export class PollGeneratorAgent extends BaseAgent {
     });
 
     const numberOfPolls = context.parameters.numberOfPolls || 1;
-    const generatedPolls = await this.generatePollsWithAI(recentContext, numberOfPolls);
+    const generatedPolls = await this.generatePollsWithAI(recentContext, numberOfPolls, weekNumber);
     apiCalls++;
 
     if (generatedPolls.length === 0) {
@@ -293,11 +293,12 @@ export class PollGeneratorAgent extends BaseAgent {
       recentBills: string[];
       debateHighlights: string[];
     },
-    numberOfPolls: number = 1
+    numberOfPolls: number = 1,
+    weekNumber: number = 0
   ): Promise<GeneratedPoll[]> {
     if (!OPENROUTER_API_KEY) {
       console.error("[PollGenerator] OpenRouter API key not configured");
-      return this.getFallbackPolls(numberOfPolls);
+      return this.getFallbackPolls(numberOfPolls, weekNumber);
     }
 
     const systemPrompt = `You are an expert at creating engaging public opinion polls about Malaysian politics and governance.
@@ -390,7 +391,7 @@ Respond ONLY with valid JSON in this exact format:
 
       if (!response.ok) {
         console.error("[PollGenerator] API error:", response.status);
-        return this.getFallbackPolls(numberOfPolls);
+        return this.getFallbackPolls(numberOfPolls, weekNumber);
       }
 
       const data = await response.json();
@@ -398,7 +399,7 @@ Respond ONLY with valid JSON in this exact format:
 
       if (!content) {
         console.error("[PollGenerator] No content in response");
-        return this.getFallbackPolls(numberOfPolls);
+        return this.getFallbackPolls(numberOfPolls, weekNumber);
       }
 
       // Parse JSON response
@@ -415,17 +416,17 @@ Respond ONLY with valid JSON in this exact format:
       }
 
       console.error("[PollGenerator] Invalid response format");
-      return this.getFallbackPolls(numberOfPolls);
+      return this.getFallbackPolls(numberOfPolls, weekNumber);
     } catch (error) {
       console.error("[PollGenerator] Error calling AI:", error);
-      return this.getFallbackPolls(numberOfPolls);
+      return this.getFallbackPolls(numberOfPolls, weekNumber);
     }
   }
 
   /**
    * Get fallback polls when AI is not available
    */
-  private getFallbackPolls(count: number): GeneratedPoll[] {
+  private getFallbackPolls(count: number, weekNumber: number = 0): GeneratedPoll[] {
     const fallbackPolls: GeneratedPoll[] = [
       {
         question: "How would you rate the government's handling of economic issues?",
@@ -466,9 +467,142 @@ Respond ONLY with valid JSON in this exact format:
           { optionText: "Very Dissatisfied", optionTextMs: "Sangat Tidak Berpuas Hati" },
         ],
       },
+      {
+        question: "How would you rate the quality of public healthcare services in Malaysia?",
+        questionMs: "Bagaimana anda menilai kualiti perkhidmatan kesihatan awam di Malaysia?",
+        description: "Share your experience with government hospitals and clinics.",
+        category: "healthcare",
+        options: [
+          { optionText: "Excellent", optionTextMs: "Cemerlang" },
+          { optionText: "Good", optionTextMs: "Baik" },
+          { optionText: "Average", optionTextMs: "Sederhana" },
+          { optionText: "Poor", optionTextMs: "Lemah" },
+          { optionText: "Very Poor", optionTextMs: "Sangat Lemah" },
+        ],
+      },
+      {
+        question: "How concerned are you about the rising cost of living in Malaysia?",
+        questionMs: "Sejauh mana anda bimbang tentang peningkatan kos sara hidup di Malaysia?",
+        description: "Tell us how the cost of living is affecting you.",
+        category: "economy",
+        options: [
+          { optionText: "Extremely concerned", optionTextMs: "Sangat bimbang" },
+          { optionText: "Very concerned", optionTextMs: "Amat bimbang" },
+          { optionText: "Somewhat concerned", optionTextMs: "Agak bimbang" },
+          { optionText: "Not very concerned", optionTextMs: "Tidak begitu bimbang" },
+          { optionText: "Not concerned at all", optionTextMs: "Tidak bimbang langsung" },
+        ],
+      },
+      {
+        question: "How would you rate the quality of education in Malaysia's public schools?",
+        questionMs: "Bagaimana anda menilai kualiti pendidikan di sekolah awam Malaysia?",
+        description: "Share your views on the standard of public school education.",
+        category: "education",
+        options: [
+          { optionText: "Excellent", optionTextMs: "Cemerlang" },
+          { optionText: "Good", optionTextMs: "Baik" },
+          { optionText: "Average", optionTextMs: "Sederhana" },
+          { optionText: "Needs improvement", optionTextMs: "Perlu penambahbaikan" },
+          { optionText: "Poor", optionTextMs: "Lemah" },
+        ],
+      },
+      {
+        question: "How effective do you think Parliament is in representing citizens' interests?",
+        questionMs: "Sejauh mana anda rasa Parlimen berkesan dalam mewakili kepentingan rakyat?",
+        description: "Share your view on Parliament's role in representing Malaysians.",
+        category: "politics",
+        options: [
+          { optionText: "Very effective", optionTextMs: "Sangat berkesan" },
+          { optionText: "Somewhat effective", optionTextMs: "Agak berkesan" },
+          { optionText: "Neutral", optionTextMs: "Neutral" },
+          { optionText: "Somewhat ineffective", optionTextMs: "Agak tidak berkesan" },
+          { optionText: "Very ineffective", optionTextMs: "Sangat tidak berkesan" },
+        ],
+      },
+      {
+        question: "How would you rate government transparency and accountability in Malaysia?",
+        questionMs: "Bagaimana anda menilai ketelusan dan akauntabiliti kerajaan di Malaysia?",
+        description: "Share your opinion on how open and accountable the government is.",
+        category: "governance",
+        options: [
+          { optionText: "Excellent", optionTextMs: "Cemerlang" },
+          { optionText: "Good", optionTextMs: "Baik" },
+          { optionText: "Average", optionTextMs: "Sederhana" },
+          { optionText: "Poor", optionTextMs: "Lemah" },
+          { optionText: "Very Poor", optionTextMs: "Sangat Lemah" },
+        ],
+      },
+      {
+        question: "How important is environmental protection to you when evaluating government policies?",
+        questionMs: "Sejauh mana perlindungan alam sekitar penting bagi anda dalam menilai dasar kerajaan?",
+        description: "Tell us how much environmental issues matter in your assessment of government.",
+        category: "environment",
+        options: [
+          { optionText: "Extremely important", optionTextMs: "Sangat penting" },
+          { optionText: "Very important", optionTextMs: "Amat penting" },
+          { optionText: "Somewhat important", optionTextMs: "Agak penting" },
+          { optionText: "Not very important", optionTextMs: "Tidak begitu penting" },
+          { optionText: "Not important at all", optionTextMs: "Tidak penting langsung" },
+        ],
+      },
+      {
+        question: "How would you rate the government's efforts to reduce corruption?",
+        questionMs: "Bagaimana anda menilai usaha kerajaan untuk mengurangkan rasuah?",
+        description: "Share your opinion on anti-corruption measures in Malaysia.",
+        category: "governance",
+        options: [
+          { optionText: "Very effective", optionTextMs: "Sangat berkesan" },
+          { optionText: "Somewhat effective", optionTextMs: "Agak berkesan" },
+          { optionText: "Neutral", optionTextMs: "Neutral" },
+          { optionText: "Somewhat ineffective", optionTextMs: "Agak tidak berkesan" },
+          { optionText: "Very ineffective", optionTextMs: "Sangat tidak berkesan" },
+        ],
+      },
+      {
+        question: "How satisfied are you with the government's digital services and e-government initiatives?",
+        questionMs: "Sejauh mana anda berpuas hati dengan perkhidmatan digital kerajaan dan inisiatif e-kerajaan?",
+        description: "Share your experience using government digital platforms and online services.",
+        category: "governance",
+        options: [
+          { optionText: "Very Satisfied", optionTextMs: "Sangat Berpuas Hati" },
+          { optionText: "Satisfied", optionTextMs: "Berpuas Hati" },
+          { optionText: "Neutral", optionTextMs: "Neutral" },
+          { optionText: "Dissatisfied", optionTextMs: "Tidak Berpuas Hati" },
+          { optionText: "Very Dissatisfied", optionTextMs: "Sangat Tidak Berpuas Hati" },
+        ],
+      },
+      {
+        question: "How confident are you in the government's ability to manage the national budget?",
+        questionMs: "Sejauh mana anda yakin dengan keupayaan kerajaan untuk mengurus belanjawan negara?",
+        description: "Share your confidence in how Malaysia's public finances are managed.",
+        category: "economy",
+        options: [
+          { optionText: "Very confident", optionTextMs: "Sangat yakin" },
+          { optionText: "Confident", optionTextMs: "Yakin" },
+          { optionText: "Neutral", optionTextMs: "Neutral" },
+          { optionText: "Not confident", optionTextMs: "Tidak yakin" },
+          { optionText: "Not confident at all", optionTextMs: "Langsung tidak yakin" },
+        ],
+      },
+      {
+        question: "How would you rate Malaysia's efforts to attract foreign investment?",
+        questionMs: "Bagaimana anda menilai usaha Malaysia untuk menarik pelaburan asing?",
+        description: "Share your view on Malaysia's investment climate and economic attractiveness.",
+        category: "economy",
+        options: [
+          { optionText: "Excellent", optionTextMs: "Cemerlang" },
+          { optionText: "Good", optionTextMs: "Baik" },
+          { optionText: "Average", optionTextMs: "Sederhana" },
+          { optionText: "Poor", optionTextMs: "Lemah" },
+          { optionText: "Very Poor", optionTextMs: "Sangat Lemah" },
+        ],
+      },
     ];
 
-    return fallbackPolls.slice(0, count);
+    // Rotate through fallback polls based on week number to ensure variety each week
+    const startIndex = weekNumber > 0 ? (weekNumber - 1) % fallbackPolls.length : 0;
+    const rotated = [...fallbackPolls.slice(startIndex), ...fallbackPolls.slice(0, startIndex)];
+    return rotated.slice(0, count);
   }
 
   /**
