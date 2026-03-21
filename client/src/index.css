@@ -458,3 +458,70 @@
 }
 
 /* ===== End Ramadan 2026 Festive Theme ===== */
+
+/* ===== Hari Raya Aidilfitri 2026 Festive Theme (temporary - remove after March 27, 2026) ===== */
+
+/* Ketupat swinging animation */
+@keyframes raya-ketupat-swing {
+  0%, 100% { transform: rotate(-6deg); }
+  50% { transform: rotate(6deg); }
+}
+
+.raya-ketupat-swing {
+  animation: raya-ketupat-swing 3.5s ease-in-out infinite;
+  transform-origin: top center;
+}
+
+/* Gold sparkle */
+@keyframes raya-sparkle {
+  0%, 100% { opacity: 0.3; transform: scale(0.8); }
+  50% { opacity: 1; transform: scale(1.4); }
+}
+
+.raya-sparkle {
+  animation: raya-sparkle 2s ease-in-out infinite;
+}
+
+/* Star twinkle */
+@keyframes raya-twinkle {
+  0%, 100% { opacity: 0.2; transform: scale(0.7) rotate(0deg); }
+  50% { opacity: 1; transform: scale(1.3) rotate(20deg); }
+}
+
+.raya-twinkle {
+  animation: raya-twinkle 2.5s ease-in-out infinite;
+}
+
+/* Firework burst */
+@keyframes raya-firework {
+  0% { opacity: 0; transform: scale(0.2); }
+  20% { opacity: 1; transform: scale(1); }
+  80% { opacity: 0.8; transform: scale(1.1); }
+  100% { opacity: 0; transform: scale(1.3); }
+}
+
+.raya-firework {
+  animation: raya-firework 3s ease-out infinite;
+}
+
+/* Crescent glow */
+@keyframes raya-crescent-glow {
+  0%, 100% { filter: drop-shadow(0 0 3px rgba(255,215,0,0.4)); }
+  50% { filter: drop-shadow(0 0 10px rgba(255,215,0,0.8)) drop-shadow(0 0 20px rgba(255,200,0,0.3)); }
+}
+
+.raya-crescent-glow {
+  animation: raya-crescent-glow 2.5s ease-in-out infinite;
+}
+
+/* Banner entrance */
+@keyframes raya-banner-enter {
+  from { transform: translateY(-100%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.raya-banner {
+  animation: raya-banner-enter 0.5s ease-out;
+}
+
+/* ===== End Hari Raya Aidilfitri 2026 Festive Theme ===== */
