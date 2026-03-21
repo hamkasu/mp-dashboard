@@ -11,7 +11,6 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { LanguageProvider } from "@/i18n/LanguageContext";
 import { PWAInstallPrompt } from "@/components/PWAInstallPrompt";
 import { CNYFestiveBanner } from "@/components/CNYFestiveBanner";
-import { RamadanFestiveBanner } from "@/components/RamadanFestiveBanner";
 import { HariRayaBanner } from "@/components/HariRayaBanner";
 
 // Eager load only the most critical pages
@@ -132,7 +131,6 @@ function App() {
       <LanguageProvider>
         <TooltipProvider>
           <CNYFestiveBanner />
-          <RamadanFestiveBanner />
           <HariRayaBanner />
           <Toaster />
           <PWAInstallPrompt />
