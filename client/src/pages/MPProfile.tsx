@@ -7,7 +7,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useRoute, Link } from "wouter";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { PageMeta } from "@/components/PageMeta";
-import { ArrowLeft, MapPin, UserCircle, Flag, FileText, Wallet, Calendar, Scale, ExternalLink, AlertTriangle, Info, MessageSquare, HelpCircle, Gavel, FileQuestion, ScrollText, Phone, Mail, MapPinned, Printer, Share2, TrendingDown } from "lucide-react";
+import { ArrowLeft, MapPin, UserCircle, Flag, FileText, Wallet, Calendar, Scale, ExternalLink, AlertTriangle, Info, MessageSquare, HelpCircle, Gavel, FileQuestion, ScrollText, Phone, Mail, MapPinned, Printer, Share2, TrendingDown, Award } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -119,6 +119,36 @@ export default function MPProfile() {
 
   // Fetch constituency data for poverty incidence
   const { data: constituency } = useConstituencyByCode(mp?.parliamentCode);
+
+  // Fetch report card for this MP
+  const { data: reportCard } = useQuery<{
+    id: string;
+    mpId: string;
+    attendanceScore: number;
+    participationScore: number;
+    conductScore: number;
+    constituencyImpactScore: number;
+    overallScore: number;
+    grade: string;
+  }>({
+    queryKey: [`/api/report-cards/${mpId}`],
+    enabled: !!mpId,
+    retry: false,
+    throwOnError: false,
+  });
+
+  // Fetch all report cards for ranking calculation
+  const { data: allReportCards = [] } = useQuery<Array<{ mpId: string; overallScore: number }>>({
+    queryKey: ["/api/report-cards"],
+    enabled: !!mpId,
+    retry: false,
+    throwOnError: false,
+  });
+
+  // Calculate ranking (cards are already sorted by overallScore descending)
+  const mpRank = reportCard
+    ? allReportCards.findIndex(card => card.mpId === mpId) + 1
+    : null;
 
   // Combine oral questions from both Hansard and PDF sources
   const allOralQuestions = useMemo(() => {
@@ -499,6 +529,48 @@ export default function MPProfile() {
                         </Tooltip>
                       </div>
                       <p className="text-lg font-semibold">{constituency.povertyIncidence?.toFixed(1)}%</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Report Card Score & Ranking */}
+                {reportCard && (
+                  <div className="flex items-start gap-3">
+                    <Award className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-medium text-sm text-muted-foreground uppercase tracking-wide mb-1">
+                        Report Card Score
+                      </p>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className={`text-lg font-semibold ${
+                          reportCard.overallScore >= 90 ? 'text-green-600' :
+                          reportCard.overallScore >= 80 ? 'text-blue-600' :
+                          reportCard.overallScore >= 70 ? 'text-yellow-600' :
+                          reportCard.overallScore >= 60 ? 'text-orange-600' :
+                          'text-red-600'
+                        }`}>
+                          {reportCard.overallScore}/100
+                        </span>
+                        <span className={`inline-flex items-center justify-center rounded-full w-7 h-7 text-sm font-bold text-white ${
+                          reportCard.grade === 'A' ? 'bg-green-500' :
+                          reportCard.grade === 'B' ? 'bg-blue-500' :
+                          reportCard.grade === 'C' ? 'bg-yellow-500' :
+                          reportCard.grade === 'D' ? 'bg-orange-500' :
+                          'bg-red-500'
+                        }`}>
+                          {reportCard.grade}
+                        </span>
+                        {mpRank != null && mpRank > 0 && (
+                          <span className="text-sm text-muted-foreground">
+                            #{mpRank} of {allReportCards.length} MPs
+                          </span>
+                        )}
+                      </div>
+                      <div className="mt-1.5">
+                        <Link href="/report-card" className="text-xs text-primary hover:underline">
+                          View full report card →
+                        </Link>
+                      </div>
                     </div>
                   </div>
                 )}
