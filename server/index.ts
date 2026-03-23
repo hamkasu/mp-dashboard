@@ -21,6 +21,7 @@ import { setupAuth } from "./simple-auth";
 import { setupGigSocialAuth } from "./gig-social-auth";
 import { setupUserAuth } from "./user-auth";
 import { setupSubscriptionRoutes } from "./subscription-routes";
+import { setupBillingRoutes } from "./billing/billing-routes";
 import { runStartupTasks } from "./startup-tasks";
 import { isDatabaseAvailable } from "./db";
 
@@ -105,8 +106,11 @@ setupGigSocialAuth(app);
 // Setup public user authentication (register, login, logout, verify-email)
 setupUserAuth(app);
 
-// Setup subscription management routes (plans, status, checkout, webhooks)
+// Setup subscription management routes (plans, status, admin grant/revoke)
 setupSubscriptionRoutes(app);
+
+// Setup billing abstraction layer (checkout, success/cancel redirects, webhooks)
+setupBillingRoutes(app);
 
 app.use((req, res, next) => {
   const start = Date.now();

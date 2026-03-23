@@ -1856,3 +1856,19 @@ export const paymentTransactions = pgTable("payment_transactions", {
 });
 
 export type PaymentTransaction = typeof paymentTransactions.$inferSelect;
+
+// Billing event log — every lifecycle event emitted by the billing service
+// (subscription_created, payment_success, payment_failed, cancelled, renewed, refunded)
+export const billingEvents = pgTable("billing_events", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  subscriptionId: varchar("subscription_id").references(() => subscriptions.id),
+  transactionId: varchar("transaction_id").references(() => paymentTransactions.id),
+  eventType: text("event_type").notNull(),       // 'subscription_created' | 'payment_success' | ...
+  billingProvider: text("billing_provider").notNull(),
+  providerEventId: text("provider_event_id"),    // idempotency key (bill id, event id)
+  payload: jsonb("payload"),                     // full raw event for audit / replay
+  processedAt: timestamp("processed_at").notNull().default(sql`now()`),
+});
+
+export type BillingEvent = typeof billingEvents.$inferSelect;
