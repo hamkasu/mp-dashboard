@@ -17,6 +17,7 @@ import { MPSpotlight } from "@/components/MPSpotlight";
 import { PollWidget } from "@/components/PollWidget";
 import { BillsToWatch } from "@/components/BillsToWatch";
 import { ParliamentVideos } from "@/components/ParliamentVideos";
+import { SilentMPs } from "@/components/SilentMPs";
 import { Footer } from "@/components/Footer";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -610,6 +611,12 @@ export default function Home() {
             <div className="relative">
               <div className="absolute -inset-1 bg-gradient-to-r from-orange-500/20 to-amber-500/10 rounded-lg blur opacity-25 pointer-events-none" />
               <BillsToWatch />
+            </div>
+
+            {/* Most Silent MPs Section */}
+            <div className="relative">
+              <div className="absolute -inset-1 bg-gradient-to-r from-slate-500/20 to-gray-500/10 rounded-lg blur opacity-25 pointer-events-none" />
+              <SilentMPs />
             </div>
 
             {/* Parliament Videos Section */}
