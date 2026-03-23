@@ -1880,6 +1880,63 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
+  // Public preview — aggregate stats + top 10 only, no auth required.
+  // Full dataset is behind requirePremium below; this endpoint never exposes it.
+  app.get("/api/constituencies/public-preview", async (req, res) => {
+    try {
+      const data = await storage.getConstituencyHansardParticipation15th();
+
+      if (!data || data.length === 0) {
+        return res.json({
+          summary: null,
+          topConstituencies: [],
+          distributionBuckets: [],
+        });
+      }
+
+      const total = data.length;
+      const avgRate =
+        Math.round(
+          (data.reduce((s, c) => s + c.participationRate, 0) / total) * 10
+        ) / 10;
+
+      const high = data.filter((c) => c.participationRate >= 70).length;
+      const moderate = data.filter(
+        (c) => c.participationRate >= 40 && c.participationRate < 70
+      ).length;
+      const low = data.filter((c) => c.participationRate < 40).length;
+
+      // Sort by participation rate descending, return top 10 (limited preview)
+      const sorted = [...data].sort(
+        (a, b) => b.participationRate - a.participationRate
+      );
+      const topConstituencies = sorted.slice(0, 10).map((c) => ({
+        constituency: c.constituency,
+        state: c.state,
+        participationRate: c.participationRate,
+        mpNames: c.mpNames,
+        // Intentionally omit sessionsSpoke, totalSpeeches (premium fields)
+      }));
+
+      return res.json({
+        summary: {
+          totalConstituencies: total,
+          avgParticipationRate: avgRate,
+          parliamentTerm: "15th Parliament",
+        },
+        topConstituencies,
+        distributionBuckets: [
+          { range: "≥70%", label: "High participation", count: high },
+          { range: "40–69%", label: "Moderate participation", count: moderate },
+          { range: "<40%", label: "Low participation", count: low },
+        ],
+      });
+    } catch (error) {
+      console.error("Error fetching constituency public preview:", error);
+      res.status(500).json({ error: "Failed to fetch constituency preview" });
+    }
+  });
+
   // Get constituency-level Hansard participation for 15th Parliament (premium)
   app.get("/api/constituencies/hansard-participation-15th", requirePremium, async (req, res) => {
     try {
