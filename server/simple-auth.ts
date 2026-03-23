@@ -15,9 +15,13 @@ import { eq } from "drizzle-orm";
 // Extend Express Request type to include session
 declare module "express-session" {
   interface SessionData {
+    // Admin session fields
     isAdmin: boolean;
     username?: string;
     userId?: string;
+    // Public user session fields (subscription system)
+    publicUserId?: string;  // logged-in public user id
+    isPremium?: boolean;    // cached subscription status (invalidated on logout/webhook)
   }
 }
 

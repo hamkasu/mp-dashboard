@@ -1774,3 +1774,85 @@ export const whatsappOtpCodes = pgTable("whatsapp_otp_codes", {
 });
 
 export type WhatsappOtpCode = typeof whatsappOtpCodes.$inferSelect;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PREMIUM SUBSCRIPTION SYSTEM
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Public user accounts (separate from admin_users)
+export const users = pgTable("users", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  email: text("email").notNull().unique(),
+  name: text("name").notNull(),
+  passwordHash: text("password_hash"),
+  isAdmin: boolean("is_admin").notNull().default(false),
+  emailVerified: boolean("email_verified").notNull().default(false),
+  emailVerificationToken: text("email_verification_token"),
+  passwordResetToken: text("password_reset_token"),
+  passwordResetExpiresAt: timestamp("password_reset_expires_at"),
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+  updatedAt: timestamp("updated_at").notNull().default(sql`now()`),
+});
+
+export const insertUserSchema = createInsertSchema(users).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertUser = z.infer<typeof insertUserSchema>;
+export type User = typeof users.$inferSelect;
+
+// Subscription plans (e.g. monthly, yearly)
+export const subscriptionPlans = pgTable("subscription_plans", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  slug: text("slug").notNull().unique(),        // 'monthly' | 'yearly'
+  name: text("name").notNull(),
+  priceMyr: integer("price_myr").notNull(),     // in sen (e.g. 1500 = RM 15.00)
+  interval: text("interval").notNull(),         // 'month' | 'year'
+  features: jsonb("features").$type<string[]>().notNull().default(sql`'[]'::jsonb`),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+});
+
+export type SubscriptionPlan = typeof subscriptionPlans.$inferSelect;
+
+// User subscriptions
+export const subscriptions = pgTable("subscriptions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  planId: varchar("plan_id").notNull().references(() => subscriptionPlans.id),
+  status: text("status").notNull(),             // 'active' | 'cancelled' | 'expired' | 'trial'
+  isTrial: boolean("is_trial").notNull().default(false),
+  currentPeriodStart: timestamp("current_period_start").notNull(),
+  currentPeriodEnd: timestamp("current_period_end").notNull(),
+  cancelAtPeriodEnd: boolean("cancel_at_period_end").notNull().default(false),
+  billingProvider: text("billing_provider").notNull().default("manual"), // 'billplz' | 'stripe' | 'manual'
+  billingProviderId: text("billing_provider_id"),  // external reference id
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+  updatedAt: timestamp("updated_at").notNull().default(sql`now()`),
+});
+
+export const insertSubscriptionSchema = createInsertSchema(subscriptions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertSubscription = z.infer<typeof insertSubscriptionSchema>;
+export type Subscription = typeof subscriptions.$inferSelect;
+
+// Payment audit trail
+export const paymentTransactions = pgTable("payment_transactions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  subscriptionId: varchar("subscription_id").references(() => subscriptions.id),
+  amountMyr: integer("amount_myr").notNull(),   // in sen
+  status: text("status").notNull(),             // 'pending' | 'paid' | 'failed' | 'refunded'
+  billingProvider: text("billing_provider").notNull(),
+  providerBillId: text("provider_bill_id"),     // Billplz bill_id / Stripe payment_intent_id
+  providerPayload: jsonb("provider_payload"),   // raw webhook payload for audit
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+});
+
+export type PaymentTransaction = typeof paymentTransactions.$inferSelect;

@@ -56,6 +56,7 @@ import {
   auditMiddleware
 } from "./middleware/security";
 import { requireAdmin, getCurrentUsername } from "./simple-auth";
+import { requirePremium } from "./subscription-middleware";
 import { sendContactEmail, sendConfirmationEmail, isEmailConfigured } from "./email";
 import { runBulkHansardAnalysis, getAnalysisJobStatus, cancelAnalysisJob } from "./hansard-ai-analyzer";
 import { isAIConfigured } from "./ai-service";
@@ -1879,8 +1880,8 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
-  // Get constituency-level Hansard participation for 15th Parliament
-  app.get("/api/constituencies/hansard-participation-15th", async (req, res) => {
+  // Get constituency-level Hansard participation for 15th Parliament (premium)
+  app.get("/api/constituencies/hansard-participation-15th", requirePremium, async (req, res) => {
     try {
       const data = await storage.getConstituencyHansardParticipation15th();
       res.json(data);
@@ -1890,8 +1891,8 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
-  // Get constituency speech statistics for 15th Parliament
-  app.get("/api/constituency-speech-stats", async (req, res) => {
+  // Get constituency speech statistics for 15th Parliament (premium)
+  app.get("/api/constituency-speech-stats", requirePremium, async (req, res) => {
     try {
       // Fetch all 15th Parliament Hansard records
       const hansards = await storage.getHansardRecordsByParliament('15th Parliament');
