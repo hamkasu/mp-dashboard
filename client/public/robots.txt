@@ -11,6 +11,11 @@ Allow: /hansard
 Allow: /attendance
 Allow: /allowances
 Allow: /mp/
+# Constituency analysis has public preview content (summary stats, top-5 table,
+# distribution chart) that is genuine indexable content — not cloaked.
+# The premium-gated section uses isAccessibleForFree:"False" structured data
+# per Google's metered paywall policy, so no penalty for partial gating.
+Allow: /constituency-analysis
 
 # Block admin and authentication pages
 Disallow: /hansard-admin

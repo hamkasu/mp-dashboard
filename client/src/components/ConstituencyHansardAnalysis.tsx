@@ -3,11 +3,52 @@
  *
  * ConstituencyHansardAnalysis — premium-gated constituency report.
  *
- * PUBLIC  (no auth):  summary stats, participation distribution chart, top-5 table
- * PREMIUM (gated):    full 222-seat table, per-state breakdown, detailed metrics
+ * ── Content tiers ────────────────────────────────────────────────────────────
  *
- * Full data is NEVER sent to non-premium clients — the public endpoint
- * deliberately omits session counts, speech counts, and returns only 10 rows.
+ * PUBLIC  (no auth, always in HTML):
+ *   • 3 summary stat cards (total constituencies, avg rate, parliament term)
+ *   • Participation distribution bar chart (High / Moderate / Low buckets)
+ *   • Top-5 constituency table with real names, states, MP badges, and rates
+ *
+ * PREMIUM (gated behind PremiumGate):
+ *   • Full 222-row constituency table with session counts and speech counts
+ *   • Rows 6-10 of public preview shown blurred as teaser
+ *   • Shimmer rows suggesting the full extent of the dataset
+ *
+ * ── SEO reasoning ────────────────────────────────────────────────────────────
+ *
+ * Google's metered-paywall policy allows paywalled content without ranking
+ * penalties PROVIDED the following rules are met:
+ *
+ *   1. NO CLOAKING — same HTML served to Googlebot and users.
+ *      We achieve this because the public section is rendered unconditionally
+ *      in the React component tree; it is not gated behind any client-side
+ *      auth check.  The PremiumGate wrapper only toggles the blur CSS.
+ *
+ *   2. PUBLIC SECTION IS GENUINELY USEFUL — not thin placeholder content.
+ *      The top-5 table contains real constituency names, real participation
+ *      rates, and real MP names drawn from the production dataset.
+ *      The distribution chart gives concrete aggregate statistics.
+ *      This passes Google's "first click free" heuristic.
+ *
+ *   3. PREMIUM DATA NOT IN HTML PAYLOAD — full data is fetched from a
+ *      separate endpoint (/api/constituencies/hansard-participation-15th)
+ *      that returns 401/403 for unauthenticated requests.  This query is
+ *      disabled (`enabled: isPremium`) for non-premium users so the full
+ *      222-row dataset is never embedded in the page HTML or sent over the
+ *      wire to free users.
+ *
+ *   4. STRUCTURED DATA ANNOTATION — the outer PremiumGate div carries
+ *      class="premium-content", which is referenced in the WebPage schema
+ *      via hasPart → cssSelector: ".premium-content".  This tells Google
+ *      explicitly which DOM region is behind the paywall.
+ *
+ *   5. INTERNAL LINKING — MPProfile.tsx links to this page via each MP's
+ *      constituency name, distributing PageRank from 222 indexed MP pages.
+ *
+ * References:
+ *   https://developers.google.com/search/docs/appearance/structured-data/paywalled-content
+ *   https://schema.org/isAccessibleForFree
  */
 
 import { useQuery } from "@tanstack/react-query";

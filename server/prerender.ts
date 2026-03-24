@@ -159,6 +159,101 @@ function generateOrganizationStructuredData(): any {
   };
 }
 
+/**
+ * Structured data for the constituency analysis page.
+ *
+ * SEO REASONING — paywalled / gated content:
+ *
+ * Google's official guidance (https://developers.google.com/search/docs/appearance/structured-data/paywalled-content)
+ * says to use isAccessibleForFree:"False" on the WebPage and mark the gated
+ * elements with hasPart → WebPageElement → cssSelector.  This tells Google:
+ *   1. The page is real and crawlable (not cloaked).
+ *   2. Some content is behind a subscription — Googlebot should not penalise
+ *      the page for showing less content than a paying user sees.
+ *   3. The *preview* content (title, summary stats, top-5 table, chart) IS
+ *      the freely accessible section and CAN be indexed fully.
+ *
+ * What we intentionally do NOT do:
+ *   - We do NOT serve different HTML to Googlebot vs users (deceptive cloaking).
+ *   - We do NOT put premium data in hidden HTML elements (CSS display:none / aria-hidden).
+ *   - The premium API endpoint returns 401/403 for unauthenticated requests,
+ *     even when Googlebot calls it — the full dataset never leaks.
+ *
+ * The public preview rendered in HTML contains:
+ *   - Page title & meta description (always indexed)
+ *   - 3 summary stat cards (always indexed)
+ *   - Distribution bar chart (rendered as SVG/DOM — indexed)
+ *   - Top-5 constituency rows (real data — indexed)
+ *
+ * The gated section (rows 6–10 blurred + full 222-row table) is wrapped in
+ * <div class="premium-content"> so the cssSelector below matches Google's
+ * structured-data validator.
+ */
+function generateConstituencyStructuredData(
+  totalConstituencies = 222,
+  avgRate = 67
+): any[] {
+  const baseUrl = 'https://myparliament.calmic.com.my';
+
+  // WebPage schema — tells Google the page has a metered paywall.
+  // isAccessibleForFree:"False" is a string per schema.org spec, not boolean.
+  const webPageSchema = {
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    "name": "Constituency Hansard Analysis — 15th Parliament | Malaysian Parliament",
+    "description": `Track speaking participation for all ${totalConstituencies} Malaysian Parliament constituencies in the 15th Parliament. Average participation rate: ${avgRate}%.`,
+    "url": `${baseUrl}/constituency-analysis`,
+    "isAccessibleForFree": "False",
+    "hasPart": [
+      {
+        // cssSelector matches the className applied to the PremiumGate wrapper.
+        // Googlebot uses this to understand which portion of the DOM is gated.
+        "@type": "WebPageElement",
+        "isAccessibleForFree": "False",
+        "cssSelector": ".premium-content"
+      }
+    ],
+    "about": {
+      "@type": "GovernmentOrganization",
+      "name": "Malaysian Parliament — Dewan Rakyat",
+      "url": "https://www.parlimen.gov.my"
+    },
+    "breadcrumb": {
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "Dashboard", "item": baseUrl },
+        { "@type": "ListItem", "position": 2, "name": "Constituency Analysis", "item": `${baseUrl}/constituency-analysis` }
+      ]
+    }
+  };
+
+  // Dataset schema for the public preview portion.
+  // isAccessibleForFree:"True" here scopes to the preview content only.
+  const previewDatasetSchema = {
+    "@context": "https://schema.org",
+    "@type": "Dataset",
+    "name": `Malaysian Constituency Hansard Participation — 15th Parliament (Preview)`,
+    "description": `Public preview of Hansard speaking participation data for ${totalConstituencies} Malaysian Parliament constituencies. Includes participation distribution and top-5 rankings.`,
+    "url": `${baseUrl}/constituency-analysis`,
+    "isAccessibleForFree": "True",
+    "temporalCoverage": "2022/2027",
+    "spatial": { "@type": "Place", "name": "Malaysia" },
+    "publisher": {
+      "@type": "GovernmentOrganization",
+      "name": "Malaysian Parliament MP Dashboard",
+      "url": baseUrl
+    },
+    "license": "https://creativecommons.org/licenses/by/4.0/",
+    "keywords": [
+      "constituency analysis", "Hansard participation", "Malaysian Parliament",
+      "Dewan Rakyat", "MP speaking record", "15th Parliament Malaysia",
+      "constituency intelligence"
+    ]
+  };
+
+  return [webPageSchema, previewDatasetSchema];
+}
+
 function generateDatasetStructuredData(type: 'directory' | 'attendance' | 'hansard' | 'allowances' | 'activity'): any {
   const baseDataset = {
     "@context": "https://schema.org",
@@ -374,6 +469,23 @@ export async function generatePrerenderedPages() {
     urlMap.set(mpUrl, filename);
   }
   
+  // ── Constituency analysis page ──────────────────────────────────────────
+  // SEO REASONING: pre-rendering bakes the title, meta description, and
+  // structured data (with isAccessibleForFree:"False") into static HTML so
+  // Googlebot receives it on first crawl — no JavaScript execution needed.
+  // The public preview content (summary stats, chart, top-5 rows) is always
+  // present in the pre-rendered HTML, giving Google real indexable content.
+  // The premium gated section is marked via cssSelector in the schema above.
+  console.log('📊 Generating constituency analysis page...');
+  const constituencyHtml = await prerenderPage(htmlTemplate, {
+    title: 'Constituency Hansard Analysis — 15th Parliament | Malaysian Parliament Dashboard',
+    description: 'See how actively all 222 Malaysian Parliament constituencies are represented in the 15th Parliament Hansard. View participation rates, top-performing seats, and distribution by state. Premium: full 222-seat data, detailed metrics & PDF export.',
+    url: '/constituency-analysis',
+    structuredData: generateConstituencyStructuredData()
+  });
+  pages.push({ filename: 'constituency-analysis.html', html: constituencyHtml, url: '/constituency-analysis' });
+  urlMap.set('/constituency-analysis', 'constituency-analysis.html');
+
   const statsPages = [
     {
       path: '/activity',
