@@ -58,6 +58,9 @@ const BillsToWatchAdmin = lazy(() => import("@/pages/BillsToWatchAdmin"));
 const ExternalFrame = lazy(() => import("@/pages/ExternalFrame"));
 const GigRegister = lazy(() => import("@/pages/GigRegister"));
 const AuditSummary = lazy(() => import("@/pages/AuditSummary"));
+const Login = lazy(() => import("@/pages/Login"));
+const Pricing = lazy(() => import("@/pages/Pricing"));
+const Account = lazy(() => import("@/pages/Account"));
 
 // Loading component
 function PageLoader() {
@@ -119,6 +122,10 @@ function Router() {
         <Route path="/daftar" component={GigRegister} />
         <Route path="/gig/register" component={GigRegister} />
         <Route path="/audit-summary" component={AuditSummary} />
+        {/* Subscription & auth */}
+        <Route path="/login" component={Login} />
+        <Route path="/pricing" component={Pricing} />
+        <Route path="/account" component={Account} />
         <Route component={NotFound} />
       </Switch>
     </Suspense>
