@@ -154,7 +154,14 @@ export function PremiumGate({
   }
 
   return (
-    <div className="relative overflow-hidden rounded-xl" style={{ minHeight }}>
+    // ── SEO: "premium-content" class ────────────────────────────────────────
+    // This className is referenced in the WebPage structured data (prerender.ts
+    // and ConstituencyAnalysis.tsx) via hasPart → cssSelector: ".premium-content".
+    // Google's paywalled-content guidelines require the cssSelector to point at
+    // the actual DOM node containing gated material so the crawler can distinguish
+    // freely-accessible sections from premium-only ones.
+    // See: https://developers.google.com/search/docs/appearance/structured-data/paywalled-content
+    <div className="premium-content relative overflow-hidden rounded-xl" style={{ minHeight }}>
       {/* Blurred background content — pointer events disabled */}
       <div
         aria-hidden="true"

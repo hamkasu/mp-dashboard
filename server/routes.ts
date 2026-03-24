@@ -4813,7 +4813,11 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         { url: '/activity', priority: '0.8', changefreq: 'weekly' },
         { url: '/hansard', priority: '0.8', changefreq: 'weekly' },
         { url: '/attendance', priority: '0.8', changefreq: 'weekly' },
-        { url: '/allowances', priority: '0.7', changefreq: 'monthly' }
+        { url: '/allowances', priority: '0.7', changefreq: 'monthly' },
+        // SEO: constituency analysis has strong topical relevance for searches like
+        // "constituency performance Malaysia" and "MP constituency participation".
+        // Priority 0.8 reflects high-quality public preview content on this page.
+        { url: '/constituency-analysis', priority: '0.8', changefreq: 'weekly' }
       ];
       
       for (const page of staticPages) {

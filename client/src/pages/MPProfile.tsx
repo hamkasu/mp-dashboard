@@ -552,7 +552,21 @@ export default function MPProfile() {
                     <p className="font-medium text-sm text-muted-foreground uppercase tracking-wide mb-1">
                       {t('home.constituency')}
                     </p>
-                    <p className="text-lg font-semibold">{mp.constituency}</p>
+                    {/*
+                      SEO: Internal link from every MP profile to the constituency
+                      analysis page.  This distributes PageRank from the 222
+                      individual MP profile pages (each independently indexed) to
+                      the constituency analysis landing page, boosting its authority
+                      for queries like "constituency hansard participation Malaysia".
+                      Anchor text uses the real constituency name for keyword signal.
+                    */}
+                    <Link
+                      href="/constituency-analysis"
+                      className="text-lg font-semibold text-primary hover:underline underline-offset-2"
+                      title={`View Hansard participation data for ${mp.constituency}`}
+                    >
+                      {mp.constituency}
+                    </Link>
                   </div>
                 </div>
 
