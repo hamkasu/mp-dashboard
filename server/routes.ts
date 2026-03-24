@@ -1948,6 +1948,114 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
+  // ── Premium PDF download ────────────────────────────────────────────────────
+  //
+  // GET /api/constituencies/report/download?name=<constituency>&state=<state>
+  //
+  // Security layers:
+  //   1. requirePremium middleware — 401 if not logged in, 403 if not subscribed.
+  //      Admin users bypass via session.isAdmin (set in admin login route).
+  //   2. Input validation — name and state must be non-empty strings, length-
+  //      capped to prevent abuse.  SQL injection is not possible here because
+  //      the data comes from the pre-computed storage method (no raw SQL with
+  //      user input); we only search in the returned JS array.
+  //   3. Exact-match lookup — the constituency name must match exactly (case-
+  //      insensitive trim) an entry returned by getConstituencyHansardParticipation15th().
+  //      This prevents path traversal, injection, or probing for internal data.
+  //   4. Cache-Control: no-store — prevents CDN/proxy caching of personalised
+  //      premium content, ensuring every download hits the auth check.
+  //
+  // File naming:
+  //   constituency-{slug}-hansard-report.pdf
+  //   e.g. constituency-padang-besar-hansard-report.pdf
+  //
+  app.get(
+    "/api/constituencies/report/download",
+    requirePremium,
+    async (req, res) => {
+      try {
+        // ── Input validation ──────────────────────────────────────────────────
+        const rawName = String(req.query.name ?? '').trim();
+        const rawState = String(req.query.state ?? '').trim();
+
+        if (!rawName || rawName.length > 120) {
+          return res.status(400).json({ error: 'Invalid constituency name.' });
+        }
+
+        // ── Fetch full premium dataset ────────────────────────────────────────
+        // The same data that backs /api/constituencies/hansard-participation-15th.
+        // Already authorised above by requirePremium; no extra check needed.
+        const allData = await storage.getConstituencyHansardParticipation15th();
+
+        // ── Locate the requested constituency ─────────────────────────────────
+        // Case-insensitive match; state narrows the search when provided.
+        const nameLower = rawName.toLowerCase();
+        const stateLower = rawState.toLowerCase();
+
+        const entry = allData.find((c) => {
+          const nameMatch = c.constituency.toLowerCase() === nameLower;
+          if (!nameMatch) return false;
+          return !rawState || c.state.toLowerCase() === stateLower;
+        });
+
+        if (!entry) {
+          return res.status(404).json({
+            error: 'Constituency not found.',
+            hint: 'Ensure name and state match exactly.',
+          });
+        }
+
+        // ── Fetch supplementary constituency profile (optional) ───────────────
+        // The constituencies table holds parliamentCode and povertyIncidence.
+        // We normalise the name to a parliament-code lookup via state matching.
+        // If it fails, we still generate the PDF (profile section is omitted).
+        let profile: import('./constituency-pdf').ConstituencyProfile | null = null;
+        try {
+          const allConstituencies = await storage.getAllConstituencies();
+          const matched = allConstituencies.find(
+            (c) =>
+              c.name?.toLowerCase() === nameLower &&
+              (!rawState || c.state?.toLowerCase() === stateLower),
+          );
+          if (matched) {
+            profile = {
+              parliamentCode: matched.parliamentCode ?? null,
+              povertyIncidence: matched.povertyIncidence ?? null,
+            };
+          }
+        } catch {
+          // Non-critical: missing profile data is handled gracefully in the PDF
+        }
+
+        // ── Generate PDF ──────────────────────────────────────────────────────
+        const {
+          generateConstituencyReportPDF,
+          constituencyPDFFilename,
+        } = await import('./constituency-pdf');
+
+        const pdfBuffer = generateConstituencyReportPDF(entry, profile, allData);
+        const filename = constituencyPDFFilename(entry.constituency);
+
+        // ── Stream response ───────────────────────────────────────────────────
+        res.setHeader('Content-Type', 'application/pdf');
+        // 'attachment' prompts the browser to download rather than open inline.
+        res.setHeader(
+          'Content-Disposition',
+          `attachment; filename="${filename}"`,
+        );
+        // Prevent CDN / proxy caching of premium content.
+        res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+        res.setHeader('Pragma', 'no-cache');
+        res.setHeader('Content-Length', String(pdfBuffer.length));
+
+        res.end(pdfBuffer);
+      } catch (error) {
+        console.error('Error generating constituency PDF:', error);
+        res.status(500).json({ error: 'Failed to generate constituency report.' });
+      }
+    },
+  );
+
   // Get constituency speech statistics for 15th Parliament (premium)
   app.get("/api/constituency-speech-stats", requirePremium, async (req, res) => {
     try {

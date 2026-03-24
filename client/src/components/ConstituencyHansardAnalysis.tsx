@@ -52,6 +52,7 @@
  */
 
 import { useQuery } from "@tanstack/react-query";
+import { useState, useCallback } from "react";
 import {
   BarChart,
   Bar,
@@ -78,6 +79,8 @@ import {
   Users,
   Activity,
   BarChart2,
+  Download,
+  Loader2,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { PremiumGate } from "@/components/PremiumGate";
@@ -364,6 +367,58 @@ function PreviewBlurRows({ rows }: { rows: PreviewConstituency[] }) {
 
 /** Full table — only rendered (and fetched) when the user is premium */
 function FullTable({ data }: { data: FullConstituency[] }) {
+  // Track which row is currently downloading (by constituency key)
+  const [downloading, setDownloading] = useState<string | null>(null);
+
+  /**
+   * Trigger a PDF download for a single constituency.
+   *
+   * We use fetch() + createObjectURL rather than window.location.href so we
+   * can show per-row loading state and handle errors gracefully.
+   * Session cookies are sent automatically with credentials:"include".
+   *
+   * Security: the server verifies premium subscription on every request via
+   * the requirePremium middleware — client-side state is untrusted.
+   */
+  const handleDownload = useCallback(async (c: FullConstituency) => {
+    const key = `${c.constituency}-${c.state}`;
+    if (downloading === key) return; // prevent double-click
+    setDownloading(key);
+    try {
+      const url =
+        `/api/constituencies/report/download` +
+        `?name=${encodeURIComponent(c.constituency)}` +
+        `&state=${encodeURIComponent(c.state)}`;
+
+      const res = await fetch(url, { credentials: "include" });
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error ?? `HTTP ${res.status}`);
+      }
+
+      // Stream the PDF blob and trigger a browser download
+      const blob = await res.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = objectUrl;
+      // Derive filename from Content-Disposition header, or fall back to slug
+      const cd = res.headers.get("content-disposition") ?? "";
+      const match = cd.match(/filename="([^"]+)"/);
+      anchor.download = match?.[1] ?? `constituency-report.pdf`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      document.body.removeChild(anchor);
+      URL.revokeObjectURL(objectUrl);
+    } catch (err) {
+      console.error("PDF download failed:", err);
+      // Show a brief inline error — no toast dependency needed
+      alert(`Download failed: ${err instanceof Error ? err.message : "Unknown error"}`);
+    } finally {
+      setDownloading(null);
+    }
+  }, [downloading]);
+
   return (
     <Card>
       <CardHeader className="pb-2">
@@ -372,7 +427,8 @@ function FullTable({ data }: { data: FullConstituency[] }) {
           All {data.length} Constituencies — 15th Parliament
         </CardTitle>
         <p className="text-xs text-muted-foreground">
-          Sorted by Hansard speaking participation rate
+          Sorted by Hansard speaking participation rate · Click{" "}
+          <Download className="inline h-3 w-3" /> to download a PDF report
         </p>
       </CardHeader>
       <CardContent className="p-0">
@@ -390,68 +446,93 @@ function FullTable({ data }: { data: FullConstituency[] }) {
                   Speeches
                 </TableHead>
                 <TableHead className="text-right pr-2">Rate</TableHead>
-                <TableHead className="hidden lg:table-cell pr-6">MPs</TableHead>
+                <TableHead className="hidden lg:table-cell">MPs</TableHead>
+                {/* PDF download column — premium feature */}
+                <TableHead className="w-10 pr-4" />
               </TableRow>
             </TableHeader>
             <TableBody>
-              {data.map((c, idx) => (
-                <TableRow
-                  key={`${c.constituency}-${c.state}`}
-                  data-testid={`row-constituency-${idx}`}
-                >
-                  <TableCell className="pl-6 text-muted-foreground">{idx + 1}</TableCell>
-                  <TableCell className="font-medium" data-testid={`text-constituency-${idx}`}>
-                    {c.constituency}
-                  </TableCell>
-                  <TableCell className="hidden md:table-cell">
-                    <Badge variant="outline" data-testid={`badge-state-${idx}`}>
-                      {c.state}
-                    </Badge>
-                  </TableCell>
-                  <TableCell
-                    className="hidden sm:table-cell text-center"
-                    data-testid={`text-sessions-${idx}`}
+              {data.map((c, idx) => {
+                const key = `${c.constituency}-${c.state}`;
+                const isDownloading = downloading === key;
+                return (
+                  <TableRow
+                    key={key}
+                    data-testid={`row-constituency-${idx}`}
                   >
-                    <div className="flex flex-col items-center">
-                      <span className="font-semibold">{c.sessionsSpoke}</span>
-                      <span className="text-xs text-muted-foreground">
-                        of {c.totalSessions}
-                      </span>
-                    </div>
-                  </TableCell>
-                  <TableCell
-                    className="hidden sm:table-cell text-center font-semibold"
-                    data-testid={`text-speeches-${idx}`}
-                  >
-                    <div className="flex items-center justify-center gap-1">
-                      <MessageSquare className="h-3.5 w-3.5 text-muted-foreground" />
-                      {c.totalSpeeches}
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-right pr-2">
-                    <span
-                      className={`text-base font-bold ${rateColour(c.participationRate)}`}
-                      data-testid={`text-rate-${idx}`}
+                    <TableCell className="pl-6 text-muted-foreground">{idx + 1}</TableCell>
+                    <TableCell className="font-medium" data-testid={`text-constituency-${idx}`}>
+                      {c.constituency}
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell">
+                      <Badge variant="outline" data-testid={`badge-state-${idx}`}>
+                        {c.state}
+                      </Badge>
+                    </TableCell>
+                    <TableCell
+                      className="hidden sm:table-cell text-center"
+                      data-testid={`text-sessions-${idx}`}
                     >
-                      {c.participationRate.toFixed(1)}%
-                    </span>
-                  </TableCell>
-                  <TableCell className="hidden lg:table-cell pr-6">
-                    <div className="flex flex-wrap gap-1 max-w-xs">
-                      {c.mpNames.map((name, mi) => (
-                        <Badge
-                          key={mi}
-                          variant="secondary"
-                          className="text-xs"
-                          data-testid={`badge-mp-${idx}-${mi}`}
-                        >
-                          {name}
-                        </Badge>
-                      ))}
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
+                      <div className="flex flex-col items-center">
+                        <span className="font-semibold">{c.sessionsSpoke}</span>
+                        <span className="text-xs text-muted-foreground">
+                          of {c.totalSessions}
+                        </span>
+                      </div>
+                    </TableCell>
+                    <TableCell
+                      className="hidden sm:table-cell text-center font-semibold"
+                      data-testid={`text-speeches-${idx}`}
+                    >
+                      <div className="flex items-center justify-center gap-1">
+                        <MessageSquare className="h-3.5 w-3.5 text-muted-foreground" />
+                        {c.totalSpeeches}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-right pr-2">
+                      <span
+                        className={`text-base font-bold ${rateColour(c.participationRate)}`}
+                        data-testid={`text-rate-${idx}`}
+                      >
+                        {c.participationRate.toFixed(1)}%
+                      </span>
+                    </TableCell>
+                    <TableCell className="hidden lg:table-cell">
+                      <div className="flex flex-wrap gap-1 max-w-xs">
+                        {c.mpNames.map((name, mi) => (
+                          <Badge
+                            key={mi}
+                            variant="secondary"
+                            className="text-xs"
+                            data-testid={`badge-mp-${idx}-${mi}`}
+                          >
+                            {name}
+                          </Badge>
+                        ))}
+                      </div>
+                    </TableCell>
+                    {/* Per-row PDF download button */}
+                    <TableCell className="pr-4 text-right">
+                      <button
+                        onClick={() => handleDownload(c)}
+                        disabled={isDownloading}
+                        title={`Download PDF report for ${c.constituency}`}
+                        className="inline-flex items-center justify-center h-7 w-7 rounded-md text-muted-foreground hover:text-primary hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        data-testid={`btn-download-${idx}`}
+                      >
+                        {isDownloading ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <Download className="h-3.5 w-3.5" />
+                        )}
+                        <span className="sr-only">
+                          Download PDF for {c.constituency}
+                        </span>
+                      </button>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         </div>
