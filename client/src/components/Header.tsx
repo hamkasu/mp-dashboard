@@ -179,6 +179,10 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
                       <BarChart3 className="w-4 h-4 mr-2" />
                       {t('nav.hansardAnalysis')}
                     </DropdownMenuItem>
+                    <DropdownMenuItem onSelect={() => setLocation("/constituency-analysis")} data-testid="submenu-constituency-analysis">
+                      <Sparkles className="w-4 h-4 mr-2 text-primary" />
+                      Constituency Intelligence
+                    </DropdownMenuItem>
                     <DropdownMenuItem onSelect={() => setLocation("/parliamentary-answers")} data-testid="submenu-parliamentary-answers">
                       <MessageSquare className="w-4 h-4 mr-2" />
                       {t('nav.parliamentaryAnswers')}
@@ -445,6 +449,10 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
               <DropdownMenuItem onSelect={() => setLocation("/hansard-analysis")}>
                 <BarChart3 className="w-4 h-4 mr-2" />
                 {t('nav.hansardAnalysis')}
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => setLocation("/constituency-analysis")}>
+                <Sparkles className="w-4 h-4 mr-2 text-primary" />
+                Constituency Intelligence
               </DropdownMenuItem>
               <DropdownMenuItem onSelect={() => setLocation("/parliamentary-answers")}>
                 <MessageSquare className="w-4 h-4 mr-2" />
