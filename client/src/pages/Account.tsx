@@ -326,7 +326,7 @@ function AccountCard() {
 
 export default function Account() {
   const [, setLocation] = useLocation();
-  const { user, isLoading: authLoading } = useAuth();
+  const { user, isPremium, isLoading: authLoading } = useAuth();
 
   // Redirect to login if not authenticated (after loading)
   if (!authLoading && !user) {
@@ -335,8 +335,10 @@ export default function Account() {
   }
 
   const params = new URLSearchParams(window.location.search);
-  const justSubscribed = params.get("subscribed") === "1";
-  const isPending = params.get("pending") === "1";
+  // Only show the success banner when the subscription is actually active in DB
+  const justSubscribed = params.get("subscribed") === "1" && isPremium;
+  // Show pending banner when subscribed=1 but isPremium is still false (payment processing)
+  const isPending = params.get("pending") === "1" || (params.get("subscribed") === "1" && !isPremium && !authLoading);
 
   return (
     <div className="min-h-screen bg-background">
