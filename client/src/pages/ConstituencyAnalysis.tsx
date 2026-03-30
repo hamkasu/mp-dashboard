@@ -149,6 +149,14 @@ export default function ConstituencyAnalysis() {
     staleTime: 60 * 60 * 1000,
   });
 
+  // ── Premium gate ────────────────────────────────────────────────────────
+  // Redirect non-premium users to /pricing. Wait until auth has loaded to
+  // avoid a flash-redirect for users who are already subscribed.
+  if (!authLoading && !isPremium) {
+    setLocation("/pricing");
+    return null;
+  }
+
   const total = preview?.summary?.totalConstituencies ?? 222;
   const avgRate = preview?.summary?.avgParticipationRate ?? 67;
 

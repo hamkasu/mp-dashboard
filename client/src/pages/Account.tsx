@@ -357,9 +357,14 @@ export default function Account() {
         {justSubscribed && (
           <Alert className="mb-6 border-primary/30 bg-primary/5">
             <Sparkles className="h-4 w-4 text-primary" />
-            <AlertDescription className="text-primary font-medium">
-              Welcome to Premium! Your subscription is now active. Enjoy full
-              access to all constituency intelligence features.
+            <AlertDescription className="flex items-center justify-between flex-wrap gap-3">
+              <span className="text-primary font-medium">
+                Welcome to Premium! Your subscription is now active. Enjoy full
+                access to all constituency intelligence features.
+              </span>
+              <Button size="sm" onClick={() => setLocation("/constituency-analysis")} className="shrink-0">
+                Explore Premium Data →
+              </Button>
             </AlertDescription>
           </Alert>
         )}
