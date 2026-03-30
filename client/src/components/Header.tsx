@@ -3,11 +3,13 @@
  * Updated: Consolidated Navigation Menu with Submenus
  */
 
-import { Search, Menu, FileText, BookOpen, UserCheck, Calculator, BarChart3, ExternalLink, AlertCircle, GraduationCap, Scale, Shield, MessageSquare, Gavel, Building2, MessageSquareText, Award, Handshake, ChevronDown, Users, Activity, LayoutDashboard, Settings, UserPlus, UserX, Upload, TrendingUp, Heart, ScrollText, Eye, Briefcase } from "lucide-react";
+import { Search, Menu, FileText, BookOpen, UserCheck, Calculator, BarChart3, ExternalLink, AlertCircle, GraduationCap, Scale, Shield, MessageSquare, Gavel, Building2, MessageSquareText, Award, Handshake, ChevronDown, Users, Activity, LayoutDashboard, Settings, UserPlus, UserX, Upload, TrendingUp, Heart, ScrollText, Eye, Briefcase, LogIn, UserCircle, Sparkles, LogOut } from "lucide-react";
 import { useState } from "react";
 import { FeedbackModal } from "@/components/FeedbackModal";
 import { FundamentalRightsPopup } from "@/components/FundamentalRightsPopup";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/hooks/use-auth";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -35,6 +37,71 @@ import { useLanguage } from "@/i18n/LanguageContext";
 interface HeaderProps {
   onMenuClick?: () => void;
   onSearchClick?: () => void;
+}
+
+// ── Auth button ───────────────────────────────────────────────────────────────
+// Shows "Sign in" when logged out; user name + account/logout dropdown when logged in.
+
+function AuthButton() {
+  const { user, isPremium, isLoading } = useAuth();
+  const qc = useQueryClient();
+  const [, setLocation] = useLocation();
+
+  if (isLoading) return null;
+
+  if (!user) {
+    return (
+      <Button
+        variant="outline"
+        size="sm"
+        className="gap-1"
+        onClick={() => setLocation("/login")}
+        data-testid="button-signin"
+      >
+        <LogIn className="h-4 w-4" />
+        <span className="hidden sm:inline">Sign in</span>
+      </Button>
+    );
+  }
+
+  async function handleLogout() {
+    await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
+    qc.clear();
+    setLocation("/");
+  }
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="outline" size="sm" className="gap-1 max-w-[160px]" data-testid="button-account">
+          <UserCircle className="h-4 w-4 shrink-0" />
+          <span className="hidden sm:inline truncate">{user.name.split(" ")[0]}</span>
+          {isPremium && <Sparkles className="h-3 w-3 text-primary shrink-0" />}
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-44">
+        <DropdownMenuLabel className="truncate text-xs text-muted-foreground font-normal">
+          {user.email}
+        </DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onSelect={() => setLocation("/account")}>
+          <UserCircle className="h-4 w-4 mr-2" />
+          My Account
+        </DropdownMenuItem>
+        {!isPremium && (
+          <DropdownMenuItem onSelect={() => setLocation("/pricing")} className="text-primary">
+            <Sparkles className="h-4 w-4 mr-2" />
+            Upgrade to Premium
+          </DropdownMenuItem>
+        )}
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onSelect={handleLogout} className="text-destructive focus:text-destructive">
+          <LogOut className="h-4 w-4 mr-2" />
+          Sign out
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
 }
 
 export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
@@ -562,6 +629,7 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
               </div>
             </DialogContent>
           </Dialog>
+          <AuthButton />
           <LanguageSwitcher />
         </div>
       </div>
