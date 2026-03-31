@@ -209,12 +209,12 @@ function PlanCard({
     <div
       className={`relative rounded-2xl border p-6 flex flex-col gap-4 transition-shadow ${
         isYearly
-          ? "border-primary shadow-lg bg-primary/5"
-          : "border-border bg-background"
+          ? "border-primary ring-2 ring-primary/20 shadow-md hover:shadow-lg bg-primary/5"
+          : "border-card-border bg-card shadow-sm hover:shadow-md"
       }`}
     >
       {isYearly && (
-        <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground text-xs px-3 py-0.5">
+        <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground text-xs px-4 py-1 shadow-sm">
           Best Value — Save RM 60
         </Badge>
       )}
@@ -314,7 +314,7 @@ export default function Pricing() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-10 max-w-4xl">
+      <div className="container mx-auto px-4 py-12 max-w-4xl">
 
         {/* Back nav */}
         <Button variant="outline" onClick={() => setLocation("/")} className="mb-8">
@@ -352,7 +352,7 @@ export default function Pricing() {
               (label) => (
                 <span
                   key={label}
-                  className="px-3 py-1 rounded-full border border-border bg-muted/40 text-xs font-medium text-muted-foreground"
+                  className="px-3 py-1 rounded-full border border-primary/20 bg-primary/10 text-xs font-medium text-primary"
                 >
                   {label}
                 </span>
@@ -387,7 +387,7 @@ export default function Pricing() {
 
         {/* ── WHY UPGRADE ───────────────────────────────────────────────────── */}
         <div className="mb-16">
-          <h2 className="text-2xl font-bold text-center mb-2">
+          <h2 className="text-2xl font-bold tracking-tight text-center mb-2">
             From Raw Data to Decision-Ready Intelligence
           </h2>
           <p className="text-center text-muted-foreground mb-8">
@@ -395,7 +395,7 @@ export default function Pricing() {
           </p>
 
           <div className="grid sm:grid-cols-2 gap-4 mb-6">
-            <div className="rounded-xl border border-border bg-muted/30 p-6">
+            <div className="rounded-xl border border-card-border bg-card shadow-2xs p-6">
               <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">
                 Without Premium
               </p>
@@ -403,7 +403,7 @@ export default function Pricing() {
                 Browse MP profiles and read individual Hansard entries. Good for a quick lookup.
               </p>
             </div>
-            <div className="rounded-xl border border-primary/40 bg-primary/5 p-6">
+            <div className="rounded-xl border border-primary/50 bg-primary/5 shadow-sm p-6">
               <p className="text-xs font-semibold uppercase tracking-widest text-primary mb-3">
                 With Premium
               </p>
@@ -424,7 +424,7 @@ export default function Pricing() {
 
         {/* ── PREMIUM FEATURES ──────────────────────────────────────────────── */}
         <div className="mb-16">
-          <h2 className="text-2xl font-bold text-center mb-2">
+          <h2 className="text-2xl font-bold tracking-tight text-center mb-2">
             Everything Serious Research Requires
           </h2>
           <p className="text-center text-muted-foreground mb-8">Six capabilities, all included.</p>
@@ -433,10 +433,10 @@ export default function Pricing() {
             {CAPABILITIES.map(({ icon: Icon, title, description, badge }) => (
               <div
                 key={title}
-                className="rounded-xl border border-border bg-background p-5 flex flex-col gap-3"
+                className="rounded-xl border border-card-border bg-card shadow-2xs hover-elevate p-5 flex flex-col gap-3"
               >
                 <div className="flex items-center gap-3">
-                  <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-primary/10 shrink-0">
+                  <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-primary/10 shrink-0">
                     <Icon className="h-5 w-5 text-primary" />
                   </div>
                   <div className="flex items-center gap-2 flex-wrap">
@@ -461,7 +461,7 @@ export default function Pricing() {
 
         {/* ── SAMPLE OUTPUTS ────────────────────────────────────────────────── */}
         <div className="mb-16">
-          <h2 className="text-2xl font-bold text-center mb-2">
+          <h2 className="text-2xl font-bold tracking-tight text-center mb-2">
             What Premium Research Actually Looks Like
           </h2>
           <p className="text-center text-muted-foreground mb-8">
@@ -470,7 +470,7 @@ export default function Pricing() {
 
           <div className="space-y-4">
             {SAMPLE_OUTPUTS.map(({ role, question, result }) => (
-              <div key={role} className="rounded-xl border border-border bg-background p-6">
+              <div key={role} className="rounded-xl border border-border border-l-2 border-l-primary bg-card shadow-2xs px-6 py-5">
                 <p className="text-xs font-semibold uppercase tracking-widest text-primary mb-3">
                   {role}
                 </p>
@@ -488,7 +488,7 @@ export default function Pricing() {
 
         {/* ── WHO IT'S FOR ──────────────────────────────────────────────────── */}
         <div className="mb-16">
-          <h2 className="text-2xl font-bold text-center mb-2">
+          <h2 className="text-2xl font-bold tracking-tight text-center mb-2">
             Built for People Who Work with Political Information Professionally
           </h2>
           <p className="text-center text-muted-foreground mb-8">
@@ -499,9 +499,9 @@ export default function Pricing() {
             {AUDIENCES.map(({ icon: Icon, title, description }) => (
               <div
                 key={title}
-                className="rounded-xl border border-border bg-background p-5 flex gap-4"
+                className="rounded-xl border border-card-border bg-card shadow-2xs hover-elevate p-5 flex gap-4"
               >
-                <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-primary/10 shrink-0 mt-0.5">
+                <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-primary/10 shrink-0 mt-0.5">
                   <Icon className="h-5 w-5 text-primary" />
                 </div>
                 <div>
@@ -517,7 +517,7 @@ export default function Pricing() {
 
         {/* ── PLAN CARDS ────────────────────────────────────────────────────── */}
         <div id="pricing-plans" className="mb-16">
-          <h2 className="text-2xl font-bold text-center mb-2">Simple Pricing. Cancel Anytime.</h2>
+          <h2 className="text-2xl font-bold tracking-tight text-center mb-2">Simple Pricing. Cancel Anytime.</h2>
           <p className="text-center text-muted-foreground mb-8">
             One tier. Full access. No feature tiers, no usage limits.
           </p>
@@ -554,18 +554,24 @@ export default function Pricing() {
 
         {/* ── TRUST SIGNALS ─────────────────────────────────────────────────── */}
         <div className="grid sm:grid-cols-3 gap-6 text-center text-sm text-muted-foreground mb-16">
-          <div className="flex flex-col items-center gap-2">
-            <Shield className="h-6 w-6 text-primary" />
+          <div className="flex flex-col items-center gap-3">
+            <div className="flex items-center justify-center w-11 h-11 rounded-full bg-primary/10">
+              <Shield className="h-5 w-5 text-primary" />
+            </div>
             <p className="font-medium text-foreground">Secure Payment</p>
             <p>Processed via Billplz — Malaysia's trusted payment gateway</p>
           </div>
-          <div className="flex flex-col items-center gap-2">
-            <Check className="h-6 w-6 text-primary" />
+          <div className="flex flex-col items-center gap-3">
+            <div className="flex items-center justify-center w-11 h-11 rounded-full bg-primary/10">
+              <Check className="h-5 w-5 text-primary" />
+            </div>
             <p className="font-medium text-foreground">Cancel Anytime</p>
             <p>No lock-in. Cancel before renewal and you won't be charged again</p>
           </div>
-          <div className="flex flex-col items-center gap-2">
-            <Sparkles className="h-6 w-6 text-primary" />
+          <div className="flex flex-col items-center gap-3">
+            <div className="flex items-center justify-center w-11 h-11 rounded-full bg-primary/10">
+              <Sparkles className="h-5 w-5 text-primary" />
+            </div>
             <p className="font-medium text-foreground">Instant Access</p>
             <p>Premium data unlocked immediately after payment confirmation</p>
           </div>
@@ -575,12 +581,12 @@ export default function Pricing() {
 
         {/* ── FAQ ───────────────────────────────────────────────────────────── */}
         <div className="mb-16">
-          <h2 className="text-2xl font-bold text-center mb-8">Common Questions</h2>
-          <div>
+          <h2 className="text-2xl font-bold tracking-tight text-center mb-8">Common Questions</h2>
+          <div className="max-w-2xl mx-auto">
             {FAQS.map(({ q, a }, i) => (
               <div key={q}>
                 {i > 0 && <Separator />}
-                <div className="py-5">
+                <div className="py-6">
                   <p className="font-semibold text-sm mb-2">{q}</p>
                   <p className="text-sm text-muted-foreground leading-relaxed">{a}</p>
                 </div>
@@ -592,8 +598,8 @@ export default function Pricing() {
         <Separator className="mb-16" />
 
         {/* ── FINAL CTA ─────────────────────────────────────────────────────── */}
-        <div className="text-center mb-10">
-          <h2 className="text-2xl font-bold mb-3">Start Researching Smarter</h2>
+        <div className="rounded-2xl border border-border bg-muted/30 px-6 sm:px-10 py-10 text-center mb-10">
+          <h2 className="text-2xl font-bold tracking-tight mb-3">Start Researching Smarter</h2>
           <p className="text-muted-foreground mb-6 max-w-xl mx-auto">
             Join journalists, researchers, and political professionals who use MyParliament Premium
             to work faster and publish with confidence.
