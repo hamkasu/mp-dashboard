@@ -21,7 +21,7 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
 import {
-  ArrowLeft, Check, Loader2, Sparkles, Shield, TestTube,
+  ArrowLeft, Check, Loader2, Sparkles, Shield, TestTube, TrendingUp,
   BarChart3, MapPin, ArrowLeftRight, FileText, Bell, BookOpen,
   Newspaper, GraduationCap, Target, Building2,
 } from "lucide-react";
@@ -100,28 +100,59 @@ const CAPABILITIES = [
   },
 ] as const;
 
-// ── Sample output scenarios ───────────────────────────────────────────────────
+// ── Preview cards (What You Get) ─────────────────────────────────────────────
 
-const SAMPLE_OUTPUTS = [
+const PREVIEW_CARDS = [
   {
-    role: "Journalist on deadline",
-    question:
-      "Which Klang Valley MPs spoke most on housing policy this session — and how does that compare to the previous term?",
-    result:
-      "A ranked breakdown, session comparison, and an exportable table ready for publication.",
+    icon: MapPin,
+    title: "Constituency Report",
+    caption: "Full breakdown for any of Malaysia's 222 parliamentary seats.",
+    highlights: [
+      "Hansard contribution count by session",
+      "MP performance vs constituency expectation score",
+      "Downloadable PDF in one click",
+    ],
   },
   {
-    role: "Campaign team doing opposition research",
-    question:
-      "How does our candidate's parliamentary record compare to the incumbent across the same constituency?",
-    result:
-      "The alignment score, participation delta, and speech trend — in a shareable PDF.",
+    icon: ArrowLeftRight,
+    title: "MP Comparison Dashboard",
+    caption: "Place any two MPs side-by-side across the same metrics.",
+    highlights: [
+      "Speech frequency, attendance rate, and voting alignment",
+      "Session-by-session trend comparison",
+      "Exportable comparison table",
+    ],
   },
   {
-    role: "Policy researcher tracking a bill",
-    question:
-      "Which MPs have consistently spoken on education reform across multiple sessions?",
-    result: "A cross-session participant list, filtered and exported in minutes.",
+    icon: TrendingUp,
+    title: "Trend & Performance View",
+    caption: "Track how an MP's activity evolves across parliamentary terms.",
+    highlights: [
+      "Participation rate across all available sessions",
+      "Topic focus areas and keyword trends",
+      "Flags when activity drops below historical average",
+    ],
+  },
+  {
+    icon: Bell,
+    title: "Watchlist & Alerts",
+    badge: "Coming Soon",
+    caption: "Monitor MPs, constituencies, or topics without checking manually.",
+    highlights: [
+      "Add any MP or constituency to a personal watchlist",
+      "Get notified on new speeches or attendance changes",
+      "Set activity thresholds for instant alerts",
+    ],
+  },
+  {
+    icon: FileText,
+    title: "Export & Report Builder",
+    caption: "Turn any view into a shareable, presentation-ready document.",
+    highlights: [
+      "PDF export with clean, structured layout",
+      "CSV download for analysis in Excel or R",
+      "Share links for collaborative research",
+    ],
   },
 ] as const;
 
@@ -550,16 +581,36 @@ export default function Pricing() {
             Not just more data — structured outputs you can use immediately.
           </p>
 
-          <div className="space-y-4">
-            {SAMPLE_OUTPUTS.map(({ role, question, result }) => (
-              <div key={role} className="rounded-xl border border-border border-l-2 border-l-primary bg-card shadow-2xs px-6 py-5">
-                <p className="text-xs font-semibold uppercase tracking-widest text-primary mb-3">
-                  {role}
-                </p>
-                <p className="text-sm text-muted-foreground italic mb-3">"{question}"</p>
-                <div className="flex items-start gap-2 text-sm">
-                  <Check className="h-4 w-4 text-primary mt-0.5 shrink-0" />
-                  <span>{result}</span>
+          <div className="grid sm:grid-cols-2 gap-4">
+            {PREVIEW_CARDS.map(({ icon: Icon, title, caption, highlights, badge }) => (
+              <div
+                key={title}
+                className="rounded-xl border border-card-border bg-card shadow-2xs overflow-hidden flex flex-col"
+              >
+                {/* Chrome header */}
+                <div className="flex items-center gap-2.5 px-4 py-3 bg-muted/50 border-b border-card-border">
+                  <div className="flex items-center justify-center w-6 h-6 rounded-md bg-primary/10 shrink-0">
+                    <Icon className="h-3.5 w-3.5 text-primary" />
+                  </div>
+                  <span className="text-xs font-semibold flex-1">{title}</span>
+                  {badge && (
+                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 text-muted-foreground">
+                      {badge}
+                    </Badge>
+                  )}
+                </div>
+
+                {/* Card body */}
+                <div className="px-4 py-4 flex flex-col gap-3 flex-1">
+                  <p className="text-sm text-muted-foreground leading-snug">{caption}</p>
+                  <ul className="space-y-1.5">
+                    {highlights.map((h) => (
+                      <li key={h} className="flex items-start gap-2 text-xs">
+                        <Check className="h-3.5 w-3.5 text-primary mt-0.5 shrink-0" />
+                        <span>{h}</span>
+                      </li>
+                    ))}
+                  </ul>
                 </div>
               </div>
             ))}
