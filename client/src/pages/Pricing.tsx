@@ -271,7 +271,6 @@ interface PlanCardProps {
   plan: SubscriptionPlan;
   isCurrentPlan: boolean;
   isPremium: boolean;
-  isLoggedIn: boolean;
   onSelect: (slug: string) => void;
   isPending: boolean;
   pendingSlug: string | null;
@@ -281,7 +280,6 @@ function PlanCard({
   plan,
   isCurrentPlan,
   isPremium,
-  isLoggedIn,
   onSelect,
   isPending,
   pendingSlug,
@@ -353,7 +351,7 @@ function PlanCard({
       ) : (
         <Button
           className="w-full"
-          variant={isYearly ? "default" : "default"}
+          variant="default"
           onClick={() => onSelect(plan.slug)}
           disabled={isPending}
         >
@@ -478,7 +476,6 @@ export default function Pricing() {
             <br className="hidden sm:block" /> Intelligence Platform
           </h1>
           <p className="text-muted-foreground text-lg max-w-2xl mx-auto mb-8">
-            For journalists, researchers, campaign teams, and policy analysts who need more than headlines.
             MyParliament Premium gives you structured access to every speech, vote, attendance record, and
             constituency performance metric — organised for research, formatted for reporting, ready to act on.
           </p>
@@ -542,7 +539,7 @@ export default function Pricing() {
           </h2>
           <p className="text-center text-muted-foreground mb-8">Six capabilities, all included.</p>
 
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-4">
             {CAPABILITIES.map(({ icon: Icon, title, description, badge }) => (
               <div
                 key={title}
@@ -622,7 +619,7 @@ export default function Pricing() {
         {/* ── WHO IT'S FOR ──────────────────────────────────────────────────── */}
         <div className="mb-16">
           <h2 className="text-2xl font-bold tracking-tight text-center mb-2">
-            Built for People Who Work with Political Information Professionally
+            Built for Political Professionals
           </h2>
           <p className="text-center text-muted-foreground mb-8">
             If you've ever exported a Hansard PDF manually, this was made for you.
@@ -675,7 +672,6 @@ export default function Pricing() {
                     plan={plan}
                     isCurrentPlan={currentPlanSlug === plan.slug}
                     isPremium={status?.isPremium ?? false}
-                    isLoggedIn={isLoggedIn}
                     onSelect={handleSelectPlan}
                     isPending={checkout.isPending}
                     pendingSlug={checkout.isPending ? (checkout.variables?.planSlug ?? null) : null}
@@ -708,7 +704,7 @@ export default function Pricing() {
               <Check className="h-5 w-5 text-primary" />
             </div>
             <p className="font-medium text-foreground">Cancel Anytime</p>
-            <p>No lock-in. Cancel before renewal and you won't be charged again</p>
+            <p>No lock-in. Your access continues until the billing period ends</p>
           </div>
           <div className="flex flex-col items-center gap-3">
             <div className="flex items-center justify-center w-11 h-11 rounded-full bg-primary/10">
@@ -746,13 +742,10 @@ export default function Pricing() {
             Join journalists, researchers, and political professionals who use MyParliament Premium
             to work faster and publish with confidence.
           </p>
-          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+          <div className="flex justify-center">
             <Button size="lg" onClick={scrollToPricing}>
               <Sparkles className="h-4 w-4 mr-2" />
               Get Premium Access
-            </Button>
-            <Button size="lg" variant="outline" onClick={scrollToPricing}>
-              View Pricing Options
             </Button>
           </div>
           <p className="text-xs text-muted-foreground mt-4">
