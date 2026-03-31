@@ -35,14 +35,25 @@ import {
 } from "@/hooks/use-subscription";
 import { useAuth } from "@/hooks/use-auth";
 
-// ── Plan card feature bullets ─────────────────────────────────────────────────
+// ── Free tier features (static display card — no API backing) ────────────────
+
+const FREE_FEATURES = [
+  "MP profiles — name, party, constituency",
+  "Recent speeches (current session only)",
+  "Attendance overview for active MPs",
+  "Public voting records",
+  "Basic Hansard search",
+];
+
+// ── Premium plan feature bullets ──────────────────────────────────────────────
 
 const PLAN_FEATURES = [
-  "Full MP intelligence across all sessions",
-  "Complete 222-constituency Hansard analysis",
-  "MP and constituency comparison tools",
-  "PDF report generation and CSV export",
-  "Alerts and watchlists (coming soon)",
+  "Full MP intelligence — every session, every metric",
+  "All 222 constituency Hansard analyses",
+  "MP vs MP and constituency comparisons",
+  "PDF report generation",
+  "CSV data export",
+  "Alerts & watchlists (coming soon)",
   "Saved research workspace (coming soon)",
 ];
 
@@ -172,6 +183,57 @@ const FAQS = [
   },
 ] as const;
 
+// ── FreeTierCard ──────────────────────────────────────────────────────────────
+
+function FreeTierCard({
+  isLoggedIn,
+  isPremium,
+  onSignup,
+}: {
+  isLoggedIn: boolean;
+  isPremium: boolean;
+  onSignup: () => void;
+}) {
+  return (
+    <div className="relative rounded-2xl border border-card-border bg-card shadow-sm p-6 flex flex-col gap-4">
+      <div>
+        <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-1">
+          Free
+        </p>
+        <div className="flex items-baseline gap-1">
+          <span className="text-4xl font-bold">RM 0</span>
+          <span className="text-sm text-muted-foreground">/forever</span>
+        </div>
+        <p className="text-xs text-muted-foreground mt-1">No credit card required</p>
+      </div>
+
+      {isLoggedIn && !isPremium ? (
+        <Button variant="outline" className="w-full" disabled>
+          <Check className="h-4 w-4 mr-2" />
+          Your current plan
+        </Button>
+      ) : isPremium ? (
+        <Button variant="outline" className="w-full" disabled>
+          Included with Premium
+        </Button>
+      ) : (
+        <Button variant="outline" className="w-full" onClick={onSignup}>
+          Get started free
+        </Button>
+      )}
+
+      <ul className="space-y-2 text-sm">
+        {FREE_FEATURES.map((f) => (
+          <li key={f} className="flex items-start gap-2">
+            <Check className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+            <span className="text-muted-foreground">{f}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 // ── PlanCard ──────────────────────────────────────────────────────────────────
 
 interface PlanCardProps {
@@ -197,30 +259,47 @@ function PlanCard({
   const isLoading = isPending && pendingSlug === plan.slug;
 
   const price = formatMyr(plan.priceMyr);
-  const period = plan.interval === "month" ? "/month" : "/year";
+  const period = isYearly ? "/year" : "/month";
 
   // Per-day equivalent (30-day month for monthly, 365-day year for annual)
   const perDay = formatMyr(Math.round(plan.priceMyr / (isYearly ? 365 : 30)));
 
-  // Yearly card extras
+  // Yearly: show monthly equivalent
   const monthlyEquiv = isYearly ? formatMyr(Math.round(plan.priceMyr / 12)) : null;
+
+  // CTA label
+  const ctaLabel = isYearly ? "Start Annual Plan" : "Get Premium Access";
 
   return (
     <div
       className={`relative rounded-2xl border p-6 flex flex-col gap-4 transition-shadow ${
         isYearly
           ? "border-primary ring-2 ring-primary/20 shadow-md hover:shadow-lg bg-primary/5"
-          : "border-card-border bg-card shadow-sm hover:shadow-md"
+          : "border-border shadow-sm hover:shadow-md bg-card"
       }`}
     >
-      {isYearly && (
+      {/* Per-plan badge */}
+      {isYearly ? (
         <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground text-xs px-4 py-1 shadow-sm">
           Best Value — Save RM 60
+        </Badge>
+      ) : (
+        <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-foreground text-background text-xs px-4 py-1 shadow-sm">
+          Most Popular
         </Badge>
       )}
 
       <div>
-        <p className="text-sm text-muted-foreground mb-1">{plan.name}</p>
+        {/* Tier + interval label */}
+        <div className="flex items-center gap-1.5 mb-1">
+          <span className="text-xs font-semibold uppercase tracking-widest text-primary">
+            Premium
+          </span>
+          <span className="text-xs text-muted-foreground">·</span>
+          <span className="text-xs text-muted-foreground">
+            {isYearly ? "Annual" : "Monthly"}
+          </span>
+        </div>
         <div className="flex items-baseline gap-1">
           <span className="text-4xl font-bold">{price}</span>
           <span className="text-sm text-muted-foreground">{period}</span>
@@ -243,7 +322,7 @@ function PlanCard({
       ) : (
         <Button
           className="w-full"
-          variant={isYearly ? "default" : "outline"}
+          variant={isYearly ? "default" : "default"}
           onClick={() => onSelect(plan.slug)}
           disabled={isPending}
         >
@@ -255,20 +334,23 @@ function PlanCard({
           ) : (
             <>
               <Sparkles className="h-4 w-4 mr-2" />
-              {isLoggedIn ? `Get ${plan.name}` : `Subscribe — ${plan.name}`}
+              {ctaLabel}
             </>
           )}
         </Button>
       )}
 
-      <ul className="space-y-2 text-sm">
-        {PLAN_FEATURES.map((f) => (
-          <li key={f} className="flex items-start gap-2">
-            <Check className="h-4 w-4 text-primary mt-0.5 shrink-0" />
-            <span>{f}</span>
-          </li>
-        ))}
-      </ul>
+      <div>
+        <p className="text-xs font-medium text-muted-foreground mb-2">Everything in Free, plus:</p>
+        <ul className="space-y-2 text-sm">
+          {PLAN_FEATURES.map((f) => (
+            <li key={f} className="flex items-start gap-2">
+              <Check className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+              <span>{f}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
     </div>
   );
 }
@@ -517,34 +599,43 @@ export default function Pricing() {
 
         {/* ── PLAN CARDS ────────────────────────────────────────────────────── */}
         <div id="pricing-plans" className="mb-16">
-          <h2 className="text-2xl font-bold tracking-tight text-center mb-2">Simple Pricing. Cancel Anytime.</h2>
-          <p className="text-center text-muted-foreground mb-8">
-            One tier. Full access. No feature tiers, no usage limits.
+          <h2 className="text-2xl font-bold tracking-tight text-center mb-2">
+            Simple, Honest Pricing
+          </h2>
+          <p className="text-center text-muted-foreground mb-10">
+            Start free. Upgrade when you're ready. Cancel anytime.
           </p>
 
           {plansLoading ? (
             <div className="flex justify-center py-12">
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
             </div>
-          ) : plans && plans.length > 0 ? (
-            <div className="grid sm:grid-cols-2 gap-6 mb-6">
-              {plans.map((plan) => (
-                <PlanCard
-                  key={plan.slug}
-                  plan={plan}
-                  isCurrentPlan={currentPlanSlug === plan.slug}
-                  isPremium={status?.isPremium ?? false}
-                  isLoggedIn={isLoggedIn}
-                  onSelect={handleSelectPlan}
-                  isPending={checkout.isPending}
-                  pendingSlug={checkout.isPending ? (checkout.variables?.planSlug ?? null) : null}
-                />
-              ))}
-            </div>
           ) : (
-            <p className="text-center text-muted-foreground py-12">
-              No plans available. Please check back soon.
-            </p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-6">
+              <FreeTierCard
+                isLoggedIn={isLoggedIn}
+                isPremium={status?.isPremium ?? false}
+                onSignup={() => setLocation("/login")}
+              />
+              {plans && plans.length > 0 ? (
+                plans.map((plan) => (
+                  <PlanCard
+                    key={plan.slug}
+                    plan={plan}
+                    isCurrentPlan={currentPlanSlug === plan.slug}
+                    isPremium={status?.isPremium ?? false}
+                    isLoggedIn={isLoggedIn}
+                    onSelect={handleSelectPlan}
+                    isPending={checkout.isPending}
+                    pendingSlug={checkout.isPending ? (checkout.variables?.planSlug ?? null) : null}
+                  />
+                ))
+              ) : (
+                <p className="text-center text-muted-foreground py-12 md:col-span-2">
+                  No plans available. Please check back soon.
+                </p>
+              )}
+            </div>
           )}
 
           <p className="text-center text-sm text-muted-foreground">
