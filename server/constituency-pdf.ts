@@ -189,7 +189,7 @@ function buildContentStream(
     : '15th Parliament';
   text(codeStr, MG, 108, 'F1', 8.5, C.label);
   text(p.constituency, MG, 128, 'F2', 22, C.body);
-  text(`${p.state}  |  15th Parliament (2022–2027)`, MG, 158, 'F1', 11, C.medium);
+  text(`${p.state}  |  15th Parliament (2022-2027)`, MG, 158, 'F1', 11, C.medium);
 
   hline(MG, 175, PW - MG);
 
@@ -202,7 +202,7 @@ function buildContentStream(
     mpY += 18;
   } else {
     for (const name of p.mpNames.slice(0, 6)) {
-      text(`\u2022 ${name}`, MG, mpY, 'F1', 11, C.body);
+      text(`- ${name}`, MG, mpY, 'F1', 11, C.body);
       mpY += 17;
     }
   }

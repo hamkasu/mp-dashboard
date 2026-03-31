@@ -2020,7 +2020,8 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
           if (matched) {
             profile = {
               parliamentCode: matched.parliamentCode ?? null,
-              povertyIncidence: matched.povertyIncidence ?? null,
+              // DB stores poverty incidence as integer tenths (179 = 17.9%); divide before display
+              povertyIncidence: matched.povertyIncidence != null ? matched.povertyIncidence / 10 : null,
             };
           }
         } catch {
