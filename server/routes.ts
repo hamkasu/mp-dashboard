@@ -45,7 +45,7 @@ import { MPNameMatcher } from "./mp-name-matcher";
 import { runHansardSync } from "./hansard-cron";
 import { HansardPdfParser } from "./hansard-pdf-parser";
 import { MemoryCache, startCacheCleanup } from "./cache";
-import { db } from "./db";
+import { db, pool } from "./db";
 import { eq, sql } from "drizzle-orm";
 import { normalizeParliamentTerm } from "@shared/utils";
 import { jobTracker } from "./job-tracker";
@@ -10572,6 +10572,41 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   });
 
   // ── Public API v1 ──────────────────────────────────────────────────────────
+
+  /**
+   * Derive the parliamentary coalition from the MP's party abbreviation.
+   * Returns null when the party cannot be mapped to a known coalition.
+   */
+  function deriveCoalition(party: string): string | null {
+    const p = (party ?? "").toUpperCase().trim();
+    // Pakatan Harapan
+    if (["PH", "PKR", "DAP", "AMANAH"].includes(p)) return "PH";
+    // Perikatan Nasional
+    if (["PN", "BERSATU", "PAS", "GERAKAN"].includes(p)) return "PN";
+    // Barisan Nasional
+    if (["BN", "UMNO", "MCA", "MIC"].includes(p)) return "BN";
+    // Gabungan Parti Sarawak
+    if (["GPS", "PBB", "SUPP", "PRS", "PDP", "PPBB"].includes(p)) return "GPS";
+    // Gabungan Rakyat Sabah
+    if (["GRS", "UPKO", "PBRS", "KKDP", "SAPP"].includes(p)) return "GRS";
+    // Parti Solidariti Bersama (Sarawak independent bloc)
+    if (["PSB"].includes(p)) return "PSB";
+    return null;
+  }
+
+  /**
+   * Map an overall score (0–100 or null) to the Skor Prestasi tier label.
+   */
+  function scoreTier(score: number | null): string {
+    if (score === null || score === undefined) return "unscored";
+    if (score >= 75) return "excellent";
+    if (score >= 50) return "good";
+    if (score >= 25) return "average";
+    if (score > 0)   return "poor";
+    return "unscored";
+  }
+
+  // ── GET /api/v1/ping ────────────────────────────────────────────────────────
   // Auth smoke-test: confirms the key is valid and returns current usage stats.
   app.get("/api/v1/ping", requireApiKey(), (req, res) => {
     const client = req.apiClient!;
@@ -10582,6 +10617,199 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       calls_today: client.calls_today,
       daily_limit: client.daily_limit,
     });
+  });
+
+  // ── GET /api/v1/mp/:p_number ────────────────────────────────────────────────
+  // Full MP profile. Salary block gated behind starter tier and above.
+  //
+  // p_number format: P followed by exactly 3 digits  (e.g. P063, P001, P222)
+  //
+  // Tier rules:
+  //   free               → full profile EXCEPT salary block (omitted entirely)
+  //   starter and above  → salary block included
+  //
+  // Data sources for each section:
+  //   mps                        → identity, attendance, allowances
+  //   mp_report_cards            → skor_prestasi scores (LEFT JOIN — may not exist)
+  //   court_cases                → integrity / active cases (LEFT JOIN)
+  //   parliamentary_oral_answers → oral questions asked (LEFT JOIN)
+  //   parliamentary_questions    → written questions logged (LEFT JOIN)
+  app.get("/api/v1/mp/:p_number", requireApiKey(), async (req, res) => {
+    // 1. Validate p_number format
+    const { p_number } = req.params;
+    if (!/^P\d{3}$/.test(p_number)) {
+      return res.status(400).json({
+        error: "invalid_p_number",
+        message: `p_number must match ^P\\d{3}$ — three digits after 'P' (e.g. P063). Received: '${p_number}'`,
+        p_number,
+      });
+    }
+
+    if (!pool) {
+      return res.status(503).json({ error: "service_unavailable", message: "Database not available" });
+    }
+
+    try {
+      // 2. Single query — MP row + LEFT JOINed aggregates from four related tables.
+      //    court_cases: count non-terminal statuses as "active".
+      //    parliamentary_oral_answers: oral questions posed by this MP.
+      //    parliamentary_questions: written/other questions logged for this MP.
+      //    mp_report_cards: performance scores (may be absent for some MPs).
+      const { rows } = await pool.query<{
+        id: string;
+        name: string;
+        party: string;
+        parliament_code: string;
+        constituency: string;
+        state: string;
+        days_attended: number;
+        total_parliament_days: number;
+        mp_allowance: number;
+        minister_salary: number;
+        is_minister: boolean;
+        overall_score: number | null;
+        attendance_score: number | null;
+        participation_score: number | null;
+        conduct_score: number | null;
+        score_updated_at: Date | null;
+        active_court_cases: number;
+        questions_oral: number;
+        questions_written: number;
+      }>(`
+        SELECT
+          m.id,
+          m.name,
+          m.party,
+          m.parliament_code,
+          m.constituency,
+          m.state,
+          m.days_attended,
+          m.total_parliament_days,
+          m.mp_allowance,
+          m.minister_salary,
+          m.is_minister,
+
+          rc.overall_score,
+          rc.attendance_score,
+          rc.participation_score,
+          rc.conduct_score,
+          rc.updated_at          AS score_updated_at,
+
+          COALESCE(cc.active_cases, 0)::int  AS active_court_cases,
+          COALESCE(oa.oral_count,   0)::int  AS questions_oral,
+          COALESCE(pq.written_count,0)::int  AS questions_written
+
+        FROM mps m
+
+        LEFT JOIN mp_report_cards rc
+               ON rc.mp_id = m.id
+
+        LEFT JOIN (
+          SELECT mp_id, COUNT(*)::int AS active_cases
+          FROM   court_cases
+          WHERE  status NOT IN (
+                   'dismissed','acquitted','discharged',
+                   'closed','completed','settled','withdrawn'
+                 )
+          GROUP  BY mp_id
+        ) cc ON cc.mp_id = m.id
+
+        LEFT JOIN (
+          SELECT questioner_mp_id, COUNT(*)::int AS oral_count
+          FROM   parliamentary_oral_answers
+          GROUP  BY questioner_mp_id
+        ) oa ON oa.questioner_mp_id = m.id
+
+        LEFT JOIN (
+          SELECT mp_id, COUNT(*)::int AS written_count
+          FROM   parliamentary_questions
+          GROUP  BY mp_id
+        ) pq ON pq.mp_id = m.id
+
+        WHERE m.parliament_code = $1
+        LIMIT 1
+      `, [p_number]);
+
+      // 3. 404 if not found
+      if (rows.length === 0) {
+        return res.status(404).json({ error: "MP not found", p_number });
+      }
+
+      const mp = rows[0];
+
+      // 4. Derived values
+      const composite    = mp.overall_score     ?? null;
+      const attPct       = mp.total_parliament_days > 0
+        ? Math.round((mp.days_attended / mp.total_parliament_days) * 100)
+        : 0;
+      const qTotal       = mp.questions_oral + mp.questions_written;
+      const estMonthly   = (mp.mp_allowance ?? 0) + (mp.minister_salary ?? 0);
+
+      // 5. Tier gate — salary block visible to starter and above
+      const SALARY_TIERS = ["starter", "professional", "research", "intelligence"];
+      const showSalary   = SALARY_TIERS.includes(req.apiClient!.tier);
+
+      // 6. Build response
+      const response: Record<string, unknown> = {
+        p_number,
+        name:         mp.name,
+        constituency: mp.constituency,
+        state:        mp.state,
+        party:        mp.party,
+        coalition:    deriveCoalition(mp.party),
+
+        skor_prestasi: {
+          composite,
+          attendance_score: mp.attendance_score  ?? null,
+          questions_score:  mp.participation_score ?? null,
+          integrity_score:  mp.conduct_score      ?? null,
+          tier:             scoreTier(composite),
+          score_updated_at: mp.score_updated_at
+            ? new Date(mp.score_updated_at).toISOString()
+            : null,
+        },
+
+        attendance: {
+          sessions_attended: mp.days_attended,
+          total_sessions:    mp.total_parliament_days,
+          attendance_pct:    attPct,
+        },
+
+        parliamentary_activity: {
+          questions_oral:    mp.questions_oral,
+          questions_written: mp.questions_written,
+          questions_total:   qTotal,
+        },
+
+        integrity: {
+          active_court_cases: mp.active_court_cases,
+          integrity_flag:     mp.active_court_cases > 0,
+          notes:              [],
+        },
+
+        meta: {
+          data_sources: ["parlimen.gov.my", "SPRM", "DOSM Census 2020"],
+          last_updated: new Date().toISOString(),
+          api_version:  "v1",
+        },
+      };
+
+      if (showSalary) {
+        response.salary = {
+          base_monthly:             16000,
+          fixed_allowance:          12700,
+          estimated_monthly_total:  estMonthly,
+          estimated_annual_total:   estMonthly * 12,
+          currency:                 "MYR",
+        };
+      }
+
+      return res.json(response);
+
+    } catch (err: any) {
+      console.error("[GET /api/v1/mp] Error:", err);
+      return res.status(500).json({ error: "internal_error", message: "Failed to fetch MP profile" });
+    }
   });
 
   // Server is now passed in from index.ts, no need to create it here
