@@ -4,6 +4,7 @@
 
 import type { Express, Request, Response, NextFunction } from "express";
 import type { Server } from "http";
+import { requireApiKey } from "./middleware/api-key-auth";
 import { storage, seedDatabase } from "./storage";
 import { z } from "zod";
 import multer from "multer";
@@ -10568,6 +10569,19 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       console.error("Error refreshing bills to watch:", error);
       res.status(500).json({ error: "Failed to refresh bills to watch", details: error.message });
     }
+  });
+
+  // ── Public API v1 ──────────────────────────────────────────────────────────
+  // Auth smoke-test: confirms the key is valid and returns current usage stats.
+  app.get("/api/v1/ping", requireApiKey(), (req, res) => {
+    const client = req.apiClient!;
+    res.json({
+      status: "ok",
+      client: client.client_name,
+      tier: client.tier,
+      calls_today: client.calls_today,
+      daily_limit: client.daily_limit,
+    });
   });
 
   // Server is now passed in from index.ts, no need to create it here

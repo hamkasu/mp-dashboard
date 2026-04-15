@@ -35,7 +35,8 @@
     "count-questions-by-mp": "tsx scripts/count-questions-by-mp.ts",
     "update-deceased-mp": "tsx scripts/update-deceased-mp.ts",
     "regenerate-report-cards": "tsx scripts/regenerate-report-cards.ts",
-    "import-election-results": "tsx scripts/import-election-results.ts"
+    "import-election-results": "tsx scripts/import-election-results.ts",
+    "generate-key": "tsx scripts/generate-api-key.ts"
   },
   "dependencies": {
     "@google/genai": "^1.30.0",
