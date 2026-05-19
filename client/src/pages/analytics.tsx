@@ -347,7 +347,6 @@ export default function Analytics() {
           </CardContent>
         </Card>
       )}
-      </div>
     </div>
   );
 }
