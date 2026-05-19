@@ -24,7 +24,9 @@ const ASSET_PATTERNS = [
   /^\/calmic-logo/,
   /^\/android-chrome/,
   /^\/site\.webmanifest/,
-  /\.(png|jpg|jpeg|gif|svg|ico|webp|woff|woff2|ttf|css|js\.map)$/,
+  /^\/offline\.html/,
+  /^\/wp-/,
+  /\.(png|jpg|jpeg|gif|svg|ico|webp|woff|woff2|ttf|css|js\.map|html|php)$/,
 ];
 
 function isAssetPath(path: string): boolean {
@@ -400,20 +402,29 @@ export default function Analytics() {
                       </span>
                     </div>
                   ))
-                : summary?.topPages
-                    .filter((page) => !isAssetPath(page.path))
-                    .slice(0, 10)
-                    .map((page) => (
-                      <div key={page.path} className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                          <span className="font-medium truncate">{getSimplePageName(page.path)}</span>
+                : (() => {
+                    const merged = new Map<string, number>();
+                    (summary?.topPages ?? [])
+                      .filter((page) => !isAssetPath(page.path))
+                      .forEach((page) => {
+                        const label = getSimplePageName(page.path);
+                        merged.set(label, (merged.get(label) ?? 0) + page.count);
+                      });
+                    return Array.from(merged.entries())
+                      .sort((a, b) => b[1] - a[1])
+                      .slice(0, 10)
+                      .map(([label, count]) => (
+                        <div key={label} className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                            <span className="font-medium truncate">{label}</span>
+                          </div>
+                          <span className="text-muted-foreground flex-shrink-0">
+                            {count.toLocaleString()}
+                          </span>
                         </div>
-                        <span className="text-muted-foreground flex-shrink-0">
-                          {page.count.toLocaleString()}
-                        </span>
-                      </div>
-                    ))}
+                      ));
+                  })()}
               {!summary?.topPages.length && (
                 <p className="text-sm text-muted-foreground text-center py-4">
                   {t('analytics.noPageData')}
