@@ -360,7 +360,7 @@ export default function Analytics() {
           </CardContent>
         </Card>
 
-        {/* Top Pages */}
+        {/* Top Pages — admin sees Simple/Technical toggle; public sees Simple only */}
         <Card data-testid="card-top-pages">
           <CardHeader>
             <div className="flex items-start justify-between gap-2">
@@ -368,29 +368,31 @@ export default function Analytics() {
                 <CardTitle>{t('analytics.topPages')}</CardTitle>
                 <CardDescription>{t('analytics.mostVisitedPages')}</CardDescription>
               </div>
-              <div className="flex gap-1 flex-shrink-0">
-                <Button
-                  variant={pageView === "simple" ? "default" : "outline"}
-                  size="sm"
-                  className="h-7 px-2 text-xs"
-                  onClick={() => setPageView("simple")}
-                >
-                  Simple
-                </Button>
-                <Button
-                  variant={pageView === "technical" ? "default" : "outline"}
-                  size="sm"
-                  className="h-7 px-2 text-xs"
-                  onClick={() => setPageView("technical")}
-                >
-                  Technical
-                </Button>
-              </div>
+              {user?.role === "admin" && (
+                <div className="flex gap-1 flex-shrink-0">
+                  <Button
+                    variant={pageView === "simple" ? "default" : "outline"}
+                    size="sm"
+                    className="h-7 px-2 text-xs"
+                    onClick={() => setPageView("simple")}
+                  >
+                    Simple
+                  </Button>
+                  <Button
+                    variant={pageView === "technical" ? "default" : "outline"}
+                    size="sm"
+                    className="h-7 px-2 text-xs"
+                    onClick={() => setPageView("technical")}
+                  >
+                    Technical
+                  </Button>
+                </div>
+              )}
             </div>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {pageView === "technical"
+              {user?.role === "admin" && pageView === "technical"
                 ? summary?.topPages.slice(0, 10).map((page) => (
                     <div key={page.path} className="flex items-center justify-between gap-2">
                       <div className="flex items-center gap-2 min-w-0">
