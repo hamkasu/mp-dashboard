@@ -8,71 +8,12 @@ import { Header } from "@/components/Header";
 import { PageMeta } from "@/components/PageMeta";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Users, Globe, FileText, TrendingUp } from "lucide-react";
+import { Users, Globe, TrendingUp } from "lucide-react";
 import { format, startOfWeek, startOfMonth } from "date-fns";
 import { getQueryFn } from "@/lib/queryClient";
 import { useLanguage } from "@/i18n/LanguageContext";
 
 type TimePeriod = "daily" | "weekly" | "monthly";
-type PageView = "technical" | "simple";
-
-const ASSET_PATTERNS = [
-  /^\/sw\.js/,
-  /^\/favicon/,
-  /^\/manifest/,
-  /^\/apple-touch-icon/,
-  /^\/calmic-logo/,
-  /^\/android-chrome/,
-  /^\/site\.webmanifest/,
-  /^\/offline\.html/,
-  /^\/wp-/,
-  /\.(png|jpg|jpeg|gif|svg|ico|webp|woff|woff2|ttf|css|js\.map|html|php)$/,
-];
-
-function isAssetPath(path: string): boolean {
-  return ASSET_PATTERNS.some((p) => p.test(path));
-}
-
-function getSimplePageName(path: string): string {
-  if (path === "/" || path === "") return "Home";
-  if (path.startsWith("/mp/")) return "MP Profile";
-  if (path.startsWith("/blog/")) return "Blog Post";
-  if (path.startsWith("/dun/sarawak")) return "Sarawak State Assembly";
-  if (path.startsWith("/dun/selangor")) return "Selangor State Assembly";
-  if (path.startsWith("/external/")) return "External Site";
-
-  const map: Record<string, string> = {
-    "/activity": "Parliamentary Activity",
-    "/hansard": "Hansard Debates",
-    "/hansard-analysis": "Hansard Analysis",
-    "/hansard-questions": "Hansard Questions",
-    "/bills": "Bills",
-    "/unpassed-bills": "Unpassed Bills",
-    "/courts": "Court Cases",
-    "/blog": "Blog",
-    "/attendance": "Attendance",
-    "/allowances": "Allowances",
-    "/fundamental-rights": "Fundamental Rights",
-    "/constitution": "Constitution",
-    "/parliament-guide": "Parliament Guide",
-    "/analytics": "Analytics Dashboard",
-    "/report-card": "MP Report Cards",
-    "/audit-summary": "Audit Summary",
-    "/ma63": "MA63 Dashboard",
-    "/parliamentary-answers": "Parliamentary Answers",
-    "/constituency-analysis": "Constituency Analysis",
-    "/pricing": "Pricing",
-    "/login": "Login",
-    "/admin/login": "Admin Login",
-    "/admin-login": "Admin Login",
-    "/account": "Account",
-    "/daftar": "GigHalal Registration",
-    "/gig/register": "GigHalal Registration",
-    "/disclaimer": "Disclaimer",
-  };
-
-  return map[path] ?? path;
-}
 
 interface AnalyticsSummary {
   totalVisits: number;
@@ -102,7 +43,6 @@ interface TimelineData {
 export default function Analytics() {
   const { t } = useLanguage();
   const [timePeriod, setTimePeriod] = useState<TimePeriod>("daily");
-  const [pageView, setPageView] = useState<PageView>("simple");
 
   // Calculate days based on time period
   const daysParam = useMemo(() => {
@@ -354,82 +294,6 @@ export default function Analytics() {
               {!summary?.topCountries.length && (
                 <p className="text-sm text-muted-foreground text-center py-4">
                   {t('analytics.noCountryData')}
-                </p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Top Pages — admin sees Simple/Technical toggle; public sees Simple only */}
-        <Card data-testid="card-top-pages">
-          <CardHeader>
-            <div className="flex items-start justify-between gap-2">
-              <div>
-                <CardTitle>{t('analytics.topPages')}</CardTitle>
-                <CardDescription>{t('analytics.mostVisitedPages')}</CardDescription>
-              </div>
-              {user?.role === "admin" && (
-                <div className="flex gap-1 flex-shrink-0">
-                  <Button
-                    variant={pageView === "simple" ? "default" : "outline"}
-                    size="sm"
-                    className="h-7 px-2 text-xs"
-                    onClick={() => setPageView("simple")}
-                  >
-                    Simple
-                  </Button>
-                  <Button
-                    variant={pageView === "technical" ? "default" : "outline"}
-                    size="sm"
-                    className="h-7 px-2 text-xs"
-                    onClick={() => setPageView("technical")}
-                  >
-                    Technical
-                  </Button>
-                </div>
-              )}
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {user?.role === "admin" && pageView === "technical"
-                ? summary?.topPages.slice(0, 10).map((page) => (
-                    <div key={page.path} className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                        <span className="font-medium truncate font-mono text-sm">{page.path}</span>
-                      </div>
-                      <span className="text-muted-foreground flex-shrink-0">
-                        {page.count.toLocaleString()}
-                      </span>
-                    </div>
-                  ))
-                : (() => {
-                    const merged = new Map<string, number>();
-                    (summary?.topPages ?? [])
-                      .filter((page) => !isAssetPath(page.path))
-                      .forEach((page) => {
-                        const label = getSimplePageName(page.path);
-                        merged.set(label, (merged.get(label) ?? 0) + page.count);
-                      });
-                    return Array.from(merged.entries())
-                      .sort((a, b) => b[1] - a[1])
-                      .slice(0, 10)
-                      .map(([label, count]) => (
-                        <div key={label} className="flex items-center justify-between gap-2">
-                          <div className="flex items-center gap-2 min-w-0">
-                            <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                            <span className="font-medium truncate">{label}</span>
-                          </div>
-                          <span className="text-muted-foreground flex-shrink-0">
-                            {count.toLocaleString()}
-                          </span>
-                        </div>
-                      ));
-                  })()}
-              {!summary?.topPages.length && (
-                <p className="text-sm text-muted-foreground text-center py-4">
-                  {t('analytics.noPageData')}
                 </p>
               )}
             </div>
