@@ -8,7 +8,7 @@ import { Header } from "@/components/Header";
 import { PageMeta } from "@/components/PageMeta";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Users, Globe, TrendingUp } from "lucide-react";
+import { Users, Globe, FileText, TrendingUp } from "lucide-react";
 import { format, startOfWeek, startOfMonth } from "date-fns";
 import { getQueryFn } from "@/lib/queryClient";
 import { useLanguage } from "@/i18n/LanguageContext";
@@ -347,6 +347,7 @@ export default function Analytics() {
           </CardContent>
         </Card>
       )}
+    </div>
     </div>
   );
 }
