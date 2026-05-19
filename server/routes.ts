@@ -6142,7 +6142,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         .orderBy(desc(count()))
         .limit(10);
 
-      // Get top pages
+      // Get top pages — fetch 50 so the frontend has enough after filtering assets
       const topPages = await db
         .select({
           path: visitorAnalytics.path,
@@ -6151,7 +6151,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         .from(visitorAnalytics)
         .groupBy(visitorAnalytics.path)
         .orderBy(desc(count()))
-        .limit(10);
+        .limit(50);
 
       res.json({
         totalVisits: totalVisits.value,
