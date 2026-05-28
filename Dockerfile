@@ -3,16 +3,18 @@
 # Stage 1: Builder - Install dependencies and build
 FROM node:20-bullseye-slim AS builder
 
-# Install build dependencies
-RUN apt-get update && apt-get install -y \
-    build-essential \
-    libcairo2-dev \
-    libpango1.0-dev \
-    libjpeg-dev \
-    libgif-dev \
-    librsvg2-dev \
-    python3 \
-    && rm -rf /var/lib/apt/lists/*
+# Install build dependencies (retry up to 3 times for flaky mirrors)
+RUN for i in 1 2 3; do \
+        apt-get update && apt-get install -y --no-install-recommends \
+            build-essential \
+            libcairo2-dev \
+            libpango1.0-dev \
+            libjpeg-dev \
+            libgif-dev \
+            librsvg2-dev \
+            python3 \
+        && break || sleep 10; \
+    done && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
@@ -34,14 +36,16 @@ RUN npm prune --production --no-audit
 # Stage 2: Production - Copy only necessary files
 FROM node:20-bullseye-slim AS production
 
-# Install only runtime dependencies (no build tools)
-RUN apt-get update && apt-get install -y \
-    libcairo2 \
-    libpango-1.0-0 \
-    libjpeg62-turbo \
-    libgif7 \
-    librsvg2-2 \
-    && rm -rf /var/lib/apt/lists/*
+# Install only runtime dependencies (retry up to 3 times for flaky mirrors)
+RUN for i in 1 2 3; do \
+        apt-get update && apt-get install -y --no-install-recommends \
+            libcairo2 \
+            libpango-1.0-0 \
+            libjpeg62-turbo \
+            libgif7 \
+            librsvg2-2 \
+        && break || sleep 10; \
+    done && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
