@@ -3,7 +3,7 @@
  * Updated: Consolidated Navigation Menu with Submenus
  */
 
-import { Search, Menu, FileText, BookOpen, UserCheck, Calculator, BarChart3, ExternalLink, AlertCircle, GraduationCap, Scale, Shield, MessageSquare, Gavel, Building2, MessageSquareText, Award, Handshake, ChevronDown, Users, Activity, LayoutDashboard, Settings, UserPlus, UserX, Upload, TrendingUp, Heart, ScrollText, Eye, Briefcase, LogIn, UserCircle, Sparkles, LogOut } from "lucide-react";
+import { Search, Menu, FileText, BookOpen, UserCheck, Calculator, BarChart3, ExternalLink, AlertCircle, GraduationCap, Scale, Shield, MessageSquare, Gavel, Building2, MessageSquareText, Award, Handshake, ChevronDown, Users, Activity, LayoutDashboard, Settings, UserPlus, UserX, Upload, TrendingUp, Heart, ScrollText, Eye, Briefcase, LogIn, UserCircle, Sparkles, LogOut, Banknote } from "lucide-react";
 import { useState } from "react";
 import { FeedbackModal } from "@/components/FeedbackModal";
 import { FundamentalRightsPopup } from "@/components/FundamentalRightsPopup";
@@ -33,6 +33,9 @@ import {
 import { Link, useLocation } from "wouter";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { useLanguage } from "@/i18n/LanguageContext";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
+import { EX_MP_PENSIONS } from "@/lib/pension-data";
 
 interface HeaderProps {
   onMenuClick?: () => void;
@@ -108,6 +111,8 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
   const [, setLocation] = useLocation();
   const { t, language } = useLanguage();
   const [donateOpen, setDonateOpen] = useState(false);
+  const [pensionOpen, setPensionOpen] = useState(false);
+  const [pensionTab, setPensionTab] = useState("BN-UMNO");
 
   const donateContent = {
     en: {
@@ -403,6 +408,61 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+
+          {/* Ex-MP Pensions Dialog */}
+          <Dialog open={pensionOpen} onOpenChange={setPensionOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="sm" className="gap-1 hidden md:flex text-amber-700 border-amber-300 hover:bg-amber-50 hover:text-amber-800 dark:text-amber-400 dark:border-amber-700 dark:hover:bg-amber-950" data-testid="button-ex-mp-pensions">
+                <Banknote className="w-4 h-4" />
+                Ex-MP Pensions
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2 text-amber-900 dark:text-amber-100">
+                  <Banknote className="h-5 w-5" />
+                  Ex-MPs Receiving Pensions (Monthly)
+                </DialogTitle>
+                <DialogDescription>
+                  Source: Parliament Written Answer, April 2025. Some ex-MPs hold both federal and state pensions.
+                </DialogDescription>
+              </DialogHeader>
+              <Tabs value={pensionTab} onValueChange={setPensionTab}>
+                <TabsList className="flex flex-wrap h-auto gap-1 mb-3 p-1">
+                  {EX_MP_PENSIONS.map(g => (
+                    <TabsTrigger key={g.group} value={g.group} className="text-xs px-2 py-1">
+                      {g.group}
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+                {EX_MP_PENSIONS.map(g => (
+                  <TabsContent key={g.group} value={g.group} className="mt-0">
+                    <div className="space-y-1">
+                      {g.members.map((m, i) => (
+                        <div key={m.name} className="flex items-center justify-between py-1.5 px-2 rounded-md bg-muted/40 text-sm">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="text-xs text-muted-foreground w-5 text-right shrink-0">{i + 1}.</span>
+                            <span className="truncate font-medium">{m.name}</span>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0 ml-2">
+                            <Badge variant="outline" className="text-xs px-1.5 py-0">
+                              {m.pensions} pension{m.pensions > 1 ? "s" : ""}
+                            </Badge>
+                            <span className="font-bold text-sm">
+                              RM {m.amount.toLocaleString("en-MY")}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <p className="text-xs text-muted-foreground italic mt-3">
+                      Total for {g.group}: RM {g.members.reduce((s, m) => s + m.amount, 0).toLocaleString("en-MY")}/month
+                    </p>
+                  </TabsContent>
+                ))}
+              </Tabs>
+            </DialogContent>
+          </Dialog>
         </div>
 
         {/* Right: Mobile Menu + Search + Feedback + Language */}
@@ -503,6 +563,14 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
               <DropdownMenuItem onSelect={() => window.open("/LKAN-1-2026-Penyata-Kewangan-Agensi-Persekutuan-Tahun-2024-Bookmark.pdf", "_blank")}>
                 <FileText className="w-4 h-4 mr-2" />
                 LKAN 1/2026 - Penyata Kewangan
+              </DropdownMenuItem>
+
+              <DropdownMenuSeparator />
+
+              {/* Ex-MP Pensions */}
+              <DropdownMenuItem onSelect={() => { setPensionOpen(true); }}>
+                <Banknote className="w-4 h-4 mr-2 text-amber-600" />
+                Ex-MP Pensions
               </DropdownMenuItem>
 
               <DropdownMenuSeparator />
