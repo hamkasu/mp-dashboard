@@ -44,6 +44,7 @@ import type { Mp, SprmInvestigation, LegislativeProposal, ParliamentaryQuestion 
 import { apiRequest } from "@/lib/queryClient";
 import { useConstituencies } from "@/hooks/use-constituencies";
 import { MALAYSIAN_STATES } from "@/lib/constants";
+import { EX_MP_PENSIONS } from "@/lib/pension-data";
 
 interface PaginatedMpsResponse {
   data: Mp[];
@@ -68,103 +69,6 @@ interface LanguageAnalysisMpStat {
   words: string[];
 }
 
-const EX_MP_PENSIONS: { group: string; color: string; members: { name: string; amount: number; pensions: number }[] }[] = [
-  {
-    group: "BN-UMNO",
-    color: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300",
-    members: [
-      { name: "Idris Jusoh", amount: 39082, pensions: 2 },
-      { name: "Najib Abdul Razak", amount: 36963, pensions: 2 },
-      { name: "Mahdzir Khalid", amount: 35082, pensions: 2 },
-      { name: "Mohamed Khaled Nordin", amount: 28045, pensions: 2 },
-      { name: "Jalaluddin Alias", amount: 26030, pensions: 2 },
-      { name: "Mohamad Haji Hasan", amount: 25249, pensions: 2 },
-      { name: "Bung Moktar Radin", amount: 24171, pensions: 2 },
-      { name: "Mohamed Nazri Abdul Aziz", amount: 24082, pensions: 2 },
-      { name: "Halimah Mohd Sadique", amount: 23982, pensions: 2 },
-      { name: "Tengku Razaleigh Hamzah", amount: 23499, pensions: 2 },
-    ],
-  },
-  {
-    group: "PN-Bersatu",
-    color: "bg-sky-100 text-sky-800 dark:bg-sky-900/30 dark:text-sky-300",
-    members: [
-      { name: "Muhyiddin Yassin", amount: 37640, pensions: 2 },
-      { name: "Azmin Ali", amount: 36707, pensions: 2 },
-      { name: "Rosol Wahid", amount: 28609, pensions: 2 },
-      { name: "Mustapa Mohamed", amount: 24582, pensions: 2 },
-      { name: "Ali Biju", amount: 23609, pensions: 2 },
-      { name: "Ronald Kiandee", amount: 22800, pensions: 1 },
-      { name: "Abd Latiff Ahmad", amount: 21832, pensions: 2 },
-      { name: "Shabudin Yahaya", amount: 21734, pensions: 2 },
-      { name: "Mansor Othman", amount: 19468, pensions: 2 },
-      { name: "Hamzah Zainudin", amount: 18582, pensions: 1 },
-    ],
-  },
-  {
-    group: "PN-PAS",
-    color: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300",
-    members: [
-      { name: "Shahidan Kassim", amount: 34082, pensions: 2 },
-      { name: "Takiyuddin Hassan", amount: 30582, pensions: 2 },
-      { name: "Abdul Hadi Awang", amount: 30100, pensions: 2 },
-      { name: "Tuan Ibrahim Tuan Man", amount: 24582, pensions: 2 },
-      { name: "Annuar Musa", amount: 22249, pensions: 2 },
-      { name: "Wan Hassan Mohd Ramli", amount: 22100, pensions: 2 },
-      { name: "Nik Muhammad Zawawi Salleh", amount: 19928, pensions: 2 },
-      { name: "Abdul Latiff Abdul Rahman", amount: 19100, pensions: 2 },
-      { name: "Halimah Ali", amount: 18903, pensions: 2 },
-      { name: "Ahmad Yunus Hairi", amount: 18903, pensions: 2 },
-    ],
-  },
-  {
-    group: "PH-PKR",
-    color: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",
-    members: [
-      { name: "Johari Abdul", amount: 32707, pensions: 2 },
-      { name: "Saifuddin Nasution Ismail", amount: 26932, pensions: 3 },
-      { name: "Christina Liew Chin Jin", amount: 25732, pensions: 2 },
-      { name: "Wan Azizah Wan Ismail", amount: 24251, pensions: 2 },
-      { name: "Chang Lih Kang", amount: 24082, pensions: 2 },
-      { name: "Amirudin Shari", amount: 23903, pensions: 2 },
-      { name: "Anwar Ibrahim", amount: 23296, pensions: 1 },
-      { name: "Sim Tse Tzin", amount: 20484, pensions: 2 },
-      { name: "Aminuddin Harun", amount: 19843, pensions: 2 },
-    ],
-  },
-  {
-    group: "PH-DAP",
-    color: "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300",
-    members: [
-      { name: "Hannah Yeoh Tseow Suan", amount: 31707, pensions: 2 },
-      { name: "Lim Guan Eng", amount: 31295, pensions: 2 },
-      { name: "Teresa Kok Suh Sim", amount: 29155, pensions: 2 },
-      { name: "Nga Kor Ming", amount: 28300, pensions: 2 },
-      { name: "Chong Chieng Jen", amount: 23609, pensions: 2 },
-      { name: "Anthony Loke Siew Fook", amount: 23059, pensions: 2 },
-      { name: "Yeo Bee Yin", amount: 23035, pensions: 2 },
-      { name: "Alice Lau Kiong Yieng", amount: 22800, pensions: 1 },
-      { name: "Chow Kon Yeow", amount: 22313, pensions: 2 },
-      { name: "V Sivakumar", amount: 21860, pensions: 2 },
-    ],
-  },
-  {
-    group: "PH-Amanah",
-    color: "bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-300",
-    members: [
-      { name: "Adly Zahari", amount: 24695, pensions: 2 },
-      { name: "Salahuddin Ayub", amount: 22145, pensions: 2 },
-      { name: "Dzulkefly Ahmad", amount: 18582, pensions: 1 },
-      { name: "Mohamad Sabu", amount: 18582, pensions: 1 },
-      { name: "Mujahid Yusof Rawa", amount: 18582, pensions: 1 },
-      { name: "Khalid Abd Samad", amount: 18582, pensions: 1 },
-      { name: "Mahfuz Omar", amount: 16109, pensions: 1 },
-      { name: "Mohamed Hanipa Maidin", amount: 16109, pensions: 1 },
-      { name: "Mohd Hatta Md Ramli", amount: 15322, pensions: 2 },
-      { name: "Aminolhuda Hassan", amount: 15078, pensions: 2 },
-    ],
-  },
-];
 
 export default function Home() {
   const { t } = useLanguage();
