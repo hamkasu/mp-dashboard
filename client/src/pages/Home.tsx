@@ -857,10 +857,6 @@ export default function Home() {
                   </div>
                   {pensionCardOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                 </CardTitle>
-                <p className="text-xs text-amber-800 dark:text-amber-200 mt-0.5">
-                  Figures from the Parliament Written Answer (April 2025). Some ex-MPs hold both federal and state pensions.{" "}
-                  <a href="https://www.facebook.com/share/p/1K9jpMuo33/" target="_blank" rel="noopener noreferrer" className="underline hover:text-amber-900 dark:hover:text-amber-100">View source</a>
-                </p>
               </CardHeader>
               {pensionCardOpen && (
                 <CardContent className="pt-0">
@@ -898,6 +894,10 @@ export default function Home() {
                       </TabsContent>
                     ))}
                   </Tabs>
+                  <p className="text-xs text-amber-800 dark:text-amber-200 mt-3 pt-3 border-t border-amber-200 dark:border-amber-800">
+                    Source: Parliament Written Answer, April 2025. Some ex-MPs hold both federal and state pensions.{" "}
+                    <a href="https://www.facebook.com/share/p/1K9jpMuo33/" target="_blank" rel="noopener noreferrer" className="underline hover:text-amber-900 dark:hover:text-amber-100">View source</a>
+                  </p>
                 </CardContent>
               )}
             </Card>
