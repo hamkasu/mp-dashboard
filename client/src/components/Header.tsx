@@ -424,7 +424,6 @@ export function Header({ onMenuClick, onSearchClick }: HeaderProps) {
                   Ex-MPs Receiving Pensions (Monthly)
                 </DialogTitle>
                 <DialogDescription>
-                  Source: Parliament Written Answer, April 2025. Some ex-MPs hold both federal and state pensions.{" "}
                   <a href="https://www.facebook.com/share/p/1K9jpMuo33/" target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground">View source</a>
                 </DialogDescription>
               </DialogHeader>
