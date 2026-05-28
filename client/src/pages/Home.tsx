@@ -44,7 +44,6 @@ import type { Mp, SprmInvestigation, LegislativeProposal, ParliamentaryQuestion 
 import { apiRequest } from "@/lib/queryClient";
 import { useConstituencies } from "@/hooks/use-constituencies";
 import { MALAYSIAN_STATES } from "@/lib/constants";
-import { EX_MP_PENSIONS } from "@/lib/pension-data";
 
 interface PaginatedMpsResponse {
   data: Mp[];
@@ -82,9 +81,7 @@ export default function Home() {
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [searchDialogOpen, setSearchDialogOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const [pensionCardOpen, setPensionCardOpen] = useState(false);
-  const [pensionTab, setPensionTab] = useState("BN-UMNO");
-  const ITEMS_PER_PAGE = 20;
+const ITEMS_PER_PAGE = 20;
 
   // Special sort modes require all MPs for client-side filtering/sorting
   const SPECIAL_SORT_MODES: SortOption[] = ["bills-raised", "oral-questions", "inappropriate-language", "poverty-highest", "poverty-lowest", "majority-highest", "majority-smallest"];
@@ -841,65 +838,6 @@ export default function Home() {
                 </CardContent>
               </Card>
             )}
-
-            {/* Ex-MP Pensions */}
-            <Card className="border-amber-200 dark:border-amber-900 bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-950/20 dark:to-yellow-950/20">
-              <CardHeader
-                className="pb-2 cursor-pointer select-none"
-                onClick={() => setPensionCardOpen(o => !o)}
-              >
-                <CardTitle className="flex items-center justify-between text-amber-900 dark:text-amber-100 text-base">
-                  <div className="flex items-center gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
-                    </svg>
-                    Ex-MPs Receiving Pensions (Monthly)
-                  </div>
-                  {pensionCardOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                </CardTitle>
-                <p className="text-xs text-amber-800 dark:text-amber-200 mt-0.5">
-                  <a href="https://www.facebook.com/share/p/1K9jpMuo33/" target="_blank" rel="noopener noreferrer" className="underline hover:text-amber-900 dark:hover:text-amber-100">View source</a>
-                </p>
-              </CardHeader>
-              {pensionCardOpen && (
-                <CardContent className="pt-0">
-                  <Tabs value={pensionTab} onValueChange={setPensionTab}>
-                    <TabsList className="flex flex-wrap h-auto gap-1 mb-3 bg-amber-100/60 dark:bg-amber-900/20 p-1">
-                      {EX_MP_PENSIONS.map(g => (
-                        <TabsTrigger key={g.group} value={g.group} className="text-xs px-2 py-1">
-                          {g.group}
-                        </TabsTrigger>
-                      ))}
-                    </TabsList>
-                    {EX_MP_PENSIONS.map(g => (
-                      <TabsContent key={g.group} value={g.group} className="mt-0">
-                        <div className="space-y-1">
-                          {g.members.map((m, i) => (
-                            <div key={m.name} className="flex items-center justify-between py-1.5 px-2 rounded-md bg-white/50 dark:bg-black/20 text-sm">
-                              <div className="flex items-center gap-2 min-w-0">
-                                <span className="text-xs text-muted-foreground w-5 text-right shrink-0">{i + 1}.</span>
-                                <span className="truncate text-amber-900 dark:text-amber-100 font-medium">{m.name}</span>
-                              </div>
-                              <div className="flex items-center gap-2 shrink-0 ml-2">
-                                <Badge variant="outline" className="text-xs px-1.5 py-0 border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-300">
-                                  {m.pensions} pension{m.pensions > 1 ? "s" : ""}
-                                </Badge>
-                                <span className="font-bold text-amber-900 dark:text-amber-100 text-sm">
-                                  RM {m.amount.toLocaleString("en-MY")}
-                                </span>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                        <p className="text-xs text-muted-foreground italic mt-2">
-                          Total monthly pensions for {g.group}: RM {g.members.reduce((s, m) => s + m.amount, 0).toLocaleString("en-MY")}
-                        </p>
-                      </TabsContent>
-                    ))}
-                  </Tabs>
-                </CardContent>
-              )}
-            </Card>
 
             {/* 2022 Election Statistics */}
             <ElectionStatsCard
