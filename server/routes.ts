@@ -7668,10 +7668,15 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   // Admin endpoint to update MP status (deceased/resigned)
   app.post("/api/admin/update-mp-status", requireAdmin, async (req, res) => {
     try {
-      const { mpId, termEndDate, byElectionDate, byElectionNotes } = req.body;
+      const { mpId, termEndDate, statusReason = "Deceased", byElectionDate, byElectionNotes } = req.body;
 
       if (!mpId || !termEndDate) {
         return res.status(400).json({ error: "mpId and termEndDate are required" });
+      }
+
+      // Validate statusReason
+      if (!["Deceased", "Resigned"].includes(statusReason)) {
+        return res.status(400).json({ error: "statusReason must be either 'Deceased' or 'Resigned'" });
       }
 
       // Validate date format
@@ -7692,7 +7697,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       // Update MP record
       const updateData: any = {
         termEndDate: endDate,
-        role: "Former Member of Parliament (Deceased)",
+        role: `Former Member of Parliament (${statusReason})`,
       };
 
       // Add optional fields if provided
