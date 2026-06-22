@@ -58,6 +58,7 @@ export default function MPStatusAdmin() {
     mutationFn: async (data: {
       mpId: string;
       termEndDate: string;
+      statusReason: "Deceased" | "Resigned";
       byElectionDate?: string;
       byElectionNotes?: string;
     }) => {
@@ -118,6 +119,7 @@ export default function MPStatusAdmin() {
     updateMpStatusMutation.mutate({
       mpId: selectedMpId,
       termEndDate: dateOfPassing,
+      statusReason: statusReason,
       byElectionDate: byElectionDate || undefined,
       byElectionNotes: byElectionNotes || undefined,
     });
