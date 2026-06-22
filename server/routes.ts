@@ -1397,6 +1397,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   app.get("/api/legislative-proposals", async (_req, res) => {
     try {
       const proposals = await storage.getAllLegislativeProposals();
+      res.set('Cache-Control', 'public, max-age=86400'); // 24 hours - historical legislative data changes rarely
       res.json(proposals);
     } catch (error) {
       console.error("Error fetching legislative proposals:", error);
@@ -1587,6 +1588,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   app.get("/api/parliamentary-questions", async (_req, res) => {
     try {
       const questions = await storage.getAllParliamentaryQuestions();
+      res.set('Cache-Control', 'public, max-age=3600'); // 1 hour - may update with new answer statuses
       res.json(questions);
     } catch (error) {
       console.error("Error fetching parliamentary questions:", error);
