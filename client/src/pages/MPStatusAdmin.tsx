@@ -33,6 +33,7 @@ export default function MPStatusAdmin() {
   const [selectedMpId, setSelectedMpId] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [statusReason, setStatusReason] = useState<"Deceased" | "Resigned">("Deceased");
   const [dateOfPassing, setDateOfPassing] = useState("");
   const [byElectionDate, setByElectionDate] = useState("");
   const [byElectionNotes, setByElectionNotes] = useState("");
@@ -71,6 +72,7 @@ export default function MPStatusAdmin() {
       // Reset form
       setSelectedMpId("");
       setSearchQuery("");
+      setStatusReason("Deceased");
       setDateOfPassing("");
       setByElectionDate("");
       setByElectionNotes("");
@@ -280,6 +282,41 @@ export default function MPStatusAdmin() {
                   )}
                 </div>
 
+                {/* Status Reason */}
+                <div className="space-y-2">
+                  <Label>Status Reason</Label>
+                  <div className="flex gap-6">
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="radio"
+                        id="reason-deceased"
+                        name="status-reason"
+                        value="Deceased"
+                        checked={statusReason === "Deceased"}
+                        onChange={(e) => setStatusReason(e.target.value as "Deceased" | "Resigned")}
+                        className="w-4 h-4"
+                      />
+                      <Label htmlFor="reason-deceased" className="font-normal cursor-pointer">
+                        Deceased
+                      </Label>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="radio"
+                        id="reason-resigned"
+                        name="status-reason"
+                        value="Resigned"
+                        checked={statusReason === "Resigned"}
+                        onChange={(e) => setStatusReason(e.target.value as "Deceased" | "Resigned")}
+                        className="w-4 h-4"
+                      />
+                      <Label htmlFor="reason-resigned" className="font-normal cursor-pointer">
+                        Resigned
+                      </Label>
+                    </div>
+                  </div>
+                </div>
+
                 {/* Date of Passing/Resignation */}
                 <div className="space-y-2">
                   <Label htmlFor="term-end-date">Date of Passing/Resignation *</Label>
@@ -332,7 +369,7 @@ export default function MPStatusAdmin() {
                       This action will:
                       <ul className="list-disc list-inside mt-2 space-y-1">
                         <li>Mark {selectedMp?.name} as a Former MP</li>
-                        <li>Update their role to "Former Member of Parliament (Deceased)"</li>
+                        <li>Update their role to "Former Member of Parliament ({statusReason})"</li>
                         <li>Display their card with a grayscale filter and "Former MP" banner</li>
                         <li>Move them to the "Former MPs" filter by default</li>
                       </ul>
@@ -365,6 +402,7 @@ export default function MPStatusAdmin() {
                     onClick={() => {
                       setSelectedMpId("");
                       setSearchQuery("");
+                      setStatusReason("Deceased");
                       setDateOfPassing("");
                       setByElectionDate("");
                       setByElectionNotes("");
