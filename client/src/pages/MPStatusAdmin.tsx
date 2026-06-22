@@ -3,7 +3,7 @@
  * Update MP status when they pass away or resign
  */
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Header } from "@/components/Header";
@@ -13,9 +13,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, UserX, AlertTriangle, CheckCircle2, UserPlus } from "lucide-react";
+import { Loader2, UserX, AlertTriangle, CheckCircle2, UserPlus, X } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { Mp } from "@shared/schema";
@@ -32,9 +31,12 @@ export default function MPStatusAdmin() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
   const [selectedMpId, setSelectedMpId] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [showSuggestions, setShowSuggestions] = useState(false);
   const [dateOfPassing, setDateOfPassing] = useState("");
   const [byElectionDate, setByElectionDate] = useState("");
   const [byElectionNotes, setByElectionNotes] = useState("");
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   // Check admin authentication
   const { data: authStatus, isLoading: authLoading } = useQuery<{ isAdmin: boolean }>({
@@ -67,6 +69,7 @@ export default function MPStatusAdmin() {
       queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
       // Reset form
       setSelectedMpId("");
+      setSearchQuery("");
       setDateOfPassing("");
       setByElectionDate("");
       setByElectionNotes("");
@@ -118,6 +121,39 @@ export default function MPStatusAdmin() {
 
   const activeMps = mps.filter((mp) => !mp.termEndDate || new Date(mp.termEndDate) > new Date());
   const formerMps = mps.filter((mp) => mp.termEndDate && new Date(mp.termEndDate) <= new Date());
+
+  // Filter MPs based on search query
+  const filteredMps = activeMps.filter((mp) => {
+    const query = searchQuery.toLowerCase();
+    return (
+      mp.name.toLowerCase().includes(query) ||
+      mp.constituency.toLowerCase().includes(query) ||
+      mp.party.toLowerCase().includes(query)
+    );
+  });
+
+  const handleSelectMp = (mp: MpListItem) => {
+    setSelectedMpId(mp.id);
+    setSearchQuery(mp.name);
+    setShowSuggestions(false);
+  };
+
+  const handleClearSelection = () => {
+    setSelectedMpId("");
+    setSearchQuery("");
+  };
+
+  // Close suggestions when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (searchInputRef.current && !searchInputRef.current.contains(event.target as Node)) {
+        setShowSuggestions(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   return (
     <div className="min-h-screen bg-background">
@@ -188,19 +224,54 @@ export default function MPStatusAdmin() {
               <form onSubmit={handleSubmit} className="space-y-6">
                 {/* MP Selection */}
                 <div className="space-y-2">
-                  <Label htmlFor="mp-select">Select MP</Label>
-                  <Select value={selectedMpId} onValueChange={setSelectedMpId}>
-                    <SelectTrigger id="mp-select">
-                      <SelectValue placeholder="Choose an MP..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {activeMps.map((mp) => (
-                        <SelectItem key={mp.id} value={mp.id}>
-                          {mp.name} - {mp.constituency} ({mp.party})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Label htmlFor="mp-search">Select MP</Label>
+                  <div className="relative">
+                    <div className="flex gap-2">
+                      <Input
+                        ref={searchInputRef}
+                        id="mp-search"
+                        placeholder="Type MP name, constituency, or party..."
+                        value={searchQuery}
+                        onChange={(e) => {
+                          setSearchQuery(e.target.value);
+                          setShowSuggestions(true);
+                          if (selectedMpId && activeMps.find((mp) => mp.id === selectedMpId)?.name !== e.target.value) {
+                            setSelectedMpId("");
+                          }
+                        }}
+                        onFocus={() => setShowSuggestions(true)}
+                      />
+                      {selectedMpId && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          onClick={handleClearSelection}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                    {showSuggestions && searchQuery && (
+                      <div className="absolute top-full left-0 right-0 mt-1 border rounded-md bg-background shadow-md z-10 max-h-64 overflow-y-auto">
+                        {filteredMps.length > 0 ? (
+                          filteredMps.map((mp) => (
+                            <button
+                              key={mp.id}
+                              type="button"
+                              onClick={() => handleSelectMp(mp)}
+                              className="w-full text-left px-3 py-2 hover:bg-accent border-b last:border-b-0 transition-colors"
+                            >
+                              <div className="font-medium">{mp.name}</div>
+                              <div className="text-sm text-muted-foreground">{mp.constituency} ({mp.party})</div>
+                            </button>
+                          ))
+                        ) : (
+                          <div className="px-3 py-2 text-sm text-muted-foreground">No MPs found</div>
+                        )}
+                      </div>
+                    )}
+                  </div>
                   {selectedMp && (
                     <p className="text-sm text-muted-foreground">
                       Selected: <span className="font-medium">{selectedMp.name}</span> ({selectedMp.constituency})
@@ -292,6 +363,7 @@ export default function MPStatusAdmin() {
                     variant="outline"
                     onClick={() => {
                       setSelectedMpId("");
+                      setSearchQuery("");
                       setDateOfPassing("");
                       setByElectionDate("");
                       setByElectionNotes("");
