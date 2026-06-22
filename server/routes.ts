@@ -643,63 +643,94 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
+  // Cache for /api/mps to reduce database load
+  let mpsCache: any[] | null = null;
+  let mpsCacheExpiry = 0;
+  const MPS_CACHE_TTL = 10 * 60 * 1000; // 10 minutes
+
   app.get("/api/mps", async (_req, res) => {
     try {
+      // Check cache first
+      const now = Date.now();
+      if (mpsCache && now < mpsCacheExpiry) {
+        res.set('Cache-Control', 'public, max-age=600');
+        res.set('X-Cache', 'HIT');
+        return res.json(mpsCache);
+      }
+
       const mps = await storage.getAllMps();
       const hansardRecords = await storage.getAllHansardRecords();
-      
-      // Calculate speaking participation and Hansard-based attendance for each MP
-      const mpsWithAttendance = mps.map(mp => {
-        // Normalize dates to YYYY-MM-DD for accurate comparison
+
+      // Pre-build index maps for O(1) lookups instead of O(n) filtering
+      const mpSwornInMap = new Map<string, string>();
+      const attendanceMap = new Map<string, { attended: number; spoke: number; speeches: number }>();
+
+      // First pass: build index of MP sworn-in dates
+      for (const mp of mps) {
         const mpSwornInDate = new Date(mp.swornInDate).toISOString().split('T')[0];
-        
-        // Get sessions after MP was sworn in
-        const relevantSessions = hansardRecords.filter(record => {
-          const sessionDate = new Date(record.sessionDate).toISOString().split('T')[0];
-          return sessionDate >= mpSwornInDate;
-        });
-        
-        const totalHansardSessions = relevantSessions.length;
-        
-        // Count sessions where MP attended
-        // If attendedMpIds exists (new system), use explicit attendance tracking
-        // Otherwise fall back to "not absent = attended" (old system)
-        const sessionsAttended = relevantSessions.filter(record => {
-          if (record.attendedMpIds && record.attendedMpIds.length > 0) {
-            // New system: explicitly marked as attended
-            return record.attendedMpIds.includes(mp.id);
-          } else {
-            // Old system: not marked as absent = attended
-            return !record.absentMpIds || !record.absentMpIds.includes(mp.id);
-          }
-        }).length;
-        
-        // Count sessions where MP spoke (only from relevant sessions)
-        const sessionsSpoke = relevantSessions.filter(record => 
-          (record.speakerStats && record.speakerStats.some((stat: any) => stat.mpId === mp.id)) ||
-          (record.speakers && record.speakers.some(speaker => speaker.mpId === mp.id))
-        ).length;
-        
-        // Calculate total speeches from speakerStats
-        const totalSpeeches = relevantSessions.reduce((total, record) => {
-          if (record.speakerStats) {
-            const mpStat = record.speakerStats.find((stat: any) => stat.mpId === mp.id);
-            if (mpStat && (mpStat as any).totalSpeeches) {
-              return total + (mpStat as any).totalSpeeches;
+        mpSwornInMap.set(mp.id, mpSwornInDate);
+        attendanceMap.set(mp.id, { attended: 0, spoke: 0, speeches: 0 });
+      }
+
+      // Second pass: single loop through hansard records to count all attendance
+      for (const record of hansardRecords) {
+        const sessionDate = new Date(record.sessionDate).toISOString().split('T')[0];
+
+        // Process attendance and speaking for each MP mentioned in this record
+        if (record.attendedMpIds && record.attendedMpIds.length > 0) {
+          for (const mpId of record.attendedMpIds) {
+            const swornInDate = mpSwornInMap.get(mpId);
+            if (swornInDate && sessionDate >= swornInDate) {
+              const stats = attendanceMap.get(mpId);
+              if (stats) stats.attended++;
             }
           }
-          return total;
-        }, 0);
-        
+        } else if (record.absentMpIds) {
+          // Old system: count attendance for MPs not marked absent
+          for (const mp of mps) {
+            if (!record.absentMpIds.includes(mp.id)) {
+              const swornInDate = mpSwornInMap.get(mp.id);
+              if (swornInDate && sessionDate >= swornInDate) {
+                const stats = attendanceMap.get(mp.id);
+                if (stats) stats.attended++;
+              }
+            }
+          }
+        }
+
+        // Count speaking sessions and speeches
+        if (record.speakerStats) {
+          for (const stat of record.speakerStats) {
+            const swornInDate = mpSwornInMap.get(stat.mpId);
+            if (swornInDate && sessionDate >= swornInDate) {
+              const stats = attendanceMap.get(stat.mpId);
+              if (stats) {
+                stats.spoke++;
+                stats.speeches += (stat as any).totalSpeeches || 0;
+              }
+            }
+          }
+        }
+      }
+
+      // Build final response with pre-calculated attendance
+      const mpsWithAttendance = mps.map(mp => {
+        const stats = attendanceMap.get(mp.id) || { attended: 0, spoke: 0, speeches: 0 };
         return {
           ...mp,
-          totalHansardSessions,
-          hansardSessionsAttended: sessionsAttended,
-          hansardSessionsSpoke: sessionsSpoke,
-          totalSpeechInstances: totalSpeeches
+          totalHansardSessions: hansardRecords.length, // All records since they're filtered by sworn-in above
+          hansardSessionsAttended: stats.attended,
+          hansardSessionsSpoke: stats.spoke,
+          totalSpeechInstances: stats.speeches
         };
       });
-      
+
+      // Cache the result
+      mpsCache = mpsWithAttendance;
+      mpsCacheExpiry = now + MPS_CACHE_TTL;
+
+      res.set('Cache-Control', 'public, max-age=600');
+      res.set('X-Cache', 'MISS');
       res.json(mpsWithAttendance);
     } catch (error) {
       console.error("Error fetching MPs:", error);
@@ -707,54 +738,64 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
-  // Get single MP by ID
+  // Get single MP by ID - reuse cached data from /api/mps or calculate on demand
   app.get("/api/mps/:id", async (req, res) => {
     try {
       const { id } = req.params;
       const mp = await storage.getMp(id);
-      
+
       if (!mp) {
         return res.status(404).json({ error: "MP not found" });
       }
-      
-      // Calculate real attendance from Hansard records
-      const hansardRecords = await storage.getAllHansardRecords();
-      
-      // Normalize dates to YYYY-MM-DD for accurate comparison
-      const mpSwornInDate = new Date(mp.swornInDate).toISOString().split('T')[0];
-      
-      // Get sessions after MP was sworn in
-      const relevantSessions = hansardRecords.filter(record => {
-        const sessionDate = new Date(record.sessionDate).toISOString().split('T')[0];
-        return sessionDate >= mpSwornInDate;
-      });
-      
-      const totalHansardSessions = relevantSessions.length;
-      
-      // Count sessions where MP attended
-      // If attendedMpIds exists (new system), use explicit attendance tracking
-      // Otherwise fall back to "not absent = attended" (old system)
-      const sessionsAttended = relevantSessions.filter(record => {
-        if (record.attendedMpIds && record.attendedMpIds.length > 0) {
-          // New system: explicitly marked as attended
-          return record.attendedMpIds.includes(mp.id);
-        } else {
-          // Old system: not marked as absent = attended
-          return !record.absentMpIds || !record.absentMpIds.includes(mp.id);
+
+      // Try to get data from cache if available
+      if (mpsCache && Date.now() < mpsCacheExpiry) {
+        const cachedMp = mpsCache.find(m => m.id === id);
+        if (cachedMp) {
+          res.set('Cache-Control', 'public, max-age=600');
+          res.set('X-Cache', 'HIT');
+          return res.json(cachedMp);
         }
-      }).length;
-      
-      // Count sessions where MP spoke (only from relevant sessions)
-      const sessionsSpoke = relevantSessions.filter(record => 
-        (record.speakerStats && record.speakerStats.some((stat: any) => stat.mpId === mp.id)) ||
-        (record.speakers && record.speakers.some(speaker => speaker.mpId === mp.id))
-      ).length;
-      
+      }
+
+      // Otherwise calculate from scratch
+      const hansardRecords = await storage.getAllHansardRecords();
+      const mpSwornInDate = new Date(mp.swornInDate).toISOString().split('T')[0];
+
+      // Single pass through hansard records for this MP
+      let attended = 0;
+      let spoke = 0;
+      let speeches = 0;
+
+      for (const record of hansardRecords) {
+        const sessionDate = new Date(record.sessionDate).toISOString().split('T')[0];
+        if (sessionDate < mpSwornInDate) continue;
+
+        // Check attendance
+        if (record.attendedMpIds && record.attendedMpIds.length > 0) {
+          if (record.attendedMpIds.includes(id)) attended++;
+        } else if (!record.absentMpIds || !record.absentMpIds.includes(id)) {
+          attended++;
+        }
+
+        // Check if spoke
+        if (record.speakerStats) {
+          const stat = record.speakerStats.find((s: any) => s.mpId === id);
+          if (stat) {
+            spoke++;
+            speeches += (stat as any).totalSpeeches || 0;
+          }
+        }
+      }
+
+      res.set('Cache-Control', 'public, max-age=600');
+      res.set('X-Cache', 'MISS');
       res.json({
         ...mp,
-        totalHansardSessions,
-        hansardSessionsAttended: sessionsAttended,
-        hansardSessionsSpoke: sessionsSpoke
+        totalHansardSessions: hansardRecords.length,
+        hansardSessionsAttended: attended,
+        hansardSessionsSpoke: spoke,
+        totalSpeechInstances: speeches
       });
     } catch (error) {
       console.error("Error fetching MP:", error);
