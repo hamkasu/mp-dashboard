@@ -428,10 +428,28 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
+  // Cache for /api/mp-spotlight (daily rotation at midnight)
+  let spotlightCache: any = null;
+  let spotlightCacheDate = '';
+  let spotlightComputeTime = 0;
+
   // Get all MPs
   // Get MP Spotlight - daily rotating MP with stats highlight
   app.get("/api/mp-spotlight", async (_req, res) => {
     try {
+      const computeStart = Date.now();
+
+      // Get today's date for cache invalidation (resets at midnight)
+      const today = new Date();
+      const dateString = today.toISOString().split('T')[0];
+
+      // Return cached result if it's the same day
+      if (spotlightCache && spotlightCacheDate === dateString) {
+        res.set('X-Cache', 'HIT');
+        res.set('X-Compute-Time', spotlightComputeTime.toString());
+        return res.json(spotlightCache);
+      }
+
       const mps = await storage.getAllMps();
       const hansardRecords = await storage.getAllHansardRecords();
 
@@ -600,7 +618,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         console.error("Error fetching poverty data:", povertyError);
       }
 
-      res.json({
+      const responseData = {
         mp: {
           id: spotlightMp.id,
           name: spotlightMp.name,
@@ -636,7 +654,16 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         highlightStat,
         hansardQuotes,
         date: today.toISOString().split('T')[0],
-      });
+      };
+
+      // Cache the result
+      spotlightCache = responseData;
+      spotlightCacheDate = dateString;
+      spotlightComputeTime = Date.now() - computeStart;
+
+      res.set('X-Cache', 'MISS');
+      res.set('X-Compute-Time', spotlightComputeTime.toString());
+      res.json(responseData);
     } catch (error) {
       console.error("Error fetching MP spotlight:", error);
       res.status(500).json({ error: "Failed to fetch MP spotlight" });
