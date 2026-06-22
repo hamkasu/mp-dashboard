@@ -433,6 +433,11 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   let spotlightCacheDate = '';
   let spotlightComputeTime = 0;
 
+  // Cache for /api/analytics/summary (hourly)
+  let analyticsSummaryCache: any = null;
+  let analyticsSummaryCacheTime = 0;
+  const ANALYTICS_CACHE_TTL = 60 * 60 * 1000; // 1 hour
+
   // Get all MPs
   // Get MP Spotlight - daily rotating MP with stats highlight
   app.get("/api/mp-spotlight", async (_req, res) => {
@@ -6189,8 +6194,16 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   });
 
   // Analytics API routes (protected - admin only)
-  app.get("/api/analytics/summary", async (_req, res) => {
+  app.get("/api/analytics/summary", requireAdmin, async (_req, res) => {
     try {
+      const now = Date.now();
+
+      // Check cache (1 hour TTL)
+      if (analyticsSummaryCache && now < analyticsSummaryCacheTime + ANALYTICS_CACHE_TTL) {
+        res.set('X-Cache', 'HIT');
+        return res.json(analyticsSummaryCache);
+      }
+
       const { visitorAnalytics } = await import("@shared/schema");
       const { sql, count, countDistinct, desc } = await import("drizzle-orm");
 
@@ -6221,19 +6234,26 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         .orderBy(desc(count()))
         .limit(50);
 
-      res.json({
+      const responseData = {
         totalVisits: totalVisits.value,
         uniqueVisitors: uniqueIPs.value,
         topCountries,
         topPages,
-      });
+      };
+
+      // Cache the result
+      analyticsSummaryCache = responseData;
+      analyticsSummaryCacheTime = now;
+
+      res.set('X-Cache', 'MISS');
+      res.json(responseData);
     } catch (error) {
       console.error("Analytics summary error:", error);
       res.status(500).json({ error: "Failed to fetch analytics summary" });
     }
   });
 
-  app.get("/api/analytics/recent", async (req, res) => {
+  app.get("/api/analytics/recent", requireAdmin, async (req, res) => {
     try {
       const { visitorAnalytics } = await import("@shared/schema");
       const { desc } = await import("drizzle-orm");
@@ -6253,7 +6273,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
-  app.get("/api/analytics/countries", async (_req, res) => {
+  app.get("/api/analytics/countries", requireAdmin, async (_req, res) => {
     try {
       const { visitorAnalytics } = await import("@shared/schema");
       const { sql, count, desc } = await import("drizzle-orm");
@@ -6276,7 +6296,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
-  app.get("/api/analytics/timeline", async (req, res) => {
+  app.get("/api/analytics/timeline", requireAdmin, async (req, res) => {
     try {
       const { visitorAnalytics } = await import("@shared/schema");
       const { sql, count } = await import("drizzle-orm");
@@ -6309,7 +6329,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   });
 
   // Public endpoint for page-specific visitor count
-  app.get("/api/analytics/page-views", async (req, res) => {
+  app.get("/api/analytics/page-views", requireAdmin, async (req, res) => {
     try {
       const { visitorAnalytics } = await import("@shared/schema");
       const { eq, count } = await import("drizzle-orm");
