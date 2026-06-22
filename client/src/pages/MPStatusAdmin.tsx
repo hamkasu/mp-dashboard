@@ -37,6 +37,7 @@ export default function MPStatusAdmin() {
   const [byElectionDate, setByElectionDate] = useState("");
   const [byElectionNotes, setByElectionNotes] = useState("");
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   // Check admin authentication
   const { data: authStatus, isLoading: authLoading } = useQuery<{ isAdmin: boolean }>({
@@ -146,7 +147,7 @@ export default function MPStatusAdmin() {
   // Close suggestions when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (searchInputRef.current && !searchInputRef.current.contains(event.target as Node)) {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
         setShowSuggestions(false);
       }
     };
@@ -225,7 +226,7 @@ export default function MPStatusAdmin() {
                 {/* MP Selection */}
                 <div className="space-y-2">
                   <Label htmlFor="mp-search">Select MP</Label>
-                  <div className="relative">
+                  <div className="relative" ref={containerRef}>
                     <div className="flex gap-2">
                       <Input
                         ref={searchInputRef}
