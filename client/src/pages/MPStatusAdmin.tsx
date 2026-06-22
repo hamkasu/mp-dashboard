@@ -17,6 +17,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, UserX, AlertTriangle, CheckCircle2, UserPlus, X } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import type { Mp } from "@shared/schema";
 
 interface MpListItem {
@@ -285,36 +286,22 @@ export default function MPStatusAdmin() {
                 {/* Status Reason */}
                 <div className="space-y-2">
                   <Label>Status Reason</Label>
-                  <div className="flex gap-6">
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="radio"
-                        id="reason-deceased"
-                        name="status-reason"
-                        value="Deceased"
-                        checked={statusReason === "Deceased"}
-                        onChange={(e) => setStatusReason(e.target.value as "Deceased" | "Resigned")}
-                        className="w-4 h-4"
-                      />
-                      <Label htmlFor="reason-deceased" className="font-normal cursor-pointer">
-                        Deceased
-                      </Label>
+                  <RadioGroup value={statusReason} onValueChange={(value) => setStatusReason(value as "Deceased" | "Resigned")}>
+                    <div className="flex gap-6">
+                      <div className="flex items-center gap-2">
+                        <RadioGroupItem value="Deceased" id="reason-deceased" />
+                        <Label htmlFor="reason-deceased" className="font-normal cursor-pointer">
+                          Deceased
+                        </Label>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <RadioGroupItem value="Resigned" id="reason-resigned" />
+                        <Label htmlFor="reason-resigned" className="font-normal cursor-pointer">
+                          Resigned
+                        </Label>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="radio"
-                        id="reason-resigned"
-                        name="status-reason"
-                        value="Resigned"
-                        checked={statusReason === "Resigned"}
-                        onChange={(e) => setStatusReason(e.target.value as "Deceased" | "Resigned")}
-                        className="w-4 h-4"
-                      />
-                      <Label htmlFor="reason-resigned" className="font-normal cursor-pointer">
-                        Resigned
-                      </Label>
-                    </div>
-                  </div>
+                  </RadioGroup>
                 </div>
 
                 {/* Date of Passing/Resignation */}
