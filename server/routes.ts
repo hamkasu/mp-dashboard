@@ -467,7 +467,6 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
 
       // Use deterministic daily rotation based on date
       // The same MP will be shown all day, rotating at midnight
-      const today = new Date();
       const dayOfYear = Math.floor((today.getTime() - new Date(today.getFullYear(), 0, 0).getTime()) / (1000 * 60 * 60 * 24));
       const year = today.getFullYear();
       const seed = year * 1000 + dayOfYear;
