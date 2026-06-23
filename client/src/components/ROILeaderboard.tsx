@@ -76,6 +76,7 @@ export function ROILeaderboard({ mps, currentMpId }: ROILeaderboardProps) {
                 <th className="text-left py-3 px-2 font-semibold text-gray-700">Party</th>
                 <th className="text-left py-3 px-2 font-semibold text-gray-700">State</th>
                 <th className="text-right py-3 px-2 font-semibold text-gray-700">Bills Raised</th>
+                <th className="text-right py-3 px-2 font-semibold text-gray-700">Output per RM</th>
                 <th className="text-right py-3 px-2 font-semibold text-gray-700">ROI Score</th>
                 <th className="text-center py-3 px-2 font-semibold text-gray-700">Grade</th>
                 <th className="text-right py-3 px-2 font-semibold text-gray-700">Outputs</th>
@@ -88,6 +89,8 @@ export function ROILeaderboard({ mps, currentMpId }: ROILeaderboardProps) {
                 const bills = mp.billsRaised ?? mp.bills ?? 0;
                 const questions = mp.questionsAsked ?? mp.questions ?? 0;
                 const totalOutputs = speeches + bills + questions;
+                const outputScore = (speeches * 1.0) + (bills * 8.0) + (questions * 0.8);
+                const roiRatio = mp.annualAllowance > 0 ? outputScore / mp.annualAllowance : 0;
                 const isCurrentMp = currentMpId === (mp.mpId ?? mp.id);
 
                 return (
@@ -124,6 +127,9 @@ export function ROILeaderboard({ mps, currentMpId }: ROILeaderboardProps) {
                     </td>
                     <td className="py-3 px-2 text-gray-600">{mp.state}</td>
                     <td className="py-3 px-2 text-right font-semibold text-green-700">{bills}</td>
+                    <td className="py-3 px-2 text-right">
+                      <span className="font-mono text-sm text-blue-700 font-semibold">{roiRatio.toFixed(4)}</span>
+                    </td>
                     <td className="py-3 px-2 text-right">
                       <span className="font-bold text-lg text-purple-700">{mp.roiScore}</span>
                     </td>
