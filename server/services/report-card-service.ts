@@ -132,13 +132,13 @@ function calculateROIScoreUsingPercentile(
   // Use percentile ranking: higher ROI ratio = higher percentile
   const score = calculatePercentile(roiRatios, targetRatio, false);
 
-  // Assign grade based on percentile score
+  // Assign grade based on percentile score (equal distribution: each grade ~20%)
   let grade: string;
-  if (score >= 90) grade = 'A';
-  else if (score >= 75) grade = 'B';
-  else if (score >= 50) grade = 'C';
-  else if (score >= 25) grade = 'D';
-  else grade = 'F';
+  if (score >= 80) grade = 'A';      // Top 20% (80-100)
+  else if (score >= 60) grade = 'B'; // 60-80 (next 20%)
+  else if (score >= 40) grade = 'C'; // 40-60 (middle 20%)
+  else if (score >= 20) grade = 'D'; // 20-40 (next 20%)
+  else grade = 'F';                  // Bottom 20% (0-20)
 
   return { score, grade };
 }
@@ -567,11 +567,11 @@ function calculateGrades(metrics: MPMetrics[]): (MPGrade & MPMetrics)[] {
     const overallScore = Math.min(100, baseScore + Math.round(targetMp.committeeBonus));
 
     let grade: string;
-    if (overallScore >= 90) grade = 'A';
-    else if (overallScore >= 80) grade = 'B';
-    else if (overallScore >= 70) grade = 'C';
-    else if (overallScore >= 60) grade = 'D';
-    else grade = 'F';
+    if (overallScore >= 80) grade = 'A';      // Top 20% (80-100)
+    else if (overallScore >= 60) grade = 'B'; // 60-80 (next 20%)
+    else if (overallScore >= 40) grade = 'C'; // 40-60 (middle 20%)
+    else if (overallScore >= 20) grade = 'D'; // 20-40 (next 20%)
+    else grade = 'F';                         // Bottom 20% (0-20)
 
     return { attendanceScore, participationScore, conductScore, constituencyScore, overallScore, grade };
   }
@@ -615,13 +615,13 @@ function calculateGrades(metrics: MPMetrics[]): (MPGrade & MPMetrics)[] {
     // Bonus is capped at 100 total
     const overallScore = Math.min(100, baseScore + Math.round(mp.committeeBonus));
 
-    // 6. Assign letter grade
+    // 6. Assign letter grade (equal distribution: each grade ~20%)
     let grade: string;
-    if (overallScore >= 90) grade = 'A';
-    else if (overallScore >= 80) grade = 'B';
-    else if (overallScore >= 70) grade = 'C';
-    else if (overallScore >= 60) grade = 'D';
-    else grade = 'F';
+    if (overallScore >= 80) grade = 'A';      // Top 20% (80-100)
+    else if (overallScore >= 60) grade = 'B'; // 60-80 (next 20%)
+    else if (overallScore >= 40) grade = 'C'; // 40-60 (middle 20%)
+    else if (overallScore >= 20) grade = 'D'; // 20-40 (next 20%)
+    else grade = 'F';                         // Bottom 20% (0-20)
 
     // Phase 4: Calculate coalition percentiles if MP has a coalition
     let coalitionScores: Partial<MPGrade> = {};
