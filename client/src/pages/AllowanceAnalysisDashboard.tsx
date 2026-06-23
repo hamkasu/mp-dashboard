@@ -20,11 +20,25 @@ interface MPROIEntry {
 }
 
 interface AllowanceEfficiencyData {
-  avgROI: number;
-  medianROI: number;
-  topPerformers: MPROIEntry[];
-  lowestPerformers: MPROIEntry[];
-  gradeDistribution: Record<string, number>;
+  summary: {
+    totalMPs: number;
+    averageROI: number;
+    medianROI: number;
+    averageAnnualAllowance: number;
+  };
+  topPerformer: {
+    name: string;
+    party: string;
+    roiScore: number;
+    roiGrade: string;
+  };
+  lowestPerformer: {
+    name: string;
+    party: string;
+    roiScore: number;
+    roiGrade: string;
+  };
+  performanceDistribution: Record<string, { count: number; avgAllowance: number }>;
 }
 
 function AllowanceAnalysisDashboard() {
@@ -53,7 +67,7 @@ function AllowanceAnalysisDashboard() {
         const leaderboardData = await leaderboardRes.json();
         const efficiency = await efficiencyRes.json();
 
-        setMps(leaderboardData);
+        setMps(leaderboardData.data || leaderboardData);
         setEfficiencyData(efficiency);
 
         const uniqueParties = Array.from(new Set(leaderboardData.map((mp: MPROIEntry) => mp.party))).sort() as string[];
@@ -91,9 +105,9 @@ function AllowanceAnalysisDashboard() {
   }, [mps, searchTerm, selectedParty, selectedGrade]);
 
   const gradeDistributionData = efficiencyData
-    ? Object.entries(efficiencyData.gradeDistribution).map(([grade, count]) => ({
+    ? Object.entries(efficiencyData.performanceDistribution).map(([grade, data]) => ({
         grade,
-        count,
+        count: data.count,
       }))
     : [];
 
@@ -120,7 +134,7 @@ function AllowanceAnalysisDashboard() {
               <CardDescription>Average ROI Score</CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-3xl font-bold text-purple-700">{efficiencyData.avgROI}</p>
+              <p className="text-3xl font-bold text-purple-700">{efficiencyData.summary.averageROI}</p>
             </CardContent>
           </Card>
 
@@ -129,7 +143,7 @@ function AllowanceAnalysisDashboard() {
               <CardDescription>Median ROI Score</CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-3xl font-bold text-blue-700">{efficiencyData.medianROI}</p>
+              <p className="text-3xl font-bold text-blue-700">{efficiencyData.summary.medianROI}</p>
             </CardContent>
           </Card>
 
@@ -140,7 +154,7 @@ function AllowanceAnalysisDashboard() {
             <CardContent>
               <div className="flex items-center gap-2">
                 <Users className="w-6 h-6 text-green-600" />
-                <p className="text-3xl font-bold text-green-700">{mps.length}</p>
+                <p className="text-3xl font-bold text-green-700">{efficiencyData.summary.totalMPs}</p>
               </div>
             </CardContent>
           </Card>
@@ -234,27 +248,25 @@ function AllowanceAnalysisDashboard() {
               <div className="flex items-center gap-2">
                 <TrendingUp className="w-5 h-5 text-green-600" />
                 <div>
-                  <CardTitle>Top Performers</CardTitle>
-                  <CardDescription>Highest ROI scores</CardDescription>
+                  <CardTitle>Top Performer</CardTitle>
+                  <CardDescription>Highest ROI score</CardDescription>
                 </div>
               </div>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {efficiencyData.topPerformers.slice(0, 5).map((mp, idx) => (
-                  <div key={mp.id} className="flex justify-between items-center p-3 bg-white rounded border border-green-200">
-                    <div>
-                      <p className="font-semibold text-gray-900">#{idx + 1} {mp.name}</p>
-                      <p className="text-sm text-gray-600">{mp.party} • {mp.state}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-bold text-lg text-green-700">{mp.roiScore}</p>
-                      <p className={`text-xs font-bold ${
-                        mp.roiGrade === 'A' ? 'text-green-600' : 'text-gray-600'
-                      }`}>Grade {mp.roiGrade}</p>
-                    </div>
+                <div className="flex justify-between items-center p-3 bg-white rounded border border-green-200">
+                  <div>
+                    <p className="font-semibold text-gray-900">🏆 {efficiencyData.topPerformer.name}</p>
+                    <p className="text-sm text-gray-600">{efficiencyData.topPerformer.party}</p>
                   </div>
-                ))}
+                  <div className="text-right">
+                    <p className="font-bold text-lg text-green-700">{efficiencyData.topPerformer.roiScore}</p>
+                    <p className={`text-xs font-bold ${
+                      efficiencyData.topPerformer.roiGrade === 'A' ? 'text-green-600' : 'text-gray-600'
+                    }`}>Grade {efficiencyData.topPerformer.roiGrade}</p>
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -263,27 +275,25 @@ function AllowanceAnalysisDashboard() {
             <CardHeader>
               <div className="flex items-center gap-2">
                 <div>
-                  <CardTitle>Lowest Performers</CardTitle>
-                  <CardDescription>Lowest ROI scores</CardDescription>
+                  <CardTitle>Lowest Performer</CardTitle>
+                  <CardDescription>Lowest ROI score</CardDescription>
                 </div>
               </div>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {efficiencyData.lowestPerformers.slice(0, 5).map((mp, idx) => (
-                  <div key={mp.id} className="flex justify-between items-center p-3 bg-white rounded border border-red-200">
-                    <div>
-                      <p className="font-semibold text-gray-900">#{idx + 1} {mp.name}</p>
-                      <p className="text-sm text-gray-600">{mp.party} • {mp.state}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-bold text-lg text-red-700">{mp.roiScore}</p>
-                      <p className={`text-xs font-bold ${
-                        mp.roiGrade === 'F' ? 'text-red-600' : 'text-gray-600'
-                      }`}>Grade {mp.roiGrade}</p>
-                    </div>
+                <div className="flex justify-between items-center p-3 bg-white rounded border border-red-200">
+                  <div>
+                    <p className="font-semibold text-gray-900">{efficiencyData.lowestPerformer.name}</p>
+                    <p className="text-sm text-gray-600">{efficiencyData.lowestPerformer.party}</p>
                   </div>
-                ))}
+                  <div className="text-right">
+                    <p className="font-bold text-lg text-red-700">{efficiencyData.lowestPerformer.roiScore}</p>
+                    <p className={`text-xs font-bold ${
+                      efficiencyData.lowestPerformer.roiGrade === 'F' ? 'text-red-600' : 'text-gray-600'
+                    }`}>Grade {efficiencyData.lowestPerformer.roiGrade}</p>
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>
