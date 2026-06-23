@@ -9924,6 +9924,112 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
+  // Phase 4: Get report cards with coalition and state percentiles
+  app.get("/api/report-cards/percentiles/coalition-state", async (req, res) => {
+    try {
+      const { getReportCardsWithCoalitionAndStatePercentiles } = await import("./services/report-card-service");
+      const cardsWithPercentiles = await getReportCardsWithCoalitionAndStatePercentiles();
+
+      res.json({
+        total: cardsWithPercentiles.length,
+        data: cardsWithPercentiles.map(card => ({
+          mpId: card.mpId,
+          name: card.name,
+          party: card.mp?.party,
+          state: card.state,
+          coalition: card.coalition,
+          // Global percentiles
+          global: {
+            attendanceScore: card.attendanceScore,
+            participationScore: card.participationScore,
+            conductScore: card.conductScore,
+            constituencyScore: card.constituencyScore,
+            overallScore: card.overallScore,
+            grade: card.grade,
+          },
+          // Coalition percentiles (if applicable)
+          ...(card.coalitionOverallScore && {
+            coalition: {
+              attendanceScore: card.coalitionAttendanceScore,
+              participationScore: card.coalitionParticipationScore,
+              conductScore: card.coalitionConductScore,
+              constituencyScore: card.coalitionConstituencyScore,
+              overallScore: card.coalitionOverallScore,
+              grade: card.coalitionGrade,
+            },
+          }),
+          // State percentiles
+          ...(card.stateOverallScore && {
+            state: {
+              attendanceScore: card.stateAttendanceScore,
+              participationScore: card.stateParticipationScore,
+              conductScore: card.stateConductScore,
+              constituencyScore: card.stateConstituencyScore,
+              overallScore: card.stateOverallScore,
+              grade: card.stateGrade,
+            },
+          }),
+        })),
+      });
+    } catch (error) {
+      console.error("Error fetching coalition/state percentiles:", error);
+      res.status(500).json({ error: "Failed to fetch coalition/state percentiles" });
+    }
+  });
+
+  // Get report card for specific MP with coalition/state percentiles
+  app.get("/api/report-cards/:mpId/with-coalition-state", async (req, res) => {
+    try {
+      const { mpId } = req.params;
+      const { getReportCardsWithCoalitionAndStatePercentiles } = await import("./services/report-card-service");
+      const allCards = await getReportCardsWithCoalitionAndStatePercentiles();
+      const card = allCards.find(c => c.mpId === mpId);
+
+      if (!card) {
+        return res.status(404).json({ error: "Report card not found for this MP" });
+      }
+
+      res.json({
+        mpId: card.mpId,
+        name: card.name,
+        party: card.mp?.party,
+        state: card.state,
+        coalition: card.coalition,
+        global: {
+          attendanceScore: card.attendanceScore,
+          participationScore: card.participationScore,
+          conductScore: card.conductScore,
+          constituencyScore: card.constituencyScore,
+          overallScore: card.overallScore,
+          grade: card.grade,
+        },
+        ...(card.coalitionOverallScore && {
+          coalitionPercentile: {
+            attendanceScore: card.coalitionAttendanceScore,
+            participationScore: card.coalitionParticipationScore,
+            conductScore: card.coalitionConductScore,
+            constituencyScore: card.coalitionConstituencyScore,
+            overallScore: card.coalitionOverallScore,
+            grade: card.coalitionGrade,
+          },
+        }),
+        ...(card.stateOverallScore && {
+          statePercentile: {
+            attendanceScore: card.stateAttendanceScore,
+            participationScore: card.stateParticipationScore,
+            conductScore: card.stateConductScore,
+            constituencyScore: card.stateConstituencyScore,
+            overallScore: card.stateOverallScore,
+            grade: card.stateGrade,
+          },
+        }),
+      });
+    } catch (error) {
+      console.error("Error fetching MP report card with coalition/state:", error);
+      res.status(500).json({ error: "Failed to fetch MP report card" });
+    }
+  });
+
   // Compare two MPs using Grok AI
   app.post("/api/report-cards/compare-grok", async (req, res) => {
     try {
