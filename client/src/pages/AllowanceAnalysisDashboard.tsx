@@ -2,9 +2,10 @@ import { useState, useEffect } from "react";
 import { ROILeaderboard } from "@/components/ROILeaderboard";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line } from "recharts";
-import { TrendingUp, Users } from "lucide-react";
+import { TrendingUp, Users, RefreshCw } from "lucide-react";
 
 interface MPROIEntry {
   mpId?: string;
@@ -54,44 +55,85 @@ function AllowanceAnalysisDashboard() {
   const [selectedParty, setSelectedParty] = useState<string>("all");
   const [selectedGrade, setSelectedGrade] = useState<string>("all");
   const [parties, setParties] = useState<string[]>([]);
+  const [recalculating, setRecalculating] = useState(false);
+  const [recalcStatus, setRecalcStatus] = useState<{ type: 'success' | 'error' | null; message: string }>(
+    { type: null, message: '' }
+  );
+
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+
+      // Fetch both endpoints, but handle failures individually
+      const [leaderboardRes, efficiencyRes] = await Promise.all([
+        fetch("/api/report-cards/roi-leaderboard").catch(() => null),
+        fetch("/api/analytics/allowance-efficiency").catch(() => null),
+      ]);
+
+      // Process leaderboard data (required)
+      if (leaderboardRes && leaderboardRes.ok) {
+        const leaderboardData = await leaderboardRes.json();
+        const mpsData = leaderboardData.data || leaderboardData;
+        setMps(mpsData);
+
+        const uniqueParties = Array.from(new Set(mpsData.map((mp: MPROIEntry) => mp.party))).sort() as string[];
+        setParties(uniqueParties);
+      } else {
+        console.error("Failed to fetch leaderboard data");
+      }
+
+      // Process efficiency data (optional)
+      if (efficiencyRes && efficiencyRes.ok) {
+        const efficiency = await efficiencyRes.json();
+        setEfficiencyData(efficiency);
+      } else {
+        console.error("Failed to fetch efficiency data (continuing without it)");
+      }
+    } catch (err) {
+      console.error("Error fetching allowance data:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRecalculate = async () => {
+    try {
+      setRecalculating(true);
+      setRecalcStatus({ type: null, message: '' });
+
+      const response = await fetch("/api/admin/report-cards/update", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        setRecalcStatus({
+          type: 'success',
+          message: `Report cards updated! ${result.updated} updated, ${result.created} created.`,
+        });
+        setTimeout(() => {
+          setRecalcStatus({ type: null, message: '' });
+          fetchData();
+        }, 2000);
+      } else {
+        const error = await response.json();
+        setRecalcStatus({
+          type: 'error',
+          message: `Failed to recalculate: ${error.error || 'Unknown error'}`,
+        });
+      }
+    } catch (err) {
+      setRecalcStatus({
+        type: 'error',
+        message: `Error: ${err instanceof Error ? err.message : 'Unknown error'}`,
+      });
+    } finally {
+      setRecalculating(false);
+    }
+  };
 
   useEffect(() => {
-    async function fetchData() {
-      try {
-        setLoading(true);
-
-        // Fetch both endpoints, but handle failures individually
-        const [leaderboardRes, efficiencyRes] = await Promise.all([
-          fetch("/api/report-cards/roi-leaderboard").catch(() => null),
-          fetch("/api/analytics/allowance-efficiency").catch(() => null),
-        ]);
-
-        // Process leaderboard data (required)
-        if (leaderboardRes && leaderboardRes.ok) {
-          const leaderboardData = await leaderboardRes.json();
-          const mpsData = leaderboardData.data || leaderboardData;
-          setMps(mpsData);
-
-          const uniqueParties = Array.from(new Set(mpsData.map((mp: MPROIEntry) => mp.party))).sort() as string[];
-          setParties(uniqueParties);
-        } else {
-          console.error("Failed to fetch leaderboard data");
-        }
-
-        // Process efficiency data (optional)
-        if (efficiencyRes && efficiencyRes.ok) {
-          const efficiency = await efficiencyRes.json();
-          setEfficiencyData(efficiency);
-        } else {
-          console.error("Failed to fetch efficiency data (continuing without it)");
-        }
-      } catch (err) {
-        console.error("Error fetching allowance data:", err);
-      } finally {
-        setLoading(false);
-      }
-    }
-
     fetchData();
   }, []);
 
@@ -135,8 +177,31 @@ function AllowanceAnalysisDashboard() {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-8">
-        <h1 className="text-4xl font-bold text-gray-900 mb-2">Allowance Analysis Dashboard</h1>
-        <p className="text-lg text-gray-600">Analyze MP allowance efficiency and return on investment</p>
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h1 className="text-4xl font-bold text-gray-900 mb-2">Allowance Analysis Dashboard</h1>
+            <p className="text-lg text-gray-600">Analyze MP allowance efficiency and return on investment</p>
+          </div>
+          <Button
+            onClick={handleRecalculate}
+            disabled={recalculating}
+            className="gap-2"
+            variant="outline"
+          >
+            <RefreshCw className={`w-4 h-4 ${recalculating ? 'animate-spin' : ''}`} />
+            {recalculating ? 'Recalculating...' : 'Recalculate Grades'}
+          </Button>
+        </div>
+
+        {recalcStatus.type && (
+          <div className={`p-3 rounded-md text-sm font-medium ${
+            recalcStatus.type === 'success'
+              ? 'bg-green-100 text-green-800 border border-green-300'
+              : 'bg-red-100 text-red-800 border border-red-300'
+          }`}>
+            {recalcStatus.message}
+          </div>
+        )}
       </div>
 
       {/* Summary Stats */}
