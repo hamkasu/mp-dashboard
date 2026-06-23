@@ -48,6 +48,9 @@ const DunSarawak = lazy(() => import("@/pages/DunSarawak"));
 const DunSelangor = lazy(() => import("@/pages/DunSelangor"));
 const ReportCard = lazy(() => import("@/pages/ReportCard"));
 const ReportCardAdmin = lazy(() => import("@/pages/ReportCardAdmin"));
+const CoalitionComparison = lazy(() => import("@/pages/CoalitionComparison"));
+const StateLeaderboards = lazy(() => import("@/pages/StateLeaderboards"));
+const MPDetailWithPercentiles = lazy(() => import("@/pages/MPDetailWithPercentiles"));
 const MPMessagesAdmin = lazy(() => import("@/pages/MPMessagesAdmin"));
 const AIAgentsAdmin = lazy(() => import("@/pages/AIAgentsAdmin"));
 const MA63Dashboard = lazy(() => import("@/pages/MA63Dashboard"));
@@ -111,6 +114,10 @@ function Router() {
         <Route path="/ma63" component={MA63Dashboard} />
         <Route path="/report-card" component={ReportCard} />
         <Route path="/report-card-admin" component={ReportCardAdmin} />
+        {/* Phase 4: Coalition and State Percentiles */}
+        <Route path="/coalition-comparison" component={CoalitionComparison} />
+        <Route path="/state-leaderboards" component={StateLeaderboards} />
+        <Route path="/mp/:mpId/percentiles" component={MPDetailWithPercentiles} />
         <Route path="/mp-messages-admin" component={MPMessagesAdmin} />
         <Route path="/ai-agents-admin" component={AIAgentsAdmin} />
         <Route path="/mymp-import-admin" component={MYMPImportAdmin} />
