@@ -38,7 +38,9 @@
     "import-election-results": "tsx scripts/import-election-results.ts",
     "generate-key": "tsx scripts/generate-api-key.ts",
     "extract-hansard-speeches": "tsx scripts/extract-hansard-speeches.ts",
-    "tag-hansard-speeches": "tsx scripts/hansard-tag-speeches.ts"
+    "tag-hansard-speeches": "tsx scripts/hansard-tag-speeches.ts",
+    "calibration-sample": "tsx scripts/hansard-calibration-sample.ts",
+    "calibration-report": "tsx scripts/hansard-calibration-report.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.105.0",
