@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line } from "recharts";
-import { TrendingUp, Users, RefreshCw } from "lucide-react";
+import { TrendingUp, Users, RefreshCw, Info } from "lucide-react";
 
 interface MPROIEntry {
   mpId?: string;
@@ -310,6 +310,78 @@ function AllowanceAnalysisDashboard() {
                   <SelectItem value="F">F - Poor</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Methodology Section */}
+      <Card className="mb-8 border-2 border-blue-200 bg-gradient-to-br from-blue-50 to-white">
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <Info className="w-5 h-5 text-blue-600" />
+            <div>
+              <CardTitle>How ROI Grades Are Calculated</CardTitle>
+              <CardDescription>Understanding the methodology behind the scores</CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4 text-sm">
+            <div>
+              <h4 className="font-semibold text-gray-900 mb-2">ROI Output Score</h4>
+              <p className="text-gray-700">
+                We calculate each MP's output impact as: <span className="font-mono bg-gray-100 px-2 py-1 rounded">(Speeches × 1.0) + (Bills × 8.0) + (Questions × 0.8)</span>
+              </p>
+              <p className="text-gray-600 text-xs mt-1">Bills are weighted higher as they require more effort and legislative impact.</p>
+            </div>
+
+            <div>
+              <h4 className="font-semibold text-gray-900 mb-2">ROI Ratio</h4>
+              <p className="text-gray-700">
+                ROI Ratio = <span className="font-mono bg-gray-100 px-2 py-1 rounded">Output Score ÷ Annual Allowance (RM)</span>
+              </p>
+              <p className="text-gray-600 text-xs mt-1">Higher ratio = more output per ringgit of taxpayer allowance spent</p>
+            </div>
+
+            <div>
+              <h4 className="font-semibold text-gray-900 mb-2">ROI Score (0-100 Percentile)</h4>
+              <p className="text-gray-700">
+                Each MP's ROI is ranked against all 223 MPs to determine their percentile position (0-100).
+              </p>
+              <p className="text-gray-600 text-xs mt-1">Score of 50 = median performance. Score of 90 = better than 90% of peers.</p>
+            </div>
+
+            <div>
+              <h4 className="font-semibold text-gray-900 mb-2">Grade Assignment (Equal Distribution)</h4>
+              <div className="grid grid-cols-2 gap-2 mt-2">
+                <div className="p-2 bg-green-100 rounded border border-green-300">
+                  <p className="font-semibold text-green-900">A: 80-100</p>
+                  <p className="text-xs text-green-800">Top 20%</p>
+                </div>
+                <div className="p-2 bg-blue-100 rounded border border-blue-300">
+                  <p className="font-semibold text-blue-900">B: 60-80</p>
+                  <p className="text-xs text-blue-800">Next 20%</p>
+                </div>
+                <div className="p-2 bg-amber-100 rounded border border-amber-300">
+                  <p className="font-semibold text-amber-900">C: 40-60</p>
+                  <p className="text-xs text-amber-800">Middle 20%</p>
+                </div>
+                <div className="p-2 bg-orange-100 rounded border border-orange-300">
+                  <p className="font-semibold text-orange-900">D: 20-40</p>
+                  <p className="text-xs text-orange-800">Next 20%</p>
+                </div>
+                <div className="p-2 col-span-2 bg-red-100 rounded border border-red-300">
+                  <p className="font-semibold text-red-900">F: 0-20</p>
+                  <p className="text-xs text-red-800">Bottom 20%</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="pt-2 border-t border-blue-200">
+              <p className="text-xs text-gray-600 italic">
+                Last recalculated: Monthly on the 1st. Click "Recalculate Grades" above to update immediately with latest data.
+              </p>
             </div>
           </div>
         </CardContent>
