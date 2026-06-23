@@ -3,16 +3,20 @@ import { Badge } from "@/components/ui/badge";
 import { Trophy, Award } from "lucide-react";
 
 interface MPROIEntry {
-  id: string;
+  mpId?: string;
+  id?: string;
   name: string;
   party: string;
   state: string;
   roiScore: number;
   roiGrade: string;
   annualAllowance: number;
-  speeches: number;
-  bills: number;
-  questions: number;
+  totalSpeeches?: number;
+  speeches?: number;
+  billsRaised?: number;
+  bills?: number;
+  questionsAsked?: number;
+  questions?: number;
 }
 
 interface ROILeaderboardProps {
@@ -74,12 +78,15 @@ export function ROILeaderboard({ mps, currentMpId }: ROILeaderboardProps) {
             <tbody>
               {mps.map((mp, index) => {
                 const rank = index + 1;
-                const totalOutputs = mp.speeches + mp.bills + mp.questions;
-                const isCurrentMp = currentMpId === mp.id;
+                const speeches = mp.totalSpeeches ?? mp.speeches ?? 0;
+                const bills = mp.billsRaised ?? mp.bills ?? 0;
+                const questions = mp.questionsAsked ?? mp.questions ?? 0;
+                const totalOutputs = speeches + bills + questions;
+                const isCurrentMp = currentMpId === (mp.mpId ?? mp.id);
 
                 return (
                   <tr
-                    key={mp.id}
+                    key={mp.mpId ?? mp.id}
                     className={`border-b border-gray-100 hover:bg-gray-50 transition-colors ${
                       isCurrentMp ? "bg-purple-100" : ""
                     }`}
