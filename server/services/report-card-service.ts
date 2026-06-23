@@ -96,45 +96,48 @@ function calculateAllowanceRatios(
 }
 
 /**
- * Calculate ROI Score (0-100) based on output relative to allowance
+ * Calculate ROI Score (0-100) and grade using percentile ranking
  * High output = High ROI = Good value for taxpayers
  * Low output = Low ROI = Poor value for taxpayers
+ * Uses percentile-based approach for consistency with other grades
  */
-function calculateROIScore(
-  annualAllowance: number,
-  totalSpeeches: number,
-  billsRaised: number,
-  questionsAsked: number,
-  committeeMemberships: number
+function calculateROIScoreUsingPercentile(
+  allMpMetrics: Array<{
+    totalSpeeches: number;
+    billsRaised: number;
+    questionsAsked: number;
+    annualAllowance: number;
+    committeeMemberships?: number;
+  }>,
+  targetMpIndex: number
 ): { score: number; grade: string } {
-  // Weighted output index
-  // Speeches are most common (40%), Bills are rarest but valuable (30%),
-  // Questions are moderate (20%), Committees show engagement (10%)
-  const outputIndex =
-    (totalSpeeches * 1.0) +        // Weight speeches
-    (billsRaised * 15.0) +         // Bills are much more valuable
-    (questionsAsked * 0.9) +       // Questions slightly less than speeches
-    (committeeMemberships * 5.0);  // Committee roles worth more
+  const targetMp = allMpMetrics[targetMpIndex];
 
-  // Normalize: Active MP (150 speeches, 3 bills, 50 questions, 2 committees) = output of ~250
-  // If allowance is ~300k, ratio is 250/300000 = 0.00083
-  // We want this to map to ~80 (A-grade)
-  const roiRatio = (outputIndex / annualAllowance) * 1000000;
+  // Calculate ROI ratio for each MP: output / allowance
+  // Higher ratio = better ROI (more output per rupiah spent)
+  const roiRatios = allMpMetrics.map(mp => {
+    const outputIndex =
+      (mp.totalSpeeches * 1.0) +           // Speeches (weighted 1.0)
+      (mp.billsRaised * 8.0) +             // Bills (weighted 8.0)
+      (mp.questionsAsked * 0.8) +          // Questions (weighted 0.8)
+      ((mp.committeeMemberships || 0) * 3.0);  // Committees (weighted 3.0)
 
-  // Map to 0-100 scale with benchmarks
-  // roiRatio ~500 (very poor) = score 0
-  // roiRatio ~1000 (active) = score 80
-  // roiRatio ~1250+ (exceptionally active) = score 100+
-  // Formula: score = (roiRatio / 1000) * 80
-  let score = Math.round((roiRatio / 1000) * 80);
-  score = Math.min(100, Math.max(0, score)); // Clamp to 0-100
+    // Avoid division by zero
+    if (mp.annualAllowance === 0) return 0;
+    return outputIndex / mp.annualAllowance;
+  });
 
-  // Assign grade based on score
+  const targetRatio = roiRatios[targetMpIndex];
+
+  // Use percentile ranking: higher ROI ratio = higher percentile
+  const score = calculatePercentile(roiRatios, targetRatio, false);
+
+  // Assign grade based on percentile score
   let grade: string;
-  if (score >= 85) grade = 'A';
-  else if (score >= 70) grade = 'B';
-  else if (score >= 55) grade = 'C';
-  else if (score >= 40) grade = 'D';
+  if (score >= 90) grade = 'A';
+  else if (score >= 75) grade = 'B';
+  else if (score >= 50) grade = 'C';
+  else if (score >= 25) grade = 'D';
   else grade = 'F';
 
   return { score, grade };
@@ -700,12 +703,23 @@ export async function updateAllReportCards(): Promise<{ updated: number; created
     const allMps = await db.select().from(mps);
     const mpMap = new Map(allMps.map(mp => [mp.id, mp]));
 
+    // Calculate ROI scores using percentile ranking across all MPs
+    const metricsWithAllowances = metrics.map(m => {
+      const mpData = mpMap.get(m.mpId);
+      return {
+        ...m,
+        annualAllowance: mpData ? calculateAnnualAllowance(mpData) : 0,
+      };
+    });
+
     // Save each MP's grade to database
-    for (const grade of grades) {
+    for (let i = 0; i < grades.length; i++) {
+      const grade = grades[i];
       const mpData = mpMap.get(grade.mpId);
+      const metricWithAllowance = metricsWithAllowances[i];
 
       // Phase 5: Calculate allowance and ROI metrics
-      const annualAllowance = mpData ? calculateAnnualAllowance(mpData) : 0;
+      const annualAllowance = metricWithAllowance.annualAllowance;
       const allowanceRatios = calculateAllowanceRatios(
         annualAllowance,
         grade.totalSpeeches,
@@ -713,12 +727,9 @@ export async function updateAllReportCards(): Promise<{ updated: number; created
         grade.questionsAsked,
         0 // TODO: Get actual committee count when available
       );
-      const roiCalc = calculateROIScore(
-        annualAllowance,
-        grade.totalSpeeches,
-        grade.billsRaised,
-        grade.questionsAsked,
-        0 // TODO: Get actual committee count
+      const roiCalc = calculateROIScoreUsingPercentile(
+        metricsWithAllowances,
+        i
       );
 
       const existing = await db
