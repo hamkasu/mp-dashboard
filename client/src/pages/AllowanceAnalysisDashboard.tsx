@@ -7,16 +7,20 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsive
 import { TrendingUp, Users } from "lucide-react";
 
 interface MPROIEntry {
-  id: string;
+  mpId?: string;
+  id?: string;
   name: string;
   party: string;
   state: string;
   roiScore: number;
   roiGrade: string;
   annualAllowance: number;
-  speeches: number;
-  bills: number;
-  questions: number;
+  totalSpeeches?: number;
+  speeches?: number;
+  billsRaised?: number;
+  bills?: number;
+  questionsAsked?: number;
+  questions?: number;
 }
 
 interface AllowanceEfficiencyData {
