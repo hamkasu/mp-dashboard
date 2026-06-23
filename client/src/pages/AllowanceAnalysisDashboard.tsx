@@ -59,23 +59,32 @@ function AllowanceAnalysisDashboard() {
     async function fetchData() {
       try {
         setLoading(true);
+
+        // Fetch both endpoints, but handle failures individually
         const [leaderboardRes, efficiencyRes] = await Promise.all([
-          fetch("/api/report-cards/roi-leaderboard"),
-          fetch("/api/analytics/allowance-efficiency"),
+          fetch("/api/report-cards/roi-leaderboard").catch(() => null),
+          fetch("/api/analytics/allowance-efficiency").catch(() => null),
         ]);
 
-        if (!leaderboardRes.ok || !efficiencyRes.ok) {
-          throw new Error("Failed to fetch data");
+        // Process leaderboard data (required)
+        if (leaderboardRes && leaderboardRes.ok) {
+          const leaderboardData = await leaderboardRes.json();
+          const mpsData = leaderboardData.data || leaderboardData;
+          setMps(mpsData);
+
+          const uniqueParties = Array.from(new Set(mpsData.map((mp: MPROIEntry) => mp.party))).sort() as string[];
+          setParties(uniqueParties);
+        } else {
+          console.error("Failed to fetch leaderboard data");
         }
 
-        const leaderboardData = await leaderboardRes.json();
-        const efficiency = await efficiencyRes.json();
-
-        setMps(leaderboardData.data || leaderboardData);
-        setEfficiencyData(efficiency);
-
-        const uniqueParties = Array.from(new Set(leaderboardData.map((mp: MPROIEntry) => mp.party))).sort() as string[];
-        setParties(uniqueParties);
+        // Process efficiency data (optional)
+        if (efficiencyRes && efficiencyRes.ok) {
+          const efficiency = await efficiencyRes.json();
+          setEfficiencyData(efficiency);
+        } else {
+          console.error("Failed to fetch efficiency data (continuing without it)");
+        }
       } catch (err) {
         console.error("Error fetching allowance data:", err);
       } finally {
