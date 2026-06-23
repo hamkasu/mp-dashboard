@@ -386,43 +386,48 @@ async function fetchAllMPMetrics(): Promise<MPMetrics[]> {
   console.log(`[Report Cards] Fetched aggregates: ${billCounts.length} bill authors, ${questionCounts.length} questioners, ${allCourtCases.length} total court cases`);
 
   // Query 6: Get committee memberships for active MPs (15th Parliament, currently serving)
-  const allCommitteeMemberships = await db
-    .select({
-      mpId: committeeMembers.mpId,
-      committeeAbbr: committeeMembers.committeeAbbr,
-      role: committeeMembers.role,
-    })
-    .from(committeeMembers)
-    .where(
-      and(
-        eq(committeeMembers.parliamentTerm, "15th Parliament"),
-        eq(committeeMembers.endDate, null)
-      )
-    );
+  let committeeMap = new Map<string, number>();
+  try {
+    const allCommitteeMemberships = await db
+      .select({
+        mpId: committeeMembers.mpId,
+        committeeAbbr: committeeMembers.committeeAbbr,
+        role: committeeMembers.role,
+      })
+      .from(committeeMembers)
+      .where(
+        and(
+          eq(committeeMembers.parliamentTerm, "15th Parliament"),
+          eq(committeeMembers.endDate, null)
+        )
+      );
 
-  // Calculate committee bonus per MP
-  const committeeMap = new Map<string, number>();
-  for (const membership of allCommitteeMemberships) {
-    if (!committeeMap.has(membership.mpId)) {
-      committeeMap.set(membership.mpId, 0);
+    // Calculate committee bonus per MP
+    for (const membership of allCommitteeMemberships) {
+      if (!committeeMap.has(membership.mpId)) {
+        committeeMap.set(membership.mpId, 0);
+      }
+      const currentBonus = committeeMap.get(membership.mpId)!;
+
+      // Determine bonus based on committee and role
+      let bonusPoints = 0;
+      if (membership.committeeAbbr === "PAC") {
+        bonusPoints = membership.role === "chair" ? 15 : 8;
+      } else if (membership.role === "chair") {
+        bonusPoints = 10;
+      } else {
+        bonusPoints = 3;
+      }
+
+      // Set to maximum (don't add if already has higher bonus)
+      committeeMap.set(membership.mpId, Math.max(currentBonus, bonusPoints));
     }
-    const currentBonus = committeeMap.get(membership.mpId)!;
 
-    // Determine bonus based on committee and role
-    let bonusPoints = 0;
-    if (membership.committeeAbbr === "PAC") {
-      bonusPoints = membership.role === "chair" ? 15 : 8;
-    } else if (membership.role === "chair") {
-      bonusPoints = 10;
-    } else {
-      bonusPoints = 3;
-    }
-
-    // Set to maximum (don't add if already has higher bonus)
-    committeeMap.set(membership.mpId, Math.max(currentBonus, bonusPoints));
+    console.log(`[Report Cards] Found committee memberships for ${committeeMap.size} MPs`);
+  } catch (error) {
+    console.warn("[Report Cards] Committee memberships table not found or unavailable, skipping committee bonuses");
+    committeeMap = new Map(); // Empty map - no committee bonuses
   }
-
-  console.log(`[Report Cards] Found committee memberships for ${committeeMap.size} MPs`);
 
   // Combine all data into metrics
   const metrics: MPMetrics[] = allMps.map(mp => {
