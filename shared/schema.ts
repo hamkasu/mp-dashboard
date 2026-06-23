@@ -1589,6 +1589,55 @@ export type InsertMa63WatchlistItem = z.infer<typeof insertMa63WatchlistItemSche
 export type UpdateMa63WatchlistItem = z.infer<typeof updateMa63WatchlistItemSchema>;
 export type Ma63WatchlistItem = typeof ma63WatchlistItems.$inferSelect;
 
+// ========== PARLIAMENTARY COMMITTEES ==========
+// Committee membership tracking for scoring and transparency
+
+export const COMMITTEE_ROLES = ["chair", "member", "vice-chair"] as const;
+export type CommitteeRole = typeof COMMITTEE_ROLES[number];
+
+export const committeeMembers = pgTable("committee_memberships", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  mpId: varchar("mp_id").notNull().references(() => mps.id, { onDelete: "cascade" }),
+
+  // Committee identification
+  committeeName: text("committee_name").notNull(),    // "Public Accounts Committee"
+  committeeAbbr: text("committee_abbr"),              // "PAC" - optional abbreviation
+
+  // Role and status
+  role: text("role").$type<CommitteeRole>().notNull(), // "chair", "member", "vice-chair"
+
+  // Session tracking (15th Parliament, 14th Parliament, etc.)
+  parliamentTerm: text("parliament_term").notNull(),
+  startDate: timestamp("start_date").notNull(),
+  endDate: timestamp("end_date"),                     // null = currently serving
+
+  // Data quality
+  sourceUrl: text("source_url"),                      // Where data came from for verification
+  verificationNotes: text("verification_notes"),      // Any caveats about data accuracy
+
+  // Timestamps
+  createdAt: timestamp("created_at").notNull().default(sql`NOW()`),
+  updatedAt: timestamp("updated_at").notNull().default(sql`NOW()`),
+});
+
+export const insertCommitteeMemberSchema = createInsertSchema(committeeMembers).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  role: z.enum(COMMITTEE_ROLES),
+  startDate: z.coerce.date(),
+  endDate: z.coerce.date().nullable().optional(),
+  sourceUrl: z.string().nullable().optional(),
+  verificationNotes: z.string().nullable().optional(),
+});
+
+export const updateCommitteeMemberSchema = insertCommitteeMemberSchema.partial().omit({ mpId: true });
+
+export type InsertCommitteeMember = z.infer<typeof insertCommitteeMemberSchema>;
+export type UpdateCommitteeMember = z.infer<typeof updateCommitteeMemberSchema>;
+export type CommitteeMember = typeof committeeMembers.$inferSelect;
+
 // ========== WEEKLY POLLS ==========
 // Weekly polling system with AI-generated topics
 

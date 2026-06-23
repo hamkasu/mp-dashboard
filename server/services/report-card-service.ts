@@ -10,8 +10,8 @@
  */
 
 import { db } from "../db";
-import { mps, mpReportCards, legislativeProposals, parliamentaryQuestions, courtCases, constituencies, hansardRecords } from "../../shared/schema";
-import { eq, desc, sql, gte } from "drizzle-orm";
+import { mps, mpReportCards, legislativeProposals, parliamentaryQuestions, courtCases, constituencies, hansardRecords, committeeMembers } from "../../shared/schema";
+import { eq, desc, sql, gte, and } from "drizzle-orm";
 
 // ============================================================================
 // TYPES
@@ -28,6 +28,7 @@ interface MPMetrics {
   courtCases: number;
   courtCaseWeight: number; // Weighted court case impact (0-100+ scale)
   povertyRate: number; // Poverty incidence * 10 (e.g., 57 = 5.7%)
+  committeeBonus: number; // Bonus points for committee participation (0-15)
 }
 
 // Court case status weights for conduct score
@@ -39,6 +40,16 @@ const CASE_STATUS_WEIGHTS: Record<string, number> = {
   under_investigation: 0.25, // 25% impact
   acquitted: 0,          // No impact
   withdrawn: 0,          // No impact
+};
+
+// Committee bonus points for higher accountability roles
+// Applied as a modifier to the overall score, not diluting the 40/30/20/10 breakdown
+const COMMITTEE_BONUS_POINTS: Record<string, number> = {
+  'PAC_chair': 15,              // Public Accounts Committee Chair - highest oversight
+  'special_committee_chair': 12, // Special Select Committee Chair
+  'PAC_member': 8,              // PAC Member
+  'committee_chair': 10,        // Regular committee chair
+  'committee_member': 3,        // Regular committee member
 };
 
 interface MPGrade {
@@ -269,6 +280,45 @@ async function fetchAllMPMetrics(): Promise<MPMetrics[]> {
 
   console.log(`[Report Cards] Fetched aggregates: ${billCounts.length} bill authors, ${questionCounts.length} questioners, ${allCourtCases.length} total court cases`);
 
+  // Query 6: Get committee memberships for active MPs (15th Parliament, currently serving)
+  const allCommitteeMemberships = await db
+    .select({
+      mpId: committeeMembers.mpId,
+      committeeAbbr: committeeMembers.committeeAbbr,
+      role: committeeMembers.role,
+    })
+    .from(committeeMembers)
+    .where(
+      and(
+        eq(committeeMembers.parliamentTerm, "15th Parliament"),
+        eq(committeeMembers.endDate, null)
+      )
+    );
+
+  // Calculate committee bonus per MP
+  const committeeMap = new Map<string, number>();
+  for (const membership of allCommitteeMemberships) {
+    if (!committeeMap.has(membership.mpId)) {
+      committeeMap.set(membership.mpId, 0);
+    }
+    const currentBonus = committeeMap.get(membership.mpId)!;
+
+    // Determine bonus based on committee and role
+    let bonusPoints = 0;
+    if (membership.committeeAbbr === "PAC") {
+      bonusPoints = membership.role === "chair" ? 15 : 8;
+    } else if (membership.role === "chair") {
+      bonusPoints = 10;
+    } else {
+      bonusPoints = 3;
+    }
+
+    // Set to maximum (don't add if already has higher bonus)
+    committeeMap.set(membership.mpId, Math.max(currentBonus, bonusPoints));
+  }
+
+  console.log(`[Report Cards] Found committee memberships for ${committeeMap.size} MPs`);
+
   // Combine all data into metrics
   const metrics: MPMetrics[] = allMps.map(mp => {
     // Get attendance from map
@@ -300,6 +350,7 @@ async function fetchAllMPMetrics(): Promise<MPMetrics[]> {
       courtCases: courtCaseData.count,
       courtCaseWeight: courtCaseData.weight,
       povertyRate: povertyMap.get(mp.parliamentCode) || 0,
+      committeeBonus: committeeMap.get(mp.mpId) || 0,
     };
   });
 
@@ -367,13 +418,17 @@ function calculateGrades(metrics: MPMetrics[]): (MPGrade & MPMetrics)[] {
     const povertyPercentile = calculatePercentile(allPovertyRates, mp.povertyRate, true);
     const constituencyScore = Math.round(povertyPercentile);
 
-    // 5. Overall Score (weighted average: 40, 30, 20, 10)
-    const overallScore = Math.round(
+    // 5. Overall Score (weighted average: 40, 30, 20, 10) + committee bonus
+    const baseScore = Math.round(
       (attendanceScore * 0.40) +
       (participationScore * 0.30) +
       (conductScore * 0.20) +
       (constituencyScore * 0.10)
     );
+
+    // Apply committee bonus (0-15 points) for higher-accountability roles
+    // Bonus is capped at 100 total
+    const overallScore = Math.min(100, baseScore + Math.round(mp.committeeBonus));
 
     // 6. Assign letter grade
     let grade: string;
