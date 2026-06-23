@@ -25,7 +25,10 @@ import {
   insertBlogPostSchema,
   updateBlogPostSchema,
   insertUserFeedbackSchema,
+  insertCommitteeMemberSchema,
+  updateCommitteeMemberSchema,
   mps,
+  committeeMembers,
   hansardPdfFiles,
   hansardRecords,
   unmatchedSpeakers,
@@ -46,7 +49,7 @@ import { runHansardSync } from "./hansard-cron";
 import { HansardPdfParser } from "./hansard-pdf-parser";
 import { MemoryCache, startCacheCleanup } from "./cache";
 import { db, pool } from "./db";
-import { eq, sql } from "drizzle-orm";
+import { eq, sql, desc } from "drizzle-orm";
 import { normalizeParliamentTerm } from "@shared/utils";
 import { jobTracker } from "./job-tracker";
 import { runHansardDownloadJob, runPreviousParliamentsDownloadJob } from "./hansard-background-jobs";
@@ -9921,6 +9924,112 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
+  // Phase 4: Get report cards with coalition and state percentiles
+  app.get("/api/report-cards/percentiles/coalition-state", async (req, res) => {
+    try {
+      const { getReportCardsWithCoalitionAndStatePercentiles } = await import("./services/report-card-service");
+      const cardsWithPercentiles = await getReportCardsWithCoalitionAndStatePercentiles();
+
+      res.json({
+        total: cardsWithPercentiles.length,
+        data: cardsWithPercentiles.map(card => ({
+          mpId: card.mpId,
+          name: card.name,
+          party: card.mp?.party,
+          state: card.state,
+          coalition: card.coalition,
+          // Global percentiles
+          global: {
+            attendanceScore: card.attendanceScore,
+            participationScore: card.participationScore,
+            conductScore: card.conductScore,
+            constituencyScore: card.constituencyScore,
+            overallScore: card.overallScore,
+            grade: card.grade,
+          },
+          // Coalition percentiles (if applicable)
+          ...(card.coalitionOverallScore && {
+            coalition: {
+              attendanceScore: card.coalitionAttendanceScore,
+              participationScore: card.coalitionParticipationScore,
+              conductScore: card.coalitionConductScore,
+              constituencyScore: card.coalitionConstituencyScore,
+              overallScore: card.coalitionOverallScore,
+              grade: card.coalitionGrade,
+            },
+          }),
+          // State percentiles
+          ...(card.stateOverallScore && {
+            state: {
+              attendanceScore: card.stateAttendanceScore,
+              participationScore: card.stateParticipationScore,
+              conductScore: card.stateConductScore,
+              constituencyScore: card.stateConstituencyScore,
+              overallScore: card.stateOverallScore,
+              grade: card.stateGrade,
+            },
+          }),
+        })),
+      });
+    } catch (error) {
+      console.error("Error fetching coalition/state percentiles:", error);
+      res.status(500).json({ error: "Failed to fetch coalition/state percentiles" });
+    }
+  });
+
+  // Get report card for specific MP with coalition/state percentiles
+  app.get("/api/report-cards/:mpId/with-coalition-state", async (req, res) => {
+    try {
+      const { mpId } = req.params;
+      const { getReportCardsWithCoalitionAndStatePercentiles } = await import("./services/report-card-service");
+      const allCards = await getReportCardsWithCoalitionAndStatePercentiles();
+      const card = allCards.find(c => c.mpId === mpId);
+
+      if (!card) {
+        return res.status(404).json({ error: "Report card not found for this MP" });
+      }
+
+      res.json({
+        mpId: card.mpId,
+        name: card.name,
+        party: card.mp?.party,
+        state: card.state,
+        coalition: card.coalition,
+        global: {
+          attendanceScore: card.attendanceScore,
+          participationScore: card.participationScore,
+          conductScore: card.conductScore,
+          constituencyScore: card.constituencyScore,
+          overallScore: card.overallScore,
+          grade: card.grade,
+        },
+        ...(card.coalitionOverallScore && {
+          coalitionPercentile: {
+            attendanceScore: card.coalitionAttendanceScore,
+            participationScore: card.coalitionParticipationScore,
+            conductScore: card.coalitionConductScore,
+            constituencyScore: card.coalitionConstituencyScore,
+            overallScore: card.coalitionOverallScore,
+            grade: card.coalitionGrade,
+          },
+        }),
+        ...(card.stateOverallScore && {
+          statePercentile: {
+            attendanceScore: card.stateAttendanceScore,
+            participationScore: card.stateParticipationScore,
+            conductScore: card.stateConductScore,
+            constituencyScore: card.stateConstituencyScore,
+            overallScore: card.stateOverallScore,
+            grade: card.stateGrade,
+          },
+        }),
+      });
+    } catch (error) {
+      console.error("Error fetching MP report card with coalition/state:", error);
+      res.status(500).json({ error: "Failed to fetch MP report card" });
+    }
+  });
+
   // Compare two MPs using Grok AI
   app.post("/api/report-cards/compare-grok", async (req, res) => {
     try {
@@ -10662,6 +10771,119 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     } catch (error: any) {
       console.error("Error refreshing bills to watch:", error);
       res.status(500).json({ error: "Failed to refresh bills to watch", details: error.message });
+    }
+  });
+
+  // ── Committee Memberships ───────────────────────────────────────────────────
+
+  // Get committee memberships for an MP (public)
+  app.get("/api/mps/:id/committee-memberships", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const memberships = await db
+        .select()
+        .from(committeeMembers)
+        .where(eq(committeeMembers.mpId, id))
+        .orderBy(desc(committeeMembers.startDate));
+
+      res.json(memberships);
+    } catch (error) {
+      console.error("Error fetching committee memberships:", error);
+      res.status(500).json({ error: "Failed to fetch committee memberships" });
+    }
+  });
+
+  // List all committee memberships (admin)
+  app.get("/api/admin/committee-memberships", requireAdmin, async (req, res) => {
+    try {
+      const memberships = await db
+        .select()
+        .from(committeeMembers)
+        .innerJoin(mps, eq(committeeMembers.mpId, mps.id))
+        .orderBy(desc(committeeMembers.updatedAt));
+
+      const response = memberships.map(({ committee_memberships, mps: mp }) => ({
+        ...committee_memberships,
+        mpName: mp.name,
+      }));
+
+      res.json(response);
+    } catch (error) {
+      console.error("Error listing committee memberships:", error);
+      res.status(500).json({ error: "Failed to list committee memberships" });
+    }
+  });
+
+  // Create committee membership (admin)
+  app.post("/api/admin/committee-memberships", requireAdmin, mutationRateLimit, auditMiddleware('committee-create'), async (req, res) => {
+    try {
+      const validated = insertCommitteeMemberSchema.parse(req.body);
+
+      // Verify MP exists
+      const mp = await storage.getMp(validated.mpId);
+      if (!mp) {
+        return res.status(400).json({ error: "Invalid MP ID" });
+      }
+
+      const memberships = await db
+        .insert(committeeMembers)
+        .values(validated)
+        .returning();
+
+      res.json(memberships[0]);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid data", details: error.errors });
+      }
+      console.error("Error creating committee membership:", error);
+      res.status(500).json({ error: "Failed to create committee membership" });
+    }
+  });
+
+  // Update committee membership (admin)
+  app.patch("/api/admin/committee-memberships/:id", requireAdmin, mutationRateLimit, auditMiddleware('committee-update'), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const validated = updateCommitteeMemberSchema.parse(req.body);
+
+      const updated = await db
+        .update(committeeMembers)
+        .set({ ...validated, updatedAt: new Date() })
+        .where(eq(committeeMembers.id, id))
+        .returning();
+
+      if (!updated.length) {
+        return res.status(404).json({ error: "Committee membership not found" });
+      }
+
+      res.json(updated[0]);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid data", details: error.errors });
+      }
+      console.error("Error updating committee membership:", error);
+      res.status(500).json({ error: "Failed to update committee membership" });
+    }
+  });
+
+  // Delete committee membership (admin)
+  app.delete("/api/admin/committee-memberships/:id", requireAdmin, mutationRateLimit, auditMiddleware('committee-delete'), async (req, res) => {
+    try {
+      const { id } = req.params;
+
+      const deleted = await db
+        .delete(committeeMembers)
+        .where(eq(committeeMembers.id, id))
+        .returning();
+
+      if (!deleted.length) {
+        return res.status(404).json({ error: "Committee membership not found" });
+      }
+
+      res.json({ success: true, deleted: deleted[0] });
+    } catch (error) {
+      console.error("Error deleting committee membership:", error);
+      res.status(500).json({ error: "Failed to delete committee membership" });
     }
   });
 

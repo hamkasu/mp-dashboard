@@ -85,6 +85,8 @@ export const mps = pgTable("mps", {
   mympEthicsScore: integer("mymp_ethics_score"), // Optional: MYMP ethics score
   wikipediaUrl: text("wikipedia_url"), // Wikipedia link if available
   mympDataUpdatedAt: timestamp("mymp_data_updated_at"), // When MYMP data was last synced
+  // Phase 4: Coalition-based percentile scoring
+  coalitionId: varchar("coalition_id").references(() => coalitions.id, { onDelete: "set null" }),
 });
 
 export const insertMpSchema = createInsertSchema(mps).omit({
@@ -93,6 +95,46 @@ export const insertMpSchema = createInsertSchema(mps).omit({
 
 export type InsertMp = z.infer<typeof insertMpSchema>;
 export type Mp = typeof mps.$inferSelect;
+
+// ========== COALITIONS ==========
+// Phase 4: Political coalition groupings for relative percentile scoring
+
+export const coalitions = pgTable("coalitions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull().unique(),  // "Barisan Nasional", "Pakatan Harapan", etc.
+  code: text("code").notNull().unique(),  // "BN", "PH", "GPS", "PN", "IND"
+  colorHex: text("color_hex"),            // UI color for coalition (e.g., "#FF0000")
+  description: text("description"),       // Coalition description/notes
+  createdAt: timestamp("created_at").notNull().default(sql`NOW()`),
+  updatedAt: timestamp("updated_at").notNull().default(sql`NOW()`),
+});
+
+export const insertCoalitionSchema = createInsertSchema(coalitions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  colorHex: z.string().nullable().optional(),
+  description: z.string().nullable().optional(),
+});
+
+export const updateCoalitionSchema = insertCoalitionSchema.partial();
+
+export type InsertCoalition = z.infer<typeof insertCoalitionSchema>;
+export type UpdateCoalition = z.infer<typeof updateCoalitionSchema>;
+export type Coalition = typeof coalitions.$inferSelect;
+
+// Party to Coalition mapping table
+export const partyCoalitionMappings = pgTable("party_coalition_mapping", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  partyName: text("party_name").notNull(),
+  coalitionId: varchar("coalition_id").notNull().references(() => coalitions.id, { onDelete: "cascade" }),
+  effectiveDate: timestamp("effective_date").notNull().default(sql`NOW()`),
+  endDate: timestamp("end_date"),         // null = still in coalition
+  notes: text("notes"),
+});
+
+export type PartyCoalitionMapping = typeof partyCoalitionMappings.$inferSelect;
 
 // Sarawak State Legislative Assembly (DUN) Members
 export const sarawakDunMembers = pgTable("sarawak_dun_members", {
@@ -1588,6 +1630,55 @@ export const updateMa63WatchlistItemSchema = insertMa63WatchlistItemSchema.parti
 export type InsertMa63WatchlistItem = z.infer<typeof insertMa63WatchlistItemSchema>;
 export type UpdateMa63WatchlistItem = z.infer<typeof updateMa63WatchlistItemSchema>;
 export type Ma63WatchlistItem = typeof ma63WatchlistItems.$inferSelect;
+
+// ========== PARLIAMENTARY COMMITTEES ==========
+// Committee membership tracking for scoring and transparency
+
+export const COMMITTEE_ROLES = ["chair", "member", "vice-chair"] as const;
+export type CommitteeRole = typeof COMMITTEE_ROLES[number];
+
+export const committeeMembers = pgTable("committee_memberships", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  mpId: varchar("mp_id").notNull().references(() => mps.id, { onDelete: "cascade" }),
+
+  // Committee identification
+  committeeName: text("committee_name").notNull(),    // "Public Accounts Committee"
+  committeeAbbr: text("committee_abbr"),              // "PAC" - optional abbreviation
+
+  // Role and status
+  role: text("role").$type<CommitteeRole>().notNull(), // "chair", "member", "vice-chair"
+
+  // Session tracking (15th Parliament, 14th Parliament, etc.)
+  parliamentTerm: text("parliament_term").notNull(),
+  startDate: timestamp("start_date").notNull(),
+  endDate: timestamp("end_date"),                     // null = currently serving
+
+  // Data quality
+  sourceUrl: text("source_url"),                      // Where data came from for verification
+  verificationNotes: text("verification_notes"),      // Any caveats about data accuracy
+
+  // Timestamps
+  createdAt: timestamp("created_at").notNull().default(sql`NOW()`),
+  updatedAt: timestamp("updated_at").notNull().default(sql`NOW()`),
+});
+
+export const insertCommitteeMemberSchema = createInsertSchema(committeeMembers).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  role: z.enum(COMMITTEE_ROLES),
+  startDate: z.coerce.date(),
+  endDate: z.coerce.date().nullable().optional(),
+  sourceUrl: z.string().nullable().optional(),
+  verificationNotes: z.string().nullable().optional(),
+});
+
+export const updateCommitteeMemberSchema = insertCommitteeMemberSchema.partial().omit({ mpId: true });
+
+export type InsertCommitteeMember = z.infer<typeof insertCommitteeMemberSchema>;
+export type UpdateCommitteeMember = z.infer<typeof updateCommitteeMemberSchema>;
+export type CommitteeMember = typeof committeeMembers.$inferSelect;
 
 // ========== WEEKLY POLLS ==========
 // Weekly polling system with AI-generated topics
