@@ -12,7 +12,7 @@ interface AllowanceEfficiencyStats {
   allowanceVsOutput: Array<{ name: string; allowance: number; outputs: number; roi: number }>;
 }
 
-export function AllowanceEfficiencyPage() {
+function AllowanceEfficiencyPage() {
   const [stats, setStats] = useState<AllowanceEfficiencyStats | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -142,7 +142,7 @@ export function AllowanceEfficiencyPage() {
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="party" angle={-45} textAnchor="end" height={100} />
                 <YAxis />
-                <Tooltip formatter={(value) => value.toFixed(1)} />
+                <Tooltip formatter={(value) => typeof value === 'number' ? value.toFixed(1) : value} />
                 <Bar dataKey="avgScore" fill="#10b981" name="Average ROI Score" />
               </BarChart>
             </ResponsiveContainer>
@@ -168,7 +168,7 @@ export function AllowanceEfficiencyPage() {
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="state" angle={-45} textAnchor="end" height={100} />
                 <YAxis />
-                <Tooltip formatter={(value) => value.toFixed(1)} />
+                <Tooltip formatter={(value) => typeof value === 'number' ? value.toFixed(1) : value} />
                 <Bar dataKey="avgScore" fill="#ef4444" name="Average ROI Score" />
               </BarChart>
             </ResponsiveContainer>
@@ -230,3 +230,5 @@ export function AllowanceEfficiencyPage() {
     </div>
   );
 }
+
+export default AllowanceEfficiencyPage;

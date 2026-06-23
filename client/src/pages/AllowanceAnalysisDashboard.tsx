@@ -27,7 +27,7 @@ interface AllowanceEfficiencyData {
   gradeDistribution: Record<string, number>;
 }
 
-export function AllowanceAnalysisDashboard() {
+function AllowanceAnalysisDashboard() {
   const [mps, setMps] = useState<MPROIEntry[]>([]);
   const [filteredMps, setFilteredMps] = useState<MPROIEntry[]>([]);
   const [efficiencyData, setEfficiencyData] = useState<AllowanceEfficiencyData | null>(null);
@@ -56,7 +56,7 @@ export function AllowanceAnalysisDashboard() {
         setMps(leaderboardData);
         setEfficiencyData(efficiency);
 
-        const uniqueParties = [...new Set(leaderboardData.map((mp: MPROIEntry) => mp.party))].sort();
+        const uniqueParties = Array.from(new Set(leaderboardData.map((mp: MPROIEntry) => mp.party))).sort() as string[];
         setParties(uniqueParties);
       } catch (err) {
         console.error("Error fetching allowance data:", err);
@@ -292,3 +292,5 @@ export function AllowanceAnalysisDashboard() {
     </div>
   );
 }
+
+export default AllowanceAnalysisDashboard;

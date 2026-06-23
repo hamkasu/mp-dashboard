@@ -30,7 +30,7 @@ interface MPAllowanceData {
   parliamentSittingAllowance: number;
 }
 
-export function MPAllowanceBreakdown() {
+function MPAllowanceBreakdown() {
   const { mpId } = useParams<{ mpId: string }>();
   const [, setLocation] = useLocation();
   const [mpData, setMpData] = useState<MPAllowanceData | null>(null);
@@ -150,3 +150,5 @@ export function MPAllowanceBreakdown() {
     </div>
   );
 }
+
+export default MPAllowanceBreakdown;
