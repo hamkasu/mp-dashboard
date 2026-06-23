@@ -1,4 +1,4 @@
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useLocation } from "wouter";
 import { useState, useEffect } from "react";
 import { ChevronLeft } from "lucide-react";
 import { AllowanceBreakdownCard } from "@/components/AllowanceBreakdownCard";
@@ -32,7 +32,7 @@ interface MPAllowanceData {
 
 export function MPAllowanceBreakdown() {
   const { mpId } = useParams<{ mpId: string }>();
-  const navigate = useNavigate();
+  const [, setLocation] = useLocation();
   const [mpData, setMpData] = useState<MPAllowanceData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -72,7 +72,7 @@ export function MPAllowanceBreakdown() {
   if (error || !mpData) {
     return (
       <div className="container mx-auto px-4 py-8">
-        <Button variant="outline" onClick={() => navigate(-1)} className="mb-6">
+        <Button variant="outline" onClick={() => setLocation("/allowance-analysis")} className="mb-6">
           <ChevronLeft className="w-4 h-4 mr-2" />
           Back
         </Button>
@@ -83,7 +83,7 @@ export function MPAllowanceBreakdown() {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <Button variant="outline" onClick={() => navigate(-1)} className="mb-6">
+      <Button variant="outline" onClick={() => setLocation("/allowance-analysis")} className="mb-6">
         <ChevronLeft className="w-4 h-4 mr-2" />
         Back
       </Button>
