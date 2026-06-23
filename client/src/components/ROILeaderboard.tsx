@@ -75,6 +75,7 @@ export function ROILeaderboard({ mps, currentMpId }: ROILeaderboardProps) {
                 <th className="text-left py-3 px-2 font-semibold text-gray-700">MP Name</th>
                 <th className="text-left py-3 px-2 font-semibold text-gray-700">Party</th>
                 <th className="text-left py-3 px-2 font-semibold text-gray-700">State</th>
+                <th className="text-right py-3 px-2 font-semibold text-gray-700">Bills Raised</th>
                 <th className="text-right py-3 px-2 font-semibold text-gray-700">ROI Score</th>
                 <th className="text-center py-3 px-2 font-semibold text-gray-700">Grade</th>
                 <th className="text-right py-3 px-2 font-semibold text-gray-700">Outputs</th>
@@ -122,6 +123,7 @@ export function ROILeaderboard({ mps, currentMpId }: ROILeaderboardProps) {
                       </Badge>
                     </td>
                     <td className="py-3 px-2 text-gray-600">{mp.state}</td>
+                    <td className="py-3 px-2 text-right font-semibold text-green-700">{bills}</td>
                     <td className="py-3 px-2 text-right">
                       <span className="font-bold text-lg text-purple-700">{mp.roiScore}</span>
                     </td>
