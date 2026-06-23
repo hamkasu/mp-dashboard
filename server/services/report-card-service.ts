@@ -122,11 +122,11 @@ function calculateROIScore(
   const roiRatio = (outputIndex / annualAllowance) * 1000000;
 
   // Map to 0-100 scale with benchmarks
-  // 0.5 ratio (very poor) = 0 score
-  // 1.0 ratio (active) = 80 score
-  // 2.0+ ratio (exceptionally active) = 100 score
-  // Linear scaling: score = (ratio - 0.5) / 1.5 * 100
-  let score = Math.round(((roiRatio - 0.5) / 1.5) * 100);
+  // roiRatio ~500 (very poor) = score 0
+  // roiRatio ~1000 (active) = score 80
+  // roiRatio ~1250+ (exceptionally active) = score 100+
+  // Formula: score = (roiRatio / 1000) * 80
+  let score = Math.round((roiRatio / 1000) * 80);
   score = Math.min(100, Math.max(0, score)); // Clamp to 0-100
 
   // Assign grade based on score
