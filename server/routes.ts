@@ -9906,25 +9906,6 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
-  // Get report card for specific MP
-  app.get("/api/report-cards/:mpId", async (req, res) => {
-    try {
-      const { mpId } = req.params;
-      const { getReportCardsWithDetails } = await import("./services/report-card-service");
-      const allCards = await getReportCardsWithDetails();
-      const reportCard = allCards.find(card => card.mpId === mpId);
-
-      if (!reportCard) {
-        return res.status(404).json({ error: "Report card not found for this MP" });
-      }
-
-      res.json(reportCard);
-    } catch (error) {
-      console.error("Error fetching MP report card:", error);
-      res.status(500).json({ error: "Failed to fetch MP report card" });
-    }
-  });
-
   // Phase 4: Get report cards with coalition and state percentiles
   app.get("/api/report-cards/percentiles/coalition-state", async (req, res) => {
     try {
@@ -9978,6 +9959,110 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
+  // Compare two MPs using Grok AI
+  app.post("/api/report-cards/compare-grok", async (req, res) => {
+    try {
+      const { mp1Id, mp2Id } = req.body;
+
+      if (!mp1Id || !mp2Id) {
+        return res.status(400).json({ error: "Both MP IDs are required" });
+      }
+
+      if (mp1Id === mp2Id) {
+        return res.status(400).json({ error: "Cannot compare an MP with themselves" });
+      }
+
+      // Fetch report cards for both MPs
+      const { getReportCardsWithDetails } = await import("./services/report-card-service");
+      const allCards = await getReportCardsWithDetails();
+
+      const mp1Card = allCards.find(card => card.mpId === mp1Id);
+      const mp2Card = allCards.find(card => card.mpId === mp2Id);
+
+      if (!mp1Card || !mp2Card) {
+        return res.status(404).json({ error: "One or both MPs not found" });
+      }
+
+      // Check if AI service is configured
+      const grokService = await import("./services/grok.js");
+      if (!grokService.isGrokConfigured()) {
+        return res.status(503).json({
+          error: "AI service is not configured. Please set OPENROUTER_API_KEY environment variable."
+        });
+      }
+
+      // Generate comparison using Gemini via OpenRouter
+      console.log(`[Grok Compare] Comparing ${mp1Card.mp.name} vs ${mp2Card.mp.name}`);
+
+      const comparisonResult = await grokService.compareMPs(mp1Card, mp2Card);
+
+      res.json({
+        comparison: comparisonResult.comparison,
+        generatedAt: comparisonResult.generatedAt,
+      });
+    } catch (error: any) {
+      console.error("Error comparing MPs with Grok:", error);
+      res.status(500).json({
+        error: "Failed to compare MPs",
+        details: error.message
+      });
+    }
+  });
+
+  // Get ROI leaderboard (all MPs ranked by ROI) - BEFORE parametric route
+  app.get("/api/report-cards/roi-leaderboard", async (req, res) => {
+    try {
+      const cards = await db
+        .select()
+        .from(mpReportCards)
+        .innerJoin(mps, eq(mpReportCards.mpId, mps.id))
+        .orderBy(desc(mpReportCards.roiScore))
+        .limit(250);
+
+      const leaderboard = cards.map((row, idx) => ({
+        rank: idx + 1,
+        mpId: row.mp_report_cards.mpId,
+        name: row.mps.name,
+        party: row.mps.party,
+        state: row.mps.state,
+        roiScore: row.mp_report_cards.roiScore,
+        roiGrade: row.mp_report_cards.roiGrade,
+        annualAllowance: row.mp_report_cards.annualAllowance,
+        totalSpeeches: row.mp_report_cards.totalSpeeches,
+        billsRaised: row.mp_report_cards.billsRaised,
+        questionsAsked: row.mp_report_cards.questionsAsked,
+        allowancePerSpeech: row.mp_report_cards.allowancePerSpeech,
+      }));
+
+      res.json({
+        total: leaderboard.length,
+        data: leaderboard,
+      });
+    } catch (error) {
+      console.error("Error fetching ROI leaderboard:", error);
+      res.status(500).json({ error: "Failed to fetch ROI leaderboard" });
+    }
+  });
+
+  // Get report card for specific MP
+  app.get("/api/report-cards/:mpId", async (req, res) => {
+    try {
+      const { mpId } = req.params;
+      const { getReportCardsWithDetails } = await import("./services/report-card-service");
+      const allCards = await getReportCardsWithDetails();
+      const reportCard = allCards.find(card => card.mpId === mpId);
+
+      if (!reportCard) {
+        return res.status(404).json({ error: "Report card not found for this MP" });
+      }
+
+      res.json(reportCard);
+    } catch (error) {
+      console.error("Error fetching MP report card:", error);
+      res.status(500).json({ error: "Failed to fetch MP report card" });
+    }
+  });
+
   // Get report card for specific MP with coalition/state percentiles
   app.get("/api/report-cards/:mpId/with-coalition-state", async (req, res) => {
     try {
@@ -10028,56 +10113,6 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     } catch (error) {
       console.error("Error fetching MP report card with coalition/state:", error);
       res.status(500).json({ error: "Failed to fetch MP report card" });
-    }
-  });
-
-  // Compare two MPs using Grok AI
-  app.post("/api/report-cards/compare-grok", async (req, res) => {
-    try {
-      const { mp1Id, mp2Id } = req.body;
-
-      if (!mp1Id || !mp2Id) {
-        return res.status(400).json({ error: "Both MP IDs are required" });
-      }
-
-      if (mp1Id === mp2Id) {
-        return res.status(400).json({ error: "Cannot compare an MP with themselves" });
-      }
-
-      // Fetch report cards for both MPs
-      const { getReportCardsWithDetails } = await import("./services/report-card-service");
-      const allCards = await getReportCardsWithDetails();
-
-      const mp1Card = allCards.find(card => card.mpId === mp1Id);
-      const mp2Card = allCards.find(card => card.mpId === mp2Id);
-
-      if (!mp1Card || !mp2Card) {
-        return res.status(404).json({ error: "One or both MPs not found" });
-      }
-
-      // Check if AI service is configured
-      const grokService = await import("./services/grok.js");
-      if (!grokService.isGrokConfigured()) {
-        return res.status(503).json({
-          error: "AI service is not configured. Please set OPENROUTER_API_KEY environment variable."
-        });
-      }
-
-      // Generate comparison using Gemini via OpenRouter
-      console.log(`[Grok Compare] Comparing ${mp1Card.mp.name} vs ${mp2Card.mp.name}`);
-
-      const comparisonResult = await grokService.compareMPs(mp1Card, mp2Card);
-
-      res.json({
-        comparison: comparisonResult.comparison,
-        generatedAt: comparisonResult.generatedAt,
-      });
-    } catch (error: any) {
-      console.error("Error comparing MPs with Grok:", error);
-      res.status(500).json({
-        error: "Failed to compare MPs",
-        details: error.message
-      });
     }
   });
 
@@ -10158,41 +10193,6 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     } catch (error) {
       console.error("Error fetching allowance breakdown:", error);
       res.status(500).json({ error: "Failed to fetch allowance breakdown" });
-    }
-  });
-
-  // Get ROI leaderboard (all MPs ranked by ROI)
-  app.get("/api/report-cards/roi-leaderboard", async (req, res) => {
-    try {
-      const cards = await db
-        .select()
-        .from(mpReportCards)
-        .innerJoin(mps, eq(mpReportCards.mpId, mps.id))
-        .orderBy(desc(mpReportCards.roiScore))
-        .limit(250);
-
-      const leaderboard = cards.map((row, idx) => ({
-        rank: idx + 1,
-        mpId: row.mp_report_cards.mpId,
-        name: row.mps.name,
-        party: row.mps.party,
-        state: row.mps.state,
-        roiScore: row.mp_report_cards.roiScore,
-        roiGrade: row.mp_report_cards.roiGrade,
-        annualAllowance: row.mp_report_cards.annualAllowance,
-        totalSpeeches: row.mp_report_cards.totalSpeeches,
-        billsRaised: row.mp_report_cards.billsRaised,
-        questionsAsked: row.mp_report_cards.questionsAsked,
-        allowancePerSpeech: row.mp_report_cards.allowancePerSpeech,
-      }));
-
-      res.json({
-        total: leaderboard.length,
-        data: leaderboard,
-      });
-    } catch (error) {
-      console.error("Error fetching ROI leaderboard:", error);
-      res.status(500).json({ error: "Failed to fetch ROI leaderboard" });
     }
   });
 
