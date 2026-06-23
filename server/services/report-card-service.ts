@@ -26,8 +26,20 @@ interface MPMetrics {
   billsRaised: number;
   questionsAsked: number;
   courtCases: number;
+  courtCaseWeight: number; // Weighted court case impact (0-100+ scale)
   povertyRate: number; // Poverty incidence * 10 (e.g., 57 = 5.7%)
 }
+
+// Court case status weights for conduct score
+// Higher weight = more serious impact on conduct score
+const CASE_STATUS_WEIGHTS: Record<string, number> = {
+  convicted: 1.0,        // Full impact
+  charged: 0.5,          // 50% impact
+  appeal_pending: 0.5,   // 50% impact
+  under_investigation: 0.25, // 25% impact
+  acquitted: 0,          // No impact
+  withdrawn: 0,          // No impact
+};
 
 interface MPGrade {
   mpId: string;
@@ -234,18 +246,28 @@ async function fetchAllMPMetrics(): Promise<MPMetrics[]> {
 
   const questionsMap = new Map(questionCounts.map(q => [q.mpId, q.count]));
 
-  // Query 5: Count court cases per MP (batch)
-  const courtCaseCounts = await db
+  // Query 5: Get all court cases with status for weighted impact calculation
+  const allCourtCases = await db
     .select({
       mpId: courtCases.mpId,
-      count: sql<number>`count(*)::int`,
+      status: courtCases.status,
     })
-    .from(courtCases)
-    .groupBy(courtCases.mpId);
+    .from(courtCases);
 
-  const courtCasesMap = new Map(courtCaseCounts.map(c => [c.mpId, c.count]));
+  // Calculate weighted court case impact per MP
+  const courtCasesMap = new Map<string, { count: number; weight: number }>();
+  for (const courtCase of allCourtCases) {
+    if (!courtCasesMap.has(courtCase.mpId)) {
+      courtCasesMap.set(courtCase.mpId, { count: 0, weight: 0 });
+    }
+    const stats = courtCasesMap.get(courtCase.mpId)!;
+    stats.count++;
+    // Get weight for this status, default to 0.5 if unknown status
+    const weight = CASE_STATUS_WEIGHTS[courtCase.status] ?? 0.5;
+    stats.weight += weight;
+  }
 
-  console.log(`[Report Cards] Fetched aggregates: ${billCounts.length} bill authors, ${questionCounts.length} questioners, ${courtCaseCounts.length} with court cases`);
+  console.log(`[Report Cards] Fetched aggregates: ${billCounts.length} bill authors, ${questionCounts.length} questioners, ${allCourtCases.length} total court cases`);
 
   // Combine all data into metrics
   const metrics: MPMetrics[] = allMps.map(mp => {
@@ -265,6 +287,8 @@ async function fetchAllMPMetrics(): Promise<MPMetrics[]> {
       ? mp.totalSpeechInstances / mp.hansardSessionsSpoke
       : 0;
 
+    const courtCaseData = courtCasesMap.get(mp.mpId) || { count: 0, weight: 0 };
+
     return {
       mpId: mp.mpId,
       name: mp.name,
@@ -273,7 +297,8 @@ async function fetchAllMPMetrics(): Promise<MPMetrics[]> {
       averageSpeeches,
       billsRaised: billsMap.get(mp.mpId) || 0,
       questionsAsked: questionsMap.get(mp.mpId) || 0,
-      courtCases: courtCasesMap.get(mp.mpId) || 0,
+      courtCases: courtCaseData.count,
+      courtCaseWeight: courtCaseData.weight,
       povertyRate: povertyMap.get(mp.parliamentCode) || 0,
     };
   });
@@ -312,7 +337,7 @@ function calculateGrades(metrics: MPMetrics[]): (MPGrade & MPMetrics)[] {
   const allSpeeches = metrics.map(m => m.averageSpeeches);
   const allBills = metrics.map(m => m.billsRaised);
   const allQuestions = metrics.map(m => m.questionsAsked);
-  const allCourtCases = metrics.map(m => m.courtCases);
+  const allCourtCaseWeights = metrics.map(m => m.courtCaseWeight);
   const allPovertyRates = metrics.map(m => m.povertyRate);
 
   // Calculate grades for each MP
@@ -333,8 +358,8 @@ function calculateGrades(metrics: MPMetrics[]): (MPGrade & MPMetrics)[] {
     );
 
     // 3. Conduct Score (20% weight)
-    // Fewer court cases is better
-    const courtCasePercentile = calculatePercentile(allCourtCases, mp.courtCases, true);
+    // Lower weighted court case impact is better (inverted)
+    const courtCasePercentile = calculatePercentile(allCourtCaseWeights, mp.courtCaseWeight, true);
     const conductScore = Math.round(courtCasePercentile);
 
     // 4. Constituency Score (10% weight)

@@ -116,31 +116,45 @@ export const insertSarawakDunMemberSchema = createInsertSchema(sarawakDunMembers
 export type InsertSarawakDunMember = z.infer<typeof insertSarawakDunMemberSchema>;
 export type SarawakDunMember = typeof sarawakDunMembers.$inferSelect;
 
+// Case status enum - aligned with Phase 2 spec
+export const CASE_STATUS_VALUES = ["under_investigation", "charged", "convicted", "acquitted", "withdrawn", "appeal_pending"] as const;
+export type CaseStatus = typeof CASE_STATUS_VALUES[number];
+
 export const courtCases = pgTable("court_cases", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   mpId: varchar("mp_id").notNull().references(() => mps.id),
   caseNumber: text("case_number").notNull().unique(),
   title: text("title").notNull(),
   courtLevel: text("court_level").notNull(),
-  status: text("status").notNull(),
+  status: text("status").$type<CaseStatus>().notNull(),
   caseType: text("case_type").notNull().default("criminal"),
   filingDate: timestamp("filing_date").notNull(),
   outcome: text("outcome"),
   charges: text("charges").notNull(),
   documentLinks: jsonb("document_links").$type<string[]>().notNull().default(sql`'[]'::jsonb`),
+  statusConfirmedAt: timestamp("status_confirmed_at"), // When status was last verified against public record
+  statusConfirmedBy: varchar("status_confirmed_by"), // Who verified it (admin user ID)
+  statusNotes: text("status_notes"), // Any caveats/flags about the status determination
 });
 
 export const insertCourtCaseSchema = createInsertSchema(courtCases).omit({
   id: true,
+  statusConfirmedAt: true,
 }).extend({
+  status: z.enum(CASE_STATUS_VALUES),
   documentLinks: z.array(z.string()).default([]),
   filingDate: z.preprocess(
     (val) => (typeof val === 'string' ? new Date(val) : val),
     z.date()
   ),
+  statusConfirmedBy: z.string().nullable().optional(),
+  statusNotes: z.string().nullable().optional(),
 });
 
+export const updateCourtCaseSchema = insertCourtCaseSchema.partial();
+
 export type InsertCourtCase = z.infer<typeof insertCourtCaseSchema>;
+export type UpdateCourtCase = z.infer<typeof updateCourtCaseSchema>;
 export type CourtCase = typeof courtCases.$inferSelect;
 
 export const sprmInvestigations = pgTable("sprm_investigations", {
@@ -148,17 +162,22 @@ export const sprmInvestigations = pgTable("sprm_investigations", {
   mpId: varchar("mp_id").notNull().references(() => mps.id),
   caseNumber: text("case_number").unique(),
   title: text("title").notNull(),
-  status: text("status").notNull(),
+  status: text("status").$type<CaseStatus>().notNull(),
   startDate: timestamp("start_date").notNull(),
   endDate: timestamp("end_date"),
   outcome: text("outcome"),
   charges: text("charges").notNull(),
   documentLinks: jsonb("document_links").$type<string[]>().notNull().default(sql`'[]'::jsonb`),
+  statusConfirmedAt: timestamp("status_confirmed_at"),
+  statusConfirmedBy: varchar("status_confirmed_by"),
+  statusNotes: text("status_notes"),
 });
 
 export const insertSprmInvestigationSchema = createInsertSchema(sprmInvestigations).omit({
   id: true,
+  statusConfirmedAt: true,
 }).extend({
+  status: z.enum(CASE_STATUS_VALUES),
   documentLinks: z.array(z.string()).default([]),
   startDate: z.preprocess(
     (val) => (typeof val === 'string' ? new Date(val) : val),
@@ -168,6 +187,8 @@ export const insertSprmInvestigationSchema = createInsertSchema(sprmInvestigatio
     (val) => (val === null || val === undefined || val === '' ? null : typeof val === 'string' ? new Date(val) : val),
     z.date().nullable().optional()
   ),
+  statusConfirmedBy: z.string().nullable().optional(),
+  statusNotes: z.string().nullable().optional(),
 });
 
 export const updateSprmInvestigationSchema = insertSprmInvestigationSchema.omit({ mpId: true }).partial();
