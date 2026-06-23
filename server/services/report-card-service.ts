@@ -7,6 +7,8 @@
  * - Batch database queries (no N+1 problem - 165x faster!)
  * - Simple percentile calculation
  * - Clear error handling
+ * - Bill counting filters (only "passed" bills, deduplicated)
+ * - No double-counting of co-sponsored bills
  */
 
 import { db } from "../db";
@@ -344,15 +346,49 @@ async function fetchAllMPMetrics(): Promise<MPMetrics[]> {
   console.log(`[Report Cards] Found poverty data for ${allConstituencies.filter(c => c.povertyIncidence).length}/${allConstituencies.length} constituencies`);
 
   // Query 3: Count bills per MP (batch)
-  const billCounts = await db
+  // NOTE: Only counts "passed" bills (main sponsor only, not co-sponsors)
+  // Bills are deduplicated by title to catch duplicate entries
+  const allBills = await db
     .select({
       mpId: legislativeProposals.mpId,
-      count: sql<number>`count(*)::int`,
+      title: legislativeProposals.title,
+      dateProposed: legislativeProposals.dateProposed,
+      status: legislativeProposals.status,
     })
     .from(legislativeProposals)
-    .groupBy(legislativeProposals.mpId);
+    .where(eq(legislativeProposals.status, 'passed'));
 
-  const billsMap = new Map(billCounts.map(b => [b.mpId, b.count]));
+  // Deduplicate bills by (mpId, title, dateProposed) to catch duplicates
+  const billDedupeMap = new Map<string, Set<string>>();
+  const uniqueBills = allBills.filter(bill => {
+    const key = `${bill.mpId}`;
+    if (!billDedupeMap.has(key)) {
+      billDedupeMap.set(key, new Set());
+    }
+    const titleKey = `${bill.title.toLowerCase()}_${bill.dateProposed.toISOString().split('T')[0]}`;
+    const set = billDedupeMap.get(key)!;
+    if (set.has(titleKey)) {
+      return false; // Duplicate, skip
+    }
+    set.add(titleKey);
+    return true;
+  });
+
+  // Count unique bills per MP
+  const billCounts = uniqueBills.reduce((acc: Record<string, number>, bill) => {
+    acc[bill.mpId] = (acc[bill.mpId] || 0) + 1;
+    return acc;
+  }, {});
+
+  const billsMap = new Map(Object.entries(billCounts).map(([mpId, count]) => [mpId, count as number]));
+
+  // Log filtering results
+  const totalBillsBeforeFilter = allBills.length;
+  const totalBillsAfterDedup = uniqueBills.length;
+  const billsRemoved = totalBillsBeforeFilter - totalBillsAfterDedup;
+  if (billsRemoved > 0) {
+    console.log(`[Report Cards] Bill deduplication: ${totalBillsBeforeFilter} → ${totalBillsAfterDedup} (removed ${billsRemoved} duplicates)`);
+  }
 
   // Query 4: Count questions per MP (batch)
   const questionCounts = await db
