@@ -36,9 +36,12 @@
     "update-deceased-mp": "tsx scripts/update-deceased-mp.ts",
     "regenerate-report-cards": "tsx scripts/regenerate-report-cards.ts",
     "import-election-results": "tsx scripts/import-election-results.ts",
-    "generate-key": "tsx scripts/generate-api-key.ts"
+    "generate-key": "tsx scripts/generate-api-key.ts",
+    "extract-hansard-speeches": "tsx scripts/extract-hansard-speeches.ts",
+    "tag-hansard-speeches": "tsx scripts/hansard-tag-speeches.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.105.0",
     "@google/genai": "^1.30.0",
     "@hookform/resolvers": "^3.10.0",
     "@jridgewell/trace-mapping": "^0.3.25",

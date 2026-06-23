@@ -1990,3 +1990,130 @@ export const billingEvents = pgTable("billing_events", {
 });
 
 export type BillingEvent = typeof billingEvents.$inferSelect;
+
+// ========== HANSARD NLP TAGGING PIPELINE ==========
+// Phase 1: Individual speech turns extracted from sessions
+
+export const hansardSpeeches = pgTable("hansard_speeches", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  hansardRecordId: varchar("hansard_record_id").notNull().references(() => hansardRecords.id, { onDelete: "cascade" }),
+  mpId: varchar("mp_id").notNull().references(() => mps.id),
+  speechText: text("speech_text").notNull(),
+  instanceNumber: integer("instance_number").notNull(), // Which turn did this MP speak (1st, 2nd, etc)
+  speakingOrder: integer("speaking_order").notNull(), // Overall order in the session
+  characterOffsetStart: integer("character_offset_start"), // Position in full transcript
+  characterOffsetEnd: integer("character_offset_end"),
+  createdAt: timestamp("created_at").notNull().default(sql`NOW()`),
+});
+
+export const insertHansardSpeechSchema = createInsertSchema(hansardSpeeches).omit({
+  id: true,
+  createdAt: true,
+}).extend({
+  characterOffsetStart: z.number().nullable().optional(),
+  characterOffsetEnd: z.number().nullable().optional(),
+});
+
+export type InsertHansardSpeech = z.infer<typeof insertHansardSpeechSchema>;
+export type HansardSpeech = typeof hansardSpeeches.$inferSelect;
+
+// Phase 2: Topic and sentiment tags assigned to speeches
+
+export const REVIEW_STATUS_VALUES = ["auto_published", "pending_review", "approved", "rejected", "edited"] as const;
+export type ReviewStatus = typeof REVIEW_STATUS_VALUES[number];
+
+export const SENTIMENT_TONE_VALUES = ["supportive", "critical", "neutral_informational", "mixed"] as const;
+export type SentimentTone = typeof SENTIMENT_TONE_VALUES[number];
+
+export const SENTIMENT_TARGET_VALUES = ["government_policy", "specific_minister", "specific_mp", "opposition_general", "none"] as const;
+export type SentimentTarget = typeof SENTIMENT_TARGET_VALUES[number];
+
+export const hansardTags = pgTable("hansard_tags", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  speechId: varchar("speech_id").notNull().references(() => hansardSpeeches.id, { onDelete: "cascade" }),
+  tagType: text("tag_type").$type<"topic" | "sentiment">().notNull(), // 'topic' or 'sentiment'
+  tagValue: text("tag_value").notNull(), // topic slug (e.g., "epf") or sentiment tone
+  confidence: integer("confidence").notNull(), // 0-100 (stored as percentage)
+  evidenceQuote: text("evidence_quote"), // substring from speech justifying tag
+  isNewTag: boolean("is_new_tag").notNull().default(false), // true if not in vocabulary
+  // Sentiment-specific fields
+  targetType: text("target_type").$type<SentimentTarget>(), // only for sentiment
+  targetEntity: text("target_entity"), // named individual/org, only if target_type isn't 'none'
+  // Review workflow
+  reviewStatus: text("review_status").$type<ReviewStatus>().notNull().default("auto_published"),
+  reviewFlagReason: text("review_flag_reason"), // why this landed in borderline band
+  reviewedAt: timestamp("reviewed_at"),
+  reviewedBy: varchar("reviewed_by"), // admin user ID
+  createdAt: timestamp("created_at").notNull().default(sql`NOW()`),
+});
+
+export const insertHansardTagSchema = createInsertSchema(hansardTags).omit({
+  id: true,
+  createdAt: true,
+  reviewedAt: true,
+}).extend({
+  tagType: z.enum(["topic", "sentiment"]),
+  confidence: z.number().min(0).max(100),
+  isNewTag: z.boolean().optional().default(false),
+  targetType: z.enum(SENTIMENT_TARGET_VALUES).nullable().optional(),
+  targetEntity: z.string().nullable().optional(),
+  reviewStatus: z.enum(REVIEW_STATUS_VALUES).optional().default("auto_published"),
+  reviewFlagReason: z.string().nullable().optional(),
+  reviewedBy: z.string().nullable().optional(),
+  evidenceQuote: z.string().nullable().optional(),
+});
+
+export const updateHansardTagSchema = insertHansardTagSchema.partial();
+
+export type InsertHansardTag = z.infer<typeof insertHansardTagSchema>;
+export type UpdateHansardTag = z.infer<typeof updateHansardTagSchema>;
+export type HansardTag = typeof hansardTags.$inferSelect;
+
+// Extracted entities from speeches
+export const ENTITY_TYPE_VALUES = ["organization", "policy_or_bill", "place", "statistic_cited"] as const;
+export type EntityType = typeof ENTITY_TYPE_VALUES[number];
+
+export const hansardEntities = pgTable("hansard_entities", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  speechId: varchar("speech_id").notNull().references(() => hansardSpeeches.id, { onDelete: "cascade" }),
+  entityName: text("entity_name").notNull(),
+  entityType: text("entity_type").$type<EntityType>().notNull(),
+  createdAt: timestamp("created_at").notNull().default(sql`NOW()`),
+});
+
+export const insertHansardEntitySchema = createInsertSchema(hansardEntities).omit({
+  id: true,
+  createdAt: true,
+}).extend({
+  entityType: z.enum(ENTITY_TYPE_VALUES),
+});
+
+export type InsertHansardEntity = z.infer<typeof insertHansardEntitySchema>;
+export type HansardEntity = typeof hansardEntities.$inferSelect;
+
+// Controlled vocabulary for topic tags
+export const VOCAB_STATUS_VALUES = ["active", "pending_review", "merged"] as const;
+export type VocabStatus = typeof VOCAB_STATUS_VALUES[number];
+
+export const hansardTopicVocabulary = pgTable("hansard_topic_vocabulary", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tagSlug: text("tag_slug").notNull().unique(), // e.g., "epf", "childcare_policy"
+  displayLabel: text("display_label").notNull(), // human-readable, e.g., "EPF / retirement savings"
+  status: text("status").$type<VocabStatus>().notNull().default("active"),
+  mergedIntoSlug: text("merged_into_slug"), // if merged, which tag it was merged into
+  createdAt: timestamp("created_at").notNull().default(sql`NOW()`),
+});
+
+export const insertHansardTopicVocabularySchema = createInsertSchema(hansardTopicVocabulary).omit({
+  id: true,
+  createdAt: true,
+}).extend({
+  status: z.enum(VOCAB_STATUS_VALUES).optional().default("active"),
+  mergedIntoSlug: z.string().nullable().optional(),
+});
+
+export const updateHansardTopicVocabularySchema = insertHansardTopicVocabularySchema.partial();
+
+export type InsertHansardTopicVocabulary = z.infer<typeof insertHansardTopicVocabularySchema>;
+export type UpdateHansardTopicVocabulary = z.infer<typeof updateHansardTopicVocabularySchema>;
+export type HansardTopicVocabulary = typeof hansardTopicVocabulary.$inferSelect;
