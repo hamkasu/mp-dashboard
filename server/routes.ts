@@ -28,6 +28,7 @@ import {
   insertCommitteeMemberSchema,
   updateCommitteeMemberSchema,
   mps,
+  mpReportCards,
   committeeMembers,
   hansardPdfFiles,
   hansardRecords,
