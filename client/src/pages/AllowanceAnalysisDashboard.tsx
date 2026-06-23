@@ -378,9 +378,12 @@ function AllowanceAnalysisDashboard() {
               </div>
             </div>
 
-            <div className="pt-2 border-t border-blue-200">
+            <div className="pt-2 border-t border-blue-200 space-y-2">
               <p className="text-xs text-gray-600 italic">
                 Last recalculated: Monthly on the 1st. Click "Recalculate Grades" above to update immediately with latest data.
+              </p>
+              <p className="text-xs text-amber-700 bg-amber-50 p-2 rounded border border-amber-200">
+                ⚠️ <span className="font-semibold">Note:</span> Grades are calculated for all 223 MPs in the database, including deceased and resigned members. This ensures consistent percentile rankings across the full historical dataset. The leaderboard may show fewer active MPs depending on current status.
               </p>
             </div>
           </div>
