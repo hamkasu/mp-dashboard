@@ -16,6 +16,7 @@ import { RoyalAddress } from "@/components/RoyalAddress";
 import { MPSpotlight } from "@/components/MPSpotlight";
 import { PollWidget } from "@/components/PollWidget";
 import { BillsToWatch } from "@/components/BillsToWatch";
+import { AllowanceAnalysisCard } from "@/components/AllowanceAnalysisCard";
 import { ParliamentVideos } from "@/components/ParliamentVideos";
 import { SilentMPs } from "@/components/SilentMPs";
 import { Footer } from "@/components/Footer";
@@ -613,6 +614,12 @@ const ITEMS_PER_PAGE = 20;
             <div className="relative">
               <div className="absolute -inset-1 bg-gradient-to-r from-orange-500/20 to-amber-500/10 rounded-lg blur opacity-25 pointer-events-none" />
               <BillsToWatch />
+            </div>
+
+            {/* Allowance Analysis Section */}
+            <div className="relative">
+              <div className="absolute -inset-1 bg-gradient-to-r from-purple-500/20 to-indigo-500/10 rounded-lg blur opacity-25 pointer-events-none" />
+              <AllowanceAnalysisCard />
             </div>
 
             {/* Most Silent MPs Section */}
