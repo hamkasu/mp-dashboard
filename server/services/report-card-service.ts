@@ -125,7 +125,8 @@ function calculateROIScore(
   // 0.5 ratio (very poor) = 0 score
   // 1.0 ratio (active) = 80 score
   // 2.0+ ratio (exceptionally active) = 100 score
-  let score = Math.round((roiRatio / 0.01) * 100); // Scale up the ratio
+  // Linear scaling: score = (ratio - 0.5) / 1.5 * 100
+  let score = Math.round(((roiRatio - 0.5) / 1.5) * 100);
   score = Math.min(100, Math.max(0, score)); // Clamp to 0-100
 
   // Assign grade based on score
