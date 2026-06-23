@@ -54,6 +54,91 @@ const COMMITTEE_BONUS_POINTS: Record<string, number> = {
   'committee_member': 3,        // Regular committee member
 };
 
+// ============================================================================
+// PHASE 5: ALLOWANCE & ROI CALCULATION
+// ============================================================================
+
+/**
+ * Calculate total annual allowance for an MP (RM)
+ * Includes base, minister salary, and all supplements
+ */
+function calculateAnnualAllowance(mp: typeof mps.$inferSelect): number {
+  const base = (mp.mpAllowance || 0) * 12;
+  const minister = (mp.ministerSalary || 0) * 12;
+  const entertainment = (mp.entertainmentAllowance || 0) * 12;
+  const phone = (mp.handphoneAllowance || 0) * 12;
+  const computer = (mp.computerAllowance || 0) * 12;
+  const dress = (mp.dressWearAllowance || 0) * 12;
+
+  // Estimate sitting allowance (assume ~70 sessions per year)
+  const sitting = (mp.parliamentSittingAllowance || 400) * 70;
+
+  return Math.round(base + minister + entertainment + phone + computer + dress + sitting);
+}
+
+/**
+ * Calculate cost ratios: how much allowance per unit of output
+ * Lower is better (fewer ringgits per action)
+ */
+function calculateAllowanceRatios(
+  annualAllowance: number,
+  totalSpeeches: number,
+  billsRaised: number,
+  questionsAsked: number,
+  committeeMemberships: number
+) {
+  return {
+    allowancePerSpeech: totalSpeeches > 0 ? Math.round(annualAllowance / totalSpeeches) : 999999,
+    allowancePerBill: billsRaised > 0 ? Math.round(annualAllowance / billsRaised) : 999999,
+    allowancePerQuestion: questionsAsked > 0 ? Math.round(annualAllowance / questionsAsked) : 999999,
+    allowancePerCommittee: committeeMemberships > 0 ? Math.round(annualAllowance / committeeMemberships) : 999999,
+  };
+}
+
+/**
+ * Calculate ROI Score (0-100) based on output relative to allowance
+ * High output = High ROI = Good value for taxpayers
+ * Low output = Low ROI = Poor value for taxpayers
+ */
+function calculateROIScore(
+  annualAllowance: number,
+  totalSpeeches: number,
+  billsRaised: number,
+  questionsAsked: number,
+  committeeMemberships: number
+): { score: number; grade: string } {
+  // Weighted output index
+  // Speeches are most common (40%), Bills are rarest but valuable (30%),
+  // Questions are moderate (20%), Committees show engagement (10%)
+  const outputIndex =
+    (totalSpeeches * 1.0) +        // Weight speeches
+    (billsRaised * 15.0) +         // Bills are much more valuable
+    (questionsAsked * 0.9) +       // Questions slightly less than speeches
+    (committeeMemberships * 5.0);  // Committee roles worth more
+
+  // Normalize: Active MP (150 speeches, 3 bills, 50 questions, 2 committees) = output of ~250
+  // If allowance is ~300k, ratio is 250/300000 = 0.00083
+  // We want this to map to ~80 (A-grade)
+  const roiRatio = (outputIndex / annualAllowance) * 1000000;
+
+  // Map to 0-100 scale with benchmarks
+  // 0.5 ratio (very poor) = 0 score
+  // 1.0 ratio (active) = 80 score
+  // 2.0+ ratio (exceptionally active) = 100 score
+  let score = Math.round((roiRatio / 0.01) * 100); // Scale up the ratio
+  score = Math.min(100, Math.max(0, score)); // Clamp to 0-100
+
+  // Assign grade based on score
+  let grade: string;
+  if (score >= 85) grade = 'A';
+  else if (score >= 70) grade = 'B';
+  else if (score >= 55) grade = 'C';
+  else if (score >= 40) grade = 'D';
+  else grade = 'F';
+
+  return { score, grade };
+}
+
 interface MPGrade {
   mpId: string;
   attendanceScore: number;
@@ -605,8 +690,31 @@ export async function updateAllReportCards(): Promise<{ updated: number; created
     let updated = 0;
     let created = 0;
 
+    // Fetch all MPs to get allowance data for Phase 5
+    const allMps = await db.select().from(mps);
+    const mpMap = new Map(allMps.map(mp => [mp.id, mp]));
+
     // Save each MP's grade to database
     for (const grade of grades) {
+      const mpData = mpMap.get(grade.mpId);
+
+      // Phase 5: Calculate allowance and ROI metrics
+      const annualAllowance = mpData ? calculateAnnualAllowance(mpData) : 0;
+      const allowanceRatios = calculateAllowanceRatios(
+        annualAllowance,
+        grade.totalSpeeches,
+        grade.billsRaised,
+        grade.questionsAsked,
+        0 // TODO: Get actual committee count when available
+      );
+      const roiCalc = calculateROIScore(
+        annualAllowance,
+        grade.totalSpeeches,
+        grade.billsRaised,
+        grade.questionsAsked,
+        0 // TODO: Get actual committee count
+      );
+
       const existing = await db
         .select()
         .from(mpReportCards)
@@ -628,6 +736,14 @@ export async function updateAllReportCards(): Promise<{ updated: number; created
         questionsAsked: grade.questionsAsked,
         inappropriateLanguageCount: 0,
         povertyRate: grade.povertyRate,
+        // Phase 5: Allowance and ROI fields
+        annualAllowance,
+        allowancePerSpeech: allowanceRatios.allowancePerSpeech,
+        allowancePerBill: allowanceRatios.allowancePerBill,
+        allowancePerQuestion: allowanceRatios.allowancePerQuestion,
+        allowancePerCommittee: allowanceRatios.allowancePerCommittee,
+        roiScore: roiCalc.score,
+        roiGrade: roiCalc.grade,
         updatedAt: new Date(),
       };
 
