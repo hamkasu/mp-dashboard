@@ -51,6 +51,9 @@ const ReportCardAdmin = lazy(() => import("@/pages/ReportCardAdmin"));
 const CoalitionComparison = lazy(() => import("@/pages/CoalitionComparison"));
 const StateLeaderboards = lazy(() => import("@/pages/StateLeaderboards"));
 const MPDetailWithPercentiles = lazy(() => import("@/pages/MPDetailWithPercentiles"));
+const AllowanceAnalysisDashboard = lazy(() => import("@/pages/AllowanceAnalysisDashboard"));
+const MPAllowanceBreakdown = lazy(() => import("@/pages/MPAllowanceBreakdown"));
+const AllowanceEfficiencyPage = lazy(() => import("@/pages/AllowanceEfficiencyPage"));
 const MPMessagesAdmin = lazy(() => import("@/pages/MPMessagesAdmin"));
 const AIAgentsAdmin = lazy(() => import("@/pages/AIAgentsAdmin"));
 const MA63Dashboard = lazy(() => import("@/pages/MA63Dashboard"));
@@ -118,6 +121,10 @@ function Router() {
         <Route path="/coalition-comparison" component={CoalitionComparison} />
         <Route path="/state-leaderboards" component={StateLeaderboards} />
         <Route path="/mp/:mpId/percentiles" component={MPDetailWithPercentiles} />
+        {/* Phase 5: Allowance-per-Output ROI Analysis */}
+        <Route path="/allowance-analysis" component={AllowanceAnalysisDashboard} />
+        <Route path="/mp/:mpId/allowance-breakdown" component={MPAllowanceBreakdown} />
+        <Route path="/allowance-efficiency" component={AllowanceEfficiencyPage} />
         <Route path="/mp-messages-admin" component={MPMessagesAdmin} />
         <Route path="/ai-agents-admin" component={AIAgentsAdmin} />
         <Route path="/mymp-import-admin" component={MYMPImportAdmin} />

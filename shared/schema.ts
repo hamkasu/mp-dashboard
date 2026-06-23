@@ -1150,6 +1150,15 @@ export const mpReportCards = pgTable("mp_report_cards", {
   inappropriateLanguageCount: integer("inappropriate_language_count").notNull().default(0),
   povertyRate: integer("poverty_rate").default(0),
 
+  // Phase 5: Allowance and ROI metrics
+  annualAllowance: integer("annual_allowance").notNull().default(0),
+  allowancePerSpeech: integer("allowance_per_speech").notNull().default(0),
+  allowancePerBill: integer("allowance_per_bill").notNull().default(0),
+  allowancePerQuestion: integer("allowance_per_question").notNull().default(0),
+  allowancePerCommittee: integer("allowance_per_committee").notNull().default(0),
+  roiScore: integer("roi_score").notNull().default(50), // 0-100
+  roiGrade: text("roi_grade").notNull().default("C"), // A-F
+
   // Timestamps
   calculatedAt: timestamp("calculated_at").notNull().default(sql`NOW()`),
   updatedAt: timestamp("updated_at").notNull().default(sql`NOW()`),

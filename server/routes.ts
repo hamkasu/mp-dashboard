@@ -10119,6 +10119,134 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
+  // ========== PHASE 5: ALLOWANCE & ROI ENDPOINTS ==========
+
+  // Get allowance breakdown for a specific MP
+  app.get("/api/mps/:id/allowance-breakdown", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const card = await db
+        .select()
+        .from(mpReportCards)
+        .where(eq(mpReportCards.mpId, id))
+        .limit(1);
+
+      if (!card || card.length === 0) {
+        return res.status(404).json({ error: "MP not found" });
+      }
+
+      const mp = await db.select().from(mps).where(eq(mps.id, id)).limit(1);
+
+      res.json({
+        mpId: id,
+        name: mp[0]?.name,
+        party: mp[0]?.party,
+        state: mp[0]?.state,
+        annualAllowance: card[0].annualAllowance,
+        allowancePerSpeech: card[0].allowancePerSpeech,
+        allowancePerBill: card[0].allowancePerBill,
+        allowancePerQuestion: card[0].allowancePerQuestion,
+        allowancePerCommittee: card[0].allowancePerCommittee,
+        roiScore: card[0].roiScore,
+        roiGrade: card[0].roiGrade,
+        // Output metrics
+        totalSpeeches: card[0].totalSpeeches,
+        billsRaised: card[0].billsRaised,
+        questionsAsked: card[0].questionsAsked,
+      });
+    } catch (error) {
+      console.error("Error fetching allowance breakdown:", error);
+      res.status(500).json({ error: "Failed to fetch allowance breakdown" });
+    }
+  });
+
+  // Get ROI leaderboard (all MPs ranked by ROI)
+  app.get("/api/report-cards/roi-leaderboard", async (req, res) => {
+    try {
+      const cards = await db
+        .select()
+        .from(mpReportCards)
+        .innerJoin(mps, eq(mpReportCards.mpId, mps.id))
+        .orderBy(desc(mpReportCards.roiScore))
+        .limit(250);
+
+      const leaderboard = cards.map((row, idx) => ({
+        rank: idx + 1,
+        mpId: row.mp_report_cards.mpId,
+        name: row.mps.name,
+        party: row.mps.party,
+        state: row.mps.state,
+        roiScore: row.mp_report_cards.roiScore,
+        roiGrade: row.mp_report_cards.roiGrade,
+        annualAllowance: row.mp_report_cards.annualAllowance,
+        totalSpeeches: row.mp_report_cards.totalSpeeches,
+        billsRaised: row.mp_report_cards.billsRaised,
+        questionsAsked: row.mp_report_cards.questionsAsked,
+        allowancePerSpeech: row.mp_report_cards.allowancePerSpeech,
+      }));
+
+      res.json({
+        total: leaderboard.length,
+        data: leaderboard,
+      });
+    } catch (error) {
+      console.error("Error fetching ROI leaderboard:", error);
+      res.status(500).json({ error: "Failed to fetch ROI leaderboard" });
+    }
+  });
+
+  // Get allowance efficiency analytics
+  app.get("/api/analytics/allowance-efficiency", async (req, res) => {
+    try {
+      const cards = await db.select().from(mpReportCards).innerJoin(mps, eq(mpReportCards.mpId, mps.id));
+
+      // Calculate statistics
+      const roiScores = cards.map(c => c.mp_report_cards.roiScore);
+      const allowances = cards.map(c => c.mp_report_cards.annualAllowance);
+
+      const avgROI = Math.round(roiScores.reduce((a, b) => a + b, 0) / roiScores.length);
+      const medianROI = roiScores.sort((a, b) => a - b)[Math.floor(roiScores.length / 2)];
+      const avgAllowance = Math.round(allowances.reduce((a, b) => a + b, 0) / allowances.length);
+
+      const roiByGrade: Record<string, { count: number; avgAllowance: number }> = {};
+      ['A', 'B', 'C', 'D', 'F'].forEach(grade => {
+        const filtered = cards.filter(c => c.mp_report_cards.roiGrade === grade);
+        roiByGrade[grade] = {
+          count: filtered.length,
+          avgAllowance: filtered.length > 0 ? Math.round(filtered.reduce((sum, c) => sum + c.mp_report_cards.annualAllowance, 0) / filtered.length) : 0,
+        };
+      });
+
+      const topPerformer = cards.reduce((a, b) => a.mp_report_cards.roiScore > b.mp_report_cards.roiScore ? a : b);
+      const lowestPerformer = cards.reduce((a, b) => a.mp_report_cards.roiScore < b.mp_report_cards.roiScore ? a : b);
+
+      res.json({
+        summary: {
+          totalMPs: cards.length,
+          averageROI: avgROI,
+          medianROI,
+          averageAnnualAllowance: avgAllowance,
+        },
+        topPerformer: {
+          name: topPerformer.mps.name,
+          party: topPerformer.mps.party,
+          roiScore: topPerformer.mp_report_cards.roiScore,
+          roiGrade: topPerformer.mp_report_cards.roiGrade,
+        },
+        lowestPerformer: {
+          name: lowestPerformer.mps.name,
+          party: lowestPerformer.mps.party,
+          roiScore: lowestPerformer.mp_report_cards.roiScore,
+          roiGrade: lowestPerformer.mp_report_cards.roiGrade,
+        },
+        performanceDistribution: roiByGrade,
+      });
+    } catch (error) {
+      console.error("Error fetching allowance efficiency analytics:", error);
+      res.status(500).json({ error: "Failed to fetch allowance efficiency analytics" });
+    }
+  });
+
   // ========== AGENTIC AI ENDPOINTS ==========
 
   // Get all available AI agents
