@@ -858,9 +858,6 @@ export type InsertCourtCaseNewsArticle = z.infer<typeof insertCourtCaseNewsArtic
 export type UpdateCourtCaseNewsArticle = z.infer<typeof updateCourtCaseNewsArticleSchema>;
 export type CourtCaseNewsArticle = typeof courtCaseNewsArticles.$inferSelect;
 
-// Update schema for court cases
-export const updateCourtCaseSchema = insertCourtCaseSchema.partial();
-
 // ========== PARLIAMENT BILLS ==========
 // Bills table for storing scraped bills from Parliament website
 export const bills = pgTable("bills", {
