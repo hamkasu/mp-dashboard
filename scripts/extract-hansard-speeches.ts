@@ -60,7 +60,8 @@ async function extractSpeechesFromRecords() {
 
       // Insert each speaking instance as a speech record
       const speeches = [];
-      for (const instance of allInstances) {
+      for (let idx = 0; idx < allInstances.length; idx++) {
+        const instance = allInstances[idx];
         const mpId = mpNameMap.get(instance.mpName);
         if (!mpId) {
           console.warn(`⚠️  Could not find MP ID for ${instance.mpName}`);
@@ -72,7 +73,7 @@ async function extractSpeechesFromRecords() {
           mpId,
           speechText: instance.speechText || '',
           instanceNumber: instance.instanceNumber,
-          speakingOrder: instance.speakingOrder,
+          speakingOrder: idx + 1, // Speaking order based on position in session
           characterOffsetStart: instance.headerPosition,
           characterOffsetEnd:
             instance.headerPosition + (instance.headerLength || 0) + (instance.speechText?.length || 0),
