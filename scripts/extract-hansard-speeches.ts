@@ -3,7 +3,7 @@
  * Populates hansard_speeches table from hansardRecords transcripts
  */
 
-import { db } from '../server/db';
+import { getDb } from '../server/db';
 import { hansardRecords, hansardSpeeches, mps } from '@shared/schema';
 import { HansardSpeakerParser } from '../server/hansard-speaker-parser';
 import { eq } from 'drizzle-orm';
@@ -11,6 +11,8 @@ import { eq } from 'drizzle-orm';
 async function extractSpeechesFromRecords() {
   const limit = process.argv[2] ? parseInt(process.argv[2], 10) : undefined;
   console.log('🔍 Extracting speech turns from Hansard records...');
+
+  const db = getDb();
 
   // Get all MPs for speaker parsing
   const allMps = await db.select().from(mps);
