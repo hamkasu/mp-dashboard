@@ -240,40 +240,107 @@ export class HansardPdfParser {
     };
   }
 
+  /**
+   * Clean PDF-extracted section text for reliable regex matching.
+   * PDF text extraction can insert page headers (e.g., "DR 5.2.2026  iii")
+   * mid-entry when text spans page boundaries, breaking constituency
+   * extraction regex.
+   */
+  private cleanSectionText(section: string): string {
+    return section
+      // Remove page headers like "DR 5.2.2026" or "DR.05.02.2026"
+      .replace(/\bDR[\.\s]*\d+[\.\s]*\d+[\.\s]*\d+\b/gi, '')
+      // Remove standalone Roman numeral page numbers (i, ii, iii, iv, v, etc.)
+      .replace(/^\s*[ivxlcdm]+\s*$/gmi, '')
+      // Replace Unicode smart quotes with ASCII equivalents
+      .replace(/[\u2018\u2019\u201A\u201B]/g, "'")
+      .replace(/[\u201C\u201D\u201E\u201F]/g, '"')
+      // Collapse newlines and multiple spaces to single space
+      .replace(/\n+/g, ' ')
+      .replace(/\s+/g, ' ');
+  }
+
+  /**
+   * Extract constituency names from a section of the Hansard attendance list.
+   * Uses entry-based parsing: splits on numbered entries (e.g., "1.", "2."),
+   * then extracts the LAST parenthetical from each entry (the constituency).
+   * This is resilient to page headers embedded mid-entry by PDF extraction.
+   */
+  private extractConstituenciesFromSection(section: string, excludeSpeaker: boolean = false): string[] {
+    const constituencies: string[] = [];
+
+    // Clean PDF artifacts (page headers, smart quotes, line breaks)
+    const cleaned = this.cleanSectionText(section);
+
+    // Remove Yang di-Pertua Dewan Rakyat (Speaker presides, not attending as MP)
+    const text = excludeSpeaker
+      ? cleaned.replace(/\d+\.\s*Yang di-Pertua Dewan Rakyat[^)]*\([^)]+\)/gi, '')
+      : cleaned;
+
+    // Split into individual numbered entries: "1. ...", "2. ...", etc.
+    const entries = text.split(/(?=\d+\.\s+)/);
+
+    for (const entry of entries) {
+      if (!entry.trim() || !/^\d+\./.test(entry.trim())) continue;
+
+      // Find ALL parenthetical groups in this entry using permissive [^)]+
+      // This handles page headers embedded inside parens (digits, colons, etc.)
+      const parens = [...entry.matchAll(/\(([^)]+)\)/g)];
+      if (parens.length === 0) continue;
+
+      // The LAST parenthetical is the constituency
+      // (earlier ones may be ministerial portfolios like "(Undang-Undang dan Reformasi Institusi)")
+      const rawConstituency = parens[parens.length - 1][1]
+        .replace(/\s+/g, ' ')
+        .trim();
+
+      // Validate: must start with a letter and be a plausible constituency name
+      if (rawConstituency && /^[A-Za-z]/.test(rawConstituency) && !constituencies.includes(rawConstituency)) {
+        constituencies.push(rawConstituency);
+      }
+    }
+
+    return constituencies;
+  }
+
   private parseAttendance(text: string): AttendanceData {
     const attendedConstituencies: string[] = [];
     const absentConstituencies: string[] = [];
 
     // Find "Ahli-Ahli Yang Hadir" section
-    const attendedStart = text.indexOf('Ahli-Ahli Yang Hadir:');
-    if (attendedStart !== -1) {
+    const headerPos = text.indexOf('Ahli-Ahli Yang Hadir:');
+    if (headerPos !== -1) {
+      // PDF text extraction can place header text AFTER body entries from the same page.
+      // E.g., entries 1-37 may appear BEFORE "Ahli-Ahli Yang Hadir:" in the extracted text,
+      // with entries 38+ appearing after it. We need to scan backwards to find entries
+      // that precede the header.
+      let attendedStart = headerPos;
+      const lookbackSize = 20000; // generous lookback for page 1 entries
+      const textBefore = text.substring(Math.max(0, headerPos - lookbackSize), headerPos);
+      // Find the first numbered entry (e.g., "1. Yang di-Pertua..." or "1. Perdana Menteri...")
+      const firstEntryMatch = textBefore.match(/\b1\.\s+(?:Yang di-Pertua|Perdana|Menteri|Dato|Datuk|Tuan|Puan)/);
+      if (firstEntryMatch && firstEntryMatch.index !== undefined) {
+        attendedStart = Math.max(0, headerPos - lookbackSize) + firstEntryMatch.index;
+        console.log(`📄 Attendance section: found ${headerPos - attendedStart} chars of entries before header (PDF extraction order issue)`);
+      }
+
       const attendedEnd = Math.min(
-        text.indexOf('Senator Yang Turut Hadir:', attendedStart) !== -1 
-          ? text.indexOf('Senator Yang Turut Hadir:', attendedStart)
+        text.indexOf('Senator Yang Turut Hadir:', headerPos) !== -1
+          ? text.indexOf('Senator Yang Turut Hadir:', headerPos)
           : Number.MAX_SAFE_INTEGER,
-        text.indexOf('Ahli-Ahli Yang Tidak Hadir:', attendedStart) !== -1
-          ? text.indexOf('Ahli-Ahli Yang Tidak Hadir:', attendedStart)
+        text.indexOf('Ahli-Ahli Yang Tidak Hadir:', headerPos) !== -1
+          ? text.indexOf('Ahli-Ahli Yang Tidak Hadir:', headerPos)
           : Number.MAX_SAFE_INTEGER
       );
-      const attendedSection = text.substring(attendedStart, attendedEnd === Number.MAX_SAFE_INTEGER ? undefined : attendedEnd);
-      
-      // Extract constituencies from entries like "Menteri..., Datuk ... (Constituency)"
-      // Flexible regex to handle: multi-word names, hyphens, apostrophes, mixed case
-      const constituencyRegex = /\(([A-Za-z][A-Za-z\s\-'\.]+?)\)/g;
-      let match;
-      while ((match = constituencyRegex.exec(attendedSection)) !== null) {
-        const constituency = match[1].trim();
-        if (constituency && !attendedConstituencies.includes(constituency)) {
-          attendedConstituencies.push(constituency);
-        }
-      }
+      const rawAttendedSection = text.substring(attendedStart, attendedEnd === Number.MAX_SAFE_INTEGER ? undefined : attendedEnd);
+      attendedConstituencies.push(...this.extractConstituenciesFromSection(rawAttendedSection, true));
     }
 
     // Find "Ahli-Ahli Yang Tidak Hadir" section
     const absentStart = text.indexOf('Ahli-Ahli Yang Tidak Hadir:');
     if (absentStart !== -1) {
       const absentEnd = Math.min(
-        text.indexOf('PERTANYAAN', absentStart) !== -1 
+        text.indexOf('PERTANYAAN', absentStart) !== -1
           ? text.indexOf('PERTANYAAN', absentStart)
           : Number.MAX_SAFE_INTEGER,
         text.indexOf('USUL:', absentStart) !== -1
@@ -283,17 +350,8 @@ export class HansardPdfParser {
           ? text.indexOf('RANG UNDANG-UNDANG', absentStart)
           : Number.MAX_SAFE_INTEGER
       );
-      const absentSection = text.substring(absentStart, absentEnd === Number.MAX_SAFE_INTEGER ? undefined : absentEnd);
-      
-      // Flexible regex to handle: multi-word names, hyphens, apostrophes, mixed case
-      const constituencyRegex = /\(([A-Za-z][A-Za-z\s\-'\.]+?)\)/g;
-      let match;
-      while ((match = constituencyRegex.exec(absentSection)) !== null) {
-        const constituency = match[1].trim();
-        if (constituency && !absentConstituencies.includes(constituency)) {
-          absentConstituencies.push(constituency);
-        }
-      }
+      const rawAbsentSection = text.substring(absentStart, absentEnd === Number.MAX_SAFE_INTEGER ? undefined : absentEnd);
+      absentConstituencies.push(...this.extractConstituenciesFromSection(rawAbsentSection));
     }
 
     // Match constituencies to MP IDs
@@ -303,11 +361,14 @@ export class HansardPdfParser {
       ))
       .map(mp => mp.id);
 
+    const attendedSet = new Set(attendedMpIds);
     const absentMpIds = this.allMps
-      .filter(mp => absentConstituencies.some(c => 
+      .filter(mp => absentConstituencies.some(c =>
         this.normalizeConstituency(c) === this.normalizeConstituency(mp.constituency)
       ))
-      .map(mp => mp.id);
+      .map(mp => mp.id)
+      // Remove any MP that also appears in the attended list (PDF parsing overlap)
+      .filter(id => !attendedSet.has(id));
 
     // Find unmatched constituencies for debugging
     const unmatchedAttended = attendedConstituencies.filter(c => 
@@ -317,11 +378,19 @@ export class HansardPdfParser {
       !this.allMps.some(mp => this.normalizeConstituency(c) === this.normalizeConstituency(mp.constituency))
     );
 
+    // Detect overlap between attended and absent constituency lists from PDF
+    const overlappingConstituencies = attendedConstituencies.filter(c =>
+      absentConstituencies.some(a => this.normalizeConstituency(c) === this.normalizeConstituency(a))
+    );
+
     console.log(`📊 Attendance parsed:`);
     console.log(`   - Found ${attendedConstituencies.length} attended constituencies`);
     console.log(`   - Found ${absentConstituencies.length} absent constituencies`);
     console.log(`   - Matched ${attendedMpIds.length} attended MPs`);
     console.log(`   - Matched ${absentMpIds.length} absent MPs`);
+    if (overlappingConstituencies.length > 0) {
+      console.log(`   - ⚠️ Overlap detected (resolved to attended): ${overlappingConstituencies.join(', ')}`);
+    }
     if (unmatchedAttended.length > 0) {
       console.log(`   - ⚠️ Unmatched attended constituencies: ${unmatchedAttended.slice(0, 10).join(', ')}${unmatchedAttended.length > 10 ? '...' : ''}`);
     }

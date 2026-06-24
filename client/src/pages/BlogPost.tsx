@@ -119,13 +119,42 @@ export default function BlogPost() {
         keywords={`Malaysian Parliament, ${post?.title || 'blog'}`}
         url={`https://myparliament.calmic.com.my/blog/${post?.slug || ''}`}
         image={post?.imageUrl || undefined}
+        structuredData={{
+          "@context": "https://schema.org",
+          "@type": "Article",
+          "headline": post?.title,
+          "description": post?.excerpt,
+          "image": post?.imageUrl || "https://myparliament.calmic.com.my/android-chrome-512x512.png",
+          "datePublished": post?.publishedAt ? new Date(post.publishedAt).toISOString() : undefined,
+          "dateModified": post?.updatedAt ? new Date(post.updatedAt).toISOString() : post?.publishedAt ? new Date(post.publishedAt).toISOString() : undefined,
+          "author": {
+            "@type": post?.author?.includes("Calmic") ? "Organization" : "Person",
+            "name": post?.author || "Malaysian Parliament Dashboard"
+          },
+          "publisher": {
+            "@type": "Organization",
+            "name": "Malaysian Parliament Dashboard",
+            "logo": {
+              "@type": "ImageObject",
+              "url": "https://myparliament.calmic.com.my/android-chrome-512x512.png"
+            }
+          },
+          "mainEntityOfPage": {
+            "@type": "WebPage",
+            "@id": `https://myparliament.calmic.com.my/blog/${post?.slug || ''}`
+          },
+          "articleSection": post?.category,
+          "keywords": `Malaysian Parliament, ${post?.title || 'blog'}`,
+          "wordCount": post?.content ? post.content.split(/\s+/).length : undefined,
+          "articleBody": post?.excerpt
+        }}
       />
       <Header />
 
       <main className="flex-1 container mx-auto px-4 py-6 md:py-8 max-w-4xl">
         <article className="space-y-6">
           <Button
-            variant="ghost"
+            variant="outline"
             onClick={handleBack}
             className="mb-4"
             data-testid="button-back-to-blog"

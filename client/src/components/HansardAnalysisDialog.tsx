@@ -108,25 +108,20 @@ export function HansardAnalysisDialog({ hansardRecord, trigger }: HansardAnalysi
   // Get the currently selected hansard record (either from dropdown or prop)
   const selectedHansard = allHansardRecords?.find(r => r.id === selectedHansardId) || hansardRecord;
 
-  const filteredMps = (() => {
-    if (!mps) return [];
+  // Fetch MPs who spoke in the selected Hansard session
+  const { data: speakersData, isLoading: speakersLoading } = useQuery<{
+    hansardRecordId: string;
+    sessionNumber: string;
+    speakers: MP[];
+  }>({
+    queryKey: [`/api/hansard-records/${selectedHansardId}/speakers`],
+    enabled: !!selectedHansardId,
+  });
 
-    if (!selectedHansard?.speakers || selectedHansard.speakers.length === 0) {
-      return mps;
-    }
-
-    const speakerMpIds = selectedHansard.speakers
-      .filter(speaker => speaker.mpId)
-      .map(speaker => speaker.mpId);
-
-    if (speakerMpIds.length === 0) {
-      return mps;
-    }
-
-    const filtered = mps.filter(mp => speakerMpIds.includes(mp.id));
-
-    return filtered.length > 0 ? filtered : mps;
-  })();
+  // Use speakers from the API if available, otherwise empty array
+  const filteredMps = selectedHansardId && speakersData?.speakers
+    ? speakersData.speakers
+    : [];
 
   const analyzeMutation = useMutation({
     mutationFn: async (data: { hansardRecordId: string; mpId: string }) => {
@@ -275,16 +270,20 @@ export function HansardAnalysisDialog({ hansardRecord, trigger }: HansardAnalysi
 
                 <div className="space-y-2">
                   <Label htmlFor="mp-select-dialog">Select MP</Label>
-                  {mpsLoading ? (
+                  {(mpsLoading || (selectedHansardId && speakersLoading)) ? (
                     <Skeleton className="h-10 w-full" />
                   ) : (
                     <Select
                       value={selectedMpId}
                       onValueChange={setSelectedMpId}
-                      disabled={analyzeMutation.isPending}
+                      disabled={analyzeMutation.isPending || !selectedHansardId}
                     >
                       <SelectTrigger id="mp-select-dialog" data-testid="select-mp-dialog">
-                        <SelectValue placeholder={filteredMps.length > 0 ? "Choose a Constituency" : "No MPs spoke in this session"} />
+                        <SelectValue placeholder={
+                          selectedHansardId
+                            ? (filteredMps.length > 0 ? "Choose a Constituency" : "No MPs spoke in this session")
+                            : "Select a session first"
+                        } />
                       </SelectTrigger>
                       <SelectContent>
                         {filteredMps.length > 0 ? (
@@ -295,7 +294,7 @@ export function HansardAnalysisDialog({ hansardRecord, trigger }: HansardAnalysi
                           ))
                         ) : (
                           <SelectItem value="none" disabled>
-                            No MPs spoke in this session
+                            {selectedHansardId ? "No MPs spoke in this session" : "Select a session first"}
                           </SelectItem>
                         )}
                       </SelectContent>

@@ -9,9 +9,16 @@ import { Header } from "@/components/Header";
 import { SearchDialog } from "@/components/SearchDialog";
 import { PageMeta } from "@/components/PageMeta";
 import { StatisticsCards } from "@/components/StatisticsCards";
+import { ElectionStatsCard } from "@/components/ElectionStatsCard";
 import { FilterSidebar } from "@/components/FilterSidebar";
 import { MPGrid } from "@/components/MPGrid";
-import { DonateButton } from "@/components/DonateButton";
+import { RoyalAddress } from "@/components/RoyalAddress";
+import { MPSpotlight } from "@/components/MPSpotlight";
+import { PollWidget } from "@/components/PollWidget";
+import { BillsToWatch } from "@/components/BillsToWatch";
+import { AllowanceAnalysisCard } from "@/components/AllowanceAnalysisCard";
+import { ParliamentVideos } from "@/components/ParliamentVideos";
+import { SilentMPs } from "@/components/SilentMPs";
 import { Footer } from "@/components/Footer";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -31,11 +38,13 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { ExternalLink, AlertTriangle, Eye, ChevronLeft, ChevronRight, ChevronDown, UserX, TrendingUp, Info } from "lucide-react";
+import { ExternalLink, AlertTriangle, Eye, ChevronLeft, ChevronRight, ChevronDown, UserX, TrendingUp, Info, Newspaper, ChevronUp } from "lucide-react";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Link } from "wouter";
 import type { Mp, SprmInvestigation, LegislativeProposal, ParliamentaryQuestion } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { useConstituencies } from "@/hooks/use-constituencies";
+import { MALAYSIAN_STATES } from "@/lib/constants";
 
 interface PaginatedMpsResponse {
   data: Mp[];
@@ -48,8 +57,9 @@ interface PaginatedMpsResponse {
   };
 }
 
-type SortOption = "name" | "attendance-best" | "attendance-worst" | "speeches-most" | "speeches-fewest" | "poverty-highest" | "poverty-lowest" | "bills-raised" | "oral-questions" | "inappropriate-language";
+type SortOption = "name" | "attendance-best" | "attendance-worst" | "speeches-most" | "speeches-fewest" | "poverty-highest" | "poverty-lowest" | "bills-raised" | "oral-questions" | "inappropriate-language" | "majority-highest" | "majority-smallest";
 type StatusFilter = "all" | "active" | "former";
+type CabinetFilter = "all" | "ministers" | "deputy-ministers";
 
 interface LanguageAnalysisMpStat {
   mpId: string;
@@ -58,6 +68,7 @@ interface LanguageAnalysisMpStat {
   count: number;
   words: string[];
 }
+
 
 export default function Home() {
   const { t } = useLanguage();
@@ -71,10 +82,10 @@ export default function Home() {
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [searchDialogOpen, setSearchDialogOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const ITEMS_PER_PAGE = 20;
+const ITEMS_PER_PAGE = 20;
 
   // Special sort modes require all MPs for client-side filtering/sorting
-  const SPECIAL_SORT_MODES: SortOption[] = ["bills-raised", "oral-questions", "inappropriate-language", "poverty-highest", "poverty-lowest"];
+  const SPECIAL_SORT_MODES: SortOption[] = ["bills-raised", "oral-questions", "inappropriate-language", "poverty-highest", "poverty-lowest", "majority-highest", "majority-smallest"];
   const isSpecialSortMode = SPECIAL_SORT_MODES.includes(sortBy);
 
   // Build query string for paginated API
@@ -126,6 +137,12 @@ export default function Home() {
     stateCount: number;
     averageAttendanceRate?: number;
     totalCumulativeCosts?: number;
+    electionStats?: {
+      year: number;
+      totalVotes: number;
+      governmentVotes: number;
+      oppositionVotes: number;
+    };
   }>({
     queryKey: ["/api/stats"],
   });
@@ -340,15 +357,21 @@ export default function Home() {
         const countB = inappropriateLanguageByMpId.get(b.id)?.count ?? 0;
         return countB - countA;
       });
+    } else if (sortBy === "majority-highest" || sortBy === "majority-smallest") {
+      result.sort((a, b) => {
+        const majorityA = a.electionMajority ?? (sortBy === "majority-highest" ? -1 : Infinity);
+        const majorityB = b.electionMajority ?? (sortBy === "majority-highest" ? -1 : Infinity);
+        return sortBy === "majority-highest" ? majorityB - majorityA : majorityA - majorityB;
+      });
     }
 
     return result;
   }, [mps, isSpecialSortMode, searchQuery, selectedParties, selectedStates, selectedCabinetPositions, sortBy, povertyByCode, billsCountByMpId, oralQuestionsCountByMpId, inappropriateLanguageByMpId]);
 
   const availableStates = useMemo(() => {
-    const states = Array.from(new Set(mps.map((mp) => mp.state)));
-    return states.sort();
-  }, [mps]);
+    // Include all Malaysian states, not just those with MPs in database
+    return [...MALAYSIAN_STATES].sort();
+  }, []);
 
   const mpsWithSprmInvestigations = useMemo(() => {
     if (!sprmInvestigations.length || !mps.length) return [];
@@ -439,6 +462,52 @@ export default function Home() {
           description="Track Malaysian Parliament MPs, voting records, and parliamentary activities. Comprehensive Dewan Rakyat dashboard with attendance tracking, court cases, and SPRM investigations."
           keywords="Malaysian Parliament, MP dashboard, Dewan Rakyat, voting records, parliamentary activities, MP attendance, court cases, SPRM investigations, Malaysia MPs"
           url="https://myparliament.calmic.com.my"
+          structuredData={{
+            "@context": "https://schema.org",
+            "@type": "FAQPage",
+            "mainEntity": [
+              {
+                "@type": "Question",
+                "name": "How many MPs are in the Malaysian Parliament?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "There are 222 Members of Parliament (MPs) in Dewan Rakyat, representing constituencies across Malaysia."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "Can I track my MP's attendance?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "Yes, the Malaysian Parliament Dashboard provides real-time attendance tracking for all 222 MPs, including detailed statistics and voting records."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "What information is available about MPs?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "The dashboard tracks MP attendance, parliamentary activities, Hansard speeches, court cases, SPRM investigations, allowances, and voting records for complete transparency."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "How often is the data updated?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "The Malaysian Parliament Dashboard is updated regularly to reflect the latest parliamentary activities, attendance records, and official announcements."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "Is the Malaysian Parliament Dashboard official?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "This is an independent platform created to increase transparency and public access to Malaysian Parliament data. It aggregates publicly available information about MPs and parliamentary activities."
+                }
+              }
+            ]
+          }}
         />
         <Header
           onMenuClick={() => setMobileFiltersOpen(true)}
@@ -496,6 +565,75 @@ export default function Home() {
         {/* Main Content */}
         <main className="flex-1 px-4 md:px-6 lg:px-8 py-6 md:py-8">
           <div className="space-y-6 md:space-y-8">
+            {/* Media Section */}
+            <div className="relative">
+              <div className="absolute -inset-1 bg-gradient-to-r from-purple-500/20 to-violet-500/10 rounded-lg blur opacity-25 pointer-events-none" />
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <Newspaper className="h-5 w-5 text-purple-600" />
+                    Media
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  <a
+                    href="https://malayznbeat.com/comfort-zone-to-code-how-a-sarawak-founder-reinvented-business-in-malaysia/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-between gap-4 p-3 rounded-lg border hover:bg-accent/50 transition-colors group"
+                  >
+                    <div className="space-y-1 min-w-0">
+                      <p className="text-sm font-medium group-hover:text-primary transition-colors">
+                        Comfort Zone to Code: How a Sarawak Founder Reinvented Business in Malaysia
+                      </p>
+                      <p className="text-xs text-muted-foreground">MalayzNBeat</p>
+                    </div>
+                    <ExternalLink className="h-4 w-4 shrink-0 text-muted-foreground group-hover:text-primary transition-colors" />
+                  </a>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Featured Cards: Royal Address, MP Spotlight & Weekly Poll */}
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+              <div className="relative">
+                <div className="absolute -inset-1 bg-gradient-to-r from-primary/20 to-primary/10 rounded-lg blur opacity-25 pointer-events-none" />
+                <RoyalAddress />
+              </div>
+              <div className="relative">
+                <div className="absolute -inset-1 bg-gradient-to-r from-amber-500/20 to-orange-500/10 rounded-lg blur opacity-25 pointer-events-none" />
+                <MPSpotlight />
+              </div>
+              <div className="relative md:col-span-2 xl:col-span-1">
+                <div className="absolute -inset-1 bg-gradient-to-r from-green-500/20 to-emerald-500/10 rounded-lg blur opacity-25 pointer-events-none" />
+                <PollWidget />
+              </div>
+            </div>
+
+            {/* Bills to Watch Section */}
+            <div className="relative">
+              <div className="absolute -inset-1 bg-gradient-to-r from-orange-500/20 to-amber-500/10 rounded-lg blur opacity-25 pointer-events-none" />
+              <BillsToWatch />
+            </div>
+
+            {/* Allowance Analysis Section */}
+            <div className="relative">
+              <div className="absolute -inset-1 bg-gradient-to-r from-purple-500/20 to-indigo-500/10 rounded-lg blur opacity-25 pointer-events-none" />
+              <AllowanceAnalysisCard />
+            </div>
+
+            {/* Most Silent MPs Section */}
+            <div className="relative">
+              <div className="absolute -inset-1 bg-gradient-to-r from-slate-500/20 to-gray-500/10 rounded-lg blur opacity-25 pointer-events-none" />
+              <SilentMPs />
+            </div>
+
+            {/* Parliament Videos Section */}
+            <div className="relative">
+              <div className="absolute -inset-1 bg-gradient-to-r from-red-500/20 to-rose-500/10 rounded-lg blur opacity-25 pointer-events-none" />
+              <ParliamentVideos />
+            </div>
+
             {/* SEO Landing Section */}
             <div className="space-y-3" data-testid="landing-section">
               <div className="flex items-center gap-2">
@@ -690,12 +828,15 @@ export default function Home() {
                         <p className="text-xs font-medium text-muted-foreground mb-1">Plus attendance-based:</p>
                         <ul className="text-xs text-blue-800 dark:text-blue-200 space-y-0.5">
                           <li>• Parliament sitting allowances (RM 400/day)</li>
-                          <li>• Government meeting allowances (RM 300/day)</li>
+                          <li>• Government meeting allowances (RM 300/day)**</li>
                         </ul>
                       </div>
                     </div>
                     <p className="text-xs text-blue-800 dark:text-blue-200 mt-2">
                       *Note: PM receives no salary. Other ministers have taken a 20% voluntary paycut.
+                    </p>
+                    <p className="text-xs text-blue-800 dark:text-blue-200">
+                      **Government meeting attendance data not yet available.
                     </p>
                     <p className="text-xs text-muted-foreground italic">
                       Calculated based on individual sworn-in dates and attendance records. Does not include periodic allowances (handphone, computer, attire purchases).
@@ -704,6 +845,13 @@ export default function Home() {
                 </CardContent>
               </Card>
             )}
+
+            {/* 2022 Election Statistics */}
+            <ElectionStatsCard
+              stats={stats?.electionStats}
+              isLoading={statsLoading}
+            />
+
             {/* Statistics */}
             <StatisticsCards 
               stats={stats || defaultStats} 
@@ -712,8 +860,6 @@ export default function Home() {
               hasPartyFilter={selectedParties.length > 0} 
             />
 
-            {/* Donate Section */}
-            <DonateButton />
 
             {/* MP Grid */}
             {sortBy === "inappropriate-language" && languageAnalysisLoading ? (

@@ -1,6 +1,6 @@
 {
-  "name": "Malaysian Parliament MP Dashboard",
-  "short_name": "MY Parliament",
+  "name": "MyParliament MP Dashboard",
+  "short_name": "MyParliament",
   "icons": [
     {
       "src": "/android-chrome-192x192.png",
@@ -13,7 +13,7 @@
       "type": "image/png"
     }
   ],
-  "theme_color": "#1e40af",
+  "theme_color": "#2563eb",
   "background_color": "#ffffff",
   "display": "standalone"
 }

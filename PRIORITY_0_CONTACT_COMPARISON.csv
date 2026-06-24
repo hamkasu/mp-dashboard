@@ -1,0 +1,47 @@
+Priority,MP Name,Parliament Code,Constituency,State,Current Email,Current Address (truncated),Email Belongs to MP?,Address Belongs to MP?,Confidence,Recommendation,Diagnosis/Reasons
+1,Ikmal Hisham Abdul Aziz,P027,Tanah Merah,Kelantan,ik.nobletwin@yahoo.com.my,"No.15-1, Jalan AU 1A/4B, Taman Keramat Permai, 542",NO,NO,High,NEEDS CORRECTION,"Email: Email (ik.nobletwin) doesn't match MP name (Ikmal Hisham Abdul Aziz) | Address: Address is in Kuala Lumpur, but MP is from Kelantan"
+2,Siti Mastura Mohamad,P041,Kepala Batas,Pulau Pinang,abdulrahman@mohr.gov.my,"Pejabat Timbalan Menteri, 
+Kementerian Sumber Manu",NO,MINISTRY_OFFICE,High,NEEDS CORRECTION,Email: Email (abdulrahman) doesn't match MP name (Siti Mastura Mohamad) | Address: Address is a ministry office (may be legitimate for cabinet members)
+3,Suhaimi Abdullah,P004,Langkawi,Kedah,khalib.5050@gmail.com,"22-1, Jalan Makmur 1, Presint Niaga, Bandar Sateli",NO,NO,High,NEEDS CORRECTION,"Email: Email (khalib.5050) doesn't match MP name (Suhaimi Abdullah) | Address: Address is in Pahang, but MP is from Kedah"
+4,Ngeh Koo Ham,P068,Beruas,Perak,drmaskepalabatas@gmail.com,"No 23 , Tingkat 1 , Seksyen 4/3 , Bandar Putra Ber",NO,NO,High,NEEDS CORRECTION,"Email: Email (drmaskepalabatas) doesn't match MP name (Ngeh Koo Ham) | Address: Address is in Pulau Pinang, but MP is from Perak"
+5,Wan Azizah Wan Ismail,P124,Bandar Tun Razak,Kuala Lumpur,abuabdulhalim24@gmail.com,"Baitul Qurra' wal Fuqoha, Lorong Kiyai Hj. Abdul R",NO,NO,High,NEEDS CORRECTION,"Email: Email (abuabdulhalim24) doesn't match MP name (Wan Azizah Wan Ismail) | Address: Address is in Melaka, but MP is from Kuala Lumpur"
+6,Hamzah Zainudin,P056,Larut,Perak,ahliparlimenlarut@gmail.com,"No. 15, Jalan Langgak Tunku,
+Taman Tunku,
+50480 Ku",NO,NO,High,NEEDS CORRECTION,"Email: Generic parliament/party office email without MP name match | Address: Address is in Kuala Lumpur, but MP is from Perak"
+7,Jonathan Yasin,P179,Ranau,Sabah,muhyddin.tsmy@gmail.com,"No.5, Jalan Setiabakti 7, Bukit Damansara, 50490 K",NO,NO,High,NEEDS CORRECTION,"Email: Email (muhyddin.tsmy) doesn't match MP name (Jonathan Yasin) | Address: Address is in Kuala Lumpur, but MP is from Sabah"
+8,Hishammuddin Hussein,P153,Sembrong,Johor,dshh61@gmail.com,"Suite 5.03, Level 5, 
+Menara Ampwalk North Block
+2",NO,NO,High,NEEDS CORRECTION,"Email: Email (dshh61) doesn't match MP name (Hishammuddin Hussein) | Address: Address is in Kuala Lumpur, but MP is from Johor"
+9,Roslan Hashim,P018,Kulim Bandar Baharu,Kedah,pejabatparlimenkt@gmail.com,"PT 1886 Tingkat Bawah, Rumah Kedai 2 Tingkat, Kuba",NO,NO,High,NEEDS CORRECTION,"Email: Generic parliament/party office email without MP name match | Address: Address is in Terengganu, but MP is from Kedah"
+10,Rafizi Ramli,P100,Pandan,Selangor,mpdgn039@gmail.com,"Pejabat PKM Parlimen Dungun, Lot 3671, Tingkat 1, ",NO,NO,High,NEEDS CORRECTION,"Email: Generic parliament/party office email without MP name match | Address: Address is in Sabah, but MP is from Selangor"
+11,Suhaili Abdul Rahman,P166,Labuan,Labuan,syedsaddiq92@gmail.com,"Pusat Khidmat Ahli Parlimen Muar, G-6, No.1, Lot 3",NO,NO,High,NEEDS CORRECTION,"Email: Email (syedsaddiq92) doesn't match MP name (Suhaili Abdul Rahman) | Address: Address is in Johor, but MP is from Labuan"
+12,Ahmad Tarmizi Sulaiman,P013,Sik,Kedah,mpbachok@gmail.com,"Pusat Khidmat Ahli Parlimen Bachok, Kompleks Pendi",NO,NO,High,NEEDS CORRECTION,"Email: Generic parliament/party office email without MP name match | Address: Address is in Kelantan, but MP is from Kedah"
+13,Fong Kui Lun,P120,Bukit Bintang,Kuala Lumpur,dapbukitbintang@gmail.com,"Pusat Khidmat Rakyat Parlimen Bukit Bintang, 30, J",NO,YES,High,NEEDS CORRECTION,Email: Generic parliament/party office email without MP name match | Address: Address matches constituency (Bukit Bintang)
+14,Tan Kok Wai,P123,Cheras,Kuala Lumpur,cherasdap@gmail.com,"1, Jalan SP 6/5, Taman Segar Perdana, Cheras, 4320",NO,NO,High,NEEDS CORRECTION,"Email: Generic parliament/party office email without MP name match | Address: Address is in Selangor, but MP is from Kuala Lumpur"
+15,Steven Sim,P045,Bukit Mertajam,Pulau Pinang,ybteresakok1@gmail.com,"No. 28-3A, 4th Floor
+Jalan 1/116B 
+Sri Desa Entrep",NO,NO,High,NEEDS CORRECTION,"Email: Email (ybteresakok1) doesn't match MP name (Steven Sim) | Address: Address is in Kuala Lumpur, but MP is from Pulau Pinang"
+,Sh Mohmed Puzi Sh Ali,P085,Pekan,Pahang,drhaliamhhaliq@gmail.com,"Pusat Khidmat Masyarakat Ahli Parlimen Kapar, No.2",YES,NO,Low,Review Manually,"Email: Email contains part of MP's name | Address: Address is in Selangor, but MP is from Pahang"
+,Adnan Abu Hassan,P129,Kuala Pilah,Negeri Sembilan,takiyuddinhassan22@gmail.com,"PUSAT KHIDMAT AHLI PARLIMEN KOTA BHARU, F8, LOT 47",YES,NO,Low,Review Manually,Email: Email contains part of MP's name | Address: 
+,Khaled Nordin,P156,Kota Tinggi,Johor,ltkdr.nordin@gmail.com,"PEJABAT AHLI PARLIMEN LUMUT
+No. 44, Jalan Indah Ra",YES,NO,Low,Review Manually,"Email: Email contains part of MP's name | Address: Address is in Perak, but MP is from Johor"
+,Zaliha Mustafa,P141,Sekijang,Johor,zaliha@jpm.gov.my,"Pejabat Menteri Jabatan Wilayah Persekutuan
+Kement",YES,NO,Low,Review Manually,"Email: Email contains part of MP's name | Address: Address is in Putrajaya, but MP is from Johor"
+,Ismail Sabri Yaakob,P090,Bera,Pahang,ismailsabri60@yahoo.com,"No.839, Lorong 17/22C, Seksyen 17, 46400 Petaling ",YES,NO,Low,Review Manually,"Email: Email contains part of MP's name | Address: Address is in Selangor, but MP is from Pahang"
+,Ewon Benedick,P174,Penampang,Sabah,ewonbenedick@kuskop.gov.my,"Pejabat Menteri, Kementerian Pembangunan Usahawan ",YES,NO,Low,Review Manually,"Email: Email contains part of MP's name | Address: Address is in Putrajaya, but MP is from Sabah"
+,M Saravanan,P072,Tapah,Perak,sarannsaravanan@gmail.com,"No.39, Jalan Setiajaya, Bukit Damansara, 50490 Kua",YES,NO,Low,Review Manually,"Email: Email contains part of MP's name | Address: Address is in Kuala Lumpur, but MP is from Perak"
+,Noraini Ahmad,P147,Parit Sulong,Johor,idrissahmad@gmail.com,"No.102(Tingkat Atas) Bangunan PKNP, Jalan Besar,34",YES,NO,Low,Review Manually,"Email: Email contains part of MP's name | Address: Address is in Perak, but MP is from Johor"
+,Riduan Rubin,P181,Tenom,Sabah,riduan.rubin@gmail.com,"Perbadanan Harta Intelek Malaysia (MyIPO), Aras 23",YES,NO,Low,Review Manually,"Email: Email contains part of MP's name | Address: Address is in Selangor, but MP is from Sabah"
+,Fadillah Yusof,P194,Petra Jaya,Sarawak,azliyusof67@gmail.com,"No.1B, Level 2, Blok 1, Worldwide Business Centre,",YES,NO,Low,Review Manually,"Email: Email contains part of MP's name | Address: Address is in Selangor, but MP is from Sarawak"
+,Chiew Choon Man,P219,Miri,Sarawak,tuanibrahimtuanman@gmail.com,"Pusat Khidmat Rakyat Ahli Parlimen Kubang Kerian, ",YES,NO,Low,Review Manually,"Email: Email contains part of MP's name | Address: Address is in Kelantan, but MP is from Sarawak"
+,Kelvin Yii,P195,Bandar Kuching,Sarawak,kelvinyiidap@gmail.com,"97, Lorong Abang Abdul Rahim 5A,93450 Kuching",YES,NO,Low,Review Manually,Email: Email contains part of MP's name | Address: 
+,Onn Abu Bakar,P150,Batu Pahat,Johor,onnab77@gmail.com,"Lot 374, Lorong A-8, Kampung Cheras Baru, 56100 Ku",YES,NO,Low,Review Manually,"Email: Email contains part of MP's name | Address: Address is in Kuala Lumpur, but MP is from Johor"
+,Abdul Hadi Awang,P037,Marang,Terengganu,tansriabdulhadiawang@gmail.com,"Pejabat Agung PAS Pusat, No. 318-A, Jalan Raja Lau",YES,NO,Low,Review Manually,"Email: Email contains part of MP's name | Address: Address is in Kuala Lumpur, but MP is from Terengganu"
+,Kamal Ashaari,P087,Kuala Krau,Pahang,ustazkamal1970@gmail.com,"No.27, Tingkat Atas, Lorong Baiduri 1, 26400 Banda",YES,NO,Low,Review Manually,Email: Email contains part of MP's name | Address: 
+,Hannah Yeoh,P117,Segambut,Kuala Lumpur,hannahyeoh@kbs.gov.my,"Pejabat Menteri Belia dan Sukan, Aras 17, Menara K",YES,NO,Low,Review Manually,"Email: Email contains part of MP's name | Address: Address is in Putrajaya, but MP is from Kuala Lumpur"
+,Ahmad Zahid Hamidi,P075,Bagan Datuk,Perak,zahid@jpm.gov.my,"Pejabat Timbalan Perdana Menteri, Aras 4, Blok Bar",YES,NO,Low,Review Manually,"Email: Email contains part of MP's name | Address: Address is in Putrajaya, but MP is from Perak"
+,Chan Foong Hin,P172,Kota Kinabalu,Sabah,chanfoonghin@kpk.gov.my,"PEJABAT TIMBALAN MENTERI,
+KEMENTERIAN PERLADANGAN ",YES,NO,Low,Review Manually,"Email: Email contains part of MP's name | Address: Address is in Putrajaya, but MP is from Sabah"
+,Iskandar Dzulkarnain Abdul Khalid,P067,Kuala Kangsar,Perak,iskandar47@gmail.com,"Suite 8,15.1, Menara One Mont Kiara, No. 1, Jalan ",YES,NO,Low,Review Manually,"Email: Email contains part of MP's name | Address: Address is in Kuala Lumpur, but MP is from Perak"
+16,Mohamad Hasan,P131,Rembau,Negeri Sembilan,parlimenp061@gmail.com,"No.6, Persiaran Rengas Jaya, Taman Rengas Jaya, 33",NO,NO,High,DEFINITELY NEEDS CORRECTION,"Email: Email contains parliament code P061, but MP is P131 | Address: Address is in Perak, but MP is from Negeri Sembilan"
+17,Hanifah Hajar Taib,P213,Mukah,Sarawak,ustazismip069@gmail.com,"D/A, Darul Mubarak Travel dan Tours, No.17, Persia",NO,NO,High,DEFINITELY NEEDS CORRECTION,"Email: Email contains parliament code P069, but MP is P213 | Address: Address is in Perak, but MP is from Sarawak"

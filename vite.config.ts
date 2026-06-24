@@ -56,6 +56,7 @@ export default defineConfig({
     chunkSizeWarningLimit: 1000, // Increase warning limit to 1000kb
   },
   server: {
+    allowedHosts: true,
     fs: {
       strict: true,
       deny: ["**/.*"],

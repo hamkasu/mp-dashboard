@@ -545,7 +545,7 @@ export default function ParliamentaryAnswersAdmin() {
                             )}
                             {answer.fullTextUrl && (
                               <Button
-                                variant="ghost"
+                                variant="outline"
                                 size="sm"
                                 asChild
                               >

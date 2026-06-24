@@ -64,6 +64,16 @@ export function Footer() {
                   {currentContent.blog}
                 </Link>
               </li>
+              <li>
+                <a
+                  href="https://gighala.calmic.com.my?utm_source=myparliament&utm_medium=footer&utm_campaign=cross_promo"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-muted-foreground hover:text-primary transition-colors"
+                >
+                  GigHala
+                </a>
+              </li>
             </ul>
           </div>
 

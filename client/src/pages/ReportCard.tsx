@@ -43,11 +43,16 @@ import {
   Calendar,
   MessageSquare,
   Shield,
-  MapPin
+  MapPin,
+  Brain,
+  CheckSquare,
+  Square
 } from "lucide-react";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import { PageMeta } from "@/components/PageMeta";
+import { GrokCompareDialog } from "@/components/GrokCompareDialog";
+import { MALAYSIAN_STATES } from "@/lib/constants";
 
 interface Mp {
   id: string;
@@ -124,6 +129,8 @@ export default function ReportCard() {
   const [coalitionFilter, setCoalitionFilter] = useState<string>("all");
   const [sortField, setSortField] = useState<SortField>('overallScore');
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
+  const [selectedMPs, setSelectedMPs] = useState<string[]>([]);
+  const [compareDialogOpen, setCompareDialogOpen] = useState(false);
 
   // Fetch report cards
   const { data: reportCards = [], isLoading: cardsLoading } = useQuery<MpReportCard[]>({
@@ -142,9 +149,9 @@ export default function ReportCard() {
 
   // Get unique states and coalitions for filters
   const uniqueStates = useMemo(() => {
-    const states = new Set(reportCards.map(card => card.mp.state));
-    return Array.from(states).sort();
-  }, [reportCards]);
+    // Include all Malaysian states, not just those with MPs in database
+    return [...MALAYSIAN_STATES].sort();
+  }, []);
 
   const governmentParties = ['UMNO', 'PKR', 'DAP', 'PH', 'BN', 'GPS', 'GRS', 'WARISAN'];
 
@@ -229,6 +236,26 @@ export default function ReportCard() {
       setSortOrder('desc');
     }
   };
+
+  const handleMPSelection = (mpId: string, checked: boolean) => {
+    if (checked) {
+      if (selectedMPs.length < 2) {
+        setSelectedMPs([...selectedMPs, mpId]);
+      }
+    } else {
+      setSelectedMPs(selectedMPs.filter(id => id !== mpId));
+    }
+  };
+
+  const handleCompareClick = () => {
+    if (selectedMPs.length === 2) {
+      setCompareDialogOpen(true);
+    }
+  };
+
+  const selectedMPsData = useMemo(() => {
+    return reportCards.filter(card => selectedMPs.includes(card.mpId));
+  }, [reportCards, selectedMPs]);
 
   const SortIcon = ({ field }: { field: SortField }) => {
     if (sortField !== field) return <ArrowUpDown className="ml-2 h-4 w-4 inline" />;
@@ -600,7 +627,7 @@ export default function ReportCard() {
                     Showing {filteredAndSortedCards.length} of {reportCards.length} MPs
                   </span>
                   <Button
-                    variant="ghost"
+                    variant="outline"
                     size="sm"
                     onClick={() => {
                       setSearchQuery("");
@@ -636,6 +663,16 @@ export default function ReportCard() {
                   <Table>
                     <TableHeader>
                       <TableRow>
+                        <TableHead className="w-12 text-center">
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span className="cursor-help underline decoration-dotted">Select</span>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Select 2 MPs to compare with Grok AI</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TableHead>
                         <TableHead className="cursor-pointer" onClick={() => handleSort('name')}>
                           Name <SortIcon field="name" />
                         </TableHead>
@@ -684,10 +721,26 @@ export default function ReportCard() {
                       {filteredAndSortedCards.map((card) => (
                         <TableRow
                           key={card.id}
-                          className="cursor-pointer hover:bg-accent"
-                          onClick={() => navigate(`/mp/${card.mpId}`)}
+                          className="hover:bg-accent"
                         >
-                          <TableCell>
+                          <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
+                            <div className="flex items-center justify-center">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-8 w-8 p-0"
+                                onClick={() => handleMPSelection(card.mpId, !selectedMPs.includes(card.mpId))}
+                                disabled={selectedMPs.length >= 2 && !selectedMPs.includes(card.mpId)}
+                              >
+                                {selectedMPs.includes(card.mpId) ? (
+                                  <CheckSquare className="h-5 w-5 text-primary" />
+                                ) : (
+                                  <Square className="h-5 w-5 text-muted-foreground" />
+                                )}
+                              </Button>
+                            </div>
+                          </TableCell>
+                          <TableCell className="cursor-pointer" onClick={() => navigate(`/mp/${card.mpId}`)}>
                             <div>
                               <div className="font-medium">{card.mp.name}</div>
                               {card.mp.title && (
@@ -695,35 +748,35 @@ export default function ReportCard() {
                               )}
                             </div>
                           </TableCell>
-                          <TableCell>{card.mp.party}</TableCell>
-                          <TableCell>
+                          <TableCell className="cursor-pointer" onClick={() => navigate(`/mp/${card.mpId}`)}>{card.mp.party}</TableCell>
+                          <TableCell className="cursor-pointer" onClick={() => navigate(`/mp/${card.mpId}`)}>
                             <div>
                               <div>{card.mp.constituency}</div>
                               <div className="text-xs text-muted-foreground">{card.mp.state}</div>
                             </div>
                           </TableCell>
-                          <TableCell className="text-center">
+                          <TableCell className="text-center cursor-pointer" onClick={() => navigate(`/mp/${card.mpId}`)}>
                             <Badge className={getGradeColor(card.grade)}>{card.grade}</Badge>
                           </TableCell>
-                          <TableCell className="text-center">
+                          <TableCell className="text-center cursor-pointer" onClick={() => navigate(`/mp/${card.mpId}`)}>
                             <span className={`font-bold ${getScoreColor(card.overallScore)}`}>
                               {card.overallScore}
                             </span>
                           </TableCell>
-                          <TableCell className="text-center">
+                          <TableCell className="text-center cursor-pointer" onClick={() => navigate(`/mp/${card.mpId}`)}>
                             <div className="flex items-center gap-2">
                               <Progress value={card.attendancePercentage} className="w-16 h-2" />
                               <span className="text-xs w-8">{card.attendancePercentage}%</span>
                             </div>
                           </TableCell>
-                          <TableCell className="text-center">
+                          <TableCell className="text-center cursor-pointer" onClick={() => navigate(`/mp/${card.mpId}`)}>
                             <div className="flex items-center gap-2">
                               <Progress value={card.participationScore} className="w-16 h-2" />
                               <span className="text-xs w-8">{card.participationScore}</span>
                             </div>
                           </TableCell>
                           <TableCell className="text-center">
-                            <Button variant="ghost" size="sm">
+                            <Button variant="outline" size="sm" onClick={() => navigate(`/mp/${card.mpId}`)}>
                               View Profile
                             </Button>
                           </TableCell>
@@ -795,6 +848,32 @@ export default function ReportCard() {
               </div>
             </CardContent>
           </Card>
+          {/* Floating Compare Button */}
+          {selectedMPs.length === 2 && (
+            <div className="fixed bottom-8 right-8 z-50">
+              <Button
+                size="lg"
+                onClick={handleCompareClick}
+                className="shadow-lg gap-2"
+                data-testid="button-compare-mps"
+              >
+                <Brain className="w-5 h-5" />
+                Compare {selectedMPsData.length} MPs with Grok AI
+              </Button>
+            </div>
+          )}
+
+          {/* Grok Compare Dialog */}
+          <GrokCompareDialog
+            open={compareDialogOpen}
+            onOpenChange={setCompareDialogOpen}
+            mp1={selectedMPsData[0]}
+            mp2={selectedMPsData[1]}
+            onCompareComplete={() => {
+              setSelectedMPs([]);
+              setCompareDialogOpen(false);
+            }}
+          />
         </main>
 
         <Footer />

@@ -3,7 +3,7 @@
  * Update MP status when they pass away or resign
  */
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Header } from "@/components/Header";
@@ -13,11 +13,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, UserX, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { Loader2, UserX, AlertTriangle, CheckCircle2, UserPlus, X } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import type { Mp } from "@shared/schema";
 
 interface MpListItem {
@@ -32,13 +32,18 @@ export default function MPStatusAdmin() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
   const [selectedMpId, setSelectedMpId] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [statusReason, setStatusReason] = useState<"Deceased" | "Resigned">("Deceased");
   const [dateOfPassing, setDateOfPassing] = useState("");
   const [byElectionDate, setByElectionDate] = useState("");
   const [byElectionNotes, setByElectionNotes] = useState("");
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   // Check admin authentication
   const { data: authStatus, isLoading: authLoading } = useQuery<{ isAdmin: boolean }>({
-    queryKey: ["/api/admin/check"],
+    queryKey: ["/api/admin/auth-status"],
     retry: false,
   });
 
@@ -53,6 +58,7 @@ export default function MPStatusAdmin() {
     mutationFn: async (data: {
       mpId: string;
       termEndDate: string;
+      statusReason: "Deceased" | "Resigned";
       byElectionDate?: string;
       byElectionNotes?: string;
     }) => {
@@ -67,6 +73,8 @@ export default function MPStatusAdmin() {
       queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
       // Reset form
       setSelectedMpId("");
+      setSearchQuery("");
+      setStatusReason("Deceased");
       setDateOfPassing("");
       setByElectionDate("");
       setByElectionNotes("");
@@ -90,7 +98,7 @@ export default function MPStatusAdmin() {
   }
 
   if (!authStatus?.isAdmin) {
-    setLocation("/admin/login");
+    setLocation("/admin/login?redirect=/mp-status-admin");
     return null;
   }
 
@@ -111,6 +119,7 @@ export default function MPStatusAdmin() {
     updateMpStatusMutation.mutate({
       mpId: selectedMpId,
       termEndDate: dateOfPassing,
+      statusReason: statusReason,
       byElectionDate: byElectionDate || undefined,
       byElectionNotes: byElectionNotes || undefined,
     });
@@ -118,6 +127,39 @@ export default function MPStatusAdmin() {
 
   const activeMps = mps.filter((mp) => !mp.termEndDate || new Date(mp.termEndDate) > new Date());
   const formerMps = mps.filter((mp) => mp.termEndDate && new Date(mp.termEndDate) <= new Date());
+
+  // Filter MPs based on search query
+  const filteredMps = activeMps.filter((mp) => {
+    const query = searchQuery.toLowerCase();
+    return (
+      mp.name.toLowerCase().includes(query) ||
+      mp.constituency.toLowerCase().includes(query) ||
+      mp.party.toLowerCase().includes(query)
+    );
+  });
+
+  const handleSelectMp = (mp: MpListItem) => {
+    setSelectedMpId(mp.id);
+    setSearchQuery(mp.name);
+    setShowSuggestions(false);
+  };
+
+  const handleClearSelection = () => {
+    setSelectedMpId("");
+    setSearchQuery("");
+  };
+
+  // Close suggestions when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setShowSuggestions(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   return (
     <div className="min-h-screen bg-background">
@@ -132,11 +174,21 @@ export default function MPStatusAdmin() {
       <div className="max-w-4xl mx-auto px-4 md:px-6 lg:px-8 py-8">
         <div className="space-y-6">
           {/* Header */}
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">MP Status Management</h1>
-            <p className="text-muted-foreground mt-2">
-              Update MP records when they pass away or resign
-            </p>
+          <div className="flex items-start justify-between">
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight">MP Status Management</h1>
+              <p className="text-muted-foreground mt-2">
+                Update MP records when they pass away or resign
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              onClick={() => setLocation("/add-mp-admin")}
+              className="gap-2"
+            >
+              <UserPlus className="h-4 w-4" />
+              Add New MP
+            </Button>
           </div>
 
           {/* Stats Cards */}
@@ -178,24 +230,80 @@ export default function MPStatusAdmin() {
               <form onSubmit={handleSubmit} className="space-y-6">
                 {/* MP Selection */}
                 <div className="space-y-2">
-                  <Label htmlFor="mp-select">Select MP</Label>
-                  <Select value={selectedMpId} onValueChange={setSelectedMpId}>
-                    <SelectTrigger id="mp-select">
-                      <SelectValue placeholder="Choose an MP..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {activeMps.map((mp) => (
-                        <SelectItem key={mp.id} value={mp.id}>
-                          {mp.name} - {mp.constituency} ({mp.party})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Label htmlFor="mp-search">Select MP</Label>
+                  <div className="relative" ref={containerRef}>
+                    <div className="flex gap-2">
+                      <Input
+                        ref={searchInputRef}
+                        id="mp-search"
+                        placeholder="Type MP name, constituency, or party..."
+                        value={searchQuery}
+                        onChange={(e) => {
+                          setSearchQuery(e.target.value);
+                          setShowSuggestions(true);
+                          if (selectedMpId && activeMps.find((mp) => mp.id === selectedMpId)?.name !== e.target.value) {
+                            setSelectedMpId("");
+                          }
+                        }}
+                        onFocus={() => setShowSuggestions(true)}
+                      />
+                      {selectedMpId && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          onClick={handleClearSelection}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                    {showSuggestions && searchQuery && (
+                      <div className="absolute top-full left-0 right-0 mt-1 border rounded-md bg-background shadow-md z-10 max-h-64 overflow-y-auto">
+                        {filteredMps.length > 0 ? (
+                          filteredMps.map((mp) => (
+                            <button
+                              key={mp.id}
+                              type="button"
+                              onClick={() => handleSelectMp(mp)}
+                              className="w-full text-left px-3 py-2 hover:bg-accent border-b last:border-b-0 transition-colors"
+                            >
+                              <div className="font-medium">{mp.name}</div>
+                              <div className="text-sm text-muted-foreground">{mp.constituency} ({mp.party})</div>
+                            </button>
+                          ))
+                        ) : (
+                          <div className="px-3 py-2 text-sm text-muted-foreground">No MPs found</div>
+                        )}
+                      </div>
+                    )}
+                  </div>
                   {selectedMp && (
                     <p className="text-sm text-muted-foreground">
                       Selected: <span className="font-medium">{selectedMp.name}</span> ({selectedMp.constituency})
                     </p>
                   )}
+                </div>
+
+                {/* Status Reason */}
+                <div className="space-y-2">
+                  <Label>Status Reason</Label>
+                  <RadioGroup value={statusReason} onValueChange={(value) => setStatusReason(value as "Deceased" | "Resigned")}>
+                    <div className="flex gap-6">
+                      <div className="flex items-center gap-2">
+                        <RadioGroupItem value="Deceased" id="reason-deceased" />
+                        <Label htmlFor="reason-deceased" className="font-normal cursor-pointer">
+                          Deceased
+                        </Label>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <RadioGroupItem value="Resigned" id="reason-resigned" />
+                        <Label htmlFor="reason-resigned" className="font-normal cursor-pointer">
+                          Resigned
+                        </Label>
+                      </div>
+                    </div>
+                  </RadioGroup>
                 </div>
 
                 {/* Date of Passing/Resignation */}
@@ -250,7 +358,7 @@ export default function MPStatusAdmin() {
                       This action will:
                       <ul className="list-disc list-inside mt-2 space-y-1">
                         <li>Mark {selectedMp?.name} as a Former MP</li>
-                        <li>Update their role to "Former Member of Parliament (Deceased)"</li>
+                        <li>Update their role to "Former Member of Parliament ({statusReason})"</li>
                         <li>Display their card with a grayscale filter and "Former MP" banner</li>
                         <li>Move them to the "Former MPs" filter by default</li>
                       </ul>
@@ -282,6 +390,8 @@ export default function MPStatusAdmin() {
                     variant="outline"
                     onClick={() => {
                       setSelectedMpId("");
+                      setSearchQuery("");
+                      setStatusReason("Deceased");
                       setDateOfPassing("");
                       setByElectionDate("");
                       setByElectionNotes("");

@@ -58,9 +58,73 @@ export const translations = {
       dun: "DUN",
       legal: "Legal",
       kawanku: "KAWANKU",
+      lumiNews: "Lumi News",
+      mcchr: "MCCHR",
+      reportCard: "Report Card",
+      report: "Report",
+      guide: "Guide",
       searchMps: "Search MPs...",
       malayParliament: "Malaysian Parliament",
       dewanRakyatDashboard: "Dewan Rakyat Dashboard",
+      ma63Dashboard: "MA63 Dashboard",
+      gigHala: "GigHala",
+      gigHalaTagline: "Malaysia's #1 Halal Gig Platform",
+      auditReports: "Audit Reports",
+    },
+
+    // MP Spotlight
+    mpSpotlight: {
+      title: "MP of the Day",
+      subtitle: "Featured Member of Parliament",
+      daily: "Daily Spotlight",
+      viewProfile: "View full profile",
+      parliament15: "15th Parliament",
+      deputyMinister: "Deputy Minister",
+      recentStatements: "Recent Statements",
+      electionResults: "Election Results",
+      voteShare: "Vote Share",
+      majority: "Majority",
+      turnout: "Turnout",
+      constituencyData: "Constituency Data",
+      povertyRate: "Poverty Rate",
+    },
+
+    // Royal Address
+    royalAddress: {
+      title: "Royal Address",
+      subtitle: "His Majesty Sultan Ibrahim XVII • 19 January 2026",
+      session: "Fifth Session • 15th Parliament",
+      greeting: "Assalamualaikum Warahmatullah Wabarakatuh.",
+      bismillah: "In the name of Allah, the Most Gracious, the Most Merciful. All praise is due to Allah, Lord of all the Worlds. May blessings and peace be upon the noblest of Messengers, our Prophet Muhammad (SAW), his family and his companions.",
+      intro: "Honourable President of the Senate, Speaker of the House of Representatives, Members of the Senate and House of Representatives, esteemed Ladies and Gentlemen.",
+      thanks: "Alhamdulillah, I give thanks to Allah Subhanahu Wata’ala for it is by His grace and permission, I am able to be present today at the Opening of the Fifth Session of the Fifteenth Parliament on this blessed morning.",
+      p1: "Firstly, I extend my congratulations on Malaysia’s success as ASEAN Chair last year, and on the hosting of the 47th ASEAN Summit in Kuala Lumpur.",
+      p2: "I also commend the nation’s achievements. Despite the challenges faced by the world, Malaysia registered a positive economic growth of 4.7 percent from January to September last year. Unemployment and inflation remained low, and the rate of hardcore poverty stood at 0.09 percent.",
+      p3: "This year marks the beginning of the Thirteenth Malaysia Plan. I expect this Plan to focus on the well-being of the people, especially in the areas of education, housing, healthcare and public transport.",
+      p4: "I must remind this House that no plan can succeed if corrupt practices continue to be widespread.",
+      p5: "I have stated before that I came to Kuala Lumpur to root out the corrupt, and it appears that they have been uncovered.",
+      p6: "I am deeply disappointed that corruption has occurred within the Malaysian Armed Forces even at the highest levels.",
+      p7: "This is but the tip of the iceberg. I am certain that many more will be uncovered, whether in the Customs, Immigration and Police Departments or elsewhere, including within this House. They will be pursued until they are exposed.",
+      p8: "Corruption must be fought decisively. People should be the eyes and ears of the nation and report all forms of corruption. It is not only the recipients of bribes who should be investigated, but bribers and the agents abetting them must also be held accountable.",
+      p9: "The Malaysian Anti-Corruption Commission (MACC) must carry out investigations swiftly and thoroughly, regardless of rank or position. The Government should appoint experienced judges and establish special lane court so that corruption trials may be expedited and concluded without delay.",
+      p10: "To all Honourable Members and civil servants, bear in mind that the positions you hold are a trust owed to the people and the nation. If you abuse power, misappropriate public funds, accept bribes or conspire to protect the corrupt, you are a traitor to the country.",
+      p11: "In addition, the nation faces modern threats to digital security and information integrity, including deepfake technology, which may enable fraud and undermine social stability.",
+      p12: "Threats posed by serious crimes, violence and acts involving 3R matters must also be dealt with firmly and effectively.",
+      p13: "Accordingly, laws relating to domestic security and external threats should be enacted urgently to preserve harmony among all races and safeguard the sovereignty of the nation.",
+      p14: "I welcome the efforts to strengthen laws relating to the electoral process, democratic institutions and political funding.",
+      p15: "These include initiatives limiting the Prime Minister’s tenure to two terms or ten years, separating the roles of the Attorney General and the Public Prosecutor, introducing a Freedom of Information Act and establishing the office of Ombudsman.",
+      p16: "The national education system must also continue to be strengthened as the foundation for nation-building, national identity and the country’s future.",
+      p17: "If a new education system is to be introduced, it must be aligned with the National Education Policy, and the Malay language must be the primary language as it is the national language.",
+      p18: "Any proposal to recognise any other education system must uphold the status of the Malay language and the history of Malaysia.",
+      p19: "The foundation of Malaysia lies in the Malaysia Agreement 1963, which brought together Malaya, Sabah and Sarawak as one nation.",
+      p20: "It is imperative that we return to the original intent behind the formation of Malaysia, founded on the principles of unity, mutual respect and close cooperation between the states and the Federal Government.",
+      p21: "Honourable Members must exercise greater caution, so as not to incite discord and give rise to hostility between regions. Any differences in views should be resolved with maturity, not through hatred or suspicion.",
+      p22: "State rights must always be respected. However, the shared interests of Malaysia should be the foremost priority.",
+      p23: "I also wish to remind Honourable Members that every debate, decision and vote in this House is not merely a political party position. It will determine the future of the nation.",
+      p24: "Therefore, fulfill your obligations with integrity, wisdom and responsibility in the interest of all Malaysians.",
+      p25: "Finally, let us all pray Malaysia will continue to progress and prosper, remain peaceful and harmonious and that all her people may enjoy a life of fulfilment, happiness and prosperity.",
+      closing: "Delivered at the Opening of the Fifth Session of the Fifteenth Parliament",
+      members: "Honourable Members,",
     },
 
     // Filters & Sorting
@@ -79,6 +143,8 @@ export const translations = {
       sortMostQuestions: "Most Questions Raised",
       sortNoQuestions: "No Questions Raised",
       sortInappropriateLanguage: "Inappropriate Language",
+      sortHighestMajority: "Highest Majority",
+      sortSmallestMajority: "Smallest Majority",
       cabinetPosition: "Cabinet Position",
       allMPs: "All MPs",
       cabinetMembers: "All Cabinet Members",
@@ -116,6 +182,11 @@ export const translations = {
       more: "more",
       inappropriateInstances: "inappropriate language instances",
       memberOfParliament: "Member of Parliament",
+      votes: "votes",
+      receivedIn: "Received in",
+      election: "election",
+      majority: "Majority",
+      turnout: "Turnout",
     },
 
     // Home Page
@@ -226,6 +297,15 @@ export const translations = {
       constituencyName: "Constituency Name",
       stateTerritory: "State/Territory",
 
+      // Election Results
+      electionResults: "Election Results (GE15)",
+      votesReceived: "Votes Received",
+      ofValidVotes: "of valid votes",
+      winningMajority: "Winning Majority",
+      voterTurnout: "Voter Turnout",
+      totalValidVotes: "Total Valid Votes",
+      electionYear: "Election Year",
+
       // Salary & Allowances
       salaryInformation: "Salary Information",
       monthlyAllowance: "Monthly Allowance",
@@ -326,6 +406,33 @@ export const translations = {
       // Sources
       sourcesReferences: "Sources & References",
       sourcesDescription: "All information on this page is sourced from the following publications and news outlets:",
+
+      // Biography (MYMP.org.my integration)
+      biography: "Biography",
+      biographyDesc: "Personal profile and political journey",
+      personalProfile: "Personal Profile",
+      birthDate: "Date of Birth",
+      age: "Age",
+      yearsOld: "years old",
+      hometown: "Hometown",
+      educationHistory: "Education",
+      politicalJourney: "Political Journey",
+      nonPoliticalAffiliations: "Non-Political Affiliations",
+      careerHistory: "Career History",
+      mympScores: "MYMP Scores",
+      loyaltyScore: "Loyalty Score",
+      availabilityScore: "Availability Score",
+      ethicsScore: "Ethics Score",
+      mympCredit: "Biography summary from MYMP.org.my (volunteer project)",
+      viewFullProfile: "View full profile on MYMP",
+      readMoreMymp: "Read more on MYMP",
+      dataNotAvailable: "Biography data from MYMP not available",
+      visitMymp: "Visit MYMP.org.my for MP profiles",
+      lastUpdated: "Data last updated",
+      wikipediaProfile: "Wikipedia Profile",
+      scoresDisclaimer: "Scores are compiled by MYMP volunteers based on publicly available information",
+      present: "present",
+      noData: "Not available",
     },
 
     // Allowances Page
@@ -467,6 +574,11 @@ export const translations = {
       mostVisited: "Most visited",
       visitsOverTime: "Visits Over Time",
       dailyVisitorCount: "Daily visitor count for the last 14 days",
+      weeklyVisitorCount: "Weekly visitor count for the last 7 weeks",
+      monthlyVisitorCount: "Monthly visitor count for the last 12 months",
+      daily: "Daily",
+      weekly: "Weekly",
+      monthly: "Monthly",
       topCountries: "Top Countries",
       visitorsByCountry: "Visitors by country",
       mostVisitedPages: "Most visited pages",
@@ -566,13 +678,13 @@ export const translations = {
       subjectivityContent: "The \"performance\" metrics are based on our defined methodology (e.g., participation, questions asked, media mentions). Different methodologies would yield different results. These metrics should not be interpreted as the sole measure of an MP's effectiveness, dedication, or worth.",
       independence: "Independence",
       independenceContent: "This is an independent project and is not affiliated with, endorsed by, or funded by the Parliament of Malaysia, any political party, or government agency.",
-      acknowledgement: "By using this site, you acknowledge and agree to these terms.",
+      acknowledgement: "By using this website, you acknowledge and agree to these terms.",
     },
 
     // Parliamentary Activity Page
     activity: {
       title: "Parliamentary Activity",
-      subtitle: "Track legislation, debates, and questions from Malaysian Parliament",
+      subtitle: "Track legislation, debates, and questions from the Malaysian Parliament",
       addActivity: "Add Activity",
       search: "Search by MP name, title, topic, or keyword...",
       legislation: "Legislation",
@@ -585,16 +697,16 @@ export const translations = {
       loadingQuestions: "Loading parliamentary questions...",
       loadingCourtCases: "Loading court cases...",
       loadingSprm: "Loading SPRM investigations...",
-      noProposals: "No legislative proposals yet.",
-      noDebates: "No debate participations yet.",
-      noQuestions: "No parliamentary questions yet.",
-      noCourtCases: "No court cases yet.",
-      noSprm: "No SPRM investigations yet.",
-      noProposalsSearch: "No legislative proposals found matching your search.",
-      noDebatesSearch: "No debate participations found matching your search.",
-      noQuestionsSearch: "No parliamentary questions found matching your search.",
-      noCourtCasesSearch: "No court cases found matching your search.",
-      noSprmSearch: "No SPRM investigations found matching your search.",
+      noProposals: "No legislative proposals on record yet.",
+      noDebates: "No debate participations on record yet.",
+      noQuestions: "No parliamentary questions on record yet.",
+      noCourtCases: "No court cases on record yet.",
+      noSprm: "No SPRM investigations on record yet.",
+      noProposalsSearch: "No legislative proposals matching your search.",
+      noDebatesSearch: "No debate participations matching your search.",
+      noQuestionsSearch: "No parliamentary questions matching your search.",
+      noCourtCasesSearch: "No court cases matching your search.",
+      noSprmSearch: "No SPRM investigations matching your search.",
       proposed: "Proposed",
       outcome: "Outcome",
       viewHansard: "View Hansard",
@@ -639,9 +751,9 @@ export const translations = {
 
     // Parliament Guide Page
     guide: {
-      title: "How the Malaysian Parliament Works",
+      title: "How Malaysian Parliament Works",
       titleBm: "Cara Parlimen Malaysia Berfungsi",
-      subtitle: "A Guide for High School Students",
+      subtitle: "A Guide for Secondary School Students",
       subtitleBm: "Panduan untuk Pelajar Sekolah Menengah",
     },
 
@@ -660,6 +772,58 @@ export const translations = {
       networkError: "Network error. Please check your connection.",
     },
 
+    // Parliament Videos
+    parliamentVideos: {
+      title: "Parliament Videos",
+      subtitle: "Watch official Dewan Rakyat sessions from the Parliament of Malaysia YouTube channel",
+      videos: "videos",
+      watchLive: "Watch Dewan Rakyat Sessions",
+      watchLiveSubtitle: "Live streams & latest session recordings on the official Parliament YouTube channel",
+      watchLiveAriaLabel: "Watch live or latest Dewan Rakyat session on YouTube",
+      watchAll: "Watch all sessions on YouTube",
+      fullPlaylist: "Dewan Rakyat Full Sessions Playlist",
+      source: "Source: PARLIMEN MALAYSIA YouTube (Official Parliament Channel, parlimen.gov.my)",
+      watchAllAriaLabel: "Watch all Dewan Rakyat sessions on the official YouTube channel",
+      fullPlaylistAriaLabel: "View the full Dewan Rakyat sessions playlist on YouTube",
+    },
+
+    // Bills to Watch
+    billsToWatch: {
+      title: "Bills to Watch",
+      subtitle: "Key legislation currently in the parliamentary pipeline",
+      featured: "Featured",
+      otherBills: "Other Bills Under Watch",
+      readMore: "Read more",
+      showLess: "Show less",
+      messageYourMp: "Message Your MP",
+      trackProgress: "Track at Parlimen.gov.my",
+      lastUpdated: "Last updated",
+      source: "Source: Official government statements",
+      dismiss: "Dismiss this section",
+      status: {
+        drafting: "Drafting",
+        consultation: "Consultation",
+        tabled: "Tabled",
+        committee: "Committee",
+        pending: "Pending",
+        passed: "Passed",
+      },
+    },
+
+    // Election Statistics
+    electionStats: {
+      title: "2022 Election Results",
+      description: "Popular vote results from the 15th General Election (GE15) held on 19 November 2022",
+      totalVotes: "Total Valid Votes",
+      governmentVotes: "Government Coalition",
+      oppositionVotes: "Opposition Coalition",
+      ofTotal: "of total",
+      government: "Government",
+      opposition: "Opposition",
+      validVotes: "valid votes cast",
+      note: "Source: Wikipedia. Government = PH + BN + GPS + GRS. Opposition = PN + Others.",
+    },
+
     // Feedback
     feedback: {
       button: "Feedback",
@@ -668,9 +832,9 @@ export const translations = {
       name: "Name (optional)",
       namePlaceholder: "Your name",
       email: "Email (optional)",
-      emailPlaceholder: "your@email.com",
+      emailPlaceholder: "you@example.com",
       type: "Feedback Type",
-      selectType: "Select type",
+      selectType: "Select a type",
       types: {
         general: "General Feedback",
         bug: "Bug Report",
@@ -682,18 +846,17 @@ export const translations = {
       subjectPlaceholder: "Brief summary of your feedback",
       message: "Message",
       messagePlaceholder: "Describe your feedback in detail...",
-      submit: "Send Feedback",
+      submit: "Submit Feedback",
       successTitle: "Thank You!",
       successMessage: "Your feedback has been submitted successfully.",
-      errorTitle: "Failed to Submit",
+      errorTitle: "Submission Failed",
       errorMessage: "Could not submit your feedback. Please try again.",
-      missingFields: "Missing Information",
+      missingFields: "Incomplete Information",
       fillRequired: "Please fill in the subject and message fields.",
     },
   },
-
   ms: {
-    // Common / Biasa
+    // Common
     common: {
       loading: "Memuatkan...",
       error: "Ralat",
@@ -709,31 +872,31 @@ export const translations = {
       previous: "Sebelumnya",
       close: "Tutup",
       submit: "Hantar",
-      reset: "Set Semula",
+      reset: "Set semula",
       all: "Semua",
       none: "Tiada",
       yes: "Ya",
       no: "Tidak",
       or: "atau",
       of: "daripada",
-      views: "tontonan",
+      views: "paparan",
       in: "dalam",
     },
 
-    // Navigation & Header / Navigasi & Pengepala
+    // Navigation & Header
     nav: {
       home: "Laman Utama",
       dashboard: "Papan Pemuka",
       mps: "Ahli Parlimen",
-      hansard: "Hansard",
+      hansard: "Penyata Rasmi",
       allowances: "Elaun",
       backToDashboard: "Kembali ke Papan Pemuka",
       parliamentGuide: "Cara Ia Berfungsi",
       constitution: "Perlembagaan",
-      fundamentalRights: "Hak-Hak Asasi",
-      admin: "Pentadbir",
+      fundamentalRights: "Kebebasan Asasi",
+      admin: "Admin",
       courts: "Mahkamah",
-      blog: "Ulasan",
+      blog: "Komentari",
       parliamentaryAnswers: "Jawapan Lisan",
       analysis: "Analisis",
       activity: "Aktiviti",
@@ -746,15 +909,24 @@ export const translations = {
       dun: "DUN",
       legal: "Undang-Undang",
       kawanku: "KAWANKU",
+      lumiNews: "Lumi News",
+      mcchr: "MCCHR",
+      reportCard: "Kad Laporan",
+      report: "Laporan",
+      guide: "Panduan",
       searchMps: "Cari Ahli Parlimen...",
       malayParliament: "Parlimen Malaysia",
       dewanRakyatDashboard: "Papan Pemuka Dewan Rakyat",
+      ma63Dashboard: "Papan Pemuka MA63",
+      gigHala: "GigHala",
+      gigHalaTagline: "Platform Gig Halal #1 Malaysia",
+      auditReports: "Laporan Audit",
     },
 
-    // Filters & Sorting / Penapis & Isihan
+    // Filters & Sorting
     filters: {
       title: "Penapis",
-      sortBy: "Isih Mengikut",
+      sortBy: "Susun Mengikut",
       sortName: "Nama (A-Z)",
       sortBestAttendance: "Kehadiran Terbaik",
       sortWorstAttendance: "Kehadiran Terburuk",
@@ -762,11 +934,11 @@ export const translations = {
       sortFewestSpeeches: "Ucapan Paling Sedikit",
       sortHighestPoverty: "Kemiskinan Tertinggi",
       sortLowestPoverty: "Kemiskinan Terendah",
-      sortBillsRaised: "Rang Undang-Undang Dikemukakan",
+      sortBillsRaised: "Rang Undang-undang Dikemukakan",
       sortOralQuestions: "Soalan Lisan (Parlimen 15)",
-      sortMostQuestions: "Soalan Terbanyak",
-      sortNoQuestions: "Tiada Soalan",
-      sortInappropriateLanguage: "Bahasa Tidak Wajar",
+      sortMostQuestions: "Soalan Terbanyak Dikemukakan",
+      sortNoQuestions: "Tiada Soalan Dikemukakan",
+      sortInappropriateLanguage: "Bahasa Tidak Sesuai",
       cabinetPosition: "Jawatan Kabinet",
       allMPs: "Semua Ahli Parlimen",
       cabinetMembers: "Semua Ahli Kabinet",
@@ -781,14 +953,14 @@ export const translations = {
       clearAllFilters: "Kosongkan Semua Penapis",
     },
 
-    // MP Card / Kad Ahli Parlimen
+    // MP Card
     mpCard: {
       totalEarned: "Jumlah perolehan",
       monthly: "Bulanan",
       yearly: "Tahunan",
       sessions: "sidang",
       hansardAttendance: "Kehadiran Hansard",
-      sinceSwornIn: "sejak mengangkat sumpah",
+      sinceSwornIn: "sejak angkat sumpah",
       parliamentSittingAllowance: "Elaun mesyuarat parlimen",
       speeches: "ucapan",
       speakesIn: "ucapan dalam",
@@ -796,17 +968,22 @@ export const translations = {
       hansardParticipation: "Penyertaan Hansard",
       avg: "purata",
       speechesPerSession: "ucapan/sidang",
-      hansardSpeakingParticipation: "Penyertaan ucapan Hansard",
+      hansardSpeakingParticipation: "Penyertaan berucap Hansard",
       bill: "rang undang-undang dikemukakan",
       bills: "rang undang-undang dikemukakan",
       oralQuestion: "soalan lisan",
       oralQuestions: "soalan lisan",
       more: "lagi",
-      inappropriateInstances: "kes bahasa tidak wajar",
+      inappropriateInstances: "insiden bahasa tidak sesuai",
       memberOfParliament: "Ahli Parlimen",
+      votes: "undi",
+      receivedIn: "Diterima dalam",
+      election: "pilihan raya",
+      majority: "Majoriti",
+      turnout: "Kadar keluar mengundi",
     },
 
-    // Home Page / Laman Utama
+    // Home Page
     home: {
       title: "Papan Pemuka Ahli Parlimen Malaysia",
       subtitle: "Jejaki Prestasi Parlimen & Akauntabiliti Awam Ahli Parlimen Malaysia",
@@ -814,12 +991,12 @@ export const translations = {
       viewAllMps: "Lihat Semua Ahli Parlimen",
       searchPlaceholder: "Cari Ahli Parlimen mengikut nama, kawasan, atau parti...",
 
-      // Stats / Statistik
+      // Stats
       totalMps: "Jumlah Ahli Parlimen",
       totalParties: "Jumlah Parti",
       avgAttendance: "Purata Kehadiran",
 
-      // Filters / Penapis
+      // Filters
       filters: "Penapis",
       allParties: "Semua Parti",
       allStates: "Semua Negeri",
@@ -828,45 +1005,45 @@ export const translations = {
       female: "Perempuan",
       clearFilters: "Kosongkan Penapis",
 
-      // Sort / Isih
-      sortBy: "Isih mengikut",
+      // Sort
+      sortBy: "Susun mengikut",
       sortName: "Nama",
       sortAttendance: "Kehadiran",
       sortConstituency: "Kawasan",
 
-      // MP Card / Kad Ahli Parlimen
+      // MP Card
       constituency: "Kawasan",
       state: "Negeri",
       attendance: "Kehadiran",
       viewProfile: "Lihat Profil",
 
-      // No results / Tiada keputusan
+      // No results
       noMpsFound: "Tiada Ahli Parlimen dijumpai",
       noMpsDescription: "Cuba laraskan carian atau penapis anda",
     },
 
-    // MP Profile / Profil Ahli Parlimen
+    // MP Profile
     profile: {
       title: "Profil Ahli Parlimen",
       notFound: "Ahli Parlimen Tidak Dijumpai",
 
-      // Basic Info / Maklumat Asas
+      // Basic Info
       role: "Peranan",
       party: "Parti",
       parliamentCode: "Kod Parlimen",
       gender: "Jantina",
       povertyIncidence: "Kadar Kemiskinan",
       povertySource: "Sumber: DOSM Kawasanku 2022",
-      swornInDate: "Tarikh Mengangkat Sumpah",
+      swornInDate: "Tarikh Angkat Sumpah",
 
-      // Contact / Hubungi
+      // Contact
       contact: "Maklumat Hubungan",
       email: "E-mel",
       emailMP: "E-mel Ahli Parlimen",
       telephone: "Telefon",
-      mobile: "Telefon Bimbit",
+      mobile: "Bimbit",
       fax: "Faks",
-      contactAddress: "Alamat Perhubungan",
+      contactAddress: "Alamat Hubungan",
       serviceAddress: "Alamat Perkhidmatan",
       socialMedia: "Media Sosial",
       facebook: "Facebook",
@@ -882,10 +1059,10 @@ export const translations = {
       sendingMessage: "Menghantar...",
       messageSent: "Mesej Dihantar",
       messageSentDescription: "Mesej anda telah dihantar ke pejabat Ahli Parlimen.",
-      messageDisclaimer: "Mesej anda akan direkodkan dan dimajukan ke pejabat Ahli Parlimen. Sila berkomunikasi dengan penuh hormat dan membina.",
+      messageDisclaimer: "Mesej anda akan direkodkan dan dihantar ke pejabat Ahli Parlimen. Sila bersikap hormat dan membina dalam komunikasi anda.",
       openInEmailApp: "Buka dalam Aplikasi E-mel",
 
-      // Attendance / Kehadiran
+      // Attendance
       parliamentAttendance: "Kehadiran Parlimen",
       attendanceRecord: "Rekod Kehadiran",
       parliamentarySessions: "sidang parlimen",
@@ -895,9 +1072,9 @@ export const translations = {
       good: "Baik",
       needsImprovement: "Perlu Penambahbaikan",
       absentDates: "Tarikh Tidak Hadir",
-      source: "Sumber: Rekod Rasmi Hansard",
+      source: "Sumber: Rekod Hansard Rasmi",
 
-      // Speaking Record / Rekod Ucapan
+      // Speaking Record
       hansardSpeakingRecord: "Rekod Ucapan Hansard",
       sessionsSpoken: "Sidang Berucap",
       totalSpeeches: "Jumlah Ucapan",
@@ -906,15 +1083,24 @@ export const translations = {
       recentSessions: "Sidang Terkini",
       noSpeakingRecords: "Tiada rekod ucapan dijumpai",
 
-      // Parliamentary Info / Maklumat Parlimen
+      // Parliamentary Info
       parliamentaryInformation: "Maklumat Parlimen",
-      partyAffiliation: "Gabungan Parti",
+      partyAffiliation: "Afiliasi Parti",
       currentRole: "Peranan Semasa",
       constituencyDetails: "Butiran Kawasan",
       constituencyName: "Nama Kawasan",
       stateTerritory: "Negeri/Wilayah",
 
-      // Salary & Allowances / Gaji & Elaun
+      // Election Results
+      electionResults: "Keputusan Pilihan Raya (PRU15)",
+      votesReceived: "Undi Diterima",
+      ofValidVotes: "daripada undi sah",
+      winningMajority: "Majoriti Kemenangan",
+      voterTurnout: "Kadar Keluar Mengundi",
+      totalValidVotes: "Jumlah Undi Sah",
+      electionYear: "Tahun Pilihan Raya",
+
+      // Salary & Allowances
       salaryInformation: "Maklumat Gaji",
       monthlyAllowance: "Elaun Bulanan",
       yearlyAllowance: "Elaun Tahunan",
@@ -935,9 +1121,9 @@ export const translations = {
       cumulative: "Kumulatif",
       day: "hari",
       days: "hari",
-      daysCumulative: "hari (kumulatif sejak mengangkat sumpah)",
+      daysCumulative: "hari (kumulatif sejak angkat sumpah)",
       ministerialSalary: "Gaji Menteri",
-      ministerialSalaryNote: "Selepas potongan sukarela 20%",
+      ministerialSalaryNote: "Selepas potongan gaji sukarela 20%",
       pmNoSalaryNote: "Perdana Menteri tidak mengambil gaji menteri",
 
       yearlyBreakdown: "Pecahan Elaun Tahunan",
@@ -949,31 +1135,31 @@ export const translations = {
       current: "(Semasa)",
       total: "Jumlah",
 
-      // Court Cases / Kes Mahkamah
+      // Court Cases
       courtCases: "Kes Mahkamah",
-      ongoingCases: "Kes Berjalan",
+      ongoingCases: "Kes Sedang Berjalan",
       completedCases: "Kes Selesai",
       noCases: "Tiada kes mahkamah dalam rekod untuk Ahli Parlimen ini.",
-      ongoing: "Berjalan",
+      ongoing: "Sedang Berjalan",
       completed: "Selesai",
       courtLevel: "Peringkat Mahkamah",
-      caseNumber: "No. Kes",
+      caseNumber: "No Kes",
       charges: "Pertuduhan",
       filed: "Difailkan",
       outcome: "Keputusan",
       sources: "Sumber",
       caseSummary: "Ringkasan Kes",
 
-      // SPRM Investigations / Siasatan SPRM
+      // SPRM Investigations
       sprmInvestigations: "Siasatan SPRM",
-      ongoingInvestigations: "Siasatan Berjalan",
+      ongoingInvestigations: "Siasatan Sedang Berjalan",
       completedInvestigations: "Siasatan Selesai",
       noInvestigations: "Tiada siasatan SPRM dalam rekod untuk Ahli Parlimen ini.",
       allegations: "Dakwaan",
       started: "Bermula",
       investigationSummary: "Ringkasan Siasatan",
 
-      // Legislative Activity / Aktiviti Perundangan
+      // Legislative Activity
       legislativeActivity: "Aktiviti Perundangan",
       legislativeActivityDesc: "Aktiviti parlimen termasuk soalan yang ditanya, rang undang-undang yang ditaja, dan usul yang dicadangkan berdasarkan rekod rasmi Hansard.",
       questionsAsked: "Soalan Ditanya",
@@ -989,7 +1175,7 @@ export const translations = {
       approved: "Diluluskan / Diluluskan",
       rejected: "Ditolak",
 
-      // Parliamentary Activity / Aktiviti Parlimen
+      // Parliamentary Activity
       parliamentaryActivity: "Aktiviti Parlimen",
       bills: "Rang Undang-undang",
       motions: "Usul",
@@ -1011,12 +1197,39 @@ export const translations = {
       answer: "Jawapan",
       topic: "Topik",
 
-      // Sources / Sumber
+      // Sources
       sourcesReferences: "Sumber & Rujukan",
       sourcesDescription: "Semua maklumat di halaman ini bersumber daripada penerbitan dan portal berita berikut:",
+
+      // Biography (MYMP.org.my integration)
+      biography: "Biografi",
+      biographyDesc: "Profil peribadi dan perjalanan politik",
+      personalProfile: "Profil Peribadi",
+      birthDate: "Tarikh Lahir",
+      age: "Umur",
+      yearsOld: "tahun",
+      hometown: "Kampung Halaman",
+      educationHistory: "Pendidikan",
+      politicalJourney: "Perjalanan Politik",
+      nonPoliticalAffiliations: "Afiliasi Bukan Politik",
+      careerHistory: "Sejarah Kerjaya",
+      mympScores: "Skor MYMP",
+      loyaltyScore: "Skor Kesetiaan",
+      availabilityScore: "Skor Ketersediaan",
+      ethicsScore: "Skor Etika",
+      mympCredit: "Ringkasan biografi daripada MYMP.org.my (projek sukarela)",
+      viewFullProfile: "Lihat profil penuh di MYMP",
+      readMoreMymp: "Baca lanjut di MYMP",
+      dataNotAvailable: "Data biografi dari MYMP tidak tersedia",
+      visitMymp: "Lawati MYMP.org.my untuk profil Ahli Parlimen",
+      lastUpdated: "Data dikemas kini terakhir",
+      wikipediaProfile: "Profil Wikipedia",
+      scoresDisclaimer: "Skor dikumpul oleh sukarelawan MYMP berdasarkan maklumat yang tersedia secara umum",
+      present: "kini",
+      noData: "Tidak tersedia",
     },
 
-    // Allowances Page / Halaman Elaun
+    // Allowances Page
     allowances: {
       title: "Elaun & Gaji Ahli Parlimen",
       description: "Pecahan komprehensif elaun bulanan, gaji tahunan, dan pendapatan kumulatif Ahli Parlimen Malaysia",
@@ -1045,7 +1258,7 @@ export const translations = {
       parliamentSitting: "Elaun Mesyuarat Parlimen",
     },
 
-    // Hansard Page / Halaman Hansard
+    // Hansard Page
     hansard: {
       title: "Penyata Rasmi (Hansard)",
       subtitle: "Layari transkrip parlimen dari Parlimen ke-15",
@@ -1087,7 +1300,7 @@ export const translations = {
       ready: "Sedia",
     },
 
-    // Hansard Analysis Page / Halaman Analisis Hansard
+    // Hansard Analysis Page
     hansardAnalysis: {
       title: "Analisis Ucapan Hansard",
       subtitle: "Pilih sidang Hansard untuk menganalisis ucapan bagi Ahli Parlimen tertentu",
@@ -1141,7 +1354,7 @@ export const translations = {
       noSpeakersFound: "Tiada Ahli Parlimen berucap dalam sidang ini",
     },
 
-    // Analytics Page / Halaman Analitik
+    // Analytics Page
     analytics: {
       title: "Analitik Pelawat",
       subtitle: "Jejaki dan pantau trafik laman web dari seluruh dunia",
@@ -1155,6 +1368,11 @@ export const translations = {
       mostVisited: "Paling banyak dilawati",
       visitsOverTime: "Lawatan Mengikut Masa",
       dailyVisitorCount: "Kiraan pelawat harian untuk 14 hari terakhir",
+      weeklyVisitorCount: "Kiraan pelawat mingguan untuk 7 minggu terakhir",
+      monthlyVisitorCount: "Kiraan pelawat bulanan untuk 12 bulan terakhir",
+      daily: "Harian",
+      weekly: "Mingguan",
+      monthly: "Bulanan",
       topCountries: "Negara Teratas",
       visitorsByCountry: "Pelawat mengikut negara",
       mostVisitedPages: "Halaman paling banyak dilawati",
@@ -1167,7 +1385,7 @@ export const translations = {
       unknown: "Tidak Diketahui",
     },
 
-    // Attendance Page / Halaman Kehadiran
+    // Attendance Page
     attendance: {
       title: "Laporan Kehadiran Ahli Parlimen",
       subtitle: "Jejaki Ahli Parlimen yang tidak mengambil bahagian dalam sidang parlimen",
@@ -1198,7 +1416,7 @@ export const translations = {
       loadingReport: "Memuatkan laporan kehadiran...",
     },
 
-    // Constitution Page / Halaman Perlembagaan
+    // Constitution Page
     constitution: {
       title: "Perlembagaan Persekutuan",
       subtitle: "Undang-undang tertinggi Malaysia dan panduan ringkas",
@@ -1232,7 +1450,7 @@ export const translations = {
       specialProvisionsBm: "Peruntukan khas dan pindaan perlembagaan",
     },
 
-    // Disclaimer Page / Halaman Penafian
+    // Disclaimer Page
     disclaimer: {
       title: "Penafian & Metodologi Data",
       subtitle: "Maklumat penting tentang sumber data dan batasan",
@@ -1257,7 +1475,7 @@ export const translations = {
       acknowledgement: "Dengan menggunakan laman web ini, anda mengakui dan bersetuju dengan terma-terma ini.",
     },
 
-    // Parliamentary Activity Page / Halaman Aktiviti Parlimen
+    // Parliamentary Activity Page
     activity: {
       title: "Aktiviti Parlimen",
       subtitle: "Jejaki perundangan, perbahasan, dan soalan dari Parlimen Malaysia",
@@ -1299,7 +1517,7 @@ export const translations = {
       caseNumber: "Kes",
     },
 
-    // Courts Page / Halaman Mahkamah
+    // Courts Page
     courts: {
       title: "Kes Mahkamah & Siasatan SPRM Ahli Parlimen",
       description: "Jejaki kes mahkamah dan siasatan SPRM yang melibatkan Ahli Parlimen Malaysia",
@@ -1325,7 +1543,7 @@ export const translations = {
       allegations: "Dakwaan",
     },
 
-    // Parliament Guide Page / Halaman Panduan Parlimen
+    // Parliament Guide Page
     guide: {
       title: "Cara Parlimen Malaysia Berfungsi",
       titleBm: "Cara Parlimen Malaysia Berfungsi",
@@ -1333,13 +1551,13 @@ export const translations = {
       subtitleBm: "Panduan untuk Pelajar Sekolah Menengah",
     },
 
-    // Not Found Page / Halaman Tidak Dijumpai
+    // Not Found Page
     notFound: {
       title: "404 Halaman Tidak Dijumpai",
       message: "Adakah anda terlupa menambah halaman ke penghala?",
     },
 
-    // Error Messages / Mesej Ralat
+    // Error Messages
     error: {
       generic: "Ralat berlaku. Sila cuba lagi.",
       notFound: "Tidak dijumpai",
@@ -1348,7 +1566,59 @@ export const translations = {
       networkError: "Ralat rangkaian. Sila semak sambungan anda.",
     },
 
-    // Maklum Balas / Feedback
+    // Parliament Videos
+    parliamentVideos: {
+      title: "Video Parlimen",
+      subtitle: "Tonton sesi rasmi Dewan Rakyat dari saluran YouTube Parlimen Malaysia",
+      videos: "video",
+      watchLive: "Tonton Sesi Dewan Rakyat",
+      watchLiveSubtitle: "Siaran langsung & rakaman sesi terkini di saluran YouTube rasmi Parlimen",
+      watchLiveAriaLabel: "Tonton siaran langsung atau sesi terkini Dewan Rakyat di YouTube",
+      watchAll: "Tonton semua sesi di YouTube",
+      fullPlaylist: "Senarai Main Sesi Penuh Dewan Rakyat",
+      source: "Sumber: YouTube PARLIMEN MALAYSIA (Saluran Rasmi Parlimen, parlimen.gov.my)",
+      watchAllAriaLabel: "Tonton semua sesi Dewan Rakyat di saluran YouTube rasmi",
+      fullPlaylistAriaLabel: "Lihat senarai main penuh sesi Dewan Rakyat di YouTube",
+    },
+
+    // Bills to Watch
+    billsToWatch: {
+      title: "Rang Undang-Undang Untuk Diperhatikan",
+      subtitle: "Perundangan penting yang sedang dalam proses parlimen",
+      featured: "Utama",
+      otherBills: "Lain-lain Rang Undang-Undang Dalam Perhatian",
+      readMore: "Baca lebih lanjut",
+      showLess: "Tunjuk kurang",
+      messageYourMp: "Hubungi MP Anda",
+      trackProgress: "Jejak di Parlimen.gov.my",
+      lastUpdated: "Dikemas kini",
+      source: "Sumber: Kenyataan rasmi kerajaan",
+      dismiss: "Tutup seksyen ini",
+      status: {
+        drafting: "Penggubalan",
+        consultation: "Perundingan",
+        tabled: "Dibentang",
+        committee: "Jawatankuasa",
+        pending: "Menunggu",
+        passed: "Diluluskan",
+      },
+    },
+
+    // Election Statistics
+    electionStats: {
+      title: "Keputusan Pilihan Raya 2022",
+      description: "Keputusan undi popular daripada Pilihan Raya Umum ke-15 (PRU15) pada 19 November 2022",
+      totalVotes: "Jumlah Undi Sah",
+      governmentVotes: "Gabungan Kerajaan",
+      oppositionVotes: "Gabungan Pembangkang",
+      ofTotal: "daripada jumlah",
+      government: "Kerajaan",
+      opposition: "Pembangkang",
+      validVotes: "undi sah",
+      note: "Sumber: Wikipedia. Kerajaan = PH + BN + GPS + GRS. Pembangkang = PN + Lain-lain.",
+    },
+
+    // Feedback
     feedback: {
       button: "Maklum Balas",
       title: "Hantar Maklum Balas",
@@ -1377,6 +1647,61 @@ export const translations = {
       errorMessage: "Tidak dapat menghantar maklum balas anda. Sila cuba lagi.",
       missingFields: "Maklumat Tidak Lengkap",
       fillRequired: "Sila isikan ruangan subjek dan mesej.",
+    },
+
+    // MP Spotlight
+    mpSpotlight: {
+      title: "Ahli Parlimen Hari Ini",
+      subtitle: "Ahli Parlimen Terpilih",
+      daily: "Sorotan Harian",
+      viewProfile: "Lihat profil penuh",
+      parliament15: "Parlimen ke-15",
+      deputyMinister: "Timbalan Menteri",
+      recentStatements: "Kenyataan Terkini",
+      electionResults: "Keputusan Pilihan Raya",
+      voteShare: "Peratusan Undi",
+      majority: "Majoriti",
+      turnout: "Keluar Mengundi",
+      constituencyData: "Data Kawasan",
+      povertyRate: "Kadar Kemiskinan",
+    },
+
+    // Royal Address
+    royalAddress: {
+      title: "Titah Diraja",
+      subtitle: "Kebawah Duli Yang Maha Mulia Seri Paduka Baginda Yang di-Pertuan Agong XVII Sultan Ibrahim • 19 Januari 2026",
+      session: "Penggal Kelima • Parlimen Kelima Belas",
+      greeting: "Assalamualaikum Warahmatullah Wabarakatuh.",
+      bismillah: "Dengan nama Allah Yang Maha Pemurah, lagi Maha Mengasihani. Segala puji bagi Allah, Tuhan Pentadbir Seluruh Alam. Selawat dan salam kepada junjungan besar Nabi Muhammad, semulia-mulia Rasul serta keluarga dan para sahabatnya sekalian.",
+      intro: "Yang di-Pertua Dewan Negara, Yang di-Pertua Dewan Rakyat, Ahli-Ahli Dewan Negara dan Ahli-Ahli Dewan Rakyat, saudara saudari yang Saya hormati sekalian.",
+      thanks: "Alhamdulillah, Syukur Saya kehadrat Allah Subhanahu Wata’ala kerana dengan limpah kurnia dan izin-Nya dapat Saya hadir ke Istiadat Pembukaan Penggal Kelima, Parlimen Kelima Belas pada pagi yang mulia ini.",
+      p1: "Terlebih dahulu saya ingin mengucapkan tahniah di atas kejayaan Malaysia sebagai Pengerusi ASEAN pada tahun lalu dan penganjuran Sidang Kemuncak ASEAN Ke-47 di Kuala Lumpur.",
+      p2: "Syabas juga saya ucapkan walaupun dunia menghadapi pelbagai cabaran namun Malaysia masih berjaya mencatat pertumbuhan ekonomi positif sebanyak 4.7 peratus dalam tempoh Januari hingga September tahun lalu dengan kadar pengangguran dan inflasi kekal rendah serta kemiskinan tegar berada pada paras 0.09 peratus.",
+      p3: "Tahun ini adalah merupakan permulaan Rancangan Malaysia Ketiga Belas. Saya mahu Rancangan ini memberi tumpuan kepada kesejahteraan rakyat terutama dalam bidang pendidikan, perumahan, kesihatan dan pengangkutan awam.",
+      p4: "Suka Saya ingatkan di sini segala perancangan yang dibuat tidak akan sempurna jika amalan rasuah masih berleluasa.",
+      p5: "Saya pernah sebut dahulu yang saya datang ke Kuala Lumpur untuk memburu perasuah dan nampaknya Saya telah berjaya jumpa.",
+      p6: "Saya amat kecewa apabila berlakunya kes rasuah dalam Angkatan Tentera Malaysia sehingga ke peringkat tertinggi.",
+      p7: "Ini hanyalah sekelumit daripada segunung atau the tip of the iceberg. Saya yakin ada ramai lagi di luar sana sama ada di Jabatan Kastam, Imigresen, Polis dan sebagainya serta termasuk juga yang berada dalam Dewan ini yang akan terus diburu sampai jumpa.",
+      p8: "Amalan rasuah mesti diperangi secara besar-besaran. Rakyat harus menjadi mata-mata dan melaporkan sebarang bentuk jenayah rasuah. Bukan sahaja penerima yang patut disiasat, tetapi pemberi rasuah dan ejen yang bersubahat juga mesti dikenakan tindakan.",
+      p9: "Pihak Suruhanjaya Pencegahan Rasuah Malaysia (SPRM) mesti jalankan siasatan dengan cepat, tegas dan sempurna tanpa mengira pangkat atau kedudukan. Kerajaan juga perlu menyediakan hakim yang berpengalaman dan laluan khas di mahkamah supaya perbicaraan kes rasuah dapat diselesaikan dengan segera.",
+      p10: "Kepada semua Ahli-Ahli Yang Berhormat dan penjawat awam, ingatlah bahawa jawatan yang disandang adalah amanah rakyat dan negara. Jika awak menyalah guna kuasa, menyeleweng dana awam, menerima rasuah atau bersubahat melindungi perasuah, awak adalah pengkhianat negara.",
+      p11: "Selain itu, negara turut berhadapan dengan ancaman moden terhadap keselamatan digital, integriti maklumat serta teknologi deepfake yang mampu membuka ruang kepada kes penipuan dan menggugat kestabilan sosial.",
+      p12: "Ancaman jenayah berat dan keganasan serta perbuatan yang menyentuh 3R hendaklah juga ditangani dengan berkesan.",
+      p13: "Oleh yang demikian, undang-undang berhubung keselamatan negara dan ancaman luar negara wajar diwujudkan segera kerana hanya dengan cara ini keharmonian antara semua kaum dan kedaulatan negara akan sentiasa terpelihara.",
+      p14: "Saya turut mengalu-alukan usaha bagi mengukuhkan undang-undang berkaitan pilihan raya, institusi demokrasi dan pendanaan politik.",
+      p15: "Ini termasuk usaha untuk mengehadkan tempoh jawatan Perdana Menteri kepada 2 penggal atau 10 tahun, mengasingkan peranan Peguam Negara dan Pendakwa Raya, pengenalan Akta Kebebasan Maklumat dan institusi ombudsman.",
+      p16: "Sistem pendidikan negara juga perlu terus diperkasakan sebagai asas pembinaan bangsa, jati diri dan masa hadapan negara.",
+      p17: "Jika hendak buat sistem pendidikan yang baharu, ia mesti dibuat selari dengan Dasar Pendidikan Kebangsaan dan Bahasa Melayu mesti menjadi bahasa utama kerana ianya adalah bahasa kebangsaan.",
+      p18: "Oleh itu, sebarang usul untuk mengiktiraf apa juga sistem pendidikan lain mesti terima Bahasa Melayu dan sejarah Malaysia.",
+      p19: "Asas kepada pembentukan Malaysia adalah menerusi Perjanjian Malaysia 1963. Ia telah menyatukan Tanah Melayu, Sabah dan Sarawak sebagai sebuah negara.",
+      p20: "Kita sewajarnya kembali kepada niat asal pembentukan Malaysia iaitu perpaduan dan hormat-menghormati serta kerjasama erat antara negeri-negeri dan Kerajaan Persekutuan.",
+      p21: "Yang Berhormat sekalian hendaklah lebih berhati-hati supaya tidak menghasut sampai wujud ketegangan antara wilayah. Sebarang perbezaan pandangan haruslah diselesaikan secara matang dan bukan menerusi kebencian atau syak wasangka.",
+      p22: "Hakikatnya hak-hak negeri perlu sentiasa dihormati. Namun begitu, kepentingan Malaysia secara bersama hendaklah sentiasa diutamakan.",
+      p23: "Saya juga ingin mengingatkan kepada semua Ahli-Ahli Yang Berhormat bahawa setiap perbahasan, keputusan dan undian yang dibuat di dalam Dewan ini bukan hanya merupakan pendirian politik parti tetapi menjadi penentu masa depan negara.",
+      p24: "Oleh itu, laksanakan tugas ini dengan penuh amanah, bijaksana dan bertanggungjawab demi kepentingan seluruh rakyat.",
+      p25: "Akhir kata, marilah kita sama-sama berdoa agar Malaysia terus maju dan makmur, aman damai serta seluruh rakyatnya menikmati kehidupan yang sempurna, bahagia dan sejahtera.",
+      closing: "Disampaikan semasa Istiadat Pembukaan Penggal Kelima, Parlimen Kelima Belas",
+      members: "Saudara-Saudari Sekalian,",
     },
   },
 } as const;

@@ -192,9 +192,31 @@ export class HansardQuestionParser {
   }
 
   private extractTopic(questionText: string): string {
-    const firstSentence = questionText.split(/[.!?]/)[0];
-    const words = firstSentence.split(/\s+/).slice(0, 10);
-    const topic = words.join(' ').substring(0, 100);
+    // Remove speaker introductions that may have leaked into question text
+    let cleanedText = questionText
+      .replace(/^(Tuan|Puan|Dato|Datuk|Dr\.|Yang Berhormat|Ir\.|Ts\.)\s+[^:]+:\s*/i, '')
+      .trim();
+
+    // If still contains intro pattern, use fallback
+    if (/^[A-Za-z\s]+\[.*?\]:/.test(cleanedText)) {
+      cleanedText = questionText;
+    }
+
+    // Remove common question markers
+    cleanedText = cleanedText
+      .replace(/^(minta|bertanya|meminta|asking|requesting)\s+/i, '')
+      .trim();
+
+    // Extract first sentence/phrase up to punctuation
+    const firstSentence = cleanedText.split(/[.!?]/)[0].trim();
+
+    if (firstSentence.length < 3) {
+      return 'General Question';
+    }
+
+    // Get first 10-15 words as topic
+    const words = firstSentence.split(/\s+/).slice(0, 15);
+    const topic = words.join(' ').substring(0, 150);
     return topic || 'General Question';
   }
 }

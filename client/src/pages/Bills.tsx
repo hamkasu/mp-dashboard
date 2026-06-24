@@ -12,6 +12,7 @@ import { Header } from "@/components/Header";
 import { SearchDialog } from "@/components/SearchDialog";
 import { PageMeta } from "@/components/PageMeta";
 import { BillImpactDialog } from "@/components/BillImpactDialog";
+import { GrokReviewDialog } from "@/components/GrokReviewDialog";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -23,17 +24,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { 
-  FileText, 
-  Search, 
-  ExternalLink, 
-  RefreshCw, 
-  AlertCircle, 
-  Download, 
+import {
+  FileText,
+  Search,
+  ExternalLink,
+  RefreshCw,
+  AlertCircle,
+  Download,
   Calendar,
   Sparkles,
   CheckCircle,
   Filter,
+  Brain,
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -82,6 +84,9 @@ export default function Bills() {
   const fromDatabase = billsData?.fromDatabase;
 
   const filteredBills = bills.filter((bill) => {
+    // Exclude incomplete/bad scraped data (no bill number and generic title)
+    if (!bill.billNumber && bill.title.trim().toLowerCase() === "bill") return false;
+
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       const matchesSearch =
@@ -112,8 +117,19 @@ export default function Bills() {
 
     return true;
   }).sort((a, b) => {
-    // Sort bills in ascending order by bill number
-    // Extract number and year from format like "D.R.43/2025"
+    // Sort unpassed bills first, then by bill number
+    const isPassed = (status: string) => {
+      const s = status.toLowerCase();
+      return s.includes("passed") || s.includes("lulus");
+    };
+
+    const aPassed = isPassed(a.status);
+    const bPassed = isPassed(b.status);
+    if (aPassed !== bPassed) {
+      return aPassed ? 1 : -1;
+    }
+
+    // Within each group, sort by year (ascending) then number (ascending)
     const parseBillNumber = (billNumber: string | null | undefined): { num: number, year: number } => {
       if (!billNumber) return { num: Infinity, year: Infinity };
       const match = billNumber.match(/(\d+)\/(\d{4})/);
@@ -124,7 +140,6 @@ export default function Bills() {
     const aData = parseBillNumber(a.billNumber);
     const bData = parseBillNumber(b.billNumber);
 
-    // Sort by year first (ascending), then by number (ascending)
     if (aData.year !== bData.year) {
       return aData.year - bData.year;
     }
@@ -146,6 +161,51 @@ export default function Bills() {
       return "bg-gray-500/10 text-gray-700 dark:text-gray-400 border-gray-500/20";
     }
     return "bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20";
+  };
+
+  // Extract the main status label from the full status string
+  const getStatusLabel = (status: string) => {
+    const statusLower = status.toLowerCase();
+    if (statusLower.startsWith("lulus")) return "Lulus";
+    if (statusLower.includes("passed")) return "Passed";
+    if (statusLower.includes("pending") || statusLower.includes("menunggu")) return "Pending";
+    if (statusLower.includes("rejected") || statusLower.includes("ditolak")) return "Rejected";
+    if (statusLower.includes("withdrawn") || statusLower.includes("ditarik")) return "Withdrawn";
+    if (statusLower.includes("bacaan")) return "Dalam Proses";
+    // If status is short, use it as-is
+    if (status.length <= 30) return status;
+    return "In Progress";
+  };
+
+  // Parse the detailed status information into structured fields
+  const parseStatusDetails = (status: string) => {
+    const details: { label: string; value: string }[] = [];
+
+    // Extract Bacaan Pertama (First Reading)
+    const bacaanPertamaMatch = status.match(/Bacaan Pertama Pada\s*:\s*(\d{2}\/\d{2}\/\d{4})/i);
+    if (bacaanPertamaMatch) {
+      details.push({ label: "Bacaan Pertama", value: bacaanPertamaMatch[1] });
+    }
+
+    // Extract Bacaan Kedua (Second Reading)
+    const bacaanKeduaMatch = status.match(/Bacaan Kedua Pada\s*:\s*(\d{2}\/\d{2}\/\d{4})/i);
+    if (bacaanKeduaMatch) {
+      details.push({ label: "Bacaan Kedua", value: bacaanKeduaMatch[1] });
+    }
+
+    // Extract Diluluskan (Passed) date
+    const diluluskanMatch = status.match(/Diluluskan Pada\s*:\s*(\d{2}\/\d{2}\/\d{4})/i);
+    if (diluluskanMatch) {
+      details.push({ label: "Diluluskan", value: diluluskanMatch[1] });
+    }
+
+    // Extract Dibentang Oleh (Tabled by) - get the first occurrence
+    const dibentangMatch = status.match(/Dibentang Oleh\s*:\s*([^D]+?)(?=Diluluskan|Bacaan|Tutup|$)/i);
+    if (dibentangMatch) {
+      details.push({ label: "Dibentang Oleh", value: dibentangMatch[1].trim() });
+    }
+
+    return details;
   };
 
   const clearFilters = () => {
@@ -344,11 +404,39 @@ export default function Bills() {
                           </span>
                         )}
                         <Badge variant="outline" className={getStatusColor(bill.status)}>
-                          {bill.status}
+                          {getStatusLabel(bill.status)}
                         </Badge>
                       </div>
+                      {/* Display parsed status details if available */}
+                      {parseStatusDetails(bill.status).length > 0 && (
+                        <div className={`mt-3 p-3 rounded-md text-sm ${getStatusColor(bill.status)}`}>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+                            {parseStatusDetails(bill.status).map((detail, index) => (
+                              <div key={index}>
+                                <span className="font-medium">{detail.label}:</span>{" "}
+                                <span>{detail.value}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                     <div className="flex gap-2 shrink-0">
+                      <Button
+                        data-testid={`button-download-${bill.id}`}
+                        variant="outline"
+                        size="sm"
+                        asChild
+                      >
+                        <a
+                          href={bill.fullTextUrl || "https://www.parlimen.gov.my/bills-dewan-rakyat.html?uweb=dr&"}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          <Download className="w-4 h-4 mr-2" />
+                          Download
+                        </a>
+                      </Button>
                       {bill.hasPdf && (
                         <Button
                           data-testid={`button-pdf-${bill.id}`}
@@ -357,21 +445,8 @@ export default function Bills() {
                           asChild
                         >
                           <a href={`/api/bills/${bill.id}/pdf`} target="_blank" rel="noopener noreferrer">
-                            <Download className="w-4 h-4 mr-2" />
+                            <FileText className="w-4 h-4 mr-2" />
                             PDF
-                          </a>
-                        </Button>
-                      )}
-                      {bill.fullTextUrl && (
-                        <Button
-                          data-testid={`button-external-${bill.id}`}
-                          variant="outline"
-                          size="sm"
-                          asChild
-                        >
-                          <a href={bill.fullTextUrl} target="_blank" rel="noopener noreferrer">
-                            <ExternalLink className="w-4 h-4 mr-2" />
-                            Source
                           </a>
                         </Button>
                       )}
@@ -389,6 +464,21 @@ export default function Bills() {
                             {bill.impact && (
                               <CheckCircle className="w-3.5 h-3.5 text-green-300" />
                             )}
+                          </Button>
+                        }
+                      />
+                      <GrokReviewDialog
+                        bill={bill as any}
+                        trigger={
+                          <Button
+                            data-testid={`button-grok-review-${bill.id}`}
+                            variant="outline"
+                            size="sm"
+                            className="gap-2"
+                            disabled={!bill.hasPdf}
+                          >
+                            <Brain className="w-4 h-4" />
+                            Review
                           </Button>
                         }
                       />

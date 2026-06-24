@@ -4,11 +4,14 @@
 
 import type { Express, Request, Response, NextFunction } from "express";
 import type { Server } from "http";
+import { requireApiKey } from "./middleware/api-key-auth";
 import { storage, seedDatabase } from "./storage";
 import { z } from "zod";
 import multer from "multer";
 import { promises as fs } from "fs";
 import path from "path";
+import axios from "axios";
+import https from "https";
 import { getPublicBaseUrl, buildPdfUrl, fixHansardPdfUrls } from "./utils/url-helper";
 import {
   insertCourtCaseSchema,
@@ -22,7 +25,11 @@ import {
   insertBlogPostSchema,
   updateBlogPostSchema,
   insertUserFeedbackSchema,
+  insertCommitteeMemberSchema,
+  updateCommitteeMemberSchema,
   mps,
+  mpReportCards,
+  committeeMembers,
   hansardPdfFiles,
   hansardRecords,
   unmatchedSpeakers,
@@ -34,6 +41,7 @@ import {
   blogPosts,
   bills,
   billImpacts,
+  billGrokReviews,
 } from "@shared/schema";
 import crypto from "crypto";
 import { HansardScraper, ConstituencyAttendanceCounts } from "./hansard-scraper";
@@ -41,11 +49,11 @@ import { MPNameMatcher } from "./mp-name-matcher";
 import { runHansardSync } from "./hansard-cron";
 import { HansardPdfParser } from "./hansard-pdf-parser";
 import { MemoryCache, startCacheCleanup } from "./cache";
-import { db } from "./db";
-import { eq, sql } from "drizzle-orm";
+import { db, pool } from "./db";
+import { eq, sql, desc } from "drizzle-orm";
 import { normalizeParliamentTerm } from "@shared/utils";
 import { jobTracker } from "./job-tracker";
-import { runHansardDownloadJob } from "./hansard-background-jobs";
+import { runHansardDownloadJob, runPreviousParliamentsDownloadJob } from "./hansard-background-jobs";
 import {
   mutationRateLimit,
   uploadRateLimit,
@@ -53,6 +61,7 @@ import {
   auditMiddleware
 } from "./middleware/security";
 import { requireAdmin, getCurrentUsername } from "./simple-auth";
+import { requirePremium } from "./subscription-middleware";
 import { sendContactEmail, sendConfirmationEmail, isEmailConfigured } from "./email";
 import { runBulkHansardAnalysis, getAnalysisJobStatus, cancelAnalysisJob } from "./hansard-ai-analyzer";
 import { isAIConfigured } from "./ai-service";
@@ -423,64 +432,340 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
+  // Cache for /api/mp-spotlight (daily rotation at midnight)
+  let spotlightCache: any = null;
+  let spotlightCacheDate = '';
+  let spotlightComputeTime = 0;
+
+  // Cache for /api/analytics/summary (hourly)
+  let analyticsSummaryCache: any = null;
+  let analyticsSummaryCacheTime = 0;
+  const ANALYTICS_CACHE_TTL = 60 * 60 * 1000; // 1 hour
+
   // Get all MPs
-  app.get("/api/mps", async (_req, res) => {
+  // Get MP Spotlight - daily rotating MP with stats highlight
+  app.get("/api/mp-spotlight", async (_req, res) => {
     try {
+      const computeStart = Date.now();
+
+      // Get today's date for cache invalidation (resets at midnight)
+      const today = new Date();
+      const dateString = today.toISOString().split('T')[0];
+
+      // Return cached result if it's the same day
+      if (spotlightCache && spotlightCacheDate === dateString) {
+        res.set('X-Cache', 'HIT');
+        res.set('X-Compute-Time', spotlightComputeTime.toString());
+        return res.json(spotlightCache);
+      }
+
       const mps = await storage.getAllMps();
       const hansardRecords = await storage.getAllHansardRecords();
-      
-      // Calculate speaking participation and Hansard-based attendance for each MP
-      const mpsWithAttendance = mps.map(mp => {
-        // Normalize dates to YYYY-MM-DD for accurate comparison
-        const mpSwornInDate = new Date(mp.swornInDate).toISOString().split('T')[0];
-        
-        // Get sessions after MP was sworn in
-        const relevantSessions = hansardRecords.filter(record => {
-          const sessionDate = new Date(record.sessionDate).toISOString().split('T')[0];
-          return sessionDate >= mpSwornInDate;
-        });
-        
-        const totalHansardSessions = relevantSessions.length;
-        
-        // Count sessions where MP attended
-        // If attendedMpIds exists (new system), use explicit attendance tracking
-        // Otherwise fall back to "not absent = attended" (old system)
-        const sessionsAttended = relevantSessions.filter(record => {
-          if (record.attendedMpIds && record.attendedMpIds.length > 0) {
-            // New system: explicitly marked as attended
-            return record.attendedMpIds.includes(mp.id);
-          } else {
-            // Old system: not marked as absent = attended
-            return !record.absentMpIds || !record.absentMpIds.includes(mp.id);
+
+      // Filter to only active MPs (no termEndDate)
+      const activeMps = mps.filter(mp => !mp.termEndDate);
+
+      if (activeMps.length === 0) {
+        return res.status(404).json({ error: "No active MPs found" });
+      }
+
+      // Use deterministic daily rotation based on date
+      // The same MP will be shown all day, rotating at midnight
+      const dayOfYear = Math.floor((today.getTime() - new Date(today.getFullYear(), 0, 0).getTime()) / (1000 * 60 * 60 * 24));
+      const year = today.getFullYear();
+      const seed = year * 1000 + dayOfYear;
+
+      // Sort MPs by ID for consistent ordering, then select based on seed
+      const sortedMps = [...activeMps].sort((a, b) => a.id.localeCompare(b.id));
+      const mpIndex = seed % sortedMps.length;
+      const spotlightMp = sortedMps[mpIndex];
+
+      // Calculate MP stats from Hansard records
+      const mpSwornInDate = new Date(spotlightMp.swornInDate).toISOString().split('T')[0];
+      const relevantSessions = hansardRecords.filter(record => {
+        const sessionDate = new Date(record.sessionDate).toISOString().split('T')[0];
+        return sessionDate >= mpSwornInDate;
+      });
+
+      // Count sessions attended
+      const sessionsAttended = relevantSessions.filter(record => {
+        if (record.attendedMpIds && record.attendedMpIds.length > 0) {
+          return record.attendedMpIds.includes(spotlightMp.id);
+        } else {
+          return !record.absentMpIds || !record.absentMpIds.includes(spotlightMp.id);
+        }
+      }).length;
+
+      // Count sessions where MP spoke
+      const sessionsSpoke = relevantSessions.filter(record =>
+        (record.speakerStats && record.speakerStats.some((stat: any) => stat.mpId === spotlightMp.id)) ||
+        (record.speakers && record.speakers.some(speaker => speaker.mpId === spotlightMp.id))
+      ).length;
+
+      // Calculate total speeches
+      const totalSpeeches = relevantSessions.reduce((total, record) => {
+        if (record.speakerStats) {
+          const mpStat = record.speakerStats.find((stat: any) => stat.mpId === spotlightMp.id);
+          if (mpStat && (mpStat as any).totalSpeeches) {
+            return total + (mpStat as any).totalSpeeches;
           }
-        }).length;
-        
-        // Count sessions where MP spoke (only from relevant sessions)
-        const sessionsSpoke = relevantSessions.filter(record => 
-          (record.speakerStats && record.speakerStats.some((stat: any) => stat.mpId === mp.id)) ||
-          (record.speakers && record.speakers.some(speaker => speaker.mpId === mp.id))
-        ).length;
-        
-        // Calculate total speeches from speakerStats
-        const totalSpeeches = relevantSessions.reduce((total, record) => {
-          if (record.speakerStats) {
-            const mpStat = record.speakerStats.find((stat: any) => stat.mpId === mp.id);
-            if (mpStat && (mpStat as any).totalSpeeches) {
-              return total + (mpStat as any).totalSpeeches;
+        }
+        return total;
+      }, 0);
+
+      // Get oral questions count from parliamentary_oral_answers table
+      const { parliamentaryOralAnswers } = await import("@shared/schema");
+      const { eq, count: drizzleCount } = await import("drizzle-orm");
+      const oralResult = await db.select({ count: drizzleCount() })
+        .from(parliamentaryOralAnswers)
+        .where(eq(parliamentaryOralAnswers.questionerMpId, spotlightMp.id));
+      const oralQuestionsCount = oralResult[0]?.count || 0;
+
+      // Get bills count from legislative_proposals table
+      const { legislativeProposals } = await import("@shared/schema");
+      const { and } = await import("drizzle-orm");
+      const { sql } = await import("drizzle-orm");
+      const billsResult = await db.select({ count: drizzleCount() })
+        .from(legislativeProposals)
+        .where(and(
+          eq(legislativeProposals.mpId, spotlightMp.id),
+          sql`LOWER(${legislativeProposals.type}) = 'bill'`
+        ));
+      const billsCount = billsResult[0]?.count || 0;
+
+      // Calculate attendance rate
+      const totalSessions = relevantSessions.length;
+      const attendanceRate = totalSessions > 0 ? Math.round((sessionsAttended / totalSessions) * 100) : 0;
+
+      // Fetch Hansard quotes/key arguments for this MP (with error handling)
+      let hansardQuotes: { quote: string; sessionDate: string }[] = [];
+      try {
+        const { hansardSpeakerAnalysis } = await import("@shared/schema");
+        const speakerAnalysisRecords = await db.select().from(hansardSpeakerAnalysis);
+
+        // Find key arguments from sessions where this MP spoke
+        const mpQuotes: { quote: string; sessionDate: string }[] = [];
+
+        for (const record of speakerAnalysisRecords) {
+          if (record.speakerInsights) {
+            const mpInsight = record.speakerInsights.find(
+              (insight: any) => insight.mpId === spotlightMp.id
+            );
+            if (mpInsight && mpInsight.keyArguments && mpInsight.keyArguments.length > 0) {
+              // Get the hansard record to get session date
+              const hansardRecord = relevantSessions.find(r => r.id === record.hansardRecordId);
+              const sessionDate = hansardRecord
+                ? new Date(hansardRecord.sessionDate).toISOString().split('T')[0]
+                : '';
+
+              for (const arg of mpInsight.keyArguments) {
+                mpQuotes.push({
+                  quote: arg,
+                  sessionDate
+                });
+              }
             }
           }
-          return total;
-        }, 0);
-        
+        }
+
+        // Sort by session date (most recent first) and take up to 2 quotes
+        mpQuotes.sort((a, b) => b.sessionDate.localeCompare(a.sessionDate));
+        hansardQuotes = mpQuotes.slice(0, 2);
+      } catch (quotesError) {
+        console.error("Error fetching Hansard quotes:", quotesError);
+        // Continue without quotes if there's an error
+      }
+
+      // Determine the highlight stat based on what's most notable
+      let highlightStat: { type: string; value: number; label: string };
+
+      if (oralQuestionsCount > 0) {
+        highlightStat = {
+          type: 'oral_questions',
+          value: oralQuestionsCount,
+          label: oralQuestionsCount === 1 ? 'oral question asked' : 'oral questions asked'
+        };
+      } else if (billsCount > 0) {
+        highlightStat = {
+          type: 'bills',
+          value: billsCount,
+          label: billsCount === 1 ? 'bill raised' : 'bills raised'
+        };
+      } else if (totalSpeeches > 0) {
+        highlightStat = {
+          type: 'speeches',
+          value: totalSpeeches,
+          label: totalSpeeches === 1 ? 'speech in Parliament' : 'speeches in Parliament'
+        };
+      } else if (sessionsSpoke > 0) {
+        highlightStat = {
+          type: 'sessions_spoke',
+          value: sessionsSpoke,
+          label: sessionsSpoke === 1 ? 'session spoke' : 'sessions spoke'
+        };
+      } else {
+        highlightStat = {
+          type: 'attendance',
+          value: attendanceRate,
+          label: '% attendance rate'
+        };
+      }
+
+      // Fetch poverty data for the constituency
+      let povertyIncidence: number | null = null;
+      try {
+        const { constituencies } = await import("@shared/schema");
+        const constituencyResult = await db.select()
+          .from(constituencies)
+          .where(eq(constituencies.parliamentCode, spotlightMp.parliamentCode));
+        if (constituencyResult.length > 0 && constituencyResult[0].povertyIncidence !== null) {
+          // Convert from integer (57 = 5.7%) to actual percentage
+          povertyIncidence = constituencyResult[0].povertyIncidence / 10;
+        }
+      } catch (povertyError) {
+        console.error("Error fetching poverty data:", povertyError);
+      }
+
+      const responseData = {
+        mp: {
+          id: spotlightMp.id,
+          name: spotlightMp.name,
+          party: spotlightMp.party,
+          constituency: spotlightMp.constituency,
+          state: spotlightMp.state,
+          photoUrl: spotlightMp.photoUrl,
+          isMinister: spotlightMp.isMinister,
+          isDeputyMinister: spotlightMp.isDeputyMinister,
+          ministerialPosition: spotlightMp.ministerialPosition,
+          parliamentCode: spotlightMp.parliamentCode,
+        },
+        stats: {
+          totalSessions,
+          sessionsAttended,
+          sessionsSpoke,
+          totalSpeeches,
+          oralQuestionsCount,
+          billsCount,
+          attendanceRate,
+        },
+        electionResults: {
+          year: spotlightMp.electionYear || 2022,
+          votesReceived: spotlightMp.electionVotesReceived,
+          totalValidVotes: spotlightMp.electionTotalValidVotes,
+          majority: spotlightMp.electionMajority,
+          turnoutPercent: spotlightMp.electionTurnoutPercent ? spotlightMp.electionTurnoutPercent / 100 : null,
+          votePercentage: spotlightMp.electionVotePercentage ? spotlightMp.electionVotePercentage / 100 : null,
+        },
+        constituencyData: {
+          povertyIncidence,
+        },
+        highlightStat,
+        hansardQuotes,
+        date: today.toISOString().split('T')[0],
+      };
+
+      // Cache the result
+      spotlightCache = responseData;
+      spotlightCacheDate = dateString;
+      spotlightComputeTime = Date.now() - computeStart;
+
+      res.set('X-Cache', 'MISS');
+      res.set('X-Compute-Time', spotlightComputeTime.toString());
+      res.json(responseData);
+    } catch (error) {
+      console.error("Error fetching MP spotlight:", error);
+      res.status(500).json({ error: "Failed to fetch MP spotlight" });
+    }
+  });
+
+  // Cache for /api/mps to reduce database load
+  let mpsCache: any[] | null = null;
+  let mpsCacheExpiry = 0;
+  const MPS_CACHE_TTL = 10 * 60 * 1000; // 10 minutes
+
+  app.get("/api/mps", async (_req, res) => {
+    try {
+      // Check cache first
+      const now = Date.now();
+      if (mpsCache && now < mpsCacheExpiry) {
+        res.set('Cache-Control', 'public, max-age=600');
+        res.set('X-Cache', 'HIT');
+        return res.json(mpsCache);
+      }
+
+      const mps = await storage.getAllMps();
+      const hansardRecords = await storage.getAllHansardRecords();
+
+      // Pre-build index maps for O(1) lookups instead of O(n) filtering
+      const mpSwornInMap = new Map<string, string>();
+      const attendanceMap = new Map<string, { attended: number; spoke: number; speeches: number }>();
+
+      // First pass: build index of MP sworn-in dates
+      for (const mp of mps) {
+        const mpSwornInDate = new Date(mp.swornInDate).toISOString().split('T')[0];
+        mpSwornInMap.set(mp.id, mpSwornInDate);
+        attendanceMap.set(mp.id, { attended: 0, spoke: 0, speeches: 0 });
+      }
+
+      // Second pass: single loop through hansard records to count all attendance
+      for (const record of hansardRecords) {
+        const sessionDate = new Date(record.sessionDate).toISOString().split('T')[0];
+
+        // Process attendance and speaking for each MP mentioned in this record
+        if (record.attendedMpIds && record.attendedMpIds.length > 0) {
+          for (const mpId of record.attendedMpIds) {
+            const swornInDate = mpSwornInMap.get(mpId);
+            if (swornInDate && sessionDate >= swornInDate) {
+              const stats = attendanceMap.get(mpId);
+              if (stats) stats.attended++;
+            }
+          }
+        } else if (record.absentMpIds) {
+          // Old system: count attendance for MPs not marked absent
+          for (const mp of mps) {
+            if (!record.absentMpIds.includes(mp.id)) {
+              const swornInDate = mpSwornInMap.get(mp.id);
+              if (swornInDate && sessionDate >= swornInDate) {
+                const stats = attendanceMap.get(mp.id);
+                if (stats) stats.attended++;
+              }
+            }
+          }
+        }
+
+        // Count speaking sessions and speeches
+        if (record.speakerStats) {
+          for (const stat of record.speakerStats) {
+            const swornInDate = mpSwornInMap.get(stat.mpId);
+            if (swornInDate && sessionDate >= swornInDate) {
+              const stats = attendanceMap.get(stat.mpId);
+              if (stats) {
+                stats.spoke++;
+                stats.speeches += (stat as any).totalSpeeches || 0;
+              }
+            }
+          }
+        }
+      }
+
+      // Build final response with pre-calculated attendance
+      const mpsWithAttendance = mps.map(mp => {
+        const stats = attendanceMap.get(mp.id) || { attended: 0, spoke: 0, speeches: 0 };
         return {
           ...mp,
-          totalHansardSessions,
-          hansardSessionsAttended: sessionsAttended,
-          hansardSessionsSpoke: sessionsSpoke,
-          totalSpeechInstances: totalSpeeches
+          totalHansardSessions: hansardRecords.length, // All records since they're filtered by sworn-in above
+          hansardSessionsAttended: stats.attended,
+          hansardSessionsSpoke: stats.spoke,
+          totalSpeechInstances: stats.speeches
         };
       });
-      
+
+      // Cache the result
+      mpsCache = mpsWithAttendance;
+      mpsCacheExpiry = now + MPS_CACHE_TTL;
+
+      res.set('Cache-Control', 'public, max-age=600');
+      res.set('X-Cache', 'MISS');
       res.json(mpsWithAttendance);
     } catch (error) {
       console.error("Error fetching MPs:", error);
@@ -488,54 +773,64 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
-  // Get single MP by ID
+  // Get single MP by ID - reuse cached data from /api/mps or calculate on demand
   app.get("/api/mps/:id", async (req, res) => {
     try {
       const { id } = req.params;
       const mp = await storage.getMp(id);
-      
+
       if (!mp) {
         return res.status(404).json({ error: "MP not found" });
       }
-      
-      // Calculate real attendance from Hansard records
-      const hansardRecords = await storage.getAllHansardRecords();
-      
-      // Normalize dates to YYYY-MM-DD for accurate comparison
-      const mpSwornInDate = new Date(mp.swornInDate).toISOString().split('T')[0];
-      
-      // Get sessions after MP was sworn in
-      const relevantSessions = hansardRecords.filter(record => {
-        const sessionDate = new Date(record.sessionDate).toISOString().split('T')[0];
-        return sessionDate >= mpSwornInDate;
-      });
-      
-      const totalHansardSessions = relevantSessions.length;
-      
-      // Count sessions where MP attended
-      // If attendedMpIds exists (new system), use explicit attendance tracking
-      // Otherwise fall back to "not absent = attended" (old system)
-      const sessionsAttended = relevantSessions.filter(record => {
-        if (record.attendedMpIds && record.attendedMpIds.length > 0) {
-          // New system: explicitly marked as attended
-          return record.attendedMpIds.includes(mp.id);
-        } else {
-          // Old system: not marked as absent = attended
-          return !record.absentMpIds || !record.absentMpIds.includes(mp.id);
+
+      // Try to get data from cache if available
+      if (mpsCache && Date.now() < mpsCacheExpiry) {
+        const cachedMp = mpsCache.find(m => m.id === id);
+        if (cachedMp) {
+          res.set('Cache-Control', 'public, max-age=600');
+          res.set('X-Cache', 'HIT');
+          return res.json(cachedMp);
         }
-      }).length;
-      
-      // Count sessions where MP spoke (only from relevant sessions)
-      const sessionsSpoke = relevantSessions.filter(record => 
-        (record.speakerStats && record.speakerStats.some((stat: any) => stat.mpId === mp.id)) ||
-        (record.speakers && record.speakers.some(speaker => speaker.mpId === mp.id))
-      ).length;
-      
+      }
+
+      // Otherwise calculate from scratch
+      const hansardRecords = await storage.getAllHansardRecords();
+      const mpSwornInDate = new Date(mp.swornInDate).toISOString().split('T')[0];
+
+      // Single pass through hansard records for this MP
+      let attended = 0;
+      let spoke = 0;
+      let speeches = 0;
+
+      for (const record of hansardRecords) {
+        const sessionDate = new Date(record.sessionDate).toISOString().split('T')[0];
+        if (sessionDate < mpSwornInDate) continue;
+
+        // Check attendance
+        if (record.attendedMpIds && record.attendedMpIds.length > 0) {
+          if (record.attendedMpIds.includes(id)) attended++;
+        } else if (!record.absentMpIds || !record.absentMpIds.includes(id)) {
+          attended++;
+        }
+
+        // Check if spoke
+        if (record.speakerStats) {
+          const stat = record.speakerStats.find((s: any) => s.mpId === id);
+          if (stat) {
+            spoke++;
+            speeches += (stat as any).totalSpeeches || 0;
+          }
+        }
+      }
+
+      res.set('Cache-Control', 'public, max-age=600');
+      res.set('X-Cache', 'MISS');
       res.json({
         ...mp,
-        totalHansardSessions,
-        hansardSessionsAttended: sessionsAttended,
-        hansardSessionsSpoke: sessionsSpoke
+        totalHansardSessions: hansardRecords.length,
+        hansardSessionsAttended: attended,
+        hansardSessionsSpoke: spoke,
+        totalSpeechInstances: speeches
       });
     } catch (error) {
       console.error("Error fetching MP:", error);
@@ -550,10 +845,23 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
 
       // Filter to only include active MPs (not deceased or resigned)
       const now = new Date();
-      const mps = allMps.filter(mp => {
+      const activeMpsAll = allMps.filter(mp => {
         if (!mp.termEndDate) return true;
         return new Date(mp.termEndDate) > now;
       });
+
+      // Deduplicate by parliamentCode: keep only the most recently sworn-in active MP
+      // per constituency. This handles edge cases where a by-election replacement was
+      // accidentally added twice (due to the limit(1) bug in create-mp), resulting in
+      // two active records for the same seat.
+      const mpsByCode = new Map<string, typeof activeMpsAll[0]>();
+      for (const mp of activeMpsAll) {
+        const existing = mpsByCode.get(mp.parliamentCode);
+        if (!existing || new Date(mp.swornInDate) > new Date(existing.swornInDate)) {
+          mpsByCode.set(mp.parliamentCode, mp);
+        }
+      }
+      const mps = Array.from(mpsByCode.values());
 
       // Calculate party breakdown
       const partyBreakdown = mps.reduce((acc, mp) => {
@@ -611,22 +919,26 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         const DEPUTY_PRIME_MINISTER_SALARY = 18168.15;
         const MINISTER_SALARY = 14907.20;
         const DEPUTY_MINISTER_SALARY = 10847.65;
+        const PARLIAMENTARY_SECRETARY_SALARY = 7187.40;
 
         const baseMonthlySalary = DEWAN_RAKYAT_SALARY;
 
         // Calculate ministerial salary based on role
+        // Check specific positions (order matters - check more specific first)
         let ministerialSalary = 0;
         if (mp.role) {
           const roleLower = mp.role.toLowerCase();
-          if (roleLower.includes("deputy prime minister") || roleLower.includes("timbalan perdana menteri")) {
+
+          if (roleLower.includes("prime minister") && !roleLower.includes("deputy")) {
+            ministerialSalary = 0; // PM takes no ministerial salary
+          } else if (roleLower.includes("deputy prime minister") || roleLower.includes("timbalan perdana menteri")) {
             ministerialSalary = DEPUTY_PRIME_MINISTER_SALARY;
           } else if (roleLower.includes("deputy minister") || roleLower.includes("timbalan menteri")) {
             ministerialSalary = DEPUTY_MINISTER_SALARY;
           } else if (roleLower.includes("minister") || roleLower.includes("menteri")) {
-            // Minister but not Prime Minister (PM takes no salary) or Deputy
-            if (!roleLower.includes("prime minister") || roleLower.includes("deputy")) {
-              ministerialSalary = MINISTER_SALARY;
-            }
+            ministerialSalary = MINISTER_SALARY;
+          } else if (roleLower.includes("parliamentary secretary") || roleLower.includes("setiausaha parlimen")) {
+            ministerialSalary = PARLIAMENTARY_SECRETARY_SALARY;
           }
         }
 
@@ -645,6 +957,24 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         return sum + totalForMP;
       }, 0);
 
+      // 2022 Election statistics (GE15) - Data from Wikipedia
+      // Source: https://en.wikipedia.org/wiki/2022_Malaysian_general_election
+      // Total valid votes cast: 15,535,992 (from 21,173,638 registered voters, 74.13% turnout)
+      //
+      // Popular vote by coalition:
+      // - Pakatan Harapan (PH): 5,867,667 votes (37.77%)
+      // - Perikatan Nasional (PN): 4,954,682 votes (31.90%)
+      // - Barisan Nasional (BN): 3,417,918 votes (22.00%)
+      // - Gabungan Parti Sarawak (GPS): 446,999 votes (2.88%)
+      // - Gabungan Rakyat Sabah (GRS): 310,726 votes (2.00%)
+      // - Others/Independents: 538,000 votes (3.45%)
+      //
+      // Unity Government coalition (formed after hung parliament):
+      // PH + BN + GPS + GRS + WARISAN + other gov allies
+      const totalElectionVotes = 15535992;
+      const governmentVotes = 10043310;  // PH (5,867,667) + BN (3,417,918) + GPS (446,999) + GRS (310,726)
+      const oppositionVotes = 5492682;   // PN (4,954,682) + Others/Independents (~538,000)
+
       res.json({
         totalMps: mps.length,
         partyBreakdown: partyBreakdown.sort((a, b) => b.count - a.count),
@@ -652,6 +982,13 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         stateCount: uniqueStates.size,
         averageAttendanceRate: Math.round(averageAttendanceRate * 10) / 10,
         totalCumulativeCosts: Math.round(totalCumulativeCosts),
+        // 2022 Election statistics (GE15) - Wikipedia data
+        electionStats: {
+          year: 2022,
+          totalVotes: totalElectionVotes,
+          governmentVotes: governmentVotes,
+          oppositionVotes: oppositionVotes,
+        },
       });
     } catch (error) {
       console.error("Error calculating stats:", error);
@@ -720,6 +1057,48 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     } catch (error) {
       console.error("Error calculating filtered stats:", error);
       res.status(500).json({ error: "Failed to calculate filtered statistics" });
+    }
+  });
+
+  // Image proxy for parliament website photos (bypasses hotlink protection)
+  app.get("/api/image-proxy", async (req, res) => {
+    try {
+      const imageUrl = req.query.url as string;
+
+      if (!imageUrl) {
+        return res.status(400).json({ error: "Missing url parameter" });
+      }
+
+      // Only allow proxying images from the parliament website
+      if (!imageUrl.startsWith("https://www.parlimen.gov.my/")) {
+        return res.status(403).json({ error: "Only parliament.gov.my images are allowed" });
+      }
+
+      const response = await axios.get(imageUrl, {
+        responseType: "arraybuffer",
+        headers: {
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+          "Referer": "https://www.parlimen.gov.my/",
+          "Accept": "image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
+        },
+        httpsAgent: new https.Agent({
+          rejectUnauthorized: false,
+        }),
+        timeout: 10000,
+      });
+
+      // Set appropriate headers for the image
+      const contentType = response.headers["content-type"] || "image/jpeg";
+      res.set({
+        "Content-Type": contentType,
+        "Cache-Control": "public, max-age=86400", // Cache for 24 hours
+        "Access-Control-Allow-Origin": "*",
+      });
+
+      res.send(Buffer.from(response.data));
+    } catch (error: any) {
+      console.error("Image proxy error:", error.message);
+      res.status(500).json({ error: "Failed to fetch image" });
     }
   });
 
@@ -1021,6 +1400,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   app.get("/api/legislative-proposals", async (_req, res) => {
     try {
       const proposals = await storage.getAllLegislativeProposals();
+      res.set('Cache-Control', 'public, max-age=86400'); // 24 hours - historical legislative data changes rarely
       res.json(proposals);
     } catch (error) {
       console.error("Error fetching legislative proposals:", error);
@@ -1211,6 +1591,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   app.get("/api/parliamentary-questions", async (_req, res) => {
     try {
       const questions = await storage.getAllParliamentaryQuestions();
+      res.set('Cache-Control', 'public, max-age=3600'); // 1 hour - may update with new answer statuses
       res.json(questions);
     } catch (error) {
       console.error("Error fetching parliamentary questions:", error);
@@ -1578,8 +1959,65 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
-  // Get constituency-level Hansard participation for 15th Parliament
-  app.get("/api/constituencies/hansard-participation-15th", async (req, res) => {
+  // Public preview — aggregate stats + top 10 only, no auth required.
+  // Full dataset is behind requirePremium below; this endpoint never exposes it.
+  app.get("/api/constituencies/public-preview", async (req, res) => {
+    try {
+      const data = await storage.getConstituencyHansardParticipation15th();
+
+      if (!data || data.length === 0) {
+        return res.json({
+          summary: null,
+          topConstituencies: [],
+          distributionBuckets: [],
+        });
+      }
+
+      const total = data.length;
+      const avgRate =
+        Math.round(
+          (data.reduce((s, c) => s + c.participationRate, 0) / total) * 10
+        ) / 10;
+
+      const high = data.filter((c) => c.participationRate >= 70).length;
+      const moderate = data.filter(
+        (c) => c.participationRate >= 40 && c.participationRate < 70
+      ).length;
+      const low = data.filter((c) => c.participationRate < 40).length;
+
+      // Sort by participation rate descending, return top 10 (limited preview)
+      const sorted = [...data].sort(
+        (a, b) => b.participationRate - a.participationRate
+      );
+      const topConstituencies = sorted.slice(0, 10).map((c) => ({
+        constituency: c.constituency,
+        state: c.state,
+        participationRate: c.participationRate,
+        mpNames: c.mpNames,
+        // Intentionally omit sessionsSpoke, totalSpeeches (premium fields)
+      }));
+
+      return res.json({
+        summary: {
+          totalConstituencies: total,
+          avgParticipationRate: avgRate,
+          parliamentTerm: "15th Parliament",
+        },
+        topConstituencies,
+        distributionBuckets: [
+          { range: "≥70%", label: "High participation", count: high },
+          { range: "40–69%", label: "Moderate participation", count: moderate },
+          { range: "<40%", label: "Low participation", count: low },
+        ],
+      });
+    } catch (error) {
+      console.error("Error fetching constituency public preview:", error);
+      res.status(500).json({ error: "Failed to fetch constituency preview" });
+    }
+  });
+
+  // Get constituency-level Hansard participation for 15th Parliament (premium)
+  app.get("/api/constituencies/hansard-participation-15th", requirePremium, async (req, res) => {
     try {
       const data = await storage.getConstituencyHansardParticipation15th();
       res.json(data);
@@ -1589,8 +2027,117 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
-  // Get constituency speech statistics for 15th Parliament
-  app.get("/api/constituency-speech-stats", async (req, res) => {
+  // ── Premium PDF download ────────────────────────────────────────────────────
+  //
+  // GET /api/constituencies/report/download?name=<constituency>&state=<state>
+  //
+  // Security layers:
+  //   1. requirePremium middleware — 401 if not logged in, 403 if not subscribed.
+  //      Admin users bypass via session.isAdmin (set in admin login route).
+  //   2. Input validation — name and state must be non-empty strings, length-
+  //      capped to prevent abuse.  SQL injection is not possible here because
+  //      the data comes from the pre-computed storage method (no raw SQL with
+  //      user input); we only search in the returned JS array.
+  //   3. Exact-match lookup — the constituency name must match exactly (case-
+  //      insensitive trim) an entry returned by getConstituencyHansardParticipation15th().
+  //      This prevents path traversal, injection, or probing for internal data.
+  //   4. Cache-Control: no-store — prevents CDN/proxy caching of personalised
+  //      premium content, ensuring every download hits the auth check.
+  //
+  // File naming:
+  //   constituency-{slug}-hansard-report.pdf
+  //   e.g. constituency-padang-besar-hansard-report.pdf
+  //
+  app.get(
+    "/api/constituencies/report/download",
+    requirePremium,
+    async (req, res) => {
+      try {
+        // ── Input validation ──────────────────────────────────────────────────
+        const rawName = String(req.query.name ?? '').trim();
+        const rawState = String(req.query.state ?? '').trim();
+
+        if (!rawName || rawName.length > 120) {
+          return res.status(400).json({ error: 'Invalid constituency name.' });
+        }
+
+        // ── Fetch full premium dataset ────────────────────────────────────────
+        // The same data that backs /api/constituencies/hansard-participation-15th.
+        // Already authorised above by requirePremium; no extra check needed.
+        const allData = await storage.getConstituencyHansardParticipation15th();
+
+        // ── Locate the requested constituency ─────────────────────────────────
+        // Case-insensitive match; state narrows the search when provided.
+        const nameLower = rawName.toLowerCase();
+        const stateLower = rawState.toLowerCase();
+
+        const entry = allData.find((c) => {
+          const nameMatch = c.constituency.toLowerCase() === nameLower;
+          if (!nameMatch) return false;
+          return !rawState || c.state.toLowerCase() === stateLower;
+        });
+
+        if (!entry) {
+          return res.status(404).json({
+            error: 'Constituency not found.',
+            hint: 'Ensure name and state match exactly.',
+          });
+        }
+
+        // ── Fetch supplementary constituency profile (optional) ───────────────
+        // The constituencies table holds parliamentCode and povertyIncidence.
+        // We normalise the name to a parliament-code lookup via state matching.
+        // If it fails, we still generate the PDF (profile section is omitted).
+        let profile: import('./constituency-pdf').ConstituencyProfile | null = null;
+        try {
+          const allConstituencies = await storage.getAllConstituencies();
+          const matched = allConstituencies.find(
+            (c) =>
+              c.name?.toLowerCase() === nameLower &&
+              (!rawState || c.state?.toLowerCase() === stateLower),
+          );
+          if (matched) {
+            profile = {
+              parliamentCode: matched.parliamentCode ?? null,
+              // DB stores poverty incidence as integer tenths (179 = 17.9%); divide before display
+              povertyIncidence: matched.povertyIncidence != null ? matched.povertyIncidence / 10 : null,
+            };
+          }
+        } catch {
+          // Non-critical: missing profile data is handled gracefully in the PDF
+        }
+
+        // ── Generate PDF ──────────────────────────────────────────────────────
+        const {
+          generateConstituencyReportPDF,
+          constituencyPDFFilename,
+        } = await import('./constituency-pdf');
+
+        const pdfBuffer = generateConstituencyReportPDF(entry, profile, allData);
+        const filename = constituencyPDFFilename(entry.constituency);
+
+        // ── Stream response ───────────────────────────────────────────────────
+        res.setHeader('Content-Type', 'application/pdf');
+        // 'attachment' prompts the browser to download rather than open inline.
+        res.setHeader(
+          'Content-Disposition',
+          `attachment; filename="${filename}"`,
+        );
+        // Prevent CDN / proxy caching of premium content.
+        res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+        res.setHeader('Pragma', 'no-cache');
+        res.setHeader('Content-Length', String(pdfBuffer.length));
+
+        res.end(pdfBuffer);
+      } catch (error) {
+        console.error('Error generating constituency PDF:', error);
+        res.status(500).json({ error: 'Failed to generate constituency report.' });
+      }
+    },
+  );
+
+  // Get constituency speech statistics for 15th Parliament (premium)
+  app.get("/api/constituency-speech-stats", requirePremium, async (req, res) => {
     try {
       // Fetch all 15th Parliament Hansard records
       const hansards = await storage.getHansardRecordsByParliament('15th Parliament');
@@ -1751,6 +2298,10 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   app.get("/api/hansard-records/search", async (req, res) => {
     try {
       const { query, startDate, endDate, sessionNumber } = req.query;
+      const page = Math.max(1, parseInt(req.query.page as string) || 1);
+      const limit = Math.max(1, parseInt(req.query.limit as string) || 25);
+      const offset = (page - 1) * limit;
+
       let records = await storage.getAllHansardRecords();
       
       if (query && typeof query === 'string') {
@@ -1780,26 +2331,46 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         );
       }
       
-      // Check which records have PDFs attached
-      const { eq, and } = await import("drizzle-orm");
-      const recordsWithPdfStatus = await Promise.all(
-        records.map(async (record) => {
-          const [pdfFile] = await db.select({ id: hansardPdfFiles.id })
-            .from(hansardPdfFiles)
-            .where(and(
-              eq(hansardPdfFiles.hansardRecordId, record.id),
-              eq(hansardPdfFiles.isPrimary, true)
-            ))
-            .limit(1);
-          
-          return {
-            ...fixHansardPdfUrls(record, req),
-            hasPdf: !!pdfFile
-          };
-        })
-      );
+      const totalItems = records.length;
+      const totalPages = Math.ceil(totalItems / limit);
+
+      // Apply pagination limit if specified
+      const paginatedRecords = records.slice(offset, offset + limit);
+
+      const { eq, and, inArray } = await import("drizzle-orm");
       
-      res.json(recordsWithPdfStatus);
+      let recordsWithPdfStatus = [];
+      if (paginatedRecords.length > 0) {
+        const recordIds = paginatedRecords.map(r => r.id);
+        const pdfFiles = await db
+          .select({
+            hansardRecordId: hansardPdfFiles.hansardRecordId,
+            id: hansardPdfFiles.id,
+          })
+          .from(hansardPdfFiles)
+          .where(and(
+            inArray(hansardPdfFiles.hansardRecordId, recordIds),
+            eq(hansardPdfFiles.isPrimary, true)
+          ));
+
+        const recordsWithPdfs = new Set(pdfFiles.map(pdf => pdf.hansardRecordId));
+
+        recordsWithPdfStatus = paginatedRecords.map((record) => ({
+          ...fixHansardPdfUrls(record, req),
+          hasPdf: recordsWithPdfs.has(record.id)
+        }));
+      }
+      
+      res.json({
+        data: recordsWithPdfStatus,
+        pagination: {
+          page,
+          limit,
+          totalItems,
+          totalPages,
+          hasMore: page < totalPages
+        }
+      });
     } catch (error) {
       console.error("Error searching Hansard records:", error);
       res.status(500).json({ error: "Failed to search Hansard records" });
@@ -2261,11 +2832,25 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         }
       }
 
-      const successCount = results.filter(r => r.success).length;
+      const successCount = results.filter(r => r.success && !r.skipped).length;
       console.log(`✅ Upload complete: ${successCount}/${files.length} successful`);
 
+      // Recalculate MP attendance stats after any new hansard was uploaded
+      if (successCount > 0) {
+        try {
+          console.log("🔄 Recalculating MP attendance after hansard upload...");
+          const { aggregateAttendanceForAllMps } = await import('./aggregate-speeches');
+          const attendanceResult = await aggregateAttendanceForAllMps();
+          console.log(`✅ Attendance recalculated: ${attendanceResult.totalMpsUpdated} MPs updated from ${attendanceResult.totalRecordsProcessed} records`);
+        } catch (recalcError) {
+          console.error("Error recalculating MP attendance after upload:", recalcError);
+          // Don't fail the upload response if recalculation fails
+        }
+      }
+
       // Return appropriate status code based on results
-      const statusCode = successCount === 0 ? 400 : successCount === files.length ? 201 : 207;
+      const allSuccessCount = results.filter(r => r.success).length;
+      const statusCode = allSuccessCount === 0 ? 400 : allSuccessCount === files.length ? 201 : 207;
       res.status(statusCode).json({ results });
     } catch (error) {
       console.error("Error processing Hansard PDFs:", error);
@@ -3551,6 +4136,31 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
+  // Trigger download of hansard records from previous parliaments (1st-14th)
+  app.post("/api/hansard-records/download-previous", requireAdmin, mutationRateLimit, auditMiddleware('hansard-download-previous'), async (req, res) => {
+    try {
+      const { maxRecords = 5000 } = req.body;
+
+      // Create a background job
+      const jobId = jobTracker.createJob(maxRecords, 'Initializing previous parliaments download...');
+
+      // Start the background job (don't await it)
+      runPreviousParliamentsDownloadJob(jobId, maxRecords).catch(error => {
+        console.error('[Background Job] Uncaught error:', error);
+      });
+
+      // Return immediately with the job ID
+      res.json({
+        jobId,
+        message: 'Previous parliaments download started in background',
+        statusUrl: `/api/jobs/${jobId}`
+      });
+    } catch (error) {
+      console.error("Error starting previous parliaments download job:", error);
+      res.status(500).json({ error: "Failed to start previous parliaments download job" });
+    }
+  });
+
   // Get job status
   app.get("/api/jobs/:jobId", async (req, res) => {
     try {
@@ -3792,7 +4402,14 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       res.json(analysis);
     } catch (error) {
       console.error("Error in topic extraction:", error);
-      res.status(500).json({ error: "Failed to extract topics", details: String(error) });
+      const message = String(error);
+      if (message.includes("credits exhausted") || message.includes("402")) {
+        return res.status(503).json({
+          error: "AI service temporarily unavailable",
+          details: "The AI provider's API credits have been exhausted. Please try again later or contact the administrator.",
+        });
+      }
+      res.status(500).json({ error: "Failed to extract topics", details: message });
     }
   });
 
@@ -3841,7 +4458,14 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       res.json(analysis);
     } catch (error) {
       console.error("Error in sentiment analysis:", error);
-      res.status(500).json({ error: "Failed to analyze sentiment", details: String(error) });
+      const message = String(error);
+      if (message.includes("credits exhausted") || message.includes("402")) {
+        return res.status(503).json({
+          error: "AI service temporarily unavailable",
+          details: "The AI provider's API credits have been exhausted. Please try again later or contact the administrator.",
+        });
+      }
+      res.status(500).json({ error: "Failed to analyze sentiment", details: message });
     }
   });
 
@@ -3899,7 +4523,14 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       res.json(analysis);
     } catch (error) {
       console.error("Error in speaker analysis:", error);
-      res.status(500).json({ error: "Failed to analyze speakers", details: String(error) });
+      const message = String(error);
+      if (message.includes("credits exhausted") || message.includes("402")) {
+        return res.status(503).json({
+          error: "AI service temporarily unavailable",
+          details: "The AI provider's API credits have been exhausted. Please try again later or contact the administrator.",
+        });
+      }
+      res.status(500).json({ error: "Failed to analyze speakers", details: message });
     }
   });
 
@@ -3956,6 +4587,58 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
+  app.post("/api/analyze/comprehensive/:hansardId", mutationRateLimit, async (req, res) => {
+    try {
+      const { hansardId } = req.params;
+      const { language = "en" } = req.body;
+
+      const hansard = await storage.getHansardById(hansardId);
+
+      if (!hansard) {
+        return res.status(404).json({ error: "Hansard record not found" });
+      }
+
+      // Check if analysis already exists for this language
+      const existing = await storage.getComprehensiveAnalysis(hansardId, language);
+      if (existing) {
+        return res.json(existing);
+      }
+
+      // Generate comprehensive analysis using DeepSeek
+      const deepseek = await import("./services/deepseek.js");
+
+      if (!deepseek.isDeepSeekConfigured()) {
+        throw new Error("No AI provider configured. Set GEMINI_API_KEY or other AI keys in .env file");
+      }
+
+      // Extract session date from hansard record
+      const sessionDate = hansard.sessionDate
+        ? new Date(hansard.sessionDate).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })
+        : hansard.sessionNumber;
+
+      console.log(`[AI Comprehensive] Generating for ${hansardId} (${language})`);
+
+      const result = await deepseek.generateComprehensiveAnalysis(
+        hansard.transcript,
+        sessionDate,
+        language as "en" | "ms"
+      );
+
+      // Store in database
+      const analysis = await storage.saveComprehensiveAnalysis({
+        hansardRecordId: hansardId,
+        language,
+        introduction: result.introduction,
+        sections: result.sections,
+      });
+
+      res.json(analysis);
+    } catch (error) {
+      console.error("Error in comprehensive analysis:", error);
+      res.status(500).json({ error: "Failed to generate comprehensive analysis", details: String(error) });
+    }
+  });
+
   app.post("/api/hansard/:hansardId/qa", mutationRateLimit, async (req, res) => {
     try {
       const { hansardId } = req.params;
@@ -4008,6 +4691,114 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     } catch (error) {
       console.error("Error in Q&A:", error);
       res.status(500).json({ error: "Failed to answer question", details: String(error) });
+    }
+  });
+
+  // Analyze Q&A (Soalan/Pertanyaan) sections from Hansard
+  app.post("/api/hansard/:hansardId/qa-analysis", mutationRateLimit, async (req, res) => {
+    try {
+      const { hansardId } = req.params;
+      const { force, sectionType = "menteri" } = req.body || {};
+
+      const hansard = await storage.getHansardById(hansardId);
+      if (!hansard) {
+        return res.status(404).json({ error: "Hansard record not found" });
+      }
+
+      // Check database cache first (unless force re-analyze)
+      if (!force) {
+        const cached = await storage.getQaAnalysisCache(hansardId, sectionType);
+        if (cached) {
+          console.log(`[AI Q&A Analysis] Cache hit for ${hansardId} (${sectionType})`);
+          return res.json({
+            sessionInfo: cached.sessionInfo,
+            questions: cached.questions,
+            totalQuestions: cached.totalQuestions,
+            cached: true,
+            analyzedAt: cached.analyzedAt,
+          });
+        }
+      }
+
+      // Extract full text from the stored PDF binary (transcript field is truncated to 10k chars)
+      const { eq, and } = await import("drizzle-orm");
+      const [pdfFile] = await db.select().from(hansardPdfFiles)
+        .where(and(
+          eq(hansardPdfFiles.hansardRecordId, hansardId),
+          eq(hansardPdfFiles.isPrimary, true)
+        ))
+        .limit(1);
+
+      if (!pdfFile?.pdfData) {
+        return res.status(400).json({ error: "No PDF file available for this record" });
+      }
+
+      const { PDFParse } = await import('pdf-parse');
+      const pdfParser = new PDFParse({ data: pdfFile.pdfData });
+      const pdfResult = await pdfParser.getText();
+      const fullText = pdfResult.text;
+
+      console.log(`[AI Q&A Analysis] Extracted ${fullText.length} chars from PDF for ${hansardId} (${sectionType})${force ? " (forced)" : ""}`);
+
+      const deepseek = await import("./services/deepseek.js");
+
+      const result = await deepseek.analyzeQASections(
+        fullText,
+        hansard.sessionNumber || hansardId,
+        sectionType as "menteri" | "lisan"
+      );
+
+      // Delete existing cache entry if re-analyzing
+      if (force) {
+        await storage.deleteQaAnalysisCache(hansardId, sectionType);
+      }
+
+      // Save to database
+      const saved = await storage.saveQaAnalysisCache({
+        hansardRecordId: hansardId,
+        sectionType,
+        sessionInfo: result.sessionInfo,
+        questions: result.questions,
+        totalQuestions: result.totalQuestions,
+      });
+
+      res.json({
+        ...result,
+        cached: false,
+        analyzedAt: saved.analyzedAt,
+      });
+    } catch (error) {
+      console.error("Error in Q&A analysis:", error);
+      const message = String(error);
+      if (message.includes("credits exhausted") || message.includes("402")) {
+        return res.status(503).json({
+          error: "AI service temporarily unavailable",
+          details: "The AI provider's API credits have been exhausted. Please try again later or contact the administrator.",
+        });
+      }
+      res.status(500).json({ error: "Failed to analyze Q&A sections", details: message });
+    }
+  });
+
+  // Get cached Q&A analysis without triggering new analysis
+  app.get("/api/hansard/:hansardId/qa-analysis", async (req, res) => {
+    try {
+      const { hansardId } = req.params;
+      const sectionType = (req.query.sectionType as string) || "menteri";
+      const cached = await storage.getQaAnalysisCache(hansardId, sectionType);
+      if (cached) {
+        return res.json({
+          sessionInfo: cached.sessionInfo,
+          questions: cached.questions,
+          totalQuestions: cached.totalQuestions,
+          cached: true,
+          analyzedAt: cached.analyzedAt,
+        });
+      }
+      return res.json(null);
+    } catch (error) {
+      console.error("Error fetching Q&A analysis cache:", error);
+      res.status(500).json({ error: "Failed to fetch Q&A analysis" });
     }
   });
 
@@ -4096,13 +4887,15 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   app.get("/api/analyze/:hansardId", async (req, res) => {
     try {
       const { hansardId } = req.params;
-      
-      const [topics, sentiment, speakers, summaryEn, summaryMs] = await Promise.all([
+
+      const [topics, sentiment, speakers, summaryEn, summaryMs, comprehensiveEn, comprehensiveMs] = await Promise.all([
         storage.getTopicAnalysis(hansardId).catch(() => null),
         storage.getSentimentAnalysis(hansardId).catch(() => null),
         storage.getSpeakerAnalysis(hansardId).catch(() => null),
         storage.getDetailedSummary(hansardId, "en").catch(() => null),
         storage.getDetailedSummary(hansardId, "ms").catch(() => null),
+        storage.getComprehensiveAnalysis(hansardId, "en").catch(() => null),
+        storage.getComprehensiveAnalysis(hansardId, "ms").catch(() => null),
       ]);
 
       res.json({
@@ -4112,6 +4905,10 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         detailedSummary: {
           en: summaryEn,
           ms: summaryMs,
+        },
+        comprehensiveAnalysis: {
+          en: comprehensiveEn,
+          ms: comprehensiveMs,
         },
       });
     } catch (error) {
@@ -4204,7 +5001,11 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         { url: '/activity', priority: '0.8', changefreq: 'weekly' },
         { url: '/hansard', priority: '0.8', changefreq: 'weekly' },
         { url: '/attendance', priority: '0.8', changefreq: 'weekly' },
-        { url: '/allowances', priority: '0.7', changefreq: 'monthly' }
+        { url: '/allowances', priority: '0.7', changefreq: 'monthly' },
+        // SEO: constituency analysis has strong topical relevance for searches like
+        // "constituency performance Malaysia" and "MP constituency participation".
+        // Priority 0.8 reflects high-quality public preview content on this page.
+        { url: '/constituency-analysis', priority: '0.8', changefreq: 'weekly' }
       ];
       
       for (const page of staticPages) {
@@ -4240,11 +5041,12 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   app.post("/api/admin/trigger-hansard-check", requireAdmin, async (req, res) => {
     try {
       console.log("Manual Hansard sync triggered via API...");
-      const { addSyncLog } = await import('./hansard-cron');
+      const { addSyncLog, persistSyncLogToDb } = await import('./hansard-cron');
       const result = await runHansardSync({ triggeredBy: 'manual' });
 
-      // Log the result
+      // Log the result (both in-memory and database)
       addSyncLog(result);
+      await persistSyncLogToDb(result);
 
       res.json({
         message: "Hansard sync completed",
@@ -4264,9 +5066,9 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     } catch (error: any) {
       console.error("Error triggering Hansard sync:", error);
       // Log failed sync attempt
-      const { addSyncLog } = await import('./hansard-cron');
-      addSyncLog({
-        triggeredBy: 'manual',
+      const { addSyncLog, persistSyncLogToDb } = await import('./hansard-cron');
+      const failedResult = {
+        triggeredBy: 'manual' as 'manual',
         startTime: new Date(),
         endTime: new Date(),
         durationMs: 0,
@@ -4275,7 +5077,9 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         recordsInserted: 0,
         recordsSkipped: 0,
         errors: [{ sessionNumber: 'N/A', error: error.message || String(error) }]
-      });
+      };
+      addSyncLog(failedResult);
+      await persistSyncLogToDb(failedResult);
       res.status(500).json({ error: "Failed to trigger Hansard sync", details: String(error) });
     }
   });
@@ -4283,14 +5087,38 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   // Admin endpoint to get Hansard sync logs
   app.get("/api/admin/hansard-sync-logs", requireAdmin, async (req, res) => {
     try {
-      const { getSyncLogs, getLatestSyncLog } = await import('./hansard-cron');
-      const logs = getSyncLogs();
-      const latest = getLatestSyncLog();
+      const { getSyncLogs, getLatestSyncLog, getLastSyncFromDb } = await import('./hansard-cron');
+      const inMemoryLogs = getSyncLogs();
+      const latestInMemory = getLatestSyncLog();
+      const lastFromDb = await getLastSyncFromDb();
+
+      // Also fetch recent logs from database (last 50)
+      let dbLogs = [];
+      try {
+        const { desc } = await import('drizzle-orm');
+        const { hansardSyncLogs } = await import('@shared/schema');
+        if (db) {
+          dbLogs = await db
+            .select()
+            .from(hansardSyncLogs)
+            .orderBy(desc(hansardSyncLogs.startedAt))
+            .limit(50);
+        }
+      } catch (dbError) {
+        console.error("Error fetching logs from database:", dbError);
+      }
 
       res.json({
-        totalLogs: logs.length,
-        latestSync: latest,
-        logs: logs
+        inMemory: {
+          totalLogs: inMemoryLogs.length,
+          latestSync: latestInMemory,
+          logs: inMemoryLogs
+        },
+        database: {
+          totalLogs: dbLogs.length,
+          latestSync: lastFromDb,
+          logs: dbLogs
+        }
       });
     } catch (error) {
       console.error("Error fetching sync logs:", error);
@@ -4325,6 +5153,193 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     } catch (error) {
       console.error("Error refreshing MP data:", error);
       res.status(500).json({ error: "Failed to refresh MP data", details: String(error) });
+    }
+  });
+
+  // Admin endpoint to calculate total parliament costs
+  app.get("/api/admin/calculate-parliament-costs", requireAdmin, async (req, res) => {
+    try {
+      console.log("💰 Calculating total parliament costs...");
+
+      // Get all MPs
+      const allMps = await db.select().from(mps);
+
+      // Constants for allowance calculations (same as /api/stats)
+      const DEWAN_RAKYAT_SALARY = 25700;
+      const PARLIAMENT_SITTING_PER_DAY = 400;
+      const GOVERNMENT_MEETING_PER_DAY = 300;
+      const MONTHLY_FIXED_ALLOWANCES =
+        2500 + // Entertainment
+        1500 + // Special Non-Admin MP
+        1500 + // Fixed Travel
+        1500 + // Fuel
+        300 +  // Toll
+        1500 + // Driver
+        900;   // Phone Bill
+
+      // Ministerial salaries (after 20% voluntary paycut)
+      const DEPUTY_PRIME_MINISTER_SALARY = 18168.15;
+      const MINISTER_SALARY = 14907.20;
+      const DEPUTY_MINISTER_SALARY = 10847.65;
+      const PARLIAMENTARY_SECRETARY_SALARY = 7187.40;
+
+      let totalCosts = 0;
+      let totalBaseSalaries = 0;
+      let totalMinisterialSalaries = 0;
+      let totalFixedAllowances = 0;
+      let totalParliamentSittingAllowances = 0;
+      let totalGovernmentMeetingAllowances = 0;
+      let totalMpsCount = 0;
+      let totalMinisters = 0;
+      let totalParliamentDays = 0;
+
+      const now = new Date();
+
+      for (const mp of allMps) {
+        const swornInDate = new Date(mp.swornInDate);
+
+        // For deceased/resigned MPs, calculate only up to their termEndDate
+        // For active MPs, calculate up to now
+        const endDate = mp.termEndDate ? new Date(mp.termEndDate) : now;
+
+        const monthsSinceSwornIn = Math.max(0,
+          (endDate.getFullYear() - swornInDate.getFullYear()) * 12 +
+          (endDate.getMonth() - swornInDate.getMonth())
+        );
+
+        // Base salary
+        const baseSalaryCost = DEWAN_RAKYAT_SALARY * monthsSinceSwornIn;
+        totalBaseSalaries += baseSalaryCost;
+
+        // Ministerial salary based on role (consistent with /api/stats)
+        let ministerialSalary = 0;
+        if (mp.role) {
+          const roleLower = mp.role.toLowerCase();
+          if (roleLower.includes("prime minister") && !roleLower.includes("deputy")) {
+            ministerialSalary = 0; // PM takes no ministerial salary
+          } else if (roleLower.includes("deputy prime minister") || roleLower.includes("timbalan perdana menteri")) {
+            ministerialSalary = DEPUTY_PRIME_MINISTER_SALARY;
+          } else if (roleLower.includes("deputy minister") || roleLower.includes("timbalan menteri")) {
+            ministerialSalary = DEPUTY_MINISTER_SALARY;
+          } else if (roleLower.includes("minister") || roleLower.includes("menteri")) {
+            ministerialSalary = MINISTER_SALARY;
+          } else if (roleLower.includes("parliamentary secretary") || roleLower.includes("setiausaha parlimen")) {
+            ministerialSalary = PARLIAMENTARY_SECRETARY_SALARY;
+          }
+        }
+        const ministerialSalaryCost = ministerialSalary * monthsSinceSwornIn;
+        totalMinisterialSalaries += ministerialSalaryCost;
+        if (mp.isMinister) totalMinisters++;
+
+        // Fixed allowances
+        const fixedAllowancesCost = MONTHLY_FIXED_ALLOWANCES * monthsSinceSwornIn;
+        totalFixedAllowances += fixedAllowancesCost;
+
+        // Parliament sitting allowances (cumulative)
+        const parliamentSittingCost = mp.daysAttended * PARLIAMENT_SITTING_PER_DAY;
+        totalParliamentSittingAllowances += parliamentSittingCost;
+
+        // Government meeting allowances (cumulative)
+        const governmentMeetingCost = mp.governmentMeetingDays * GOVERNMENT_MEETING_PER_DAY;
+        totalGovernmentMeetingAllowances += governmentMeetingCost;
+
+        // Total for this MP
+        const mpTotal = baseSalaryCost + ministerialSalaryCost + fixedAllowancesCost +
+                       parliamentSittingCost + governmentMeetingCost;
+        totalCosts += mpTotal;
+        totalMpsCount++;
+
+        // Track total parliament days (should be same for all MPs)
+        if (mp.totalParliamentDays > totalParliamentDays) {
+          totalParliamentDays = mp.totalParliamentDays;
+        }
+      }
+
+      res.json({
+        success: true,
+        data: {
+          totalCosts: Math.round(totalCosts),
+          breakdown: {
+            totalBaseSalaries: Math.round(totalBaseSalaries),
+            totalMinisterialSalaries: Math.round(totalMinisterialSalaries),
+            totalFixedAllowances: Math.round(totalFixedAllowances),
+            totalParliamentSittingAllowances: Math.round(totalParliamentSittingAllowances),
+            totalGovernmentMeetingAllowances: Math.round(totalGovernmentMeetingAllowances),
+          },
+          statistics: {
+            totalMps: totalMpsCount,
+            totalMinisters,
+            averageCostPerMp: totalMpsCount > 0 ? Math.round(totalCosts / totalMpsCount) : 0,
+            totalParliamentDays,
+          }
+        }
+      });
+    } catch (error) {
+      console.error("Error calculating parliament costs:", error);
+      res.status(500).json({ error: "Failed to calculate parliament costs", details: String(error) });
+    }
+  });
+
+  // Admin endpoint to import GE15 election results
+  app.post("/api/admin/import-election-results", requireAdmin, async (req, res) => {
+    try {
+      console.log("📊 Importing GE15 election results...");
+
+      const { exec } = await import('child_process');
+      const { promisify } = await import('util');
+      const { existsSync } = await import('fs');
+      const { join } = await import('path');
+      const execPromise = promisify(exec);
+
+      // Check which file exists to determine the correct command
+      const compiledScript = join(process.cwd(), 'dist/scripts/import-election-results.js');
+      const sourceScript = join(process.cwd(), 'scripts/import-election-results.ts');
+
+      const useCompiled = existsSync(compiledScript);
+      const command = useCompiled
+        ? 'node dist/scripts/import-election-results.js'
+        : existsSync(sourceScript)
+          ? 'npx tsx scripts/import-election-results.ts'
+          : null;
+
+      if (!command) {
+        throw new Error('Import script not found in either dist/scripts/ or scripts/ directory');
+      }
+
+      console.log(`Running: ${command} (${useCompiled ? 'compiled' : 'source'})`);
+
+      // Run the import script
+      const { stdout, stderr } = await execPromise(command, {
+        cwd: process.cwd(),
+        maxBuffer: 10 * 1024 * 1024, // 10MB buffer
+      });
+
+      console.log("Import script output:", stdout);
+      if (stderr) console.error("Import script stderr:", stderr);
+
+      // Parse the output to extract statistics
+      const updatedMatch = stdout.match(/Updated:\s*(\d+)/);
+      const notFoundMatch = stdout.match(/Not found:\s*(\d+)/);
+
+      const updatedCount = updatedMatch ? parseInt(updatedMatch[1], 10) : 0;
+      const notFoundCount = notFoundMatch ? parseInt(notFoundMatch[1], 10) : 0;
+
+      res.json({
+        success: true,
+        message: "Election results imported successfully",
+        results: {
+          updatedMps: updatedCount,
+          notFound: notFoundCount,
+          totalProcessed: updatedCount + notFoundCount,
+        },
+      });
+    } catch (error: any) {
+      console.error("Error importing election results:", error);
+      res.status(500).json({
+        error: "Failed to import election results",
+        details: error.message || String(error),
+        stderr: error.stderr,
+      });
     }
   });
 
@@ -4941,6 +5956,92 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
+  // Debug endpoint: inspect raw PDF text and parser results for a specific Hansard session
+  app.get("/api/admin/debug-attendance/:sessionNumber", requireAdmin, async (req, res) => {
+    try {
+      const { sessionNumber } = req.params;
+
+      // Find the Hansard record
+      const [record] = await db.select().from(hansardRecords)
+        .where(eq(hansardRecords.sessionNumber, sessionNumber))
+        .limit(1);
+
+      if (!record) {
+        return res.status(404).json({ error: `No record found for session ${sessionNumber}` });
+      }
+
+      // Get the PDF
+      const [pdfFile] = await db.select().from(hansardPdfFiles)
+        .where(eq(hansardPdfFiles.hansardRecordId, record.id))
+        .limit(1);
+
+      if (!pdfFile?.pdfData) {
+        return res.status(404).json({ error: "No PDF file available for this session" });
+      }
+
+      // Extract raw text
+      const { PDFParse } = await import('pdf-parse');
+      const parser = new PDFParse({ data: pdfFile.pdfData });
+      const result = await parser.getText();
+      const fullText = result.text;
+
+      // Find the "Ahli-Ahli Yang Hadir" section boundaries
+      const attendedStart = fullText.indexOf('Ahli-Ahli Yang Hadir:');
+      const senatorStart = fullText.indexOf('Senator Yang Turut Hadir:', attendedStart !== -1 ? attendedStart : 0);
+      const absentStart = fullText.indexOf('Ahli-Ahli Yang Tidak Hadir:', attendedStart !== -1 ? attendedStart : 0);
+
+      let attendedEnd = Number.MAX_SAFE_INTEGER;
+      if (senatorStart !== -1) attendedEnd = Math.min(attendedEnd, senatorStart);
+      if (absentStart !== -1) attendedEnd = Math.min(attendedEnd, absentStart);
+
+      const rawAttendedSection = attendedStart !== -1
+        ? fullText.substring(attendedStart, attendedEnd === Number.MAX_SAFE_INTEGER ? undefined : attendedEnd)
+        : '';
+
+      // Count numbered entries in the raw text
+      const numberedEntries = rawAttendedSection.match(/\d+\.\s+/g);
+
+      // Re-parse using the actual parser
+      const allMps = await db.select().from(mps);
+      const pdfParser = new HansardPdfParser(allMps);
+      const parsed = await pdfParser.parseHansardPdf(pdfFile.pdfData, pdfFile.originalFilename);
+
+      // DB stored values
+      const storedAttendedMpIds = (record.attendedMpIds || []) as string[];
+      const storedAbsentMpIds = (record.absentMpIds || []) as string[];
+
+      res.json({
+        sessionNumber: record.sessionNumber,
+        sessionDate: record.sessionDate,
+        // Raw text analysis
+        rawTextLength: fullText.length,
+        attendedSectionFound: attendedStart !== -1,
+        attendedSectionLength: rawAttendedSection.length,
+        numberedEntriesInRawText: numberedEntries?.length || 0,
+        // First 500 chars of attended section (for debugging)
+        attendedSectionPreview: rawAttendedSection.substring(0, 500),
+        // Last 500 chars of attended section
+        attendedSectionTail: rawAttendedSection.substring(Math.max(0, rawAttendedSection.length - 500)),
+        // Parser results
+        parsedAttendedConstituencies: parsed.attendance.attendedConstituencies,
+        parsedAttendedCount: parsed.attendance.attendedConstituencies.length,
+        parsedAbsentConstituencies: parsed.attendance.absentConstituencies,
+        parsedAbsentCount: parsed.attendance.absentConstituencies.length,
+        parsedAttendedMpIds: parsed.attendance.attendedMpIds.length,
+        parsedAbsentMpIds: parsed.attendance.absentMpIds.length,
+        speakerStatsConstituenciesAttended: parsed.speakerStats.constituenciesAttended,
+        // DB stored values
+        dbConstituenciesPresent: record.constituenciesPresent,
+        dbConstituenciesAbsent: record.constituenciesAbsent,
+        dbAttendedMpIdsCount: storedAttendedMpIds.length,
+        dbAbsentMpIdsCount: storedAbsentMpIds.length,
+      });
+    } catch (error) {
+      console.error("Error in debug-attendance:", error);
+      res.status(500).json({ error: String(error) });
+    }
+  });
+
   // Constituency Attendance Audit - Get detailed attendance for a specific constituency
   app.get("/api/admin/constituency-attendance-audit", requireAdmin, async (req, res) => {
     try {
@@ -5098,8 +6199,16 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   });
 
   // Analytics API routes (protected - admin only)
-  app.get("/api/analytics/summary", async (_req, res) => {
+  app.get("/api/analytics/summary", requireAdmin, async (_req, res) => {
     try {
+      const now = Date.now();
+
+      // Check cache (1 hour TTL)
+      if (analyticsSummaryCache && now < analyticsSummaryCacheTime + ANALYTICS_CACHE_TTL) {
+        res.set('X-Cache', 'HIT');
+        return res.json(analyticsSummaryCache);
+      }
+
       const { visitorAnalytics } = await import("@shared/schema");
       const { sql, count, countDistinct, desc } = await import("drizzle-orm");
 
@@ -5119,7 +6228,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         .orderBy(desc(count()))
         .limit(10);
 
-      // Get top pages
+      // Get top pages — fetch 50 so the frontend has enough after filtering assets
       const topPages = await db
         .select({
           path: visitorAnalytics.path,
@@ -5128,21 +6237,28 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
         .from(visitorAnalytics)
         .groupBy(visitorAnalytics.path)
         .orderBy(desc(count()))
-        .limit(10);
+        .limit(50);
 
-      res.json({
+      const responseData = {
         totalVisits: totalVisits.value,
         uniqueVisitors: uniqueIPs.value,
         topCountries,
         topPages,
-      });
+      };
+
+      // Cache the result
+      analyticsSummaryCache = responseData;
+      analyticsSummaryCacheTime = now;
+
+      res.set('X-Cache', 'MISS');
+      res.json(responseData);
     } catch (error) {
       console.error("Analytics summary error:", error);
       res.status(500).json({ error: "Failed to fetch analytics summary" });
     }
   });
 
-  app.get("/api/analytics/recent", async (req, res) => {
+  app.get("/api/analytics/recent", requireAdmin, async (req, res) => {
     try {
       const { visitorAnalytics } = await import("@shared/schema");
       const { desc } = await import("drizzle-orm");
@@ -5162,7 +6278,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
-  app.get("/api/analytics/countries", async (_req, res) => {
+  app.get("/api/analytics/countries", requireAdmin, async (_req, res) => {
     try {
       const { visitorAnalytics } = await import("@shared/schema");
       const { sql, count, desc } = await import("drizzle-orm");
@@ -5185,7 +6301,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
-  app.get("/api/analytics/timeline", async (req, res) => {
+  app.get("/api/analytics/timeline", requireAdmin, async (req, res) => {
     try {
       const { visitorAnalytics } = await import("@shared/schema");
       const { sql, count } = await import("drizzle-orm");
@@ -5218,7 +6334,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   });
 
   // Public endpoint for page-specific visitor count
-  app.get("/api/analytics/page-views", async (req, res) => {
+  app.get("/api/analytics/page-views", requireAdmin, async (req, res) => {
     try {
       const { visitorAnalytics } = await import("@shared/schema");
       const { eq, count } = await import("drizzle-orm");
@@ -5240,6 +6356,207 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     } catch (error) {
       console.error("Page views error:", error);
       res.status(500).json({ error: "Failed to fetch page views" });
+    }
+  });
+
+  // Admin Visitor Data - comprehensive visitor information (protected)
+  app.get("/api/admin/visitor-data", requireAdmin, async (req, res) => {
+    try {
+      const { visitorAnalytics } = await import("@shared/schema");
+      const { sql, count, countDistinct, desc, eq, and, gte, lte, like, ilike } = await import("drizzle-orm");
+
+      const page = Math.max(1, parseInt(req.query.page as string) || 1);
+      const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string) || 50));
+      const offset = (page - 1) * limit;
+      const search = (req.query.search as string) || "";
+      const countryFilter = (req.query.country as string) || "";
+      const dateFrom = (req.query.dateFrom as string) || "";
+      const dateTo = (req.query.dateTo as string) || "";
+
+      // Build filter conditions
+      const conditions = [];
+      if (search) {
+        conditions.push(sql`(${visitorAnalytics.path} ILIKE ${'%' + search + '%'} OR ${visitorAnalytics.ip} ILIKE ${'%' + search + '%'} OR ${visitorAnalytics.city} ILIKE ${'%' + search + '%'} OR ${visitorAnalytics.referrer} ILIKE ${'%' + search + '%'})`);
+      }
+      if (countryFilter) {
+        conditions.push(eq(visitorAnalytics.country, countryFilter));
+      }
+      if (dateFrom) {
+        conditions.push(gte(visitorAnalytics.timestamp, new Date(dateFrom)));
+      }
+      if (dateTo) {
+        const endDate = new Date(dateTo);
+        endDate.setHours(23, 59, 59, 999);
+        conditions.push(lte(visitorAnalytics.timestamp, endDate));
+      }
+
+      const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+      // Get total count for pagination
+      const [totalResult] = await db
+        .select({ value: count() })
+        .from(visitorAnalytics)
+        .where(whereClause);
+
+      // Get paginated visitor data
+      const visitors = await db
+        .select()
+        .from(visitorAnalytics)
+        .where(whereClause)
+        .orderBy(desc(visitorAnalytics.timestamp))
+        .limit(limit)
+        .offset(offset);
+
+      // Get summary statistics
+      const now = new Date();
+      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const weekStart = new Date(todayStart);
+      weekStart.setDate(weekStart.getDate() - 7);
+      const monthStart = new Date(todayStart);
+      monthStart.setDate(monthStart.getDate() - 30);
+
+      const [totalAll] = await db.select({ value: count() }).from(visitorAnalytics);
+      const [uniqueAll] = await db.select({ value: countDistinct(visitorAnalytics.ip) }).from(visitorAnalytics);
+      const [todayCount] = await db.select({ value: count() }).from(visitorAnalytics).where(gte(visitorAnalytics.timestamp, todayStart));
+      const [weekCount] = await db.select({ value: count() }).from(visitorAnalytics).where(gte(visitorAnalytics.timestamp, weekStart));
+      const [monthCount] = await db.select({ value: count() }).from(visitorAnalytics).where(gte(visitorAnalytics.timestamp, monthStart));
+
+      // Get top referrers
+      const topReferrers = await db
+        .select({
+          referrer: visitorAnalytics.referrer,
+          count: count(),
+        })
+        .from(visitorAnalytics)
+        .where(sql`${visitorAnalytics.referrer} IS NOT NULL AND ${visitorAnalytics.referrer} != ''`)
+        .groupBy(visitorAnalytics.referrer)
+        .orderBy(desc(count()))
+        .limit(10);
+
+      // Get country list for filter dropdown
+      const countries = await db
+        .select({
+          country: visitorAnalytics.country,
+          count: count(),
+        })
+        .from(visitorAnalytics)
+        .where(sql`${visitorAnalytics.country} IS NOT NULL`)
+        .groupBy(visitorAnalytics.country)
+        .orderBy(desc(count()));
+
+      // Get top cities
+      const topCities = await db
+        .select({
+          city: visitorAnalytics.city,
+          country: visitorAnalytics.country,
+          count: count(),
+        })
+        .from(visitorAnalytics)
+        .where(sql`${visitorAnalytics.city} IS NOT NULL`)
+        .groupBy(visitorAnalytics.city, visitorAnalytics.country)
+        .orderBy(desc(count()))
+        .limit(15);
+
+      // Get hourly distribution (last 24h)
+      const hourlyDistribution = await db
+        .select({
+          hour: sql<string>`EXTRACT(HOUR FROM ${visitorAnalytics.timestamp})`,
+          count: count(),
+        })
+        .from(visitorAnalytics)
+        .where(gte(visitorAnalytics.timestamp, new Date(now.getTime() - 24 * 60 * 60 * 1000)))
+        .groupBy(sql`EXTRACT(HOUR FROM ${visitorAnalytics.timestamp})`)
+        .orderBy(sql`EXTRACT(HOUR FROM ${visitorAnalytics.timestamp})`);
+
+      res.json({
+        visitors,
+        pagination: {
+          page,
+          limit,
+          total: totalResult.value,
+          totalPages: Math.ceil(totalResult.value / limit),
+        },
+        summary: {
+          totalVisits: totalAll.value,
+          uniqueVisitors: uniqueAll.value,
+          todayVisits: todayCount.value,
+          weekVisits: weekCount.value,
+          monthVisits: monthCount.value,
+        },
+        topReferrers,
+        countries,
+        topCities,
+        hourlyDistribution,
+      });
+    } catch (error) {
+      console.error("Admin visitor data error:", error);
+      res.status(500).json({ error: "Failed to fetch visitor data" });
+    }
+  });
+
+  // Admin Visitor Data - Export CSV (protected)
+  app.get("/api/admin/visitor-data/export", requireAdmin, async (req, res) => {
+    try {
+      const { visitorAnalytics } = await import("@shared/schema");
+      const { sql, desc, eq, and, gte, lte } = await import("drizzle-orm");
+
+      const search = (req.query.search as string) || "";
+      const countryFilter = (req.query.country as string) || "";
+      const dateFrom = (req.query.dateFrom as string) || "";
+      const dateTo = (req.query.dateTo as string) || "";
+
+      const conditions = [];
+      if (search) {
+        conditions.push(sql`(${visitorAnalytics.path} ILIKE ${'%' + search + '%'} OR ${visitorAnalytics.ip} ILIKE ${'%' + search + '%'} OR ${visitorAnalytics.city} ILIKE ${'%' + search + '%'})`);
+      }
+      if (countryFilter) {
+        conditions.push(eq(visitorAnalytics.country, countryFilter));
+      }
+      if (dateFrom) {
+        conditions.push(gte(visitorAnalytics.timestamp, new Date(dateFrom)));
+      }
+      if (dateTo) {
+        const endDate = new Date(dateTo);
+        endDate.setHours(23, 59, 59, 999);
+        conditions.push(lte(visitorAnalytics.timestamp, endDate));
+      }
+
+      const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+      const visitors = await db
+        .select()
+        .from(visitorAnalytics)
+        .where(whereClause)
+        .orderBy(desc(visitorAnalytics.timestamp))
+        .limit(10000);
+
+      // Generate CSV
+      const csvHeader = "Timestamp,Path,IP,Country,City,Region,Timezone,User Agent,Referrer\n";
+      const csvRows = visitors.map(v => {
+        const escapeCsv = (val: string | null) => {
+          if (!val) return "";
+          const escaped = val.replace(/"/g, '""');
+          return escaped.includes(",") || escaped.includes('"') || escaped.includes("\n") ? `"${escaped}"` : escaped;
+        };
+        return [
+          v.timestamp ? new Date(v.timestamp).toISOString() : "",
+          escapeCsv(v.path),
+          escapeCsv(v.ip),
+          escapeCsv(v.country),
+          escapeCsv(v.city),
+          escapeCsv(v.region),
+          escapeCsv(v.timezone),
+          escapeCsv(v.userAgent),
+          escapeCsv(v.referrer),
+        ].join(",");
+      }).join("\n");
+
+      res.setHeader("Content-Type", "text/csv");
+      res.setHeader("Content-Disposition", `attachment; filename=visitor-data-${new Date().toISOString().split('T')[0]}.csv`);
+      res.send(csvHeader + csvRows);
+    } catch (error) {
+      console.error("Visitor data export error:", error);
+      res.status(500).json({ error: "Failed to export visitor data" });
     }
   });
 
@@ -6090,7 +7407,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       if (!isAIConfigured()) {
         return res.status(400).json({
           error: "AI service not configured",
-          message: "Set OPENROUTER_API_KEY environment variable to enable AI analysis"
+          message: "Set at least one AI provider key (GEMINI_API_KEY, OPENROUTER_API_KEY, GROQ_API_KEY, TOGETHER_API_KEY, or CLOUDFLARE_API_KEY) to enable AI analysis"
         });
       }
 
@@ -6355,10 +7672,15 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
   // Admin endpoint to update MP status (deceased/resigned)
   app.post("/api/admin/update-mp-status", requireAdmin, async (req, res) => {
     try {
-      const { mpId, termEndDate, byElectionDate, byElectionNotes } = req.body;
+      const { mpId, termEndDate, statusReason = "Deceased", byElectionDate, byElectionNotes } = req.body;
 
       if (!mpId || !termEndDate) {
         return res.status(400).json({ error: "mpId and termEndDate are required" });
+      }
+
+      // Validate statusReason
+      if (!["Deceased", "Resigned"].includes(statusReason)) {
+        return res.status(400).json({ error: "statusReason must be either 'Deceased' or 'Resigned'" });
       }
 
       // Validate date format
@@ -6379,7 +7701,7 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       // Update MP record
       const updateData: any = {
         termEndDate: endDate,
-        role: "Former Member of Parliament (Deceased)",
+        role: `Former Member of Parliament (${statusReason})`,
       };
 
       // Add optional fields if provided
@@ -6401,11 +7723,11 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       console.log(`✅ MP status updated successfully: ${mp.name}`);
 
       // Log the action
-      await logAudit(
-        getCurrentUsername(req),
+      logAudit(
+        req,
         'UPDATE_MP_STATUS',
         `Updated MP status for ${mp.name} (${mp.constituency})`,
-        { mpId, termEndDate, byElectionDate, byElectionNotes }
+        mpId
       );
 
       res.json({
@@ -6423,6 +7745,223 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     } catch (error) {
       console.error("Error updating MP status:", error);
       res.status(500).json({ error: "Failed to update MP status", details: String(error) });
+    }
+  });
+
+  // Admin endpoint to create a new MP (for replacements after by-elections)
+  app.post("/api/admin/create-mp", requireAdmin, async (req, res) => {
+    try {
+      const {
+        name,
+        party,
+        parliamentCode,
+        constituency,
+        state,
+        gender,
+        title,
+        role,
+        swornInDate,
+        photoUrl,
+        email,
+        telephone,
+        mobileNumber,
+        facebookUrl,
+        instagramUrl,
+        twitterUrl,
+        replacesFormerMpId,
+      } = req.body;
+
+      // Validate required fields
+      if (!name || !party || !parliamentCode || !constituency || !state || !gender || !swornInDate) {
+        return res.status(400).json({
+          error: "Missing required fields",
+          required: ["name", "party", "parliamentCode", "constituency", "state", "gender", "swornInDate"]
+        });
+      }
+
+      // Validate date format
+      const swornIn = new Date(swornInDate);
+      if (isNaN(swornIn.getTime())) {
+        return res.status(400).json({ error: "Invalid swornInDate format" });
+      }
+
+      // Check if parliament code is already in use by an active MP
+      // Query ALL MPs for this code (not just limit(1)) to catch cases where
+      // there is already an inactive original + an active replacement
+      const existingMpsForCode = await db.select()
+        .from(mps)
+        .where(eq(mps.parliamentCode, parliamentCode));
+
+      const now = new Date();
+      const existingActiveMp = existingMpsForCode.find(
+        mp => !mp.termEndDate || new Date(mp.termEndDate) > now
+      );
+
+      if (existingActiveMp) {
+        return res.status(400).json({
+          error: `Parliament code ${parliamentCode} is already assigned to active MP: ${existingActiveMp.name}`,
+          existingMp: {
+            id: existingActiveMp.id,
+            name: existingActiveMp.name,
+            constituency: existingActiveMp.constituency
+          }
+        });
+      }
+
+      console.log(`📝 Creating new MP: ${name} (${constituency}, ${parliamentCode})`);
+
+      // Create the new MP record
+      const BASE_MP_ALLOWANCE = 25700;
+      const newMpData = {
+        name,
+        party,
+        parliamentCode,
+        constituency,
+        state,
+        gender,
+        title: title || "YB",
+        role: role || "Member of Parliament",
+        swornInDate: swornIn,
+        photoUrl: photoUrl || null,
+        mpAllowance: BASE_MP_ALLOWANCE,
+        ministerSalary: 0,
+        email: email || null,
+        telephone: telephone || null,
+        mobileNumber: mobileNumber || null,
+        facebookUrl: facebookUrl || null,
+        instagramUrl: instagramUrl || null,
+        twitterUrl: twitterUrl || null,
+      };
+
+      const [newMp] = await db.insert(mps).values(newMpData).returning();
+
+      console.log(`✅ New MP created successfully: ${newMp.name} (ID: ${newMp.id})`);
+
+      // If this MP replaces a former MP, update the by-election notes on the former MP
+      if (replacesFormerMpId) {
+        const [formerMp] = await db.select().from(mps).where(eq(mps.id, replacesFormerMpId)).limit(1);
+        if (formerMp) {
+          const updatedNotes = formerMp.byElectionNotes
+            ? `${formerMp.byElectionNotes}\n\nReplaced by: ${name} (sworn in: ${swornIn.toISOString().split('T')[0]})`
+            : `Replaced by: ${name} (sworn in: ${swornIn.toISOString().split('T')[0]})`;
+
+          await db.update(mps)
+            .set({ byElectionNotes: updatedNotes })
+            .where(eq(mps.id, replacesFormerMpId));
+
+          console.log(`📝 Updated by-election notes for former MP: ${formerMp.name}`);
+        }
+      }
+
+      // Log the action
+      logAudit(
+        req,
+        'CREATE_MP',
+        `Created new MP: ${name} (${constituency}, ${parliamentCode})`,
+        newMp.id
+      );
+
+      res.status(201).json({
+        message: "MP created successfully",
+        mp: newMp
+      });
+
+    } catch (error) {
+      console.error("Error creating MP:", error);
+      res.status(500).json({ error: "Failed to create MP", details: String(error) });
+    }
+  });
+
+  // Admin endpoint to edit/update an existing MP's details
+  app.patch("/api/admin/mps/:id", requireAdmin, mutationRateLimit, auditMiddleware('mp-update'), async (req, res) => {
+    try {
+      const { id } = req.params;
+
+      // Find the MP first
+      const [mp] = await db.select().from(mps).where(eq(mps.id, id)).limit(1);
+      if (!mp) {
+        return res.status(404).json({ error: "MP not found" });
+      }
+
+      // Validate and extract allowed fields
+      const {
+        name, party, parliamentCode, constituency, state, gender, title, role,
+        photoUrl, email, telephone, fax, mobileNumber, contactAddress, serviceAddress,
+        facebookUrl, instagramUrl, twitterUrl, tiktokUrl,
+        isMinister, isDeputyMinister, ministerialPosition,
+        mpAllowance, ministerSalary,
+        entertainmentAllowance, handphoneAllowance, computerAllowance,
+        dressWearAllowance, parliamentSittingAllowance,
+      } = req.body;
+
+      const updateData: Record<string, any> = {};
+
+      // Core fields
+      if (name !== undefined) updateData.name = name;
+      if (party !== undefined) updateData.party = party;
+      if (parliamentCode !== undefined) updateData.parliamentCode = parliamentCode;
+      if (constituency !== undefined) updateData.constituency = constituency;
+      if (state !== undefined) updateData.state = state;
+      if (gender !== undefined) updateData.gender = gender;
+      if (title !== undefined) updateData.title = title;
+      if (role !== undefined) updateData.role = role;
+
+      // Contact information
+      if (photoUrl !== undefined) updateData.photoUrl = photoUrl || null;
+      if (email !== undefined) updateData.email = email || null;
+      if (telephone !== undefined) updateData.telephone = telephone || null;
+      if (fax !== undefined) updateData.fax = fax || null;
+      if (mobileNumber !== undefined) updateData.mobileNumber = mobileNumber || null;
+      if (contactAddress !== undefined) updateData.contactAddress = contactAddress || null;
+      if (serviceAddress !== undefined) updateData.serviceAddress = serviceAddress || null;
+
+      // Social media
+      if (facebookUrl !== undefined) updateData.facebookUrl = facebookUrl || null;
+      if (instagramUrl !== undefined) updateData.instagramUrl = instagramUrl || null;
+      if (twitterUrl !== undefined) updateData.twitterUrl = twitterUrl || null;
+      if (tiktokUrl !== undefined) updateData.tiktokUrl = tiktokUrl || null;
+
+      // Ministerial status
+      if (isMinister !== undefined) updateData.isMinister = isMinister;
+      if (isDeputyMinister !== undefined) updateData.isDeputyMinister = isDeputyMinister;
+      if (ministerialPosition !== undefined) updateData.ministerialPosition = ministerialPosition || null;
+
+      // Allowances
+      if (mpAllowance !== undefined) updateData.mpAllowance = mpAllowance;
+      if (ministerSalary !== undefined) updateData.ministerSalary = ministerSalary;
+      if (entertainmentAllowance !== undefined) updateData.entertainmentAllowance = entertainmentAllowance;
+      if (handphoneAllowance !== undefined) updateData.handphoneAllowance = handphoneAllowance;
+      if (computerAllowance !== undefined) updateData.computerAllowance = computerAllowance;
+      if (dressWearAllowance !== undefined) updateData.dressWearAllowance = dressWearAllowance;
+      if (parliamentSittingAllowance !== undefined) updateData.parliamentSittingAllowance = parliamentSittingAllowance;
+
+      if (Object.keys(updateData).length === 0) {
+        return res.status(400).json({ error: "No valid fields provided for update" });
+      }
+
+      console.log(`📝 Updating MP details for ${mp.name} (${mp.constituency}): ${Object.keys(updateData).join(', ')}`);
+
+      const [updated] = await db.update(mps)
+        .set(updateData)
+        .where(eq(mps.id, id))
+        .returning();
+
+      // Log the action
+      logAudit(
+        req,
+        'UPDATE_MP_DETAILS',
+        `Updated MP details for ${mp.name} (${mp.constituency}): ${Object.keys(updateData).join(', ')}`,
+        id
+      );
+
+      res.json({
+        message: "MP details updated successfully",
+        mp: updated
+      });
+
+    } catch (error) {
+      console.error("Error updating MP details:", error);
+      res.status(500).json({ error: "Failed to update MP details", details: String(error) });
     }
   });
 
@@ -7241,6 +8780,107 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     } catch (error: any) {
       console.error("Error generating bill impact:", error);
       res.status(500).json({ error: "Failed to generate bill impact", details: error.message });
+    }
+  });
+
+  // Get Grok AI review for a bill
+  app.get("/api/bills/:id/grok-review", async (req, res) => {
+    try {
+      const { id } = req.params;
+
+      const review = await db.query.billGrokReviews.findFirst({
+        where: eq(billGrokReviews.billId, id),
+        orderBy: (billGrokReviews, { desc }) => [desc(billGrokReviews.generatedAt)],
+      });
+
+      res.json(review || null);
+    } catch (error: any) {
+      console.error("Error getting bill Grok review:", error);
+      res.status(500).json({ error: "Failed to get Grok review", details: error.message });
+    }
+  });
+
+  // Generate Grok AI review for a bill PDF
+  app.post("/api/bills/:id/generate-grok-review", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { title, billNumber } = req.body;
+
+      // First, get the PDF for this bill
+      const pdfFile = await getBillPdf(id);
+
+      if (!pdfFile) {
+        return res.status(404).json({
+          error: "No PDF found for this bill. Please upload a PDF first."
+        });
+      }
+
+      // Extract text from PDF
+      const { PDFParse } = await import('pdf-parse');
+      const parser = new PDFParse({ data: pdfFile.pdfData });
+      const result = await parser.getText();
+      const pdfText = result.text;
+
+      if (!pdfText || pdfText.trim().length === 0) {
+        return res.status(400).json({
+          error: "Could not extract text from PDF. The PDF may be image-based or corrupted."
+        });
+      }
+
+      console.log(`[Grok Review] Extracted ${pdfText.length} characters from PDF`);
+
+      // Generate review using Gemini via OpenRouter
+      const grokService = await import("./services/grok.js");
+
+      if (!grokService.isGrokConfigured()) {
+        return res.status(503).json({
+          error: "AI service is not configured. Please set OPENROUTER_API_KEY environment variable."
+        });
+      }
+
+      const documentType = `Bill ${billNumber || ''}: ${title}`.trim();
+      const reviewData = await grokService.analyzeDocumentWithGrok(
+        pdfText,
+        documentType,
+        pdfFile.originalFilename || 'bill.pdf'
+      );
+
+      // Save or update the review in database
+      const existingReview = await db.query.billGrokReviews.findFirst({
+        where: eq(billGrokReviews.billId, id),
+      });
+
+      if (existingReview) {
+        // Update existing
+        await db.update(billGrokReviews)
+          .set({
+            review: reviewData.review,
+            generatedAt: reviewData.generatedAt,
+            updatedAt: new Date(),
+          })
+          .where(eq(billGrokReviews.id, existingReview.id));
+      } else {
+        // Create new
+        await db.insert(billGrokReviews).values({
+          billId: id,
+          review: reviewData.review,
+          generatedBy: "grok",
+        });
+      }
+
+      // Return the newly generated review
+      const newReview = await db.query.billGrokReviews.findFirst({
+        where: eq(billGrokReviews.billId, id),
+        orderBy: (billGrokReviews, { desc }) => [desc(billGrokReviews.generatedAt)],
+      });
+
+      res.json(newReview);
+    } catch (error: any) {
+      console.error("Error generating Grok review:", error);
+      res.status(500).json({
+        error: "Failed to generate Grok review",
+        details: error.message
+      });
     }
   });
 
@@ -8266,6 +9906,144 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     }
   });
 
+  // Phase 4: Get report cards with coalition and state percentiles
+  app.get("/api/report-cards/percentiles/coalition-state", async (req, res) => {
+    try {
+      const { getReportCardsWithCoalitionAndStatePercentiles } = await import("./services/report-card-service");
+      const cardsWithPercentiles = await getReportCardsWithCoalitionAndStatePercentiles();
+
+      res.json({
+        total: cardsWithPercentiles.length,
+        data: cardsWithPercentiles.map(card => ({
+          mpId: card.mpId,
+          name: card.name,
+          party: card.mp?.party,
+          state: card.state,
+          coalition: card.coalition,
+          // Global percentiles
+          global: {
+            attendanceScore: card.attendanceScore,
+            participationScore: card.participationScore,
+            conductScore: card.conductScore,
+            constituencyScore: card.constituencyScore,
+            overallScore: card.overallScore,
+            grade: card.grade,
+          },
+          // Coalition percentiles (if applicable)
+          ...(card.coalitionOverallScore && {
+            coalition: {
+              attendanceScore: card.coalitionAttendanceScore,
+              participationScore: card.coalitionParticipationScore,
+              conductScore: card.coalitionConductScore,
+              constituencyScore: card.coalitionConstituencyScore,
+              overallScore: card.coalitionOverallScore,
+              grade: card.coalitionGrade,
+            },
+          }),
+          // State percentiles
+          ...(card.stateOverallScore && {
+            state: {
+              attendanceScore: card.stateAttendanceScore,
+              participationScore: card.stateParticipationScore,
+              conductScore: card.stateConductScore,
+              constituencyScore: card.stateConstituencyScore,
+              overallScore: card.stateOverallScore,
+              grade: card.stateGrade,
+            },
+          }),
+        })),
+      });
+    } catch (error) {
+      console.error("Error fetching coalition/state percentiles:", error);
+      res.status(500).json({ error: "Failed to fetch coalition/state percentiles" });
+    }
+  });
+
+  // Compare two MPs using Grok AI
+  app.post("/api/report-cards/compare-grok", async (req, res) => {
+    try {
+      const { mp1Id, mp2Id } = req.body;
+
+      if (!mp1Id || !mp2Id) {
+        return res.status(400).json({ error: "Both MP IDs are required" });
+      }
+
+      if (mp1Id === mp2Id) {
+        return res.status(400).json({ error: "Cannot compare an MP with themselves" });
+      }
+
+      // Fetch report cards for both MPs
+      const { getReportCardsWithDetails } = await import("./services/report-card-service");
+      const allCards = await getReportCardsWithDetails();
+
+      const mp1Card = allCards.find(card => card.mpId === mp1Id);
+      const mp2Card = allCards.find(card => card.mpId === mp2Id);
+
+      if (!mp1Card || !mp2Card) {
+        return res.status(404).json({ error: "One or both MPs not found" });
+      }
+
+      // Check if AI service is configured
+      const grokService = await import("./services/grok.js");
+      if (!grokService.isGrokConfigured()) {
+        return res.status(503).json({
+          error: "AI service is not configured. Please set OPENROUTER_API_KEY environment variable."
+        });
+      }
+
+      // Generate comparison using Gemini via OpenRouter
+      console.log(`[Grok Compare] Comparing ${mp1Card.mp.name} vs ${mp2Card.mp.name}`);
+
+      const comparisonResult = await grokService.compareMPs(mp1Card, mp2Card);
+
+      res.json({
+        comparison: comparisonResult.comparison,
+        generatedAt: comparisonResult.generatedAt,
+      });
+    } catch (error: any) {
+      console.error("Error comparing MPs with Grok:", error);
+      res.status(500).json({
+        error: "Failed to compare MPs",
+        details: error.message
+      });
+    }
+  });
+
+  // Get ROI leaderboard (all MPs ranked by ROI) - BEFORE parametric route
+  app.get("/api/report-cards/roi-leaderboard", async (req, res) => {
+    try {
+      const cards = await db
+        .select()
+        .from(mpReportCards)
+        .innerJoin(mps, eq(mpReportCards.mpId, mps.id))
+        .orderBy(desc(mpReportCards.roiScore))
+        .limit(250);
+
+      const leaderboard = cards.map((row, idx) => ({
+        rank: idx + 1,
+        mpId: row.mp_report_cards.mpId,
+        name: row.mps.name,
+        party: row.mps.party,
+        state: row.mps.state,
+        roiScore: row.mp_report_cards.roiScore,
+        roiGrade: row.mp_report_cards.roiGrade,
+        annualAllowance: row.mp_report_cards.annualAllowance,
+        totalSpeeches: row.mp_report_cards.totalSpeeches,
+        billsRaised: row.mp_report_cards.billsRaised,
+        questionsAsked: row.mp_report_cards.questionsAsked,
+        allowancePerSpeech: row.mp_report_cards.allowancePerSpeech,
+      }));
+
+      res.json({
+        total: leaderboard.length,
+        data: leaderboard,
+      });
+    } catch (error) {
+      console.error("Error fetching ROI leaderboard:", error);
+      res.status(500).json({ error: "Failed to fetch ROI leaderboard" });
+    }
+  });
+
   // Get report card for specific MP
   app.get("/api/report-cards/:mpId", async (req, res) => {
     try {
@@ -8281,6 +10059,59 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
       res.json(reportCard);
     } catch (error) {
       console.error("Error fetching MP report card:", error);
+      res.status(500).json({ error: "Failed to fetch MP report card" });
+    }
+  });
+
+  // Get report card for specific MP with coalition/state percentiles
+  app.get("/api/report-cards/:mpId/with-coalition-state", async (req, res) => {
+    try {
+      const { mpId } = req.params;
+      const { getReportCardsWithCoalitionAndStatePercentiles } = await import("./services/report-card-service");
+      const allCards = await getReportCardsWithCoalitionAndStatePercentiles();
+      const card = allCards.find(c => c.mpId === mpId);
+
+      if (!card) {
+        return res.status(404).json({ error: "Report card not found for this MP" });
+      }
+
+      res.json({
+        mpId: card.mpId,
+        name: card.name,
+        party: card.mp?.party,
+        state: card.state,
+        coalition: card.coalition,
+        global: {
+          attendanceScore: card.attendanceScore,
+          participationScore: card.participationScore,
+          conductScore: card.conductScore,
+          constituencyScore: card.constituencyScore,
+          overallScore: card.overallScore,
+          grade: card.grade,
+        },
+        ...(card.coalitionOverallScore && {
+          coalitionPercentile: {
+            attendanceScore: card.coalitionAttendanceScore,
+            participationScore: card.coalitionParticipationScore,
+            conductScore: card.coalitionConductScore,
+            constituencyScore: card.coalitionConstituencyScore,
+            overallScore: card.coalitionOverallScore,
+            grade: card.coalitionGrade,
+          },
+        }),
+        ...(card.stateOverallScore && {
+          statePercentile: {
+            attendanceScore: card.stateAttendanceScore,
+            participationScore: card.stateParticipationScore,
+            conductScore: card.stateConductScore,
+            constituencyScore: card.stateConstituencyScore,
+            overallScore: card.stateOverallScore,
+            grade: card.stateGrade,
+          },
+        }),
+      });
+    } catch (error) {
+      console.error("Error fetching MP report card with coalition/state:", error);
       res.status(500).json({ error: "Failed to fetch MP report card" });
     }
   });
@@ -8321,6 +10152,1108 @@ export async function registerRoutes(app: Express, httpServer: Server): Promise<
     } catch (error) {
       console.error("Error fetching last update time:", error);
       res.status(500).json({ error: "Failed to fetch last update time" });
+    }
+  });
+
+  // ========== PHASE 5: ALLOWANCE & ROI ENDPOINTS ==========
+
+  // Get allowance breakdown for a specific MP
+  app.get("/api/mps/:id/allowance-breakdown", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const card = await db
+        .select()
+        .from(mpReportCards)
+        .where(eq(mpReportCards.mpId, id))
+        .limit(1);
+
+      if (!card || card.length === 0) {
+        return res.status(404).json({ error: "MP not found" });
+      }
+
+      const mp = await db.select().from(mps).where(eq(mps.id, id)).limit(1);
+
+      res.json({
+        mpId: id,
+        name: mp[0]?.name,
+        party: mp[0]?.party,
+        state: mp[0]?.state,
+        annualAllowance: card[0].annualAllowance,
+        allowancePerSpeech: card[0].allowancePerSpeech,
+        allowancePerBill: card[0].allowancePerBill,
+        allowancePerQuestion: card[0].allowancePerQuestion,
+        allowancePerCommittee: card[0].allowancePerCommittee,
+        roiScore: card[0].roiScore,
+        roiGrade: card[0].roiGrade,
+        // Output metrics
+        totalSpeeches: card[0].totalSpeeches,
+        billsRaised: card[0].billsRaised,
+        questionsAsked: card[0].questionsAsked,
+      });
+    } catch (error) {
+      console.error("Error fetching allowance breakdown:", error);
+      res.status(500).json({ error: "Failed to fetch allowance breakdown" });
+    }
+  });
+
+  // Get allowance efficiency analytics
+  app.get("/api/analytics/allowance-efficiency", async (req, res) => {
+    try {
+      const cards = await db.select().from(mpReportCards).innerJoin(mps, eq(mpReportCards.mpId, mps.id));
+
+      // Calculate statistics
+      const roiScores = cards.map(c => c.mp_report_cards.roiScore);
+      const allowances = cards.map(c => c.mp_report_cards.annualAllowance);
+
+      const avgROI = Math.round(roiScores.reduce((a, b) => a + b, 0) / roiScores.length);
+      const medianROI = roiScores.sort((a, b) => a - b)[Math.floor(roiScores.length / 2)];
+      const avgAllowance = Math.round(allowances.reduce((a, b) => a + b, 0) / allowances.length);
+
+      const roiByGrade: Record<string, { count: number; avgAllowance: number }> = {};
+      ['A', 'B', 'C', 'D', 'F'].forEach(grade => {
+        const filtered = cards.filter(c => c.mp_report_cards.roiGrade === grade);
+        roiByGrade[grade] = {
+          count: filtered.length,
+          avgAllowance: filtered.length > 0 ? Math.round(filtered.reduce((sum, c) => sum + c.mp_report_cards.annualAllowance, 0) / filtered.length) : 0,
+        };
+      });
+
+      const topPerformer = cards.reduce((a, b) => a.mp_report_cards.roiScore > b.mp_report_cards.roiScore ? a : b);
+      const lowestPerformer = cards.reduce((a, b) => a.mp_report_cards.roiScore < b.mp_report_cards.roiScore ? a : b);
+
+      res.json({
+        summary: {
+          totalMPs: cards.length,
+          averageROI: avgROI,
+          medianROI,
+          averageAnnualAllowance: avgAllowance,
+        },
+        topPerformer: {
+          name: topPerformer.mps.name,
+          party: topPerformer.mps.party,
+          roiScore: topPerformer.mp_report_cards.roiScore,
+          roiGrade: topPerformer.mp_report_cards.roiGrade,
+        },
+        lowestPerformer: {
+          name: lowestPerformer.mps.name,
+          party: lowestPerformer.mps.party,
+          roiScore: lowestPerformer.mp_report_cards.roiScore,
+          roiGrade: lowestPerformer.mp_report_cards.roiGrade,
+        },
+        performanceDistribution: roiByGrade,
+      });
+    } catch (error) {
+      console.error("Error fetching allowance efficiency analytics:", error);
+      res.status(500).json({ error: "Failed to fetch allowance efficiency analytics" });
+    }
+  });
+
+  // ========== AGENTIC AI ENDPOINTS ==========
+
+  // Get all available AI agents
+  app.get("/api/agents", async (req, res) => {
+    try {
+      const { AgentService } = await import("./services/agentService");
+      const agents = AgentService.getAvailableAgents();
+      res.json({ agents });
+    } catch (error) {
+      console.error("Error fetching agents:", error);
+      res.status(500).json({ error: "Failed to fetch agents" });
+    }
+  });
+
+  // Execute an AI agent
+  app.post("/api/agents/:agentType/execute", requireAdmin, mutationRateLimit, auditMiddleware('agent-execute'), async (req, res) => {
+    try {
+      const { agentType } = req.params;
+      const { targetId, targetType, parameters } = req.body;
+      const username = getCurrentUsername(req);
+
+      const { AgentService } = await import("./services/agentService");
+
+      console.log(`[Agent] Executing ${agentType} agent by ${username}`);
+
+      // Execute agent (async)
+      const result = await AgentService.executeAgent(agentType as any, {
+        targetId,
+        targetType,
+        parameters: parameters || {},
+        triggeredBy: "manual",
+        triggeredByUserId: username,
+      });
+
+      res.json({
+        success: true,
+        executionId: result.executionId,
+        result: result.result,
+      });
+    } catch (error: any) {
+      console.error("Error executing agent:", error);
+      res.status(500).json({
+        error: "Failed to execute agent",
+        details: error.message
+      });
+    }
+  });
+
+  // Get agent execution history
+  app.get("/api/agents/executions", requireAdmin, async (req, res) => {
+    try {
+      const { limit = 50 } = req.query;
+      const { AgentService } = await import("./services/agentService");
+
+      const executions = await AgentService.getRecentExecutions(parseInt(limit as string));
+      res.json({ executions });
+    } catch (error) {
+      console.error("Error fetching executions:", error);
+      res.status(500).json({ error: "Failed to fetch executions" });
+    }
+  });
+
+  // Get execution details
+  app.get("/api/agents/executions/:executionId", requireAdmin, async (req, res) => {
+    try {
+      const { executionId } = req.params;
+      const { AgentService } = await import("./services/agentService");
+
+      const execution = await AgentService.getExecution(executionId);
+      if (!execution) {
+        return res.status(404).json({ error: "Execution not found" });
+      }
+
+      const findings = await AgentService.getExecutionFindings(executionId);
+
+      res.json({
+        execution,
+        findings,
+      });
+    } catch (error) {
+      console.error("Error fetching execution details:", error);
+      res.status(500).json({ error: "Failed to fetch execution details" });
+    }
+  });
+
+  // Get all agent findings
+  app.get("/api/agents/findings", requireAdmin, async (req, res) => {
+    try {
+      const { status, limit = 100 } = req.query;
+      const { AgentService } = await import("./services/agentService");
+
+      let findings;
+      if (status) {
+        findings = await AgentService.getFindingsByStatus(status as any);
+      } else {
+        findings = await AgentService.getRecentFindings(parseInt(limit as string));
+      }
+
+      res.json({ findings });
+    } catch (error) {
+      console.error("Error fetching findings:", error);
+      res.status(500).json({ error: "Failed to fetch findings" });
+    }
+  });
+
+  // Update finding status
+  app.patch("/api/agents/findings/:findingId", requireAdmin, mutationRateLimit, auditMiddleware('finding-update'), async (req, res) => {
+    try {
+      const { findingId } = req.params;
+      const { status } = req.body;
+      const username = getCurrentUsername(req);
+
+      const { AgentService } = await import("./services/agentService");
+
+      await AgentService.updateFindingStatus(findingId, status, username);
+
+      res.json({
+        success: true,
+        message: "Finding status updated",
+      });
+    } catch (error) {
+      console.error("Error updating finding:", error);
+      res.status(500).json({ error: "Failed to update finding" });
+    }
+  });
+
+  // Get agent schedules
+  app.get("/api/agents/schedules", requireAdmin, async (req, res) => {
+    try {
+      const { AgentService } = await import("./services/agentService");
+      const schedules = await AgentService.getSchedules();
+      res.json({ schedules });
+    } catch (error) {
+      console.error("Error fetching schedules:", error);
+      res.status(500).json({ error: "Failed to fetch schedules" });
+    }
+  });
+
+  // Create or update agent schedule
+  app.post("/api/agents/schedules/:agentType", requireAdmin, mutationRateLimit, auditMiddleware('schedule-update'), async (req, res) => {
+    try {
+      const { agentType } = req.params;
+      const { enabled, cronExpression, intervalMinutes, parameters } = req.body;
+      const username = getCurrentUsername(req);
+
+      const { AgentService } = await import("./services/agentService");
+
+      await AgentService.upsertSchedule(agentType as any, {
+        enabled,
+        cronExpression,
+        intervalMinutes,
+        parameters,
+        createdBy: username,
+      });
+
+      res.json({
+        success: true,
+        message: "Schedule updated",
+      });
+    } catch (error) {
+      console.error("Error updating schedule:", error);
+      res.status(500).json({ error: "Failed to update schedule" });
+    }
+  });
+
+  // ========== WEEKLY POLLS API ==========
+
+  // Get active poll (public)
+  app.get("/api/polls/active", async (req, res) => {
+    try {
+      const poll = await storage.getActivePoll();
+      if (!poll) {
+        return res.json({ poll: null });
+      }
+
+      // Get voter fingerprint for checking if user has voted
+      const ip = req.ip || req.socket.remoteAddress || 'unknown';
+      const userAgent = req.headers['user-agent'] || 'unknown';
+      const voterFingerprint = crypto.createHash('sha256').update(`${ip}:${userAgent}`).digest('hex');
+
+      const voteStatus = await storage.hasUserVoted(poll.id, voterFingerprint);
+
+      res.json({
+        poll: {
+          ...poll,
+          hasVoted: voteStatus.hasVoted,
+          userVotedOptionId: voteStatus.optionId,
+        },
+      });
+    } catch (error) {
+      console.error("Error fetching active poll:", error);
+      res.status(500).json({ error: "Failed to fetch active poll" });
+    }
+  });
+
+  // Get poll by ID (public)
+  app.get("/api/polls/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+
+      // Get voter fingerprint for checking if user has voted
+      const ip = req.ip || req.socket.remoteAddress || 'unknown';
+      const userAgent = req.headers['user-agent'] || 'unknown';
+      const voterFingerprint = crypto.createHash('sha256').update(`${ip}:${userAgent}`).digest('hex');
+
+      const poll = await storage.getPollWithResults(id, voterFingerprint);
+      if (!poll) {
+        return res.status(404).json({ error: "Poll not found" });
+      }
+
+      res.json({ poll });
+    } catch (error) {
+      console.error("Error fetching poll:", error);
+      res.status(500).json({ error: "Failed to fetch poll" });
+    }
+  });
+
+  // Get all polls (with optional filtering)
+  app.get("/api/polls", async (req, res) => {
+    try {
+      const { status, limit, offset } = req.query;
+
+      const polls = await storage.getAllPolls({
+        status: status as string | undefined,
+        limit: limit ? parseInt(limit as string) : 50,
+        offset: offset ? parseInt(offset as string) : 0,
+      });
+
+      res.json({ polls });
+    } catch (error) {
+      console.error("Error fetching polls:", error);
+      res.status(500).json({ error: "Failed to fetch polls" });
+    }
+  });
+
+  // Vote on a poll (public, rate-limited)
+  app.post("/api/polls/:id/vote", mutationRateLimit, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { optionId } = req.body;
+
+      if (!optionId) {
+        return res.status(400).json({ error: "optionId is required" });
+      }
+
+      // Verify poll exists and is active
+      const poll = await storage.getPoll(id);
+      if (!poll) {
+        return res.status(404).json({ error: "Poll not found" });
+      }
+      if (poll.status !== "active") {
+        return res.status(400).json({ error: "Poll is not active" });
+      }
+
+      // Verify option belongs to this poll
+      const validOption = poll.options.find((o) => o.id === optionId);
+      if (!validOption) {
+        return res.status(400).json({ error: "Invalid option for this poll" });
+      }
+
+      // Create voter fingerprint
+      const ip = req.ip || req.socket.remoteAddress || 'unknown';
+      const userAgent = req.headers['user-agent'] || 'unknown';
+      const voterFingerprint = crypto.createHash('sha256').update(`${ip}:${userAgent}`).digest('hex');
+
+      // Cast the vote
+      const result = await storage.castVote({
+        pollId: id,
+        optionId,
+        voterFingerprint,
+        ipAddress: ip,
+      });
+
+      if (result.alreadyVoted) {
+        return res.status(400).json({ error: "You have already voted on this poll" });
+      }
+
+      // Get updated poll results
+      const updatedPoll = await storage.getPollWithResults(id, voterFingerprint);
+
+      res.json({
+        success: true,
+        message: "Vote recorded successfully",
+        poll: updatedPoll,
+      });
+    } catch (error) {
+      console.error("Error casting vote:", error);
+      res.status(500).json({ error: "Failed to cast vote" });
+    }
+  });
+
+  // Admin: Create a poll manually
+  app.post("/api/polls", requireAdmin, mutationRateLimit, auditMiddleware('poll-create'), async (req, res) => {
+    try {
+      const { question, questionMs, description, category, weekNumber, year, status, options } = req.body;
+
+      if (!question || !weekNumber || !year || !options || !Array.isArray(options) || options.length < 2) {
+        return res.status(400).json({
+          error: "question, weekNumber, year, and at least 2 options are required",
+        });
+      }
+
+      const poll = await storage.createPoll(
+        {
+          question,
+          questionMs,
+          description,
+          category: category || "general",
+          weekNumber,
+          year,
+          status: status || "draft",
+          generatedBy: "manual",
+        },
+        options.map((opt: any, idx: number) => ({
+          pollId: "",
+          optionText: opt.optionText,
+          optionTextMs: opt.optionTextMs,
+          displayOrder: idx,
+        }))
+      );
+
+      res.json({ success: true, poll });
+    } catch (error) {
+      console.error("Error creating poll:", error);
+      res.status(500).json({ error: "Failed to create poll" });
+    }
+  });
+
+  // Admin: Update poll status
+  app.patch("/api/polls/:id", requireAdmin, mutationRateLimit, auditMiddleware('poll-update'), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const updates = req.body;
+
+      const poll = await storage.updatePoll(id, updates);
+      if (!poll) {
+        return res.status(404).json({ error: "Poll not found" });
+      }
+
+      res.json({ success: true, poll });
+    } catch (error) {
+      console.error("Error updating poll:", error);
+      res.status(500).json({ error: "Failed to update poll" });
+    }
+  });
+
+  // Admin: Delete a poll
+  app.delete("/api/polls/:id", requireAdmin, mutationRateLimit, auditMiddleware('poll-delete'), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const deleted = await storage.deletePoll(id);
+
+      if (!deleted) {
+        return res.status(404).json({ error: "Poll not found" });
+      }
+
+      res.json({ success: true, message: "Poll deleted" });
+    } catch (error) {
+      console.error("Error deleting poll:", error);
+      res.status(500).json({ error: "Failed to delete poll" });
+    }
+  });
+
+  // Admin: Trigger poll generation manually
+  app.post("/api/polls/generate", requireAdmin, mutationRateLimit, auditMiddleware('poll-generate'), async (req, res) => {
+    try {
+      const { numberOfPolls, forceRegenerate } = req.body;
+      const username = getCurrentUsername(req);
+
+      const { AgentService } = await import("./services/agentService");
+
+      const result = await AgentService.runAgent("poll-generator" as any, {
+        triggeredBy: "manual",
+        triggeredByUserId: username,
+        parameters: {
+          numberOfPolls: numberOfPolls || 1,
+          forceRegenerate: forceRegenerate || false,
+        },
+      });
+
+      res.json({
+        success: true,
+        executionId: result.executionId,
+        message: "Poll generation started",
+      });
+    } catch (error) {
+      console.error("Error triggering poll generation:", error);
+      res.status(500).json({ error: "Failed to trigger poll generation" });
+    }
+  });
+
+  // ========== MYMP.org.my Biography Data Import ==========
+  // Admin endpoint to import MP biography data from MYMP.org.my
+  // Data must be manually collected (not scraped) to respect MYMP terms
+
+  // Schema for MYMP data import validation
+  const mympImportSchema = z.object({
+    mpId: z.string().optional(), // If not provided, match by name + constituency
+    name: z.string().optional(),
+    constituency: z.string().optional(),
+    parliamentCode: z.string().optional(),
+    mympSlug: z.string().optional(),
+    mympUrl: z.string().url().optional(),
+    bioSummary: z.string().optional(),
+    birthDate: z.string().optional(), // ISO date string
+    hometown: z.string().optional(),
+    education: z.array(z.string()).optional(),
+    politicalHistory: z.array(z.object({
+      party: z.string(),
+      startYear: z.number(),
+      endYear: z.number().optional(),
+      notes: z.string().optional(),
+    })).optional(),
+    nonPoliticalAffiliations: z.array(z.string()).optional(),
+    careerHistory: z.array(z.string()).optional(),
+    mympLoyaltyScore: z.number().min(0).max(100).optional(),
+    mympAvailabilityScore: z.number().min(0).max(100).optional(),
+    mympEthicsScore: z.number().min(0).max(100).optional(),
+    wikipediaUrl: z.string().url().optional(),
+  });
+
+  // Batch import MYMP data for multiple MPs
+  app.post("/api/admin/import-mymp-data", requireAdmin, mutationRateLimit, auditMiddleware('mymp-import'), async (req, res) => {
+    try {
+      const { mps: mpsData, overwrite = false } = req.body;
+      const username = getCurrentUsername(req);
+
+      if (!Array.isArray(mpsData) || mpsData.length === 0) {
+        return res.status(400).json({ error: "Request body must contain 'mps' array with MP data" });
+      }
+
+      const results = {
+        success: [] as string[],
+        failed: [] as { identifier: string; error: string }[],
+        skipped: [] as string[],
+      };
+
+      for (const mpData of mpsData) {
+        try {
+          // Validate the data
+          const validated = mympImportSchema.parse(mpData);
+
+          // Find the MP by ID, parliament code, or name+constituency
+          let mp;
+          if (validated.mpId) {
+            mp = await storage.getMp(validated.mpId);
+          } else if (validated.parliamentCode) {
+            mp = await storage.getMpByParliamentCode(validated.parliamentCode);
+          } else if (validated.name && validated.constituency) {
+            mp = await storage.getMpByNameAndConstituency(validated.name, validated.constituency);
+          }
+
+          if (!mp) {
+            results.failed.push({
+              identifier: validated.mpId || validated.parliamentCode || `${validated.name}/${validated.constituency}`,
+              error: "MP not found",
+            });
+            continue;
+          }
+
+          // Check if MP already has MYMP data and overwrite is false
+          if (!overwrite && mp.bioSummary) {
+            results.skipped.push(mp.name);
+            continue;
+          }
+
+          // Build update object with only provided fields
+          const updateData: Record<string, any> = {
+            mympDataUpdatedAt: new Date(),
+          };
+
+          if (validated.mympSlug !== undefined) updateData.mympSlug = validated.mympSlug;
+          if (validated.mympUrl !== undefined) updateData.mympUrl = validated.mympUrl;
+          if (validated.bioSummary !== undefined) updateData.bioSummary = validated.bioSummary;
+          if (validated.birthDate !== undefined) updateData.birthDate = new Date(validated.birthDate);
+          if (validated.hometown !== undefined) updateData.hometown = validated.hometown;
+          if (validated.education !== undefined) updateData.education = validated.education;
+          if (validated.politicalHistory !== undefined) updateData.politicalHistory = validated.politicalHistory;
+          if (validated.nonPoliticalAffiliations !== undefined) updateData.nonPoliticalAffiliations = validated.nonPoliticalAffiliations;
+          if (validated.careerHistory !== undefined) updateData.careerHistory = validated.careerHistory;
+          if (validated.mympLoyaltyScore !== undefined) updateData.mympLoyaltyScore = validated.mympLoyaltyScore;
+          if (validated.mympAvailabilityScore !== undefined) updateData.mympAvailabilityScore = validated.mympAvailabilityScore;
+          if (validated.mympEthicsScore !== undefined) updateData.mympEthicsScore = validated.mympEthicsScore;
+          if (validated.wikipediaUrl !== undefined) updateData.wikipediaUrl = validated.wikipediaUrl;
+
+          // Update the MP
+          await db.update(mps).set(updateData).where(eq(mps.id, mp.id));
+
+          results.success.push(mp.name);
+        } catch (error) {
+          const identifier = mpData.mpId || mpData.parliamentCode || `${mpData.name}/${mpData.constituency}` || "unknown";
+          results.failed.push({
+            identifier,
+            error: error instanceof z.ZodError ? error.errors.map(e => e.message).join(", ") : String(error),
+          });
+        }
+      }
+
+      logAudit(
+        req,
+        'MYMP_IMPORT',
+        `Batch import: ${results.success.length} success, ${results.failed.length} failed, ${results.skipped.length} skipped`
+      );
+
+      res.json({
+        message: "MYMP data import completed",
+        results,
+        summary: {
+          total: mpsData.length,
+          success: results.success.length,
+          failed: results.failed.length,
+          skipped: results.skipped.length,
+        },
+      });
+    } catch (error) {
+      console.error("Error importing MYMP data:", error);
+      res.status(500).json({ error: "Failed to import MYMP data" });
+    }
+  });
+
+  // Update single MP's MYMP data
+  app.patch("/api/admin/mps/:id/mymp", requireAdmin, mutationRateLimit, auditMiddleware('mymp-update'), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const username = getCurrentUsername(req);
+
+      const mp = await storage.getMp(id);
+      if (!mp) {
+        return res.status(404).json({ error: "MP not found" });
+      }
+
+      // Validate the data
+      const validated = mympImportSchema.parse(req.body);
+
+      // Build update object
+      const updateData: Record<string, any> = {
+        mympDataUpdatedAt: new Date(),
+      };
+
+      if (validated.mympSlug !== undefined) updateData.mympSlug = validated.mympSlug;
+      if (validated.mympUrl !== undefined) updateData.mympUrl = validated.mympUrl;
+      if (validated.bioSummary !== undefined) updateData.bioSummary = validated.bioSummary;
+      if (validated.birthDate !== undefined) updateData.birthDate = new Date(validated.birthDate);
+      if (validated.hometown !== undefined) updateData.hometown = validated.hometown;
+      if (validated.education !== undefined) updateData.education = validated.education;
+      if (validated.politicalHistory !== undefined) updateData.politicalHistory = validated.politicalHistory;
+      if (validated.nonPoliticalAffiliations !== undefined) updateData.nonPoliticalAffiliations = validated.nonPoliticalAffiliations;
+      if (validated.careerHistory !== undefined) updateData.careerHistory = validated.careerHistory;
+      if (validated.mympLoyaltyScore !== undefined) updateData.mympLoyaltyScore = validated.mympLoyaltyScore;
+      if (validated.mympAvailabilityScore !== undefined) updateData.mympAvailabilityScore = validated.mympAvailabilityScore;
+      if (validated.mympEthicsScore !== undefined) updateData.mympEthicsScore = validated.mympEthicsScore;
+      if (validated.wikipediaUrl !== undefined) updateData.wikipediaUrl = validated.wikipediaUrl;
+
+      await db.update(mps).set(updateData).where(eq(mps.id, id));
+
+      logAudit(
+        req,
+        'MYMP_UPDATE',
+        `Updated MYMP data for ${mp.name}: ${Object.keys(updateData).join(', ')}`,
+        id
+      );
+
+      res.json({
+        success: true,
+        message: `MYMP data updated for ${mp.name}`,
+        updatedFields: Object.keys(updateData),
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Validation error", details: error.errors });
+      }
+      console.error("Error updating MYMP data:", error);
+      res.status(500).json({ error: "Failed to update MYMP data" });
+    }
+  });
+
+  // Get MYMP data status for all MPs (for admin dashboard)
+  app.get("/api/admin/mymp-status", requireAdmin, async (_req, res) => {
+    try {
+      const allMps = await storage.getAllMps();
+
+      const status = allMps.map(mp => ({
+        id: mp.id,
+        name: mp.name,
+        constituency: mp.constituency,
+        parliamentCode: mp.parliamentCode,
+        hasMympData: !!(mp.bioSummary || mp.mympSlug),
+        mympSlug: mp.mympSlug,
+        mympUrl: mp.mympUrl,
+        lastUpdated: mp.mympDataUpdatedAt,
+      }));
+
+      const summary = {
+        total: allMps.length,
+        withMympData: status.filter(s => s.hasMympData).length,
+        withoutMympData: status.filter(s => !s.hasMympData).length,
+      };
+
+      res.json({ status, summary });
+    } catch (error) {
+      console.error("Error fetching MYMP status:", error);
+      res.status(500).json({ error: "Failed to fetch MYMP status" });
+    }
+  });
+
+  // ============================================================================
+  // Bills to Watch API endpoints
+  // ============================================================================
+
+  // Get all bills to watch (public)
+  app.get("/api/bills-to-watch", async (_req, res) => {
+    try {
+      const { getBillsToWatch, getLastRefreshTime } = await import("./bills-to-watch-cron");
+      const billsData = await getBillsToWatch();
+      const lastRefresh = await getLastRefreshTime();
+
+      res.json({
+        bills: billsData,
+        lastRefresh,
+      });
+    } catch (error: any) {
+      console.error("Error fetching bills to watch:", error);
+      res.status(500).json({ error: "Failed to fetch bills to watch", details: error.message });
+    }
+  });
+
+  // Get last refresh time for bills to watch (admin)
+  app.get("/api/admin/bills-to-watch/last-refresh", requireAdmin, async (_req, res) => {
+    try {
+      const { getLastRefreshTime } = await import("./bills-to-watch-cron");
+      const lastRefresh = await getLastRefreshTime();
+      res.json({ lastRefresh });
+    } catch (error: any) {
+      console.error("Error fetching last refresh time:", error);
+      res.status(500).json({ error: "Failed to fetch last refresh time" });
+    }
+  });
+
+  // Manually trigger bills-to-watch refresh (admin)
+  app.post("/api/admin/bills-to-watch/refresh", requireAdmin, async (_req, res) => {
+    try {
+      const { refreshBillsToWatch } = await import("./bills-to-watch-cron");
+      const result = await refreshBillsToWatch();
+
+      res.json({
+        success: true,
+        message: "Bills to Watch refreshed successfully",
+        ...result,
+      });
+    } catch (error: any) {
+      console.error("Error refreshing bills to watch:", error);
+      res.status(500).json({ error: "Failed to refresh bills to watch", details: error.message });
+    }
+  });
+
+  // ── Committee Memberships ───────────────────────────────────────────────────
+
+  // Get committee memberships for an MP (public)
+  app.get("/api/mps/:id/committee-memberships", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const memberships = await db
+        .select()
+        .from(committeeMembers)
+        .where(eq(committeeMembers.mpId, id))
+        .orderBy(desc(committeeMembers.startDate));
+
+      res.json(memberships);
+    } catch (error) {
+      console.error("Error fetching committee memberships:", error);
+      res.status(500).json({ error: "Failed to fetch committee memberships" });
+    }
+  });
+
+  // List all committee memberships (admin)
+  app.get("/api/admin/committee-memberships", requireAdmin, async (req, res) => {
+    try {
+      const memberships = await db
+        .select()
+        .from(committeeMembers)
+        .innerJoin(mps, eq(committeeMembers.mpId, mps.id))
+        .orderBy(desc(committeeMembers.updatedAt));
+
+      const response = memberships.map(({ committee_memberships, mps: mp }) => ({
+        ...committee_memberships,
+        mpName: mp.name,
+      }));
+
+      res.json(response);
+    } catch (error) {
+      console.error("Error listing committee memberships:", error);
+      res.status(500).json({ error: "Failed to list committee memberships" });
+    }
+  });
+
+  // Create committee membership (admin)
+  app.post("/api/admin/committee-memberships", requireAdmin, mutationRateLimit, auditMiddleware('committee-create'), async (req, res) => {
+    try {
+      const validated = insertCommitteeMemberSchema.parse(req.body);
+
+      // Verify MP exists
+      const mp = await storage.getMp(validated.mpId);
+      if (!mp) {
+        return res.status(400).json({ error: "Invalid MP ID" });
+      }
+
+      const memberships = await db
+        .insert(committeeMembers)
+        .values(validated)
+        .returning();
+
+      res.json(memberships[0]);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid data", details: error.errors });
+      }
+      console.error("Error creating committee membership:", error);
+      res.status(500).json({ error: "Failed to create committee membership" });
+    }
+  });
+
+  // Update committee membership (admin)
+  app.patch("/api/admin/committee-memberships/:id", requireAdmin, mutationRateLimit, auditMiddleware('committee-update'), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const validated = updateCommitteeMemberSchema.parse(req.body);
+
+      const updated = await db
+        .update(committeeMembers)
+        .set({ ...validated, updatedAt: new Date() })
+        .where(eq(committeeMembers.id, id))
+        .returning();
+
+      if (!updated.length) {
+        return res.status(404).json({ error: "Committee membership not found" });
+      }
+
+      res.json(updated[0]);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid data", details: error.errors });
+      }
+      console.error("Error updating committee membership:", error);
+      res.status(500).json({ error: "Failed to update committee membership" });
+    }
+  });
+
+  // Delete committee membership (admin)
+  app.delete("/api/admin/committee-memberships/:id", requireAdmin, mutationRateLimit, auditMiddleware('committee-delete'), async (req, res) => {
+    try {
+      const { id } = req.params;
+
+      const deleted = await db
+        .delete(committeeMembers)
+        .where(eq(committeeMembers.id, id))
+        .returning();
+
+      if (!deleted.length) {
+        return res.status(404).json({ error: "Committee membership not found" });
+      }
+
+      res.json({ success: true, deleted: deleted[0] });
+    } catch (error) {
+      console.error("Error deleting committee membership:", error);
+      res.status(500).json({ error: "Failed to delete committee membership" });
+    }
+  });
+
+  // ── Public API v1 ──────────────────────────────────────────────────────────
+
+  /**
+   * Derive the parliamentary coalition from the MP's party abbreviation.
+   * Returns null when the party cannot be mapped to a known coalition.
+   */
+  function deriveCoalition(party: string): string | null {
+    const p = (party ?? "").toUpperCase().trim();
+    // Pakatan Harapan
+    if (["PH", "PKR", "DAP", "AMANAH"].includes(p)) return "PH";
+    // Perikatan Nasional
+    if (["PN", "BERSATU", "PAS", "GERAKAN"].includes(p)) return "PN";
+    // Barisan Nasional
+    if (["BN", "UMNO", "MCA", "MIC"].includes(p)) return "BN";
+    // Gabungan Parti Sarawak
+    if (["GPS", "PBB", "SUPP", "PRS", "PDP", "PPBB"].includes(p)) return "GPS";
+    // Gabungan Rakyat Sabah
+    if (["GRS", "UPKO", "PBRS", "KKDP", "SAPP"].includes(p)) return "GRS";
+    // Parti Solidariti Bersama (Sarawak independent bloc)
+    if (["PSB"].includes(p)) return "PSB";
+    return null;
+  }
+
+  /**
+   * Map an overall score (0–100 or null) to the Skor Prestasi tier label.
+   */
+  function scoreTier(score: number | null): string {
+    if (score === null || score === undefined) return "unscored";
+    if (score >= 75) return "excellent";
+    if (score >= 50) return "good";
+    if (score >= 25) return "average";
+    if (score > 0)   return "poor";
+    return "unscored";
+  }
+
+  // ── GET /api/v1/ping ────────────────────────────────────────────────────────
+  // Auth smoke-test: confirms the key is valid and returns current usage stats.
+  app.get("/api/v1/ping", requireApiKey(), (req, res) => {
+    const client = req.apiClient!;
+    res.json({
+      status: "ok",
+      client: client.client_name,
+      tier: client.tier,
+      calls_today: client.calls_today,
+      daily_limit: client.daily_limit,
+    });
+  });
+
+  // ── GET /api/v1/mp/:p_number ────────────────────────────────────────────────
+  // Full MP profile. Salary block gated behind starter tier and above.
+  //
+  // p_number format: P followed by exactly 3 digits  (e.g. P063, P001, P222)
+  //
+  // Tier rules:
+  //   free               → full profile EXCEPT salary block (omitted entirely)
+  //   starter and above  → salary block included
+  //
+  // Data sources for each section:
+  //   mps                        → identity, attendance, allowances
+  //   mp_report_cards            → skor_prestasi scores (LEFT JOIN — may not exist)
+  //   court_cases                → integrity / active cases (LEFT JOIN)
+  //   parliamentary_oral_answers → oral questions asked (LEFT JOIN)
+  //   parliamentary_questions    → written questions logged (LEFT JOIN)
+  app.get("/api/v1/mp/:p_number", requireApiKey(), async (req, res) => {
+    // 1. Validate p_number format
+    const { p_number } = req.params;
+    if (!/^P\d{3}$/.test(p_number)) {
+      return res.status(400).json({
+        error: "invalid_p_number",
+        message: `p_number must match ^P\\d{3}$ — three digits after 'P' (e.g. P063). Received: '${p_number}'`,
+        p_number,
+      });
+    }
+
+    if (!pool) {
+      return res.status(503).json({ error: "service_unavailable", message: "Database not available" });
+    }
+
+    try {
+      // 2. Single query — MP row + LEFT JOINed aggregates from four related tables.
+      //    court_cases: count non-terminal statuses as "active".
+      //    parliamentary_oral_answers: oral questions posed by this MP.
+      //    parliamentary_questions: written/other questions logged for this MP.
+      //    mp_report_cards: performance scores (may be absent for some MPs).
+      const { rows } = await pool.query<{
+        id: string;
+        name: string;
+        party: string;
+        parliament_code: string;
+        constituency: string;
+        state: string;
+        days_attended: number;
+        total_parliament_days: number;
+        mp_allowance: number;
+        minister_salary: number;
+        is_minister: boolean;
+        overall_score: number | null;
+        attendance_score: number | null;
+        participation_score: number | null;
+        conduct_score: number | null;
+        score_updated_at: Date | null;
+        active_court_cases: number;
+        questions_oral: number;
+        questions_written: number;
+      }>(`
+        SELECT
+          m.id,
+          m.name,
+          m.party,
+          m.parliament_code,
+          m.constituency,
+          m.state,
+          m.days_attended,
+          m.total_parliament_days,
+          m.mp_allowance,
+          m.minister_salary,
+          m.is_minister,
+
+          rc.overall_score,
+          rc.attendance_score,
+          rc.participation_score,
+          rc.conduct_score,
+          rc.updated_at          AS score_updated_at,
+
+          COALESCE(cc.active_cases, 0)::int  AS active_court_cases,
+          COALESCE(oa.oral_count,   0)::int  AS questions_oral,
+          COALESCE(pq.written_count,0)::int  AS questions_written
+
+        FROM mps m
+
+        LEFT JOIN mp_report_cards rc
+               ON rc.mp_id = m.id
+
+        LEFT JOIN (
+          SELECT mp_id, COUNT(*)::int AS active_cases
+          FROM   court_cases
+          WHERE  status NOT IN (
+                   'dismissed','acquitted','discharged',
+                   'closed','completed','settled','withdrawn'
+                 )
+          GROUP  BY mp_id
+        ) cc ON cc.mp_id = m.id
+
+        LEFT JOIN (
+          SELECT questioner_mp_id, COUNT(*)::int AS oral_count
+          FROM   parliamentary_oral_answers
+          GROUP  BY questioner_mp_id
+        ) oa ON oa.questioner_mp_id = m.id
+
+        LEFT JOIN (
+          SELECT mp_id, COUNT(*)::int AS written_count
+          FROM   parliamentary_questions
+          GROUP  BY mp_id
+        ) pq ON pq.mp_id = m.id
+
+        WHERE m.parliament_code = $1
+        LIMIT 1
+      `, [p_number]);
+
+      // 3. 404 if not found
+      if (rows.length === 0) {
+        return res.status(404).json({ error: "MP not found", p_number });
+      }
+
+      const mp = rows[0];
+
+      // 4. Derived values
+      const composite    = mp.overall_score     ?? null;
+      const attPct       = mp.total_parliament_days > 0
+        ? Math.round((mp.days_attended / mp.total_parliament_days) * 100)
+        : 0;
+      const qTotal       = mp.questions_oral + mp.questions_written;
+      const estMonthly   = (mp.mp_allowance ?? 0) + (mp.minister_salary ?? 0);
+
+      // 5. Tier gate — salary block visible to starter and above
+      const SALARY_TIERS = ["starter", "professional", "research", "intelligence"];
+      const showSalary   = SALARY_TIERS.includes(req.apiClient!.tier);
+
+      // 6. Build response
+      const response: Record<string, unknown> = {
+        p_number,
+        name:         mp.name,
+        constituency: mp.constituency,
+        state:        mp.state,
+        party:        mp.party,
+        coalition:    deriveCoalition(mp.party),
+
+        skor_prestasi: {
+          composite,
+          attendance_score: mp.attendance_score  ?? null,
+          questions_score:  mp.participation_score ?? null,
+          integrity_score:  mp.conduct_score      ?? null,
+          tier:             scoreTier(composite),
+          score_updated_at: mp.score_updated_at
+            ? new Date(mp.score_updated_at).toISOString()
+            : null,
+        },
+
+        attendance: {
+          sessions_attended: mp.days_attended,
+          total_sessions:    mp.total_parliament_days,
+          attendance_pct:    attPct,
+        },
+
+        parliamentary_activity: {
+          questions_oral:    mp.questions_oral,
+          questions_written: mp.questions_written,
+          questions_total:   qTotal,
+        },
+
+        integrity: {
+          active_court_cases: mp.active_court_cases,
+          integrity_flag:     mp.active_court_cases > 0,
+          notes:              [],
+        },
+
+        meta: {
+          data_sources: ["parlimen.gov.my", "SPRM", "DOSM Census 2020"],
+          last_updated: new Date().toISOString(),
+          api_version:  "v1",
+        },
+      };
+
+      if (showSalary) {
+        response.salary = {
+          base_monthly:             16000,
+          fixed_allowance:          12700,
+          estimated_monthly_total:  estMonthly,
+          estimated_annual_total:   estMonthly * 12,
+          currency:                 "MYR",
+        };
+      }
+
+      return res.json(response);
+
+    } catch (err: any) {
+      console.error("[GET /api/v1/mp] Error:", err);
+      return res.status(500).json({ error: "internal_error", message: "Failed to fetch MP profile" });
     }
   });
 

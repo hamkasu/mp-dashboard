@@ -253,7 +253,7 @@ export default function ParliamentaryActivity() {
                         )}
                         {proposal.hansardReference && (
                           <Button
-                            variant="ghost"
+                            variant="outline"
                             size="sm"
                             data-testid={`button-hansard-${proposal.id}`}
                             className="gap-2"
@@ -323,7 +323,7 @@ export default function ParliamentaryActivity() {
                         )}
                         {debate.hansardReference && (
                           <Button
-                            variant="ghost"
+                            variant="outline"
                             size="sm"
                             data-testid={`button-hansard-${debate.id}`}
                             className="gap-2"
@@ -406,7 +406,7 @@ export default function ParliamentaryActivity() {
 
                       {question.hansardReference && (
                         <Button
-                          variant="ghost"
+                          variant="outline"
                           size="sm"
                           data-testid={`button-hansard-${question.id}`}
                           className="gap-2"

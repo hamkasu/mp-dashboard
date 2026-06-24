@@ -11,7 +11,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { useLanguage } from "@/i18n/LanguageContext";
 
-type SortOption = "name" | "attendance-best" | "attendance-worst" | "speeches-most" | "speeches-fewest" | "poverty-highest" | "poverty-lowest" | "bills-raised" | "oral-questions" | "inappropriate-language";
+type SortOption = "name" | "attendance-best" | "attendance-worst" | "speeches-most" | "speeches-fewest" | "poverty-highest" | "poverty-lowest" | "bills-raised" | "oral-questions" | "inappropriate-language" | "majority-highest" | "majority-smallest";
 
 type StatusFilter = "all" | "active" | "former";
 
@@ -59,7 +59,7 @@ export function FilterSidebar({
         <>
           <div className="flex items-center justify-between p-4">
             <h2 className="text-lg font-semibold">{t('filters.title')}</h2>
-            <Button variant="ghost" size="icon" onClick={onClose} data-testid="button-close-filters">
+            <Button variant="outline" size="icon" onClick={onClose} data-testid="button-close-filters">
               <X className="h-4 w-4" />
             </Button>
           </div>
@@ -133,6 +133,18 @@ export function FilterSidebar({
                 <RadioGroupItem value="inappropriate-language" id="sort-inappropriate-language" data-testid="radio-sort-inappropriate-language" />
                 <Label htmlFor="sort-inappropriate-language" className="text-sm font-normal cursor-pointer">
                   {t('filters.sortInappropriateLanguage')}
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="majority-highest" id="sort-majority-highest" data-testid="radio-sort-majority-highest" />
+                <Label htmlFor="sort-majority-highest" className="text-sm font-normal cursor-pointer">
+                  {t('filters.sortHighestMajority')}
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="majority-smallest" id="sort-majority-smallest" data-testid="radio-sort-majority-smallest" />
+                <Label htmlFor="sort-majority-smallest" className="text-sm font-normal cursor-pointer">
+                  {t('filters.sortSmallestMajority')}
                 </Label>
               </div>
             </RadioGroup>

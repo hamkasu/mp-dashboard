@@ -352,10 +352,29 @@ export default function DunSarawak() {
             </h1>
           </div>
           <p className="text-muted-foreground" data-testid="text-dun-sarawak-description">
-            {language === 'ms' 
+            {language === 'ms'
               ? 'Ahli-ahli Dewan Undangan Negeri Sarawak (82 kerusi)'
               : 'Members of the Sarawak State Legislative Assembly (82 seats)'}
           </p>
+        </div>
+
+        {/* Hansard Availability Notice */}
+        <div className="mb-6 p-4 rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20" data-testid="notice-hansard-availability">
+          <div className="flex gap-3">
+            <Info className="h-5 w-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+            <div>
+              <h4 className="font-medium text-amber-800 dark:text-amber-200 mb-1">
+                {language === 'ms'
+                  ? 'Nota: Ketersediaan Hansard Terhad'
+                  : 'Note: Limited Hansard Availability'}
+              </h4>
+              <p className="text-sm text-amber-700 dark:text-amber-300">
+                {language === 'ms'
+                  ? 'Hansard ADUN Sarawak tidak mudah diakses kerana dokumen hansard hanya dipaparkan selama 30 hari sebelum dialih keluar dari laman web DUN. Lihat bahagian "Sumber & Dokumen" di bawah untuk maklumat lanjut.'
+                  : 'Sarawak ADUN hansard are not easily available as the hansard documents are only shown for 30 days before being removed from the DUN page. See the "Resources & Documents" section below for more information.'}
+              </p>
+            </div>
+          </div>
         </div>
 
         <div className="flex flex-col sm:flex-row gap-4 mb-6">
@@ -589,7 +608,7 @@ export default function DunSarawak() {
                         </a>
                       </Button>
                       <Button 
-                        variant="ghost" 
+                        variant="outline" 
                         size="sm" 
                         asChild
                         data-testid="button-download-hansard-doc"
@@ -643,7 +662,7 @@ export default function DunSarawak() {
                         </a>
                       </Button>
                       <Button 
-                        variant="ghost" 
+                        variant="outline" 
                         size="sm" 
                         asChild
                         data-testid="button-download-remuneration-doc"
@@ -1081,7 +1100,7 @@ export default function DunSarawak() {
                   </a>
                 </Button>
                 <Button 
-                  variant="ghost" 
+                  variant="outline" 
                   size="sm" 
                   asChild
                 >
@@ -1266,7 +1285,7 @@ export default function DunSarawak() {
                   </a>
                 </Button>
                 <Button 
-                  variant="ghost" 
+                  variant="outline" 
                   size="sm" 
                   asChild
                 >

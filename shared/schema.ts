@@ -62,6 +62,31 @@ export const mps = pgTable("mps", {
   // By-election tracking
   byElectionDate: timestamp("by_election_date"),
   byElectionNotes: text("by_election_notes"),
+  // Election results tracking
+  electionVotesReceived: integer("election_votes_received"),
+  electionTotalValidVotes: integer("election_total_valid_votes"),
+  electionYear: integer("election_year").default(2022),
+  electionMajority: integer("election_majority"),
+  electionTurnoutPercent: integer("election_turnout_percent"), // percentage * 100 (e.g. 7652 = 76.52%)
+  electionVotePercentage: integer("election_vote_percentage"), // percentage * 100 (e.g. 5358 = 53.58%)
+  // MYMP.org.my Biography Integration
+  // Data sourced manually from https://mymp.org.my (volunteer-run MP directory)
+  mympSlug: text("mymp_slug"), // URL slug for MYMP profile (e.g., "syed-saddiq")
+  mympUrl: text("mymp_url"), // Full MYMP profile URL
+  bioSummary: text("bio_summary"), // Biography summary from MYMP
+  birthDate: timestamp("birth_date"), // Date of birth
+  hometown: text("hometown"), // Place of origin/hometown
+  education: jsonb("education").$type<string[]>().default(sql`'[]'::jsonb`), // Education history
+  politicalHistory: jsonb("political_history").$type<Array<{ party: string; startYear: number; endYear?: number; notes?: string }>>().default(sql`'[]'::jsonb`), // Political journey
+  nonPoliticalAffiliations: jsonb("non_political_affiliations").$type<string[]>().default(sql`'[]'::jsonb`), // NGOs, associations
+  careerHistory: jsonb("career_history").$type<string[]>().default(sql`'[]'::jsonb`), // Career before politics
+  mympLoyaltyScore: integer("mymp_loyalty_score"), // Optional: MYMP loyalty score (0-10 scaled to 0-100)
+  mympAvailabilityScore: integer("mymp_availability_score"), // Optional: MYMP availability score
+  mympEthicsScore: integer("mymp_ethics_score"), // Optional: MYMP ethics score
+  wikipediaUrl: text("wikipedia_url"), // Wikipedia link if available
+  mympDataUpdatedAt: timestamp("mymp_data_updated_at"), // When MYMP data was last synced
+  // Phase 4: Coalition-based percentile scoring
+  coalitionId: varchar("coalition_id").references(() => coalitions.id, { onDelete: "set null" }),
 });
 
 export const insertMpSchema = createInsertSchema(mps).omit({
@@ -70,6 +95,46 @@ export const insertMpSchema = createInsertSchema(mps).omit({
 
 export type InsertMp = z.infer<typeof insertMpSchema>;
 export type Mp = typeof mps.$inferSelect;
+
+// ========== COALITIONS ==========
+// Phase 4: Political coalition groupings for relative percentile scoring
+
+export const coalitions = pgTable("coalitions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull().unique(),  // "Barisan Nasional", "Pakatan Harapan", etc.
+  code: text("code").notNull().unique(),  // "BN", "PH", "GPS", "PN", "IND"
+  colorHex: text("color_hex"),            // UI color for coalition (e.g., "#FF0000")
+  description: text("description"),       // Coalition description/notes
+  createdAt: timestamp("created_at").notNull().default(sql`NOW()`),
+  updatedAt: timestamp("updated_at").notNull().default(sql`NOW()`),
+});
+
+export const insertCoalitionSchema = createInsertSchema(coalitions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  colorHex: z.string().nullable().optional(),
+  description: z.string().nullable().optional(),
+});
+
+export const updateCoalitionSchema = insertCoalitionSchema.partial();
+
+export type InsertCoalition = z.infer<typeof insertCoalitionSchema>;
+export type UpdateCoalition = z.infer<typeof updateCoalitionSchema>;
+export type Coalition = typeof coalitions.$inferSelect;
+
+// Party to Coalition mapping table
+export const partyCoalitionMappings = pgTable("party_coalition_mapping", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  partyName: text("party_name").notNull(),
+  coalitionId: varchar("coalition_id").notNull().references(() => coalitions.id, { onDelete: "cascade" }),
+  effectiveDate: timestamp("effective_date").notNull().default(sql`NOW()`),
+  endDate: timestamp("end_date"),         // null = still in coalition
+  notes: text("notes"),
+});
+
+export type PartyCoalitionMapping = typeof partyCoalitionMappings.$inferSelect;
 
 // Sarawak State Legislative Assembly (DUN) Members
 export const sarawakDunMembers = pgTable("sarawak_dun_members", {
@@ -93,31 +158,45 @@ export const insertSarawakDunMemberSchema = createInsertSchema(sarawakDunMembers
 export type InsertSarawakDunMember = z.infer<typeof insertSarawakDunMemberSchema>;
 export type SarawakDunMember = typeof sarawakDunMembers.$inferSelect;
 
+// Case status enum - aligned with Phase 2 spec
+export const CASE_STATUS_VALUES = ["under_investigation", "charged", "convicted", "acquitted", "withdrawn", "appeal_pending"] as const;
+export type CaseStatus = typeof CASE_STATUS_VALUES[number];
+
 export const courtCases = pgTable("court_cases", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   mpId: varchar("mp_id").notNull().references(() => mps.id),
   caseNumber: text("case_number").notNull().unique(),
   title: text("title").notNull(),
   courtLevel: text("court_level").notNull(),
-  status: text("status").notNull(),
+  status: text("status").$type<CaseStatus>().notNull(),
   caseType: text("case_type").notNull().default("criminal"),
   filingDate: timestamp("filing_date").notNull(),
   outcome: text("outcome"),
   charges: text("charges").notNull(),
   documentLinks: jsonb("document_links").$type<string[]>().notNull().default(sql`'[]'::jsonb`),
+  statusConfirmedAt: timestamp("status_confirmed_at"), // When status was last verified against public record
+  statusConfirmedBy: varchar("status_confirmed_by"), // Who verified it (admin user ID)
+  statusNotes: text("status_notes"), // Any caveats/flags about the status determination
 });
 
 export const insertCourtCaseSchema = createInsertSchema(courtCases).omit({
   id: true,
+  statusConfirmedAt: true,
 }).extend({
+  status: z.enum(CASE_STATUS_VALUES),
   documentLinks: z.array(z.string()).default([]),
   filingDate: z.preprocess(
     (val) => (typeof val === 'string' ? new Date(val) : val),
     z.date()
   ),
+  statusConfirmedBy: z.string().nullable().optional(),
+  statusNotes: z.string().nullable().optional(),
 });
 
+export const updateCourtCaseSchema = insertCourtCaseSchema.partial();
+
 export type InsertCourtCase = z.infer<typeof insertCourtCaseSchema>;
+export type UpdateCourtCase = z.infer<typeof updateCourtCaseSchema>;
 export type CourtCase = typeof courtCases.$inferSelect;
 
 export const sprmInvestigations = pgTable("sprm_investigations", {
@@ -125,17 +204,22 @@ export const sprmInvestigations = pgTable("sprm_investigations", {
   mpId: varchar("mp_id").notNull().references(() => mps.id),
   caseNumber: text("case_number").unique(),
   title: text("title").notNull(),
-  status: text("status").notNull(),
+  status: text("status").$type<CaseStatus>().notNull(),
   startDate: timestamp("start_date").notNull(),
   endDate: timestamp("end_date"),
   outcome: text("outcome"),
   charges: text("charges").notNull(),
   documentLinks: jsonb("document_links").$type<string[]>().notNull().default(sql`'[]'::jsonb`),
+  statusConfirmedAt: timestamp("status_confirmed_at"),
+  statusConfirmedBy: varchar("status_confirmed_by"),
+  statusNotes: text("status_notes"),
 });
 
 export const insertSprmInvestigationSchema = createInsertSchema(sprmInvestigations).omit({
   id: true,
+  statusConfirmedAt: true,
 }).extend({
+  status: z.enum(CASE_STATUS_VALUES),
   documentLinks: z.array(z.string()).default([]),
   startDate: z.preprocess(
     (val) => (typeof val === 'string' ? new Date(val) : val),
@@ -145,6 +229,8 @@ export const insertSprmInvestigationSchema = createInsertSchema(sprmInvestigatio
     (val) => (val === null || val === undefined || val === '' ? null : typeof val === 'string' ? new Date(val) : val),
     z.date().nullable().optional()
   ),
+  statusConfirmedBy: z.string().nullable().optional(),
+  statusNotes: z.string().nullable().optional(),
 });
 
 export const updateSprmInvestigationSchema = insertSprmInvestigationSchema.omit({ mpId: true }).partial();
@@ -650,6 +736,30 @@ export const insertHansardDetailedSummarySchema = createInsertSchema(hansardDeta
 export type InsertHansardDetailedSummary = z.infer<typeof insertHansardDetailedSummarySchema>;
 export type HansardDetailedSummary = typeof hansardDetailedSummary.$inferSelect;
 
+export const hansardComprehensiveAnalysis = pgTable("hansard_comprehensive_analysis", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  hansardRecordId: varchar("hansard_record_id").notNull().references(() => hansardRecords.id, { onDelete: "cascade" }),
+  language: text("language").notNull().default("en"),
+  introduction: text("introduction").notNull(),
+  sections: jsonb("sections").$type<Array<{
+    title: string;
+    overview: string;
+    keyPoints: Array<{
+      heading: string;
+      detail: string;
+    }>;
+  }>>().notNull(),
+  analyzedAt: timestamp("analyzed_at").notNull().default(sql`NOW()`),
+});
+
+export const insertHansardComprehensiveAnalysisSchema = createInsertSchema(hansardComprehensiveAnalysis).omit({
+  id: true,
+  analyzedAt: true,
+});
+
+export type InsertHansardComprehensiveAnalysis = z.infer<typeof insertHansardComprehensiveAnalysisSchema>;
+export type HansardComprehensiveAnalysis = typeof hansardComprehensiveAnalysis.$inferSelect;
+
 export const hansardQaCache = pgTable("hansard_qa_cache", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   hansardRecordId: varchar("hansard_record_id").notNull().references(() => hansardRecords.id, { onDelete: "cascade" }),
@@ -667,6 +777,30 @@ export const insertHansardQaCacheSchema = createInsertSchema(hansardQaCache).omi
 
 export type InsertHansardQaCache = z.infer<typeof insertHansardQaCacheSchema>;
 export type HansardQaCache = typeof hansardQaCache.$inferSelect;
+
+export const hansardQaAnalysisCache = pgTable("hansard_qa_analysis_cache", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  hansardRecordId: varchar("hansard_record_id").notNull().references(() => hansardRecords.id, { onDelete: "cascade" }),
+  sectionType: varchar("section_type").notNull().default("menteri"),
+  sessionInfo: text("session_info").notNull(),
+  questions: jsonb("questions").$type<Array<{
+    no: number;
+    questioner: string;
+    ministerTargeted: string;
+    topic: string;
+    summary: string;
+  }>>().notNull(),
+  totalQuestions: integer("total_questions").notNull().default(0),
+  analyzedAt: timestamp("analyzed_at").notNull().default(sql`NOW()`),
+});
+
+export const insertHansardQaAnalysisCacheSchema = createInsertSchema(hansardQaAnalysisCache).omit({
+  id: true,
+  analyzedAt: true,
+});
+
+export type InsertHansardQaAnalysisCache = z.infer<typeof insertHansardQaAnalysisCacheSchema>;
+export type HansardQaAnalysisCache = typeof hansardQaAnalysisCache.$inferSelect;
 
 // Court Case News Articles table for scraped news review queue
 export const courtCaseNewsArticles = pgTable("court_case_news_articles", {
@@ -723,9 +857,6 @@ export const updateCourtCaseNewsArticleSchema = insertCourtCaseNewsArticleSchema
 export type InsertCourtCaseNewsArticle = z.infer<typeof insertCourtCaseNewsArticleSchema>;
 export type UpdateCourtCaseNewsArticle = z.infer<typeof updateCourtCaseNewsArticleSchema>;
 export type CourtCaseNewsArticle = typeof courtCaseNewsArticles.$inferSelect;
-
-// Update schema for court cases
-export const updateCourtCaseSchema = insertCourtCaseSchema.partial();
 
 // ========== PARLIAMENT BILLS ==========
 // Bills table for storing scraped bills from Parliament website
@@ -808,6 +939,30 @@ export const updateBillImpactSchema = insertBillImpactSchema.partial();
 export type InsertBillImpact = z.infer<typeof insertBillImpactSchema>;
 export type UpdateBillImpact = z.infer<typeof updateBillImpactSchema>;
 export type BillImpact = typeof billImpacts.$inferSelect;
+
+// Bill Grok Reviews table for storing Grok AI-generated comprehensive reviews
+export const billGrokReviews = pgTable("bill_grok_reviews", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  billId: varchar("bill_id").notNull().references(() => bills.id, { onDelete: "cascade" }),
+  review: text("review").notNull(), // Markdown-formatted comprehensive review
+  generatedBy: text("generated_by").default("grok"),
+  generatedAt: timestamp("generated_at").notNull().default(sql`NOW()`),
+  createdAt: timestamp("created_at").notNull().default(sql`NOW()`),
+  updatedAt: timestamp("updated_at").notNull().default(sql`NOW()`),
+});
+
+export const insertBillGrokReviewSchema = createInsertSchema(billGrokReviews).omit({
+  id: true,
+  generatedAt: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const updateBillGrokReviewSchema = insertBillGrokReviewSchema.partial();
+
+export type InsertBillGrokReview = z.infer<typeof insertBillGrokReviewSchema>;
+export type UpdateBillGrokReview = z.infer<typeof updateBillGrokReviewSchema>;
+export type BillGrokReview = typeof billGrokReviews.$inferSelect;
 
 // ========== PARLIAMENTARY ORAL ANSWERS ==========
 // Parliamentary oral answers table for storing scraped jawapan lisan from Parliament website
@@ -995,6 +1150,15 @@ export const mpReportCards = pgTable("mp_report_cards", {
   inappropriateLanguageCount: integer("inappropriate_language_count").notNull().default(0),
   povertyRate: integer("poverty_rate").default(0),
 
+  // Phase 5: Allowance and ROI metrics
+  annualAllowance: integer("annual_allowance").notNull().default(0),
+  allowancePerSpeech: integer("allowance_per_speech").notNull().default(0),
+  allowancePerBill: integer("allowance_per_bill").notNull().default(0),
+  allowancePerQuestion: integer("allowance_per_question").notNull().default(0),
+  allowancePerCommittee: integer("allowance_per_committee").notNull().default(0),
+  roiScore: integer("roi_score").notNull().default(50), // 0-100
+  roiGrade: text("roi_grade").notNull().default("C"), // A-F
+
   // Timestamps
   calculatedAt: timestamp("calculated_at").notNull().default(sql`NOW()`),
   updatedAt: timestamp("updated_at").notNull().default(sql`NOW()`),
@@ -1106,3 +1270,850 @@ export type MpContactMessage = typeof mpContactMessages.$inferSelect;
 export type MpContactMessageWithMp = MpContactMessage & {
   mp: Mp;
 };
+
+// Hansard Sync Logs table for tracking automated sync operations
+export const hansardSyncLogs = pgTable("hansard_sync_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  triggeredBy: text("triggered_by").notNull(), // 'manual', 'scheduled', 'startup-recovery'
+  startedAt: timestamp("started_at").notNull(),
+  completedAt: timestamp("completed_at"),
+  durationMs: integer("duration_ms"),
+  lastKnownSession: text("last_known_session"),
+  recordsFound: integer("records_found").default(0),
+  recordsInserted: integer("records_inserted").default(0),
+  recordsSkipped: integer("records_skipped").default(0),
+  errors: jsonb("errors").$type<Array<{ sessionNumber: string; error: string }>>(),
+  success: boolean("success").default(true),
+});
+
+export const insertHansardSyncLogSchema = createInsertSchema(hansardSyncLogs).omit({
+  id: true,
+});
+
+export type InsertHansardSyncLog = z.infer<typeof insertHansardSyncLogSchema>;
+export type HansardSyncLog = typeof hansardSyncLogs.$inferSelect;
+
+// ========== AGENTIC AI INFRASTRUCTURE ==========
+// AI Agent Executions table for tracking all agent runs
+export const aiAgentExecutions = pgTable("ai_agent_executions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  agentType: text("agent_type").notNull(), // 'hansard-monitor', 'data-quality', 'bill-analyzer', etc.
+  targetId: varchar("target_id"), // ID of the resource being analyzed (hansardId, billId, mpId, etc.)
+  targetType: text("target_type"), // 'hansard', 'bill', 'mp', 'constituency', 'global'
+
+  // Execution lifecycle
+  status: text("status").notNull().default("pending"), // 'pending', 'running', 'completed', 'failed', 'cancelled'
+  startedAt: timestamp("started_at").notNull().default(sql`NOW()`),
+  completedAt: timestamp("completed_at"),
+  durationMs: integer("duration_ms"),
+
+  // Input/output
+  parameters: jsonb("parameters").$type<Record<string, any>>().default(sql`'{}'::jsonb`),
+  result: jsonb("result").$type<Record<string, any>>(),
+
+  // Metadata
+  triggeredBy: text("triggered_by").notNull(), // 'manual', 'scheduled', 'webhook', 'user'
+  triggeredByUserId: varchar("triggered_by_user_id"),
+  errorMessage: text("error_message"),
+  errorStack: text("error_stack"),
+
+  // Stats
+  tokensUsed: integer("tokens_used"),
+  apiCalls: integer("api_calls").default(0),
+  dataUpdated: boolean("data_updated").default(false),
+
+  createdAt: timestamp("created_at").notNull().default(sql`NOW()`),
+});
+
+export const insertAiAgentExecutionSchema = createInsertSchema(aiAgentExecutions).omit({
+  id: true,
+  createdAt: true,
+  startedAt: true,
+  completedAt: true,
+}).extend({
+  targetId: z.string().nullable().optional(),
+  targetType: z.enum(["hansard", "bill", "mp", "constituency", "global"]).nullable().optional(),
+  status: z.enum(["pending", "running", "completed", "failed", "cancelled"]).optional().default("pending"),
+  parameters: z.record(z.any()).optional().default({}),
+  result: z.record(z.any()).nullable().optional(),
+  triggeredByUserId: z.string().nullable().optional(),
+  errorMessage: z.string().nullable().optional(),
+  errorStack: z.string().nullable().optional(),
+  tokensUsed: z.number().nullable().optional(),
+  apiCalls: z.number().optional().default(0),
+  dataUpdated: z.boolean().optional().default(false),
+  durationMs: z.number().nullable().optional(),
+});
+
+export const updateAiAgentExecutionSchema = insertAiAgentExecutionSchema.partial();
+
+export type InsertAiAgentExecution = z.infer<typeof insertAiAgentExecutionSchema>;
+export type UpdateAiAgentExecution = z.infer<typeof updateAiAgentExecutionSchema>;
+export type AiAgentExecution = typeof aiAgentExecutions.$inferSelect;
+
+// AI Agent Findings table for storing specific insights discovered by agents
+export const aiAgentFindings = pgTable("ai_agent_findings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  executionId: varchar("execution_id").notNull().references(() => aiAgentExecutions.id, { onDelete: "cascade" }),
+
+  // Finding details
+  findingType: text("finding_type").notNull(), // 'insight', 'inconsistency', 'suggestion', 'warning', 'error'
+  severity: text("severity").notNull().default("info"), // 'critical', 'high', 'medium', 'low', 'info'
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+
+  // Related entities
+  relatedMpIds: jsonb("related_mp_ids").$type<string[]>().default(sql`'[]'::jsonb`),
+  relatedHansardIds: jsonb("related_hansard_ids").$type<string[]>().default(sql`'[]'::jsonb`),
+  relatedBillIds: jsonb("related_bill_ids").$type<string[]>().default(sql`'[]'::jsonb`),
+
+  // Evidence and actions
+  evidence: jsonb("evidence").$type<Record<string, any>>(), // Supporting data
+  suggestedAction: text("suggested_action"),
+  actionTaken: text("action_taken"),
+  actionTakenAt: timestamp("action_taken_at"),
+  actionTakenBy: varchar("action_taken_by"),
+
+  // Status
+  status: text("status").notNull().default("new"), // 'new', 'acknowledged', 'in_progress', 'resolved', 'dismissed'
+  reviewedBy: varchar("reviewed_by"),
+  reviewedAt: timestamp("reviewed_at"),
+
+  createdAt: timestamp("created_at").notNull().default(sql`NOW()`),
+});
+
+export const insertAiAgentFindingSchema = createInsertSchema(aiAgentFindings).omit({
+  id: true,
+  createdAt: true,
+  actionTakenAt: true,
+  reviewedAt: true,
+}).extend({
+  findingType: z.enum(["insight", "inconsistency", "suggestion", "warning", "error"]),
+  severity: z.enum(["critical", "high", "medium", "low", "info"]).optional().default("info"),
+  relatedMpIds: z.array(z.string()).optional().default([]),
+  relatedHansardIds: z.array(z.string()).optional().default([]),
+  relatedBillIds: z.array(z.string()).optional().default([]),
+  evidence: z.record(z.any()).nullable().optional(),
+  suggestedAction: z.string().nullable().optional(),
+  actionTaken: z.string().nullable().optional(),
+  actionTakenBy: z.string().nullable().optional(),
+  status: z.enum(["new", "acknowledged", "in_progress", "resolved", "dismissed"]).optional().default("new"),
+  reviewedBy: z.string().nullable().optional(),
+});
+
+export const updateAiAgentFindingSchema = insertAiAgentFindingSchema.partial();
+
+export type InsertAiAgentFinding = z.infer<typeof insertAiAgentFindingSchema>;
+export type UpdateAiAgentFinding = z.infer<typeof updateAiAgentFindingSchema>;
+export type AiAgentFinding = typeof aiAgentFindings.$inferSelect;
+
+// AI Agent Schedules table for managing scheduled agent runs
+export const aiAgentSchedules = pgTable("ai_agent_schedules", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  agentType: text("agent_type").notNull(),
+
+  // Schedule configuration
+  enabled: boolean("enabled").notNull().default(true),
+  cronExpression: text("cron_expression"), // e.g., '0 0 * * *' for daily at midnight
+  intervalMinutes: integer("interval_minutes"), // Alternative to cron
+
+  // Parameters for scheduled runs
+  parameters: jsonb("parameters").$type<Record<string, any>>().default(sql`'{}'::jsonb`),
+
+  // Execution tracking
+  lastRunAt: timestamp("last_run_at"),
+  lastRunStatus: text("last_run_status"),
+  lastExecutionId: varchar("last_execution_id").references(() => aiAgentExecutions.id),
+  nextRunAt: timestamp("next_run_at"),
+
+  // Metadata
+  createdBy: varchar("created_by"),
+  createdAt: timestamp("created_at").notNull().default(sql`NOW()`),
+  updatedAt: timestamp("updated_at").notNull().default(sql`NOW()`),
+});
+
+export const insertAiAgentScheduleSchema = createInsertSchema(aiAgentSchedules).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  lastRunAt: true,
+}).extend({
+  enabled: z.boolean().optional().default(true),
+  cronExpression: z.string().nullable().optional(),
+  intervalMinutes: z.number().nullable().optional(),
+  parameters: z.record(z.any()).optional().default({}),
+  lastRunStatus: z.string().nullable().optional(),
+  lastExecutionId: z.string().nullable().optional(),
+  nextRunAt: z.date().nullable().optional(),
+  createdBy: z.string().nullable().optional(),
+});
+
+export const updateAiAgentScheduleSchema = insertAiAgentScheduleSchema.partial();
+
+export type InsertAiAgentSchedule = z.infer<typeof insertAiAgentScheduleSchema>;
+export type UpdateAiAgentSchedule = z.infer<typeof updateAiAgentScheduleSchema>;
+export type AiAgentSchedule = typeof aiAgentSchedules.$inferSelect;
+
+// ========== MA63 DASHBOARD TABLES ==========
+// Malaysia Agreement 1963 Implementation Tracker for Sabah & Sarawak
+
+// MA63 Summary Statistics
+export const ma63Summary = pgTable("ma63_summary", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  totalIssues: integer("total_issues").notNull().default(0),
+  resolved: integer("resolved").notNull().default(0),
+  resolvedMadani: integer("resolved_madani").notNull().default(0), // Resolved under Madani government
+  inProgress: integer("in_progress").notNull().default(0),
+  pending: integer("pending").notNull().default(0),
+  overallProgress: integer("overall_progress").notNull().default(0), // Percentage (0-100)
+  dataSource: text("data_source"),
+  lastOfficialUpdate: timestamp("last_official_update"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").notNull().default(sql`NOW()`),
+  updatedAt: timestamp("updated_at").notNull().default(sql`NOW()`),
+});
+
+export const insertMa63SummarySchema = createInsertSchema(ma63Summary).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const updateMa63SummarySchema = insertMa63SummarySchema.partial();
+
+export type InsertMa63Summary = z.infer<typeof insertMa63SummarySchema>;
+export type UpdateMa63Summary = z.infer<typeof updateMa63SummarySchema>;
+export type Ma63Summary = typeof ma63Summary.$inferSelect;
+
+// MA63 Categories
+export const ma63Categories = pgTable("ma63_categories", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  code: varchar("code", { length: 50 }).unique().notNull(), // e.g., 'territorial', 'fiscal'
+  nameEn: text("name_en").notNull(),
+  nameMs: text("name_ms").notNull(),
+  icon: varchar("icon", { length: 50 }), // Lucide icon name
+  color: varchar("color", { length: 20 }), // Hex color code
+  resolved: integer("resolved").notNull().default(0),
+  inProgress: integer("in_progress").notNull().default(0),
+  pending: integer("pending").notNull().default(0),
+  total: integer("total").notNull().default(0),
+  displayOrder: integer("display_order").notNull().default(0),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").notNull().default(sql`NOW()`),
+  updatedAt: timestamp("updated_at").notNull().default(sql`NOW()`),
+});
+
+export const insertMa63CategorySchema = createInsertSchema(ma63Categories).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const updateMa63CategorySchema = insertMa63CategorySchema.partial();
+
+export type InsertMa63Category = z.infer<typeof insertMa63CategorySchema>;
+export type UpdateMa63Category = z.infer<typeof updateMa63CategorySchema>;
+export type Ma63Category = typeof ma63Categories.$inferSelect;
+
+// MA63 Individual Issues
+export const ma63Issues = pgTable("ma63_issues", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  categoryId: varchar("category_id").references(() => ma63Categories.id, { onDelete: "cascade" }),
+  titleEn: text("title_en").notNull(),
+  titleMs: text("title_ms").notNull(),
+  descriptionEn: text("description_en"),
+  descriptionMs: text("description_ms"),
+  status: text("status").notNull().default("pending"), // 'resolved', 'in_progress', 'pending', 'blocked'
+  priority: text("priority").default("medium"), // 'critical', 'high', 'medium', 'low'
+  resolvedDate: timestamp("resolved_date"),
+  resolvedBy: text("resolved_by"), // Which government/administration
+  relatedDocuments: jsonb("related_documents").$type<string[]>().default(sql`'[]'::jsonb`),
+  keyStakeholders: jsonb("key_stakeholders").$type<string[]>().default(sql`'[]'::jsonb`),
+  notes: text("notes"),
+  isFeatured: boolean("is_featured").notNull().default(false), // Show in watchlist
+  lastUpdate: timestamp("last_update"),
+  createdAt: timestamp("created_at").notNull().default(sql`NOW()`),
+  updatedAt: timestamp("updated_at").notNull().default(sql`NOW()`),
+});
+
+export const insertMa63IssueSchema = createInsertSchema(ma63Issues).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  status: z.enum(["resolved", "in_progress", "pending", "blocked"]).optional().default("pending"),
+  priority: z.enum(["critical", "high", "medium", "low"]).optional().default("medium"),
+  relatedDocuments: z.array(z.string()).optional().default([]),
+  keyStakeholders: z.array(z.string()).optional().default([]),
+  isFeatured: z.boolean().optional().default(false),
+  categoryId: z.string().nullable().optional(),
+  descriptionEn: z.string().nullable().optional(),
+  descriptionMs: z.string().nullable().optional(),
+  resolvedDate: z.date().nullable().optional(),
+  resolvedBy: z.string().nullable().optional(),
+  notes: z.string().nullable().optional(),
+  lastUpdate: z.date().nullable().optional(),
+});
+
+export const updateMa63IssueSchema = insertMa63IssueSchema.partial();
+
+export type InsertMa63Issue = z.infer<typeof insertMa63IssueSchema>;
+export type UpdateMa63Issue = z.infer<typeof updateMa63IssueSchema>;
+export type Ma63Issue = typeof ma63Issues.$inferSelect;
+
+// MA63 Timeline Events
+export const ma63TimelineEvents = pgTable("ma63_timeline_events", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  eventDate: timestamp("event_date").notNull(),
+  year: integer("year").notNull(),
+  month: varchar("month", { length: 20 }),
+  eventEn: text("event_en").notNull(),
+  eventMs: text("event_ms").notNull(),
+  eventType: text("event_type").notNull().default("milestone"), // 'milestone', 'resolved', 'in_progress', 'upcoming', 'setback'
+  relatedIssueId: varchar("related_issue_id").references(() => ma63Issues.id, { onDelete: "set null" }),
+  sourceUrl: text("source_url"),
+  sourceName: text("source_name"),
+  isMajor: boolean("is_major").notNull().default(false),
+  displayOrder: integer("display_order"),
+  createdAt: timestamp("created_at").notNull().default(sql`NOW()`),
+  updatedAt: timestamp("updated_at").notNull().default(sql`NOW()`),
+});
+
+export const insertMa63TimelineEventSchema = createInsertSchema(ma63TimelineEvents).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  eventType: z.enum(["milestone", "resolved", "in_progress", "upcoming", "setback"]).optional().default("milestone"),
+  isMajor: z.boolean().optional().default(false),
+  relatedIssueId: z.string().nullable().optional(),
+  sourceUrl: z.string().nullable().optional(),
+  sourceName: z.string().nullable().optional(),
+  month: z.string().nullable().optional(),
+  displayOrder: z.number().nullable().optional(),
+});
+
+export const updateMa63TimelineEventSchema = insertMa63TimelineEventSchema.partial();
+
+export type InsertMa63TimelineEvent = z.infer<typeof insertMa63TimelineEventSchema>;
+export type UpdateMa63TimelineEvent = z.infer<typeof updateMa63TimelineEventSchema>;
+export type Ma63TimelineEvent = typeof ma63TimelineEvents.$inferSelect;
+
+// MA63 Priority Watchlist Items
+export const ma63WatchlistItems = pgTable("ma63_watchlist_items", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  issueId: varchar("issue_id").references(() => ma63Issues.id, { onDelete: "cascade" }),
+  titleEn: text("title_en").notNull(),
+  titleMs: text("title_ms").notNull(),
+  descriptionEn: text("description_en").notNull(),
+  descriptionMs: text("description_ms").notNull(),
+  status: text("status").notNull().default("in_progress"), // 'resolved', 'in_progress', 'pending', 'blocked'
+  priority: text("priority").notNull().default("medium"), // 'critical', 'high', 'medium', 'low'
+  lastUpdateDate: timestamp("last_update_date"),
+  lastUpdateNote: text("last_update_note"),
+  displayOrder: integer("display_order").notNull().default(0),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").notNull().default(sql`NOW()`),
+  updatedAt: timestamp("updated_at").notNull().default(sql`NOW()`),
+});
+
+export const insertMa63WatchlistItemSchema = createInsertSchema(ma63WatchlistItems).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  status: z.enum(["resolved", "in_progress", "pending", "blocked"]).optional().default("in_progress"),
+  priority: z.enum(["critical", "high", "medium", "low"]).optional().default("medium"),
+  isActive: z.boolean().optional().default(true),
+  displayOrder: z.number().optional().default(0),
+  issueId: z.string().nullable().optional(),
+  lastUpdateDate: z.date().nullable().optional(),
+  lastUpdateNote: z.string().nullable().optional(),
+});
+
+export const updateMa63WatchlistItemSchema = insertMa63WatchlistItemSchema.partial();
+
+export type InsertMa63WatchlistItem = z.infer<typeof insertMa63WatchlistItemSchema>;
+export type UpdateMa63WatchlistItem = z.infer<typeof updateMa63WatchlistItemSchema>;
+export type Ma63WatchlistItem = typeof ma63WatchlistItems.$inferSelect;
+
+// ========== PARLIAMENTARY COMMITTEES ==========
+// Committee membership tracking for scoring and transparency
+
+export const COMMITTEE_ROLES = ["chair", "member", "vice-chair"] as const;
+export type CommitteeRole = typeof COMMITTEE_ROLES[number];
+
+export const committeeMembers = pgTable("committee_memberships", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  mpId: varchar("mp_id").notNull().references(() => mps.id, { onDelete: "cascade" }),
+
+  // Committee identification
+  committeeName: text("committee_name").notNull(),    // "Public Accounts Committee"
+  committeeAbbr: text("committee_abbr"),              // "PAC" - optional abbreviation
+
+  // Role and status
+  role: text("role").$type<CommitteeRole>().notNull(), // "chair", "member", "vice-chair"
+
+  // Session tracking (15th Parliament, 14th Parliament, etc.)
+  parliamentTerm: text("parliament_term").notNull(),
+  startDate: timestamp("start_date").notNull(),
+  endDate: timestamp("end_date"),                     // null = currently serving
+
+  // Data quality
+  sourceUrl: text("source_url"),                      // Where data came from for verification
+  verificationNotes: text("verification_notes"),      // Any caveats about data accuracy
+
+  // Timestamps
+  createdAt: timestamp("created_at").notNull().default(sql`NOW()`),
+  updatedAt: timestamp("updated_at").notNull().default(sql`NOW()`),
+});
+
+export const insertCommitteeMemberSchema = createInsertSchema(committeeMembers).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  role: z.enum(COMMITTEE_ROLES),
+  startDate: z.coerce.date(),
+  endDate: z.coerce.date().nullable().optional(),
+  sourceUrl: z.string().nullable().optional(),
+  verificationNotes: z.string().nullable().optional(),
+});
+
+export const updateCommitteeMemberSchema = insertCommitteeMemberSchema.partial().omit({ mpId: true });
+
+export type InsertCommitteeMember = z.infer<typeof insertCommitteeMemberSchema>;
+export type UpdateCommitteeMember = z.infer<typeof updateCommitteeMemberSchema>;
+export type CommitteeMember = typeof committeeMembers.$inferSelect;
+
+// ========== WEEKLY POLLS ==========
+// Weekly polling system with AI-generated topics
+
+// Polls table - stores the weekly poll questions
+export const polls = pgTable("polls", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  question: text("question").notNull(),
+  questionMs: text("question_ms"), // Malay translation
+  description: text("description"), // Optional context for the poll
+  category: text("category").notNull().default("general"), // politics, economy, social, education, etc.
+
+  // Week tracking
+  weekNumber: integer("week_number").notNull(), // ISO week number
+  year: integer("year").notNull(),
+
+  // Status
+  status: text("status").notNull().default("draft"), // draft, active, closed, archived
+
+  // AI generation metadata
+  generatedBy: text("generated_by").default("ai"), // ai, manual
+  aiPromptUsed: text("ai_prompt_used"), // Store the prompt for reference
+  sourceContext: text("source_context"), // What data was used to generate this poll
+
+  // Timing
+  startsAt: timestamp("starts_at"),
+  endsAt: timestamp("ends_at"),
+
+  // Stats (denormalized for performance)
+  totalVotes: integer("total_votes").notNull().default(0),
+
+  createdAt: timestamp("created_at").notNull().default(sql`NOW()`),
+  updatedAt: timestamp("updated_at").notNull().default(sql`NOW()`),
+});
+
+export const insertPollSchema = createInsertSchema(polls).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  totalVotes: true,
+}).extend({
+  category: z.enum(["politics", "economy", "social", "education", "healthcare", "environment", "infrastructure", "governance", "general"]).optional().default("general"),
+  status: z.enum(["draft", "active", "closed", "archived"]).optional().default("draft"),
+  generatedBy: z.enum(["ai", "manual"]).optional().default("ai"),
+  questionMs: z.string().nullable().optional(),
+  description: z.string().nullable().optional(),
+  aiPromptUsed: z.string().nullable().optional(),
+  sourceContext: z.string().nullable().optional(),
+  startsAt: z.coerce.date().nullable().optional(),
+  endsAt: z.coerce.date().nullable().optional(),
+});
+
+export const updatePollSchema = insertPollSchema.partial();
+
+export type InsertPoll = z.infer<typeof insertPollSchema>;
+export type UpdatePoll = z.infer<typeof updatePollSchema>;
+export type Poll = typeof polls.$inferSelect;
+
+// Poll Options table - stores the answer choices for each poll
+export const pollOptions = pgTable("poll_options", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  pollId: varchar("poll_id").notNull().references(() => polls.id, { onDelete: "cascade" }),
+  optionText: text("option_text").notNull(),
+  optionTextMs: text("option_text_ms"), // Malay translation
+  displayOrder: integer("display_order").notNull().default(0),
+
+  // Stats (denormalized for performance)
+  voteCount: integer("vote_count").notNull().default(0),
+  votePercentage: integer("vote_percentage").notNull().default(0), // Stored as percentage * 100 (e.g., 5550 = 55.50%)
+
+  createdAt: timestamp("created_at").notNull().default(sql`NOW()`),
+});
+
+export const insertPollOptionSchema = createInsertSchema(pollOptions).omit({
+  id: true,
+  createdAt: true,
+  voteCount: true,
+  votePercentage: true,
+}).extend({
+  optionTextMs: z.string().nullable().optional(),
+  displayOrder: z.number().optional().default(0),
+});
+
+export type InsertPollOption = z.infer<typeof insertPollOptionSchema>;
+export type PollOption = typeof pollOptions.$inferSelect;
+
+// Poll Votes table - stores individual votes with deduplication
+export const pollVotes = pgTable("poll_votes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  pollId: varchar("poll_id").notNull().references(() => polls.id, { onDelete: "cascade" }),
+  optionId: varchar("option_id").notNull().references(() => pollOptions.id, { onDelete: "cascade" }),
+
+  // Voter identification for deduplication (anonymous)
+  voterFingerprint: text("voter_fingerprint").notNull(), // Hash of IP + user agent for deduplication
+  ipAddress: text("ip_address"), // For rate limiting
+
+  createdAt: timestamp("created_at").notNull().default(sql`NOW()`),
+});
+
+export const insertPollVoteSchema = createInsertSchema(pollVotes).omit({
+  id: true,
+  createdAt: true,
+}).extend({
+  ipAddress: z.string().nullable().optional(),
+});
+
+export type InsertPollVote = z.infer<typeof insertPollVoteSchema>;
+export type PollVote = typeof pollVotes.$inferSelect;
+
+// Extended types for API responses
+export type PollWithOptions = Poll & {
+  options: PollOption[];
+};
+
+export type PollWithResults = Poll & {
+  options: PollOption[];
+  hasVoted?: boolean;
+  userVotedOptionId?: string;
+};
+
+// Bills to Watch table - curated key legislation for the homepage card
+export const billsToWatch = pgTable("bills_to_watch", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  titleEn: text("title_en").notNull(),
+  titleMs: text("title_ms").notNull(),
+  billNumber: text("bill_number"),
+  status: text("status").notNull().default("pending"),
+  summaryEn: text("summary_en").notNull(),
+  summaryMs: text("summary_ms").notNull(),
+  detailsEn: text("details_en"),
+  detailsMs: text("details_ms"),
+  isFeatured: boolean("is_featured").notNull().default(false),
+  icon: text("icon").notNull().default("scroll"),
+  tags: jsonb("tags").$type<string[]>().default(sql`'[]'::jsonb`),
+  sourceUrl: text("source_url"),
+  sortOrder: integer("sort_order").notNull().default(0),
+  createdAt: timestamp("created_at").notNull().default(sql`NOW()`),
+  updatedAt: timestamp("updated_at").notNull().default(sql`NOW()`),
+});
+
+export const insertBillToWatchSchema = createInsertSchema(billsToWatch).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertBillToWatch = z.infer<typeof insertBillToWatchSchema>;
+export type BillToWatch = typeof billsToWatch.$inferSelect;
+
+// ============================================================================
+// GigHalal Authentication Tables
+// Social login + email/password for Malaysian freelancer platform
+// ============================================================================
+
+// GigHalal users table — supports email/password + social OAuth providers
+export const gigUsers = pgTable("gig_users", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  // Profile
+  username: text("username").notNull(),
+  email: text("email"),
+  phone: text("phone"),
+  displayName: text("display_name"),
+  avatarUrl: text("avatar_url"),
+  accountType: text("account_type").notNull().default("freelancer"), // freelancer | employer
+
+  // Email/password auth (nullable for social-only users)
+  passwordHash: text("password_hash"),
+
+  // OAuth provider data
+  authProvider: text("auth_provider").notNull().default("email"), // email | facebook | google | apple | whatsapp
+  providerId: text("provider_id"), // External provider user ID
+  providerData: jsonb("provider_data").$type<Record<string, unknown>>(),
+
+  // SOCSO opt-in
+  socsoAutoRegister: boolean("socso_auto_register").notNull().default(false),
+
+  // Status
+  isActive: boolean("is_active").notNull().default(true),
+  emailVerified: boolean("email_verified").notNull().default(false),
+  phoneVerified: boolean("phone_verified").notNull().default(false),
+  lastLoginAt: timestamp("last_login_at"),
+  createdAt: timestamp("created_at").notNull().default(sql`NOW()`),
+  updatedAt: timestamp("updated_at").notNull().default(sql`NOW()`),
+});
+
+export const insertGigUserSchema = createInsertSchema(gigUsers).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  lastLoginAt: true,
+});
+
+export type InsertGigUser = z.infer<typeof insertGigUserSchema>;
+export type GigUser = typeof gigUsers.$inferSelect;
+
+// WhatsApp OTP verification codes
+export const whatsappOtpCodes = pgTable("whatsapp_otp_codes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  phone: text("phone").notNull(),
+  code: text("code").notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  verified: boolean("verified").notNull().default(false),
+  attempts: integer("attempts").notNull().default(0),
+  createdAt: timestamp("created_at").notNull().default(sql`NOW()`),
+});
+
+export type WhatsappOtpCode = typeof whatsappOtpCodes.$inferSelect;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PREMIUM SUBSCRIPTION SYSTEM
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Public user accounts (separate from admin_users)
+export const users = pgTable("users", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  email: text("email").notNull().unique(),
+  name: text("name").notNull(),
+  passwordHash: text("password_hash"),
+  isAdmin: boolean("is_admin").notNull().default(false),
+  emailVerified: boolean("email_verified").notNull().default(false),
+  emailVerificationToken: text("email_verification_token"),
+  passwordResetToken: text("password_reset_token"),
+  passwordResetExpiresAt: timestamp("password_reset_expires_at"),
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+  updatedAt: timestamp("updated_at").notNull().default(sql`now()`),
+});
+
+export const insertUserSchema = createInsertSchema(users).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertUser = z.infer<typeof insertUserSchema>;
+export type User = typeof users.$inferSelect;
+
+// Subscription plans (e.g. monthly, yearly)
+export const subscriptionPlans = pgTable("subscription_plans", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  slug: text("slug").notNull().unique(),        // 'monthly' | 'yearly'
+  name: text("name").notNull(),
+  priceMyr: integer("price_myr").notNull(),     // in sen (e.g. 1500 = RM 15.00)
+  interval: text("interval").notNull(),         // 'month' | 'year'
+  features: jsonb("features").$type<string[]>().notNull().default(sql`'[]'::jsonb`),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+});
+
+export type SubscriptionPlan = typeof subscriptionPlans.$inferSelect;
+
+// User subscriptions
+export const subscriptions = pgTable("subscriptions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  planId: varchar("plan_id").notNull().references(() => subscriptionPlans.id),
+  status: text("status").notNull(),             // 'active' | 'cancelled' | 'expired' | 'trial'
+  isTrial: boolean("is_trial").notNull().default(false),
+  currentPeriodStart: timestamp("current_period_start").notNull(),
+  currentPeriodEnd: timestamp("current_period_end").notNull(),
+  cancelAtPeriodEnd: boolean("cancel_at_period_end").notNull().default(false),
+  billingProvider: text("billing_provider").notNull().default("manual"), // 'billplz' | 'stripe' | 'manual'
+  billingProviderId: text("billing_provider_id"),  // external reference id
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+  updatedAt: timestamp("updated_at").notNull().default(sql`now()`),
+});
+
+export const insertSubscriptionSchema = createInsertSchema(subscriptions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertSubscription = z.infer<typeof insertSubscriptionSchema>;
+export type Subscription = typeof subscriptions.$inferSelect;
+
+// Payment audit trail
+export const paymentTransactions = pgTable("payment_transactions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  subscriptionId: varchar("subscription_id").references(() => subscriptions.id),
+  amountMyr: integer("amount_myr").notNull(),   // in sen
+  status: text("status").notNull(),             // 'pending' | 'paid' | 'failed' | 'refunded'
+  billingProvider: text("billing_provider").notNull(),
+  providerBillId: text("provider_bill_id"),     // Billplz bill_id / Stripe payment_intent_id
+  providerPayload: jsonb("provider_payload"),   // raw webhook payload for audit
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+});
+
+export type PaymentTransaction = typeof paymentTransactions.$inferSelect;
+
+// Billing event log — every lifecycle event emitted by the billing service
+// (subscription_created, payment_success, payment_failed, cancelled, renewed, refunded)
+export const billingEvents = pgTable("billing_events", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  subscriptionId: varchar("subscription_id").references(() => subscriptions.id),
+  transactionId: varchar("transaction_id").references(() => paymentTransactions.id),
+  eventType: text("event_type").notNull(),       // 'subscription_created' | 'payment_success' | ...
+  billingProvider: text("billing_provider").notNull(),
+  providerEventId: text("provider_event_id"),    // idempotency key (bill id, event id)
+  payload: jsonb("payload"),                     // full raw event for audit / replay
+  processedAt: timestamp("processed_at").notNull().default(sql`now()`),
+});
+
+export type BillingEvent = typeof billingEvents.$inferSelect;
+
+// ========== HANSARD NLP TAGGING PIPELINE ==========
+// Phase 1: Individual speech turns extracted from sessions
+
+export const hansardSpeeches = pgTable("hansard_speeches", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  hansardRecordId: varchar("hansard_record_id").notNull().references(() => hansardRecords.id, { onDelete: "cascade" }),
+  mpId: varchar("mp_id").notNull().references(() => mps.id),
+  speechText: text("speech_text").notNull(),
+  instanceNumber: integer("instance_number").notNull(), // Which turn did this MP speak (1st, 2nd, etc)
+  speakingOrder: integer("speaking_order").notNull(), // Overall order in the session
+  characterOffsetStart: integer("character_offset_start"), // Position in full transcript
+  characterOffsetEnd: integer("character_offset_end"),
+  createdAt: timestamp("created_at").notNull().default(sql`NOW()`),
+});
+
+export const insertHansardSpeechSchema = createInsertSchema(hansardSpeeches).omit({
+  id: true,
+  createdAt: true,
+}).extend({
+  characterOffsetStart: z.number().nullable().optional(),
+  characterOffsetEnd: z.number().nullable().optional(),
+});
+
+export type InsertHansardSpeech = z.infer<typeof insertHansardSpeechSchema>;
+export type HansardSpeech = typeof hansardSpeeches.$inferSelect;
+
+// Phase 2: Topic and sentiment tags assigned to speeches
+
+export const REVIEW_STATUS_VALUES = ["auto_published", "pending_review", "approved", "rejected", "edited"] as const;
+export type ReviewStatus = typeof REVIEW_STATUS_VALUES[number];
+
+export const SENTIMENT_TONE_VALUES = ["supportive", "critical", "neutral_informational", "mixed"] as const;
+export type SentimentTone = typeof SENTIMENT_TONE_VALUES[number];
+
+export const SENTIMENT_TARGET_VALUES = ["government_policy", "specific_minister", "specific_mp", "opposition_general", "none"] as const;
+export type SentimentTarget = typeof SENTIMENT_TARGET_VALUES[number];
+
+export const hansardTags = pgTable("hansard_tags", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  speechId: varchar("speech_id").notNull().references(() => hansardSpeeches.id, { onDelete: "cascade" }),
+  tagType: text("tag_type").$type<"topic" | "sentiment">().notNull(), // 'topic' or 'sentiment'
+  tagValue: text("tag_value").notNull(), // topic slug (e.g., "epf") or sentiment tone
+  confidence: integer("confidence").notNull(), // 0-100 (stored as percentage)
+  evidenceQuote: text("evidence_quote"), // substring from speech justifying tag
+  isNewTag: boolean("is_new_tag").notNull().default(false), // true if not in vocabulary
+  // Sentiment-specific fields
+  targetType: text("target_type").$type<SentimentTarget>(), // only for sentiment
+  targetEntity: text("target_entity"), // named individual/org, only if target_type isn't 'none'
+  // Review workflow
+  reviewStatus: text("review_status").$type<ReviewStatus>().notNull().default("auto_published"),
+  reviewFlagReason: text("review_flag_reason"), // why this landed in borderline band
+  reviewedAt: timestamp("reviewed_at"),
+  reviewedBy: varchar("reviewed_by"), // admin user ID
+  createdAt: timestamp("created_at").notNull().default(sql`NOW()`),
+});
+
+export const insertHansardTagSchema = createInsertSchema(hansardTags).omit({
+  id: true,
+  createdAt: true,
+  reviewedAt: true,
+}).extend({
+  tagType: z.enum(["topic", "sentiment"]),
+  confidence: z.number().min(0).max(100),
+  isNewTag: z.boolean().optional().default(false),
+  targetType: z.enum(SENTIMENT_TARGET_VALUES).nullable().optional(),
+  targetEntity: z.string().nullable().optional(),
+  reviewStatus: z.enum(REVIEW_STATUS_VALUES).optional().default("auto_published"),
+  reviewFlagReason: z.string().nullable().optional(),
+  reviewedBy: z.string().nullable().optional(),
+  evidenceQuote: z.string().nullable().optional(),
+});
+
+export const updateHansardTagSchema = insertHansardTagSchema.partial();
+
+export type InsertHansardTag = z.infer<typeof insertHansardTagSchema>;
+export type UpdateHansardTag = z.infer<typeof updateHansardTagSchema>;
+export type HansardTag = typeof hansardTags.$inferSelect;
+
+// Extracted entities from speeches
+export const ENTITY_TYPE_VALUES = ["organization", "policy_or_bill", "place", "statistic_cited"] as const;
+export type EntityType = typeof ENTITY_TYPE_VALUES[number];
+
+export const hansardEntities = pgTable("hansard_entities", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  speechId: varchar("speech_id").notNull().references(() => hansardSpeeches.id, { onDelete: "cascade" }),
+  entityName: text("entity_name").notNull(),
+  entityType: text("entity_type").$type<EntityType>().notNull(),
+  createdAt: timestamp("created_at").notNull().default(sql`NOW()`),
+});
+
+export const insertHansardEntitySchema = createInsertSchema(hansardEntities).omit({
+  id: true,
+  createdAt: true,
+}).extend({
+  entityType: z.enum(ENTITY_TYPE_VALUES),
+});
+
+export type InsertHansardEntity = z.infer<typeof insertHansardEntitySchema>;
+export type HansardEntity = typeof hansardEntities.$inferSelect;
+
+// Controlled vocabulary for topic tags
+export const VOCAB_STATUS_VALUES = ["active", "pending_review", "merged"] as const;
+export type VocabStatus = typeof VOCAB_STATUS_VALUES[number];
+
+export const hansardTopicVocabulary = pgTable("hansard_topic_vocabulary", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tagSlug: text("tag_slug").notNull().unique(), // e.g., "epf", "childcare_policy"
+  displayLabel: text("display_label").notNull(), // human-readable, e.g., "EPF / retirement savings"
+  status: text("status").$type<VocabStatus>().notNull().default("active"),
+  mergedIntoSlug: text("merged_into_slug"), // if merged, which tag it was merged into
+  createdAt: timestamp("created_at").notNull().default(sql`NOW()`),
+});
+
+export const insertHansardTopicVocabularySchema = createInsertSchema(hansardTopicVocabulary).omit({
+  id: true,
+  createdAt: true,
+}).extend({
+  status: z.enum(VOCAB_STATUS_VALUES).optional().default("active"),
+  mergedIntoSlug: z.string().nullable().optional(),
+});
+
+export const updateHansardTopicVocabularySchema = insertHansardTopicVocabularySchema.partial();
+
+export type InsertHansardTopicVocabulary = z.infer<typeof insertHansardTopicVocabularySchema>;
+export type UpdateHansardTopicVocabulary = z.infer<typeof updateHansardTopicVocabularySchema>;
+export type HansardTopicVocabulary = typeof hansardTopicVocabulary.$inferSelect;

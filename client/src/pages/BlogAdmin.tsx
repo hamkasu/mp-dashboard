@@ -431,14 +431,14 @@ export default function BlogAdmin() {
                               <div className="flex justify-end gap-2">
                                 <Button
                                   size="sm"
-                                  variant="ghost"
+                                  variant="outline"
                                   onClick={() => handleEdit(post)}
                                 >
                                   <Edit className="h-4 w-4" />
                                 </Button>
                                 <AlertDialog>
                                   <AlertDialogTrigger asChild>
-                                    <Button size="sm" variant="ghost">
+                                    <Button size="sm" variant="outline">
                                       <Trash2 className="h-4 w-4 text-destructive" />
                                     </Button>
                                   </AlertDialogTrigger>

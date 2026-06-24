@@ -46,6 +46,8 @@ async function main() {
     "0011_create_parliamentary_answers_tables.sql",
     "0012_add_by_election_columns.sql",
     "0015_create_visitor_analytics_table.sql",
+    "0017_create_bill_grok_reviews_table.sql",
+    "007_api_keys.sql",
   ];
 
   let successCount = 0;

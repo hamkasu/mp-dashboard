@@ -9,6 +9,9 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { LanguageProvider } from "@/i18n/LanguageContext";
+import { PWAInstallPrompt } from "@/components/PWAInstallPrompt";
+import { CNYFestiveBanner } from "@/components/CNYFestiveBanner";
+import { HariRayaBanner } from "@/components/HariRayaBanner";
 
 // Eager load only the most critical pages
 import Home from "@/pages/Home";
@@ -40,11 +43,30 @@ const Bills = lazy(() => import("@/pages/Bills"));
 const ParliamentaryAnswers = lazy(() => import("@/pages/ParliamentaryAnswers"));
 const ParliamentaryAnswersAdmin = lazy(() => import("@/pages/ParliamentaryAnswersAdmin"));
 const MPStatusAdmin = lazy(() => import("@/pages/MPStatusAdmin"));
+const AddMPAdmin = lazy(() => import("@/pages/AddMPAdmin"));
 const DunSarawak = lazy(() => import("@/pages/DunSarawak"));
 const DunSelangor = lazy(() => import("@/pages/DunSelangor"));
 const ReportCard = lazy(() => import("@/pages/ReportCard"));
 const ReportCardAdmin = lazy(() => import("@/pages/ReportCardAdmin"));
+const CoalitionComparison = lazy(() => import("@/pages/CoalitionComparison"));
+const StateLeaderboards = lazy(() => import("@/pages/StateLeaderboards"));
+const MPDetailWithPercentiles = lazy(() => import("@/pages/MPDetailWithPercentiles"));
+const AllowanceAnalysisDashboard = lazy(() => import("@/pages/AllowanceAnalysisDashboard"));
+const MPAllowanceBreakdown = lazy(() => import("@/pages/MPAllowanceBreakdown"));
+const AllowanceEfficiencyPage = lazy(() => import("@/pages/AllowanceEfficiencyPage"));
 const MPMessagesAdmin = lazy(() => import("@/pages/MPMessagesAdmin"));
+const AIAgentsAdmin = lazy(() => import("@/pages/AIAgentsAdmin"));
+const MA63Dashboard = lazy(() => import("@/pages/MA63Dashboard"));
+const MYMPImportAdmin = lazy(() => import("@/pages/MYMPImportAdmin"));
+const FeedbackAdmin = lazy(() => import("@/pages/FeedbackAdmin"));
+const VisitorDataAdmin = lazy(() => import("@/pages/VisitorDataAdmin"));
+const BillsToWatchAdmin = lazy(() => import("@/pages/BillsToWatchAdmin"));
+const ExternalFrame = lazy(() => import("@/pages/ExternalFrame"));
+const GigRegister = lazy(() => import("@/pages/GigRegister"));
+const AuditSummary = lazy(() => import("@/pages/AuditSummary"));
+const Login = lazy(() => import("@/pages/Login"));
+const Pricing = lazy(() => import("@/pages/Pricing"));
+const Account = lazy(() => import("@/pages/Account"));
 
 // Loading component
 function PageLoader() {
@@ -89,11 +111,35 @@ function Router() {
         <Route path="/admin/login" component={AdminLogin} />
         <Route path="/court-cases-admin" component={CourtCasesAdmin} />
         <Route path="/mp-status-admin" component={MPStatusAdmin} />
+        <Route path="/add-mp-admin" component={AddMPAdmin} />
         <Route path="/dun/sarawak" component={DunSarawak} />
         <Route path="/dun/selangor" component={DunSelangor} />
+        <Route path="/ma63" component={MA63Dashboard} />
         <Route path="/report-card" component={ReportCard} />
         <Route path="/report-card-admin" component={ReportCardAdmin} />
+        {/* Phase 4: Coalition and State Percentiles */}
+        <Route path="/coalition-comparison" component={CoalitionComparison} />
+        <Route path="/state-leaderboards" component={StateLeaderboards} />
+        <Route path="/mp/:mpId/percentiles" component={MPDetailWithPercentiles} />
+        {/* Phase 5: Allowance-per-Output ROI Analysis */}
+        <Route path="/allowance-analysis" component={AllowanceAnalysisDashboard} />
+        <Route path="/mp/:mpId/allowance-breakdown" component={MPAllowanceBreakdown} />
+        <Route path="/allowance-efficiency" component={AllowanceEfficiencyPage} />
         <Route path="/mp-messages-admin" component={MPMessagesAdmin} />
+        <Route path="/ai-agents-admin" component={AIAgentsAdmin} />
+        <Route path="/mymp-import-admin" component={MYMPImportAdmin} />
+        <Route path="/feedback-admin" component={FeedbackAdmin} />
+        <Route path="/visitor-data-admin" component={VisitorDataAdmin} />
+        <Route path="/bills-to-watch-admin" component={BillsToWatchAdmin} />
+        <Route path="/external/:site" component={ExternalFrame} />
+        {/* GigHalal registration/login */}
+        <Route path="/daftar" component={GigRegister} />
+        <Route path="/gig/register" component={GigRegister} />
+        <Route path="/audit-summary" component={AuditSummary} />
+        {/* Subscription & auth */}
+        <Route path="/login" component={Login} />
+        <Route path="/pricing" component={Pricing} />
+        <Route path="/account" component={Account} />
         <Route component={NotFound} />
       </Switch>
     </Suspense>
@@ -105,7 +151,10 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <LanguageProvider>
         <TooltipProvider>
+          <CNYFestiveBanner />
+          <HariRayaBanner />
           <Toaster />
+          <PWAInstallPrompt />
           <Router />
         </TooltipProvider>
       </LanguageProvider>

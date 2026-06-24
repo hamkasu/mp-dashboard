@@ -144,7 +144,7 @@ export default function Blog() {
                       </div>
                     </div>
                     <Button
-                      variant="ghost"
+                      variant="outline"
                       className="w-full justify-between group"
                       data-testid={`blog-post-read-${post.id}`}
                       onClick={() => handleReadArticle(post)}

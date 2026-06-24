@@ -2,9 +2,11 @@
  * Copyright by Calmic Sdn Bhd
  */
 
+import { useState } from "react";
 import { Users, Flag, UserCircle, MapPin, Calendar, Info } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { CoalitionNumbersPopup } from "@/components/CoalitionNumbersPopup";
 
 interface Statistics {
   totalMps: number;
@@ -29,6 +31,8 @@ interface StatisticsCardsProps {
 }
 
 export function StatisticsCards({ stats, filteredStats, isLoading, hasPartyFilter = false }: StatisticsCardsProps) {
+  const [coalitionPopupOpen, setCoalitionPopupOpen] = useState(false);
+
   if (isLoading) {
     const skeletonCount = hasPartyFilter ? 3 : 5;
     const gridCols = hasPartyFilter ? "lg:grid-cols-3" : "lg:grid-cols-5";
@@ -79,7 +83,16 @@ export function StatisticsCards({ stats, filteredStats, isLoading, hasPartyFilte
   const gridCols = hasPartyFilter ? "lg:grid-cols-3" : "lg:grid-cols-5";
 
   return (
-    <div className={`grid grid-cols-1 md:grid-cols-2 ${gridCols} gap-4 md:gap-6`}>
+    <>
+      <CoalitionNumbersPopup
+        isOpen={coalitionPopupOpen}
+        onOpenChange={setCoalitionPopupOpen}
+        partyBreakdown={stats.partyBreakdown}
+        governmentMps={governmentMps}
+        oppositionMps={oppositionMps}
+        totalMps={stats.totalMps}
+      />
+      <div className={`grid grid-cols-1 md:grid-cols-2 ${gridCols} gap-4 md:gap-6`}>
       {!hasPartyFilter && (
         <Card data-testid="card-total-mps">
           <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
@@ -98,7 +111,11 @@ export function StatisticsCards({ stats, filteredStats, isLoading, hasPartyFilte
       )}
 
       {!hasPartyFilter && (
-        <Card data-testid="card-party-breakdown">
+        <Card
+          data-testid="card-party-breakdown"
+          className="cursor-pointer hover:shadow-lg transition-shadow"
+          onClick={() => setCoalitionPopupOpen(true)}
+        >
           <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Coalition Numbers</CardTitle>
             <Flag className="h-4 w-4 text-muted-foreground" />
@@ -185,6 +202,7 @@ export function StatisticsCards({ stats, filteredStats, isLoading, hasPartyFilte
           )}
         </CardContent>
       </Card>
-    </div>
+      </div>
+    </>
   );
 }

@@ -87,6 +87,22 @@ interface DetailedSummary {
   analyzedAt: string;
 }
 
+interface ComprehensiveAnalysis {
+  id: string;
+  hansardRecordId: string;
+  language: string;
+  introduction: string;
+  sections: Array<{
+    title: string;
+    overview: string;
+    keyPoints: Array<{
+      heading: string;
+      detail: string;
+    }>;
+  }>;
+  analyzedAt: string;
+}
+
 interface QAResult {
   id: string;
   hansardRecordId: string;
@@ -123,6 +139,10 @@ export function HansardAIInsights({ hansardRecord, trigger }: HansardAIInsightsP
     detailedSummary: {
       en: DetailedSummary | null;
       ms: DetailedSummary | null;
+    };
+    comprehensiveAnalysis: {
+      en: ComprehensiveAnalysis | null;
+      ms: ComprehensiveAnalysis | null;
     };
   }>({
     queryKey: [`/api/analyze/${hansardRecord.id}`],
@@ -191,6 +211,25 @@ export function HansardAIInsights({ hansardRecord, trigger }: HansardAIInsightsP
       toast({
         title: "Summary Generated",
         description: "AI has created a detailed summary of this debate",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Analysis Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const comprehensiveMutation = useMutation({
+    mutationFn: (language: "en" | "ms") =>
+      apiRequest("POST", `/api/analyze/comprehensive/${hansardRecord.id}`, { language }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/analyze/${hansardRecord.id}`] });
+      toast({
+        title: "Analysis Generated",
+        description: "AI has created a comprehensive thematic analysis of this debate",
       });
     },
     onError: (error: Error) => {
@@ -608,117 +647,92 @@ export function HansardAIInsights({ hansardRecord, trigger }: HansardAIInsightsP
                 <TabsContent key={lang} value={lang} className="space-y-4">
                   {analysisLoading ? (
                     <Skeleton className="h-64 w-full" />
-                  ) : !allAnalysis?.detailedSummary[lang as "en" | "ms"] ? (
+                  ) : !allAnalysis?.comprehensiveAnalysis?.[lang as "en" | "ms"] ? (
                     <Card>
                       <CardContent className="p-8 text-center">
                         <FileText className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-                        <p className="text-lg font-medium mb-2">Generate Summary</p>
+                        <p className="text-lg font-medium mb-2">Generate Comprehensive Analysis</p>
                         <p className="text-sm text-muted-foreground mb-4">
-                          Get a detailed summary in {lang === "en" ? "English" : "Bahasa Malaysia"}
+                          Get a detailed thematic analysis in {lang === "en" ? "English" : "Bahasa Malaysia"}
                         </p>
                         <Button
-                          onClick={() => summaryMutation.mutate(lang as "en" | "ms")}
-                          disabled={summaryMutation.isPending}
-                          data-testid={`button-generate-summary-${lang}`}
+                          onClick={() => comprehensiveMutation.mutate(lang as "en" | "ms")}
+                          disabled={comprehensiveMutation.isPending}
+                          data-testid={`button-generate-comprehensive-${lang}`}
                         >
-                          {summaryMutation.isPending ? (
+                          {comprehensiveMutation.isPending ? (
                             <>
                               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                              Generating...
+                              Generating Analysis...
                             </>
                           ) : (
                             <>
                               <Sparkles className="mr-2 h-4 w-4" />
-                              Generate Summary
+                              Generate Analysis
                             </>
                           )}
                         </Button>
                       </CardContent>
                     </Card>
                   ) : (
-                    <div className="space-y-4">
-                      <Card>
-                        <CardHeader>
-                          <CardTitle>Summary</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <p className="text-sm leading-relaxed whitespace-pre-wrap" data-testid={`summary-text-${lang}`}>
-                            {allAnalysis.detailedSummary[lang as "en" | "ms"]?.summary}
+                    <ScrollArea className="h-[600px] pr-4">
+                      <div className="space-y-6">
+                        {/* Introduction */}
+                        <div className="prose prose-sm max-w-none dark:prose-invert">
+                          <p className="text-base leading-relaxed text-muted-foreground italic">
+                            {allAnalysis.comprehensiveAnalysis[lang as "en" | "ms"]?.introduction}
                           </p>
-                        </CardContent>
-                      </Card>
+                        </div>
 
-                      {allAnalysis.detailedSummary[lang as "en" | "ms"]!.keyArguments.length > 0 && (
-                        <Card>
-                          <CardHeader>
-                            <CardTitle className="text-base">Key Arguments</CardTitle>
-                          </CardHeader>
-                          <CardContent>
-                            <ul className="list-disc list-inside space-y-2">
-                              {allAnalysis.detailedSummary[lang as "en" | "ms"]!.keyArguments.map((arg, idx) => (
-                                <li key={idx} className="text-sm">
-                                  {arg}
-                                </li>
-                              ))}
-                            </ul>
-                          </CardContent>
-                        </Card>
-                      )}
+                        {/* Thematic Sections */}
+                        {allAnalysis.comprehensiveAnalysis[lang as "en" | "ms"]?.sections.map((section, idx) => (
+                          <Card key={idx} className="border-l-4 border-l-primary" data-testid={`section-${idx}`}>
+                            <CardHeader className="pb-3">
+                              <CardTitle className="text-lg flex items-center gap-2">
+                                <span className="bg-primary text-primary-foreground rounded-full w-7 h-7 flex items-center justify-center text-sm font-bold">
+                                  {idx + 1}
+                                </span>
+                                {section.title}
+                              </CardTitle>
+                              <CardDescription className="text-sm leading-relaxed mt-2">
+                                {section.overview}
+                              </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                              <div className="space-y-4">
+                                {section.keyPoints.map((point, pidx) => (
+                                  <div key={pidx} className="pl-4 border-l-2 border-muted">
+                                    <p className="font-medium text-sm text-foreground mb-1">
+                                      {point.heading}
+                                    </p>
+                                    <p className="text-sm text-muted-foreground leading-relaxed">
+                                      {point.detail}
+                                    </p>
+                                  </div>
+                                ))}
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ))}
 
-                      {allAnalysis.detailedSummary[lang as "en" | "ms"]!.decisions.length > 0 && (
-                        <Card>
-                          <CardHeader>
-                            <CardTitle className="text-base">Decisions Made</CardTitle>
-                          </CardHeader>
-                          <CardContent>
-                            <ul className="list-disc list-inside space-y-2">
-                              {allAnalysis.detailedSummary[lang as "en" | "ms"]!.decisions.map((dec, idx) => (
-                                <li key={idx} className="text-sm">
-                                  {dec}
-                                </li>
-                              ))}
-                            </ul>
-                          </CardContent>
-                        </Card>
-                      )}
-
-                      {allAnalysis.detailedSummary[lang as "en" | "ms"]!.actionItems.length > 0 && (
-                        <Card>
-                          <CardHeader>
-                            <CardTitle className="text-base">Action Items</CardTitle>
-                          </CardHeader>
-                          <CardContent>
-                            <ul className="list-disc list-inside space-y-2">
-                              {allAnalysis.detailedSummary[lang as "en" | "ms"]!.actionItems.map((item, idx) => (
-                                <li key={idx} className="text-sm">
-                                  {item}
-                                </li>
-                              ))}
-                            </ul>
-                          </CardContent>
-                        </Card>
-                      )}
-
-                      {allAnalysis.detailedSummary[lang as "en" | "ms"]!.controversialPoints.length > 0 && (
-                        <Card>
-                          <CardHeader>
-                            <CardTitle className="text-base flex items-center gap-2">
-                              <AlertCircle className="w-4 h-4 text-orange-600 dark:text-orange-400" />
-                              Controversial Points
-                            </CardTitle>
-                          </CardHeader>
-                          <CardContent>
-                            <ul className="list-disc list-inside space-y-2">
-                              {allAnalysis.detailedSummary[lang as "en" | "ms"]!.controversialPoints.map((point, idx) => (
-                                <li key={idx} className="text-sm">
-                                  {point}
-                                </li>
-                              ))}
-                            </ul>
-                          </CardContent>
-                        </Card>
-                      )}
-                    </div>
+                        {/* Re-analyze button */}
+                        <div className="flex justify-end pt-4">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => comprehensiveMutation.mutate(lang as "en" | "ms")}
+                            disabled={comprehensiveMutation.isPending}
+                          >
+                            {comprehensiveMutation.isPending ? (
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            ) : (
+                              <RefreshCw className="mr-2 h-4 w-4" />
+                            )}
+                            Re-analyze
+                          </Button>
+                        </div>
+                      </div>
+                    </ScrollArea>
                   )}
                 </TabsContent>
               ))}

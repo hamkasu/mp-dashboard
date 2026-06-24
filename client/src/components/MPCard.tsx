@@ -2,14 +2,14 @@
  * Copyright by Calmic Sdn Bhd
  */
 
-import { MapPin, UserCircle, Wallet, Calendar, Mic, TrendingDown, ScrollText, MessageSquareWarning, HelpCircle, MessageSquare } from "lucide-react";
+import { MapPin, UserCircle, Wallet, Calendar, Mic, TrendingDown, ScrollText, MessageSquareWarning, HelpCircle, MessageSquare, Vote } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import type { Mp, LegislativeProposal, ParliamentaryQuestion } from "@shared/schema";
 import { Link } from "wouter";
-import { calculateTotalSalary, formatCurrency } from "@/lib/utils";
+import { calculateTotalSalary, formatCurrency, getProxiedPhotoUrl } from "@/lib/utils";
 import { getMinisterialSalary, getCabinetRoleType } from "@/lib/allowanceCalculator";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { useConstituencyByCode } from "@/hooks/use-constituencies";
@@ -97,7 +97,7 @@ export function MPCard({ mp, bills, oralQuestions, languageStats }: MPCardProps)
   const isValidDate = (date: any) => !!date && !isNaN(new Date(date).getTime());
 
   // Check if MP has passed away
-  const isDeceased = isValidDate(mp.termEndDate) && new Date(mp.termEndDate) <= new Date();
+  const isDeceased = isValidDate(mp.termEndDate) && new Date(mp.termEndDate!) <= new Date();
 
   return (
     <Link href={`/mp/${mp.id}`}>
@@ -108,7 +108,7 @@ export function MPCard({ mp, bills, oralQuestions, languageStats }: MPCardProps)
         <div className="aspect-[3/4] relative overflow-hidden bg-muted">
           {mp.photoUrl ? (
             <img
-              src={mp.photoUrl}
+              src={getProxiedPhotoUrl(mp.photoUrl) || mp.photoUrl}
               alt={mp.name}
               className={`object-cover w-full h-full ${isDeceased ? 'opacity-60 grayscale' : ''}`}
               loading="lazy"
@@ -172,6 +172,31 @@ export function MPCard({ mp, bills, oralQuestions, languageStats }: MPCardProps)
                 </div>
               </div>
             </div>
+
+            {mp.electionVotesReceived && (
+              <div className="flex items-start gap-2">
+                <Vote className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-purple-600 dark:text-purple-400" data-testid={`text-election-votes-${mp.id}`}>
+                    {mp.electionVotesReceived.toLocaleString()} {t('mpCard.votes')}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {t('mpCard.receivedIn')} {mp.electionYear || 2022} {t('mpCard.election')}
+                    {mp.electionVotePercentage && ` (${(mp.electionVotePercentage / 100).toFixed(1)}%)`}
+                  </p>
+                  {mp.electionMajority && (
+                    <p className="text-xs text-purple-600 dark:text-purple-400 mt-0.5">
+                      {t('mpCard.majority')}: {mp.electionMajority.toLocaleString()} {t('mpCard.votes')}
+                    </p>
+                  )}
+                  {mp.electionTurnoutPercent && (
+                    <p className="text-xs text-muted-foreground">
+                      {t('mpCard.turnout')}: {(mp.electionTurnoutPercent / 100).toFixed(1)}%
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
 
             <div className="flex items-start gap-2">
               <Wallet className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
@@ -302,6 +327,7 @@ export function MPCard({ mp, bills, oralQuestions, languageStats }: MPCardProps)
                 </div>
               </div>
             )}
+          </div>
           </div>
 
           {/* Contact Button - Always at bottom */}

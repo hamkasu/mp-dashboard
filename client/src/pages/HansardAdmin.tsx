@@ -13,7 +13,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, Download, Trash2, AlertTriangle, CheckCircle2, RefreshCw, Upload, FileText, X, Database, Clock, History, Share2, Sparkles, StopCircle, Users, Edit, UserX } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Loader2, Download, Trash2, AlertTriangle, CheckCircle2, RefreshCw, Upload, FileText, X, Database, Clock, History, Share2, Sparkles, StopCircle, Users, Edit, UserX, Vote, DollarSign } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { UnmatchedSpeakersManager } from "@/components/UnmatchedSpeakersManager";
@@ -35,7 +36,7 @@ interface UploadResult {
 }
 
 interface SyncLogEntry {
-  triggeredBy: 'manual' | 'scheduled';
+  triggeredBy: 'manual' | 'scheduled' | 'startup-recovery';
   startTime: string;
   endTime: string;
   durationMs: number;
@@ -105,6 +106,24 @@ export default function HansardAdmin() {
   const [byElectionDate, setByElectionDate] = useState("");
   const [byElectionNotes, setByElectionNotes] = useState("");
 
+  // Edit MP Details states
+  const [editMpId, setEditMpId] = useState("");
+  const [editMpForm, setEditMpForm] = useState<{
+    name: string; party: string; parliamentCode: string; constituency: string;
+    state: string; gender: string; title: string; role: string;
+    photoUrl: string; email: string; telephone: string; fax: string;
+    mobileNumber: string; contactAddress: string; serviceAddress: string;
+    facebookUrl: string; instagramUrl: string; twitterUrl: string; tiktokUrl: string;
+    isMinister: boolean; isDeputyMinister: boolean; ministerialPosition: string;
+  }>({
+    name: "", party: "", parliamentCode: "", constituency: "",
+    state: "", gender: "", title: "", role: "",
+    photoUrl: "", email: "", telephone: "", fax: "",
+    mobileNumber: "", contactAddress: "", serviceAddress: "",
+    facebookUrl: "", instagramUrl: "", twitterUrl: "", tiktokUrl: "",
+    isMinister: false, isDeputyMinister: false, ministerialPosition: "",
+  });
+
   // Constituency Attendance Audit states
   const [auditConstituency, setAuditConstituency] = useState("");
   const [auditResult, setAuditResult] = useState<{
@@ -114,11 +133,20 @@ export default function HansardAdmin() {
     absentSessions: Array<{ sessionNumber: string; sessionDate: string }>;
   } | null>(null);
 
-  // Cleanup polling interval on unmount
+  // Delete verification dialog states
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [deleteCountdown, setDeleteCountdown] = useState(0);
+  const deleteCountdownRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Cleanup polling interval and delete countdown on unmount
   useEffect(() => {
     return () => {
       if (pollingInterval) {
         clearInterval(pollingInterval);
+      }
+      if (deleteCountdownRef.current) {
+        clearInterval(deleteCountdownRef.current);
       }
     };
   }, [pollingInterval]);
@@ -136,6 +164,28 @@ export default function HansardAdmin() {
   // Fetch all MPs for status update
   const { data: allMps = [] } = useQuery<Array<{id: string; name: string; constituency: string; party: string; termEndDate: string | null}>>({
     queryKey: ["/api/mps"],
+  });
+
+  // Query for parliament costs
+  const { data: parliamentCosts, isLoading: costsLoading, refetch: refetchCosts } = useQuery<{
+    success: boolean;
+    data: {
+      totalCosts: number;
+      breakdown: {
+        totalBaseSalaries: number;
+        totalMinisterialSalaries: number;
+        totalFixedAllowances: number;
+        totalParliamentSittingAllowances: number;
+        totalGovernmentMeetingAllowances: number;
+      };
+      statistics: {
+        totalMps: number;
+        totalMinisters: number;
+        averageCostPerMp: number;
+      };
+    };
+  }>({
+    queryKey: ["/api/admin/calculate-parliament-costs"],
   });
 
   // Update MP status mutation
@@ -165,6 +215,70 @@ export default function HansardAdmin() {
       toast({
         title: "Error",
         description: error.message || "Failed to update MP status",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Fetch selected MP details for editing
+  const { data: editMpData, isLoading: editMpLoading } = useQuery<any>({
+    queryKey: ["/api/mps", editMpId],
+    queryFn: async () => {
+      const res = await fetch(`/api/mps/${editMpId}`);
+      if (!res.ok) throw new Error("Failed to fetch MP details");
+      return res.json();
+    },
+    enabled: !!editMpId,
+  });
+
+  // Populate form when MP data is loaded
+  useEffect(() => {
+    if (editMpData) {
+      setEditMpForm({
+        name: editMpData.name || "",
+        party: editMpData.party || "",
+        parliamentCode: editMpData.parliamentCode || "",
+        constituency: editMpData.constituency || "",
+        state: editMpData.state || "",
+        gender: editMpData.gender || "",
+        title: editMpData.title || "",
+        role: editMpData.role || "",
+        photoUrl: editMpData.photoUrl || "",
+        email: editMpData.email || "",
+        telephone: editMpData.telephone || "",
+        fax: editMpData.fax || "",
+        mobileNumber: editMpData.mobileNumber || "",
+        contactAddress: editMpData.contactAddress || "",
+        serviceAddress: editMpData.serviceAddress || "",
+        facebookUrl: editMpData.facebookUrl || "",
+        instagramUrl: editMpData.instagramUrl || "",
+        twitterUrl: editMpData.twitterUrl || "",
+        tiktokUrl: editMpData.tiktokUrl || "",
+        isMinister: editMpData.isMinister || false,
+        isDeputyMinister: editMpData.isDeputyMinister || false,
+        ministerialPosition: editMpData.ministerialPosition || "",
+      });
+    }
+  }, [editMpData]);
+
+  // Update MP details mutation
+  const updateMpDetailsMutation = useMutation({
+    mutationFn: async (data: { id: string; updates: Record<string, any> }) => {
+      return await apiRequest("PATCH", `/api/admin/mps/${data.id}`, data.updates);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "MP details updated successfully",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/mps"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/mps", editMpId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update MP details",
         variant: "destructive",
       });
     },
@@ -208,6 +322,30 @@ export default function HansardAdmin() {
       toast({
         title: "Error",
         description: error.message || "Failed to clean up orphaned records",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const triggerDownloadMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/admin/trigger-hansard-check");
+      return await res.json();
+    },
+    onSuccess: (data: any) => {
+      refetchSyncLogs();
+      const r = data.result;
+      toast({
+        title: r.recordsInserted > 0 ? "Download complete" : "No new files",
+        description: r.recordsInserted > 0
+          ? `Inserted ${r.recordsInserted} new record(s) in ${(r.durationMs / 1000).toFixed(1)}s`
+          : "Database is already up to date",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Download failed",
+        description: error.message || "Failed to trigger Hansard download",
         variant: "destructive",
       });
     },
@@ -317,10 +455,33 @@ export default function HansardAdmin() {
     },
   });
 
-  const handleDelete = () => {
-    if (confirm(`Are you sure you want to delete all ${hansardRecords?.length || 0} hansard records? This action cannot be undone.`)) {
-      deleteMutation.mutate();
-    }
+  const handleDeleteOpen = () => {
+    setDeleteConfirmText("");
+    setDeleteCountdown(5);
+    setDeleteDialogOpen(true);
+    // Start countdown
+    if (deleteCountdownRef.current) clearInterval(deleteCountdownRef.current);
+    deleteCountdownRef.current = setInterval(() => {
+      setDeleteCountdown((prev) => {
+        if (prev <= 1) {
+          if (deleteCountdownRef.current) clearInterval(deleteCountdownRef.current);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  };
+
+  const handleDeleteClose = () => {
+    setDeleteDialogOpen(false);
+    setDeleteConfirmText("");
+    setDeleteCountdown(0);
+    if (deleteCountdownRef.current) clearInterval(deleteCountdownRef.current);
+  };
+
+  const handleDeleteConfirm = () => {
+    deleteMutation.mutate();
+    handleDeleteClose();
   };
 
   const handleCleanupOrphaned = () => {
@@ -340,6 +501,39 @@ export default function HansardAdmin() {
     if (confirm("This will DELETE all existing hansard records and download fresh data from the 15th Parliament. This may take several minutes. Continue?")) {
       setDownloadStatus(null);
       refreshMutation.mutate(1000);
+    }
+  };
+
+  const previousParliamentsMutation = useMutation({
+    mutationFn: async (maxRecords: number) => {
+      const res = await apiRequest("POST", "/api/hansard-records/download-previous", {
+        maxRecords,
+      });
+      return await res.json();
+    },
+    onSuccess: (data: { jobId: string; message: string }) => {
+      toast({
+        title: "Download Started",
+        description: "Downloading hansards from previous parliaments in background...",
+      });
+
+      const interval = setInterval(() => pollJobStatus(data.jobId), 2000);
+      setPollingInterval(interval);
+      pollJobStatus(data.jobId);
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to start previous parliaments download",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleDownloadPreviousParliaments = () => {
+    if (confirm("This will download hansard records from all previous parliaments (1st-14th). Existing records will be skipped. This may take a very long time. Continue?")) {
+      setDownloadStatus(null);
+      previousParliamentsMutation.mutate(5000);
     }
   };
 
@@ -367,6 +561,62 @@ export default function HansardAdmin() {
   const handleRefreshMpData = () => {
     if (confirm("This will recalculate all MP attendance, speech counts, and performance metrics from Hansard records. Continue?")) {
       refreshMpDataMutation.mutate();
+    }
+  };
+
+  // Mutation to refresh MP data and recalculate costs
+  const refreshCostsMutation = useMutation({
+    mutationFn: async () => {
+      // First refresh MP data (recalculate attendance from hansard records)
+      const refreshRes = await apiRequest("POST", "/api/admin/refresh-mp-data");
+      await refreshRes.json();
+      // Then get updated costs
+      const costsRes = await apiRequest("GET", "/api/admin/calculate-parliament-costs");
+      return await costsRes.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/calculate-parliament-costs"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/mps"] });
+      toast({
+        title: "Success",
+        description: "Parliament costs recalculated with updated attendance data",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to recalculate costs",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Import Election Results mutation
+  const importElectionResultsMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/admin/import-election-results");
+      return await res.json();
+    },
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/mps"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
+      toast({
+        title: "Success",
+        description: `Imported election results for ${data.results.updatedMps} MPs`,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to import election results",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleImportElectionResults = () => {
+    if (confirm("This will fetch GE15 (2022) election vote data from Tindak Malaysia's GitHub repository and update all MPs. Continue?")) {
+      importElectionResultsMutation.mutate();
     }
   };
 
@@ -570,7 +820,13 @@ export default function HansardAdmin() {
       return await res.json();
     },
     onSuccess: (data: any) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/hansard-records"] });
+      // Invalidate all hansard-related queries, including /search with various params
+      queryClient.invalidateQueries({
+        predicate: (query) => {
+          const key = query.queryKey[0];
+          return typeof key === 'string' && key.startsWith('/api/hansard-records');
+        }
+      });
       queryClient.invalidateQueries({ queryKey: ["/api/mps"] });
       queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
       toast({
@@ -787,6 +1043,114 @@ export default function HansardAdmin() {
           </div>
         </div>
 
+      {/* Total Parliament Costs Section */}
+      <Card className="border-green-500">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <DollarSign className="h-5 w-5" />
+            Total Parliament Costs
+          </CardTitle>
+          <CardDescription>
+            Calculate total salaries and allowances for all MPs (including parliament attendance)
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {costsLoading ? (
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Calculating costs...
+            </div>
+          ) : parliamentCosts?.data ? (
+            <div className="space-y-4">
+              <div className="p-4 bg-green-50 dark:bg-green-950/20 rounded-md border border-green-200 dark:border-green-800">
+                <h3 className="text-2xl font-bold text-green-700 dark:text-green-400">
+                  RM {parliamentCosts.data.totalCosts.toLocaleString('en-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </h3>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Total cumulative costs since MPs sworn in
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-3">
+                  <h4 className="font-semibold text-sm">Cost Breakdown</h4>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Base Salaries:</span>
+                      <strong>RM {parliamentCosts.data.breakdown.totalBaseSalaries.toLocaleString('en-MY')}</strong>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Ministerial Salaries:</span>
+                      <strong>RM {parliamentCosts.data.breakdown.totalMinisterialSalaries.toLocaleString('en-MY')}</strong>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Fixed Allowances:</span>
+                      <strong>RM {parliamentCosts.data.breakdown.totalFixedAllowances.toLocaleString('en-MY')}</strong>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Parliament Sitting:</span>
+                      <strong>RM {parliamentCosts.data.breakdown.totalParliamentSittingAllowances.toLocaleString('en-MY')}</strong>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Government Meetings:</span>
+                      <strong>RM {parliamentCosts.data.breakdown.totalGovernmentMeetingAllowances.toLocaleString('en-MY')}</strong>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <h4 className="font-semibold text-sm">Statistics</h4>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Total MPs:</span>
+                      <strong>{parliamentCosts.data.statistics.totalMps}</strong>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Ministers:</span>
+                      <strong>{parliamentCosts.data.statistics.totalMinisters}</strong>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Parliament Days Total:</span>
+                      <strong>{parliamentCosts.data.statistics.totalParliamentDays}</strong>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Avg Cost per MP:</span>
+                      <strong>RM {parliamentCosts.data.statistics.averageCostPerMp.toLocaleString('en-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex gap-2 mt-4">
+                <Button
+                  onClick={() => refreshCostsMutation.mutate()}
+                  disabled={costsLoading || refreshCostsMutation.isPending}
+                  variant="outline"
+                  className="flex-1"
+                  data-testid="button-refresh-costs"
+                >
+                  {costsLoading || refreshCostsMutation.isPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Recalculating...
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className="mr-2 h-4 w-4" />
+                      Refresh Calculation
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="text-center text-muted-foreground py-4">
+              Failed to calculate costs. Please try again.
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       {/* MP Status Update Section */}
       <Card>
         <CardHeader>
@@ -899,6 +1263,354 @@ export default function HansardAdmin() {
         </CardContent>
       </Card>
 
+      {/* Edit MP Details Section */}
+      <Card className="border-blue-500">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Edit className="h-5 w-5" />
+            Edit MP Details
+          </CardTitle>
+          <CardDescription>
+            Select an MP to edit their profile information, contact details, and social media links
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {/* MP Selection */}
+            <div className="space-y-2">
+              <Label htmlFor="edit-mp-select">Select MP to Edit *</Label>
+              <Select value={editMpId} onValueChange={(val) => setEditMpId(val)}>
+                <SelectTrigger id="edit-mp-select">
+                  <SelectValue placeholder="Choose an MP to edit..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {allMps
+                    .sort((a, b) => a.name.localeCompare(b.name))
+                    .map((mp) => (
+                      <SelectItem key={mp.id} value={mp.id}>
+                        {mp.name} - {mp.constituency} ({mp.party})
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {editMpId && editMpLoading && (
+              <div className="flex items-center gap-2 text-muted-foreground py-4">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Loading MP details...
+              </div>
+            )}
+
+            {editMpId && editMpData && !editMpLoading && (
+              <div className="space-y-6 border-t pt-4">
+                {/* Basic Information */}
+                <div>
+                  <h3 className="font-medium mb-3">Basic Information</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-name">Full Name</Label>
+                      <Input
+                        id="edit-name"
+                        value={editMpForm.name}
+                        onChange={(e) => setEditMpForm(f => ({ ...f, name: e.target.value }))}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-title">Title</Label>
+                      <Select value={editMpForm.title} onValueChange={(val) => setEditMpForm(f => ({ ...f, title: val }))}>
+                        <SelectTrigger id="edit-title">
+                          <SelectValue placeholder="Select title..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="YB">YB</SelectItem>
+                          <SelectItem value="YAB">YAB</SelectItem>
+                          <SelectItem value="Datuk">Datuk</SelectItem>
+                          <SelectItem value="Datuk Seri">Datuk Seri</SelectItem>
+                          <SelectItem value="Tan Sri">Tan Sri</SelectItem>
+                          <SelectItem value="Tun">Tun</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-gender">Gender</Label>
+                      <Select value={editMpForm.gender} onValueChange={(val) => setEditMpForm(f => ({ ...f, gender: val }))}>
+                        <SelectTrigger id="edit-gender">
+                          <SelectValue placeholder="Select gender..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Male">Male</SelectItem>
+                          <SelectItem value="Female">Female</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-party">Political Party</Label>
+                      <Input
+                        id="edit-party"
+                        value={editMpForm.party}
+                        onChange={(e) => setEditMpForm(f => ({ ...f, party: e.target.value }))}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-role">Role</Label>
+                      <Input
+                        id="edit-role"
+                        value={editMpForm.role}
+                        onChange={(e) => setEditMpForm(f => ({ ...f, role: e.target.value }))}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-photo-url">Photo URL</Label>
+                      <Input
+                        id="edit-photo-url"
+                        value={editMpForm.photoUrl}
+                        onChange={(e) => setEditMpForm(f => ({ ...f, photoUrl: e.target.value }))}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Constituency Information */}
+                <div>
+                  <h3 className="font-medium mb-3">Constituency Information</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-parliament-code">Parliament Code</Label>
+                      <Input
+                        id="edit-parliament-code"
+                        value={editMpForm.parliamentCode}
+                        onChange={(e) => setEditMpForm(f => ({ ...f, parliamentCode: e.target.value }))}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-constituency">Constituency</Label>
+                      <Input
+                        id="edit-constituency"
+                        value={editMpForm.constituency}
+                        onChange={(e) => setEditMpForm(f => ({ ...f, constituency: e.target.value }))}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-state">State</Label>
+                      <Input
+                        id="edit-state"
+                        value={editMpForm.state}
+                        onChange={(e) => setEditMpForm(f => ({ ...f, state: e.target.value }))}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Ministerial Status */}
+                <div>
+                  <h3 className="font-medium mb-3">Ministerial Status</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-is-minister">Is Minister</Label>
+                      <Select value={editMpForm.isMinister ? "true" : "false"} onValueChange={(val) => setEditMpForm(f => ({ ...f, isMinister: val === "true" }))}>
+                        <SelectTrigger id="edit-is-minister">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="false">No</SelectItem>
+                          <SelectItem value="true">Yes</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-is-deputy-minister">Is Deputy Minister</Label>
+                      <Select value={editMpForm.isDeputyMinister ? "true" : "false"} onValueChange={(val) => setEditMpForm(f => ({ ...f, isDeputyMinister: val === "true" }))}>
+                        <SelectTrigger id="edit-is-deputy-minister">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="false">No</SelectItem>
+                          <SelectItem value="true">Yes</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-ministerial-position">Ministerial Position</Label>
+                      <Input
+                        id="edit-ministerial-position"
+                        placeholder="e.g., Minister of Finance"
+                        value={editMpForm.ministerialPosition}
+                        onChange={(e) => setEditMpForm(f => ({ ...f, ministerialPosition: e.target.value }))}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Contact Information */}
+                <div>
+                  <h3 className="font-medium mb-3">Contact Information</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-email">Email</Label>
+                      <Input
+                        id="edit-email"
+                        type="email"
+                        value={editMpForm.email}
+                        onChange={(e) => setEditMpForm(f => ({ ...f, email: e.target.value }))}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-telephone">Telephone</Label>
+                      <Input
+                        id="edit-telephone"
+                        value={editMpForm.telephone}
+                        onChange={(e) => setEditMpForm(f => ({ ...f, telephone: e.target.value }))}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-fax">Fax</Label>
+                      <Input
+                        id="edit-fax"
+                        value={editMpForm.fax}
+                        onChange={(e) => setEditMpForm(f => ({ ...f, fax: e.target.value }))}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-mobile">Mobile Number</Label>
+                      <Input
+                        id="edit-mobile"
+                        value={editMpForm.mobileNumber}
+                        onChange={(e) => setEditMpForm(f => ({ ...f, mobileNumber: e.target.value }))}
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 gap-4 mt-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-contact-address">Contact Address</Label>
+                      <Textarea
+                        id="edit-contact-address"
+                        value={editMpForm.contactAddress}
+                        onChange={(e) => setEditMpForm(f => ({ ...f, contactAddress: e.target.value }))}
+                        rows={2}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-service-address">Service Address</Label>
+                      <Textarea
+                        id="edit-service-address"
+                        value={editMpForm.serviceAddress}
+                        onChange={(e) => setEditMpForm(f => ({ ...f, serviceAddress: e.target.value }))}
+                        rows={2}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Social Media */}
+                <div>
+                  <h3 className="font-medium mb-3">Social Media</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-facebook">Facebook URL</Label>
+                      <Input
+                        id="edit-facebook"
+                        value={editMpForm.facebookUrl}
+                        onChange={(e) => setEditMpForm(f => ({ ...f, facebookUrl: e.target.value }))}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-instagram">Instagram URL</Label>
+                      <Input
+                        id="edit-instagram"
+                        value={editMpForm.instagramUrl}
+                        onChange={(e) => setEditMpForm(f => ({ ...f, instagramUrl: e.target.value }))}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-twitter">Twitter/X URL</Label>
+                      <Input
+                        id="edit-twitter"
+                        value={editMpForm.twitterUrl}
+                        onChange={(e) => setEditMpForm(f => ({ ...f, twitterUrl: e.target.value }))}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-tiktok">TikTok URL</Label>
+                      <Input
+                        id="edit-tiktok"
+                        value={editMpForm.tiktokUrl}
+                        onChange={(e) => setEditMpForm(f => ({ ...f, tiktokUrl: e.target.value }))}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Submit Buttons */}
+                <div className="flex gap-3">
+                  <Button
+                    onClick={() => {
+                      updateMpDetailsMutation.mutate({
+                        id: editMpId,
+                        updates: {
+                          name: editMpForm.name,
+                          party: editMpForm.party,
+                          parliamentCode: editMpForm.parliamentCode,
+                          constituency: editMpForm.constituency,
+                          state: editMpForm.state,
+                          gender: editMpForm.gender,
+                          title: editMpForm.title || undefined,
+                          role: editMpForm.role || undefined,
+                          photoUrl: editMpForm.photoUrl || undefined,
+                          email: editMpForm.email || undefined,
+                          telephone: editMpForm.telephone || undefined,
+                          fax: editMpForm.fax || undefined,
+                          mobileNumber: editMpForm.mobileNumber || undefined,
+                          contactAddress: editMpForm.contactAddress || undefined,
+                          serviceAddress: editMpForm.serviceAddress || undefined,
+                          facebookUrl: editMpForm.facebookUrl || undefined,
+                          instagramUrl: editMpForm.instagramUrl || undefined,
+                          twitterUrl: editMpForm.twitterUrl || undefined,
+                          tiktokUrl: editMpForm.tiktokUrl || undefined,
+                          isMinister: editMpForm.isMinister,
+                          isDeputyMinister: editMpForm.isDeputyMinister,
+                          ministerialPosition: editMpForm.ministerialPosition || undefined,
+                        },
+                      });
+                    }}
+                    disabled={updateMpDetailsMutation.isPending}
+                  >
+                    {updateMpDetailsMutation.isPending ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle2 className="mr-2 h-4 w-4" />
+                        Save Changes
+                      </>
+                    )}
+                  </Button>
+
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setEditMpId("");
+                      setEditMpForm({
+                        name: "", party: "", parliamentCode: "", constituency: "",
+                        state: "", gender: "", title: "", role: "",
+                        photoUrl: "", email: "", telephone: "", fax: "",
+                        mobileNumber: "", contactAddress: "", serviceAddress: "",
+                        facebookUrl: "", instagramUrl: "", twitterUrl: "", tiktokUrl: "",
+                        isMinister: false, isDeputyMinister: false, ministerialPosition: "",
+                      });
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
       <Card className="border-primary">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -938,7 +1650,7 @@ export default function HansardAdmin() {
                         </p>
                       </div>
                       <Button
-                        variant="ghost"
+                        variant="outline"
                         size="icon"
                         onClick={() => handleRemoveFile(index)}
                         data-testid={`button-remove-file-${index}`}
@@ -1151,6 +1863,51 @@ export default function HansardAdmin() {
         </CardContent>
       </Card>
 
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <History className="h-5 w-5" />
+            Download Previous Parliaments
+          </CardTitle>
+          <CardDescription>
+            Download hansard records from Parliaments 1-14 (historical archive)
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <p className="text-sm text-muted-foreground">
+              This will download hansard records from all previous parliaments (1st through 14th).
+              Existing records will be skipped automatically.
+            </p>
+            <Alert>
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription>
+                This operation downloads a large volume of historical data and may take a very long time.
+                It will NOT delete any existing records.
+              </AlertDescription>
+            </Alert>
+          </div>
+          <Button
+            onClick={handleDownloadPreviousParliaments}
+            disabled={previousParliamentsMutation.isPending || jobStatus?.status === 'running'}
+            variant="outline"
+            className="w-full"
+          >
+            {previousParliamentsMutation.isPending || jobStatus?.status === 'running' ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                {jobStatus?.status === 'running' ? 'Processing...' : 'Starting...'}
+              </>
+            ) : (
+              <>
+                <Download className="mr-2 h-4 w-4" />
+                Download Previous Parliaments
+              </>
+            )}
+          </Button>
+        </CardContent>
+      </Card>
+
       <div className="grid gap-6 md:grid-cols-2">
           <Card>
             <CardHeader>
@@ -1182,7 +1939,7 @@ export default function HansardAdmin() {
                     </Alert>
                   </div>
                   <Button
-                    onClick={handleDelete}
+                    onClick={handleDeleteOpen}
                     disabled={deleteMutation.isPending || isLoading || !hansardRecords || hansardRecords.length === 0}
                     variant="destructive"
                     className="w-full"
@@ -1204,6 +1961,59 @@ export default function HansardAdmin() {
               )}
             </CardContent>
           </Card>
+
+          {/* Delete verification dialog */}
+          <Dialog open={deleteDialogOpen} onOpenChange={(open) => { if (!open) handleDeleteClose(); }}>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2 text-destructive">
+                  <AlertTriangle className="h-5 w-5" />
+                  Confirm Deletion
+                </DialogTitle>
+                <DialogDescription>
+                  You are about to permanently delete <strong>{hansardRecords?.length || 0}</strong> hansard records. This action cannot be undone.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-2">
+                <Alert variant="destructive">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertDescription>
+                    All hansard records, including attendance data and voting records linked to these sessions, will be permanently removed.
+                  </AlertDescription>
+                </Alert>
+                <div className="space-y-2">
+                  <Label htmlFor="delete-confirm-input">
+                    Type <strong className="text-destructive">DELETE ALL</strong> to confirm:
+                  </Label>
+                  <Input
+                    id="delete-confirm-input"
+                    value={deleteConfirmText}
+                    onChange={(e) => setDeleteConfirmText(e.target.value)}
+                    placeholder="Type DELETE ALL"
+                    autoComplete="off"
+                  />
+                </div>
+                {deleteCountdown > 0 && (
+                  <p className="text-sm text-muted-foreground text-center">
+                    Delete button will be enabled in <strong>{deleteCountdown}</strong> second{deleteCountdown !== 1 ? 's' : ''}...
+                  </p>
+                )}
+              </div>
+              <DialogFooter className="gap-2 sm:gap-0">
+                <Button variant="outline" onClick={handleDeleteClose}>
+                  Cancel
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={handleDeleteConfirm}
+                  disabled={deleteConfirmText !== "DELETE ALL" || deleteCountdown > 0}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  {deleteCountdown > 0 ? `Wait ${deleteCountdown}s...` : "Permanently Delete All"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
 
           <Card>
             <CardHeader>
@@ -1409,6 +2219,55 @@ export default function HansardAdmin() {
                 <>
                   <Database className="mr-2 h-4 w-4" />
                   Refresh MP Data
+                </>
+              )}
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* Import Election Results Card */}
+        <Card className="border-purple-500">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Vote className="h-5 w-5" />
+              Import Election Results
+            </CardTitle>
+            <CardDescription>
+              Import GE15 (2022) election vote data for all MPs
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <p className="text-sm text-muted-foreground">
+                This will fetch official GE15 (2022) election results from Tindak Malaysia's GitHub repository and update all MP records with:
+              </p>
+              <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1 ml-2">
+                <li>Votes received</li>
+                <li>Vote percentage</li>
+                <li>Winning majority</li>
+                <li>Voter turnout</li>
+              </ul>
+              <Alert>
+                <AlertDescription>
+                  Data is fetched directly from the official source. Run this after the migration to populate election data.
+                </AlertDescription>
+              </Alert>
+            </div>
+            <Button
+              onClick={handleImportElectionResults}
+              disabled={importElectionResultsMutation.isPending}
+              className="w-full"
+              data-testid="button-import-election-results"
+            >
+              {importElectionResultsMutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Importing...
+                </>
+              ) : (
+                <>
+                  <Vote className="mr-2 h-4 w-4" />
+                  Import Election Data
                 </>
               )}
             </Button>
@@ -1789,7 +2648,7 @@ export default function HansardAdmin() {
               Hansard Sync Logs
             </CardTitle>
             <CardDescription>
-              View history of automatic and manual Hansard sync operations (runs daily at 12:00 PM Malaysia time)
+              View history of automatic and manual Hansard sync operations (runs daily at 12:00, 13:00 and 14:00 MYT)
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -1797,15 +2656,25 @@ export default function HansardAdmin() {
               <span className="text-sm text-muted-foreground">
                 {syncLogsLoading ? "Loading..." : `${syncLogs?.totalLogs || 0} sync operations logged`}
               </span>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => refetchSyncLogs()}
-                disabled={syncLogsLoading}
-              >
-                <RefreshCw className={`h-4 w-4 mr-2 ${syncLogsLoading ? 'animate-spin' : ''}`} />
-                Refresh
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  onClick={() => triggerDownloadMutation.mutate()}
+                  disabled={triggerDownloadMutation.isPending}
+                >
+                  <RefreshCw className={`h-4 w-4 mr-2 ${triggerDownloadMutation.isPending ? 'animate-spin' : ''}`} />
+                  {triggerDownloadMutation.isPending ? "Downloading..." : "Download Now"}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => refetchSyncLogs()}
+                  disabled={syncLogsLoading}
+                >
+                  <RefreshCw className={`h-4 w-4 mr-2 ${syncLogsLoading ? 'animate-spin' : ''}`} />
+                  Refresh
+                </Button>
+              </div>
             </div>
 
             {syncLogs?.latestSync && (
@@ -1858,6 +2727,10 @@ export default function HansardAdmin() {
                           {log.triggeredBy === 'scheduled' ? (
                             <span className="inline-flex items-center gap-1 text-blue-600">
                               <Clock className="h-3 w-3" /> Auto
+                            </span>
+                          ) : log.triggeredBy === 'startup-recovery' ? (
+                            <span className="inline-flex items-center gap-1 text-orange-600">
+                              🔄 Recovery
                             </span>
                           ) : (
                             <span className="inline-flex items-center gap-1 text-purple-600">

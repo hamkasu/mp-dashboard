@@ -603,7 +603,7 @@ export default function CourtCasesAdmin() {
                                 )}
                               </div>
                             </div>
-                            <Button variant="ghost" size="icon" asChild onClick={(e) => e.stopPropagation()}>
+                            <Button variant="outline" size="icon" asChild onClick={(e) => e.stopPropagation()}>
                               <a href={article.sourceUrl} target="_blank" rel="noopener noreferrer">
                                 <ExternalLink className="h-4 w-4" />
                               </a>
@@ -645,8 +645,14 @@ export default function CourtCasesAdmin() {
                           <div className="flex items-start justify-between gap-4">
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 mb-2 flex-wrap">
-                                <Badge variant={courtCase.status === "Ongoing" ? "default" : courtCase.status === "Completed" ? "secondary" : "outline"}>
-                                  {courtCase.status}
+                                <Badge variant={
+                                  courtCase.status === "convicted" ? "destructive" :
+                                  courtCase.status === "charged" ? "default" :
+                                  courtCase.status === "appeal_pending" ? "default" :
+                                  courtCase.status === "under_investigation" ? "secondary" :
+                                  "outline"
+                                }>
+                                  {courtCase.status.split('_').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
                                 </Badge>
                                 <Badge variant="outline">{courtCase.courtLevel}</Badge>
                                 <span className="text-xs text-muted-foreground">{courtCase.caseNumber}</span>
@@ -668,7 +674,7 @@ export default function CourtCasesAdmin() {
                             </div>
                             <div className="flex items-center gap-2">
                               <Button 
-                                variant="ghost" 
+                                variant="outline" 
                                 size="icon" 
                                 onClick={() => handleEditCase(courtCase)}
                                 data-testid={`button-edit-case-${courtCase.id}`}
@@ -676,7 +682,7 @@ export default function CourtCasesAdmin() {
                                 <Edit className="h-4 w-4" />
                               </Button>
                               <Button 
-                                variant="ghost" 
+                                variant="outline" 
                                 size="icon"
                                 onClick={() => {
                                   if (confirm("Are you sure you want to delete this court case?")) {
@@ -800,11 +806,12 @@ export default function CourtCasesAdmin() {
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="Ongoing">Ongoing</SelectItem>
-                          <SelectItem value="Completed">Completed</SelectItem>
-                          <SelectItem value="Acquitted">Acquitted</SelectItem>
-                          <SelectItem value="Convicted">Convicted</SelectItem>
-                          <SelectItem value="Appeal Pending">Appeal Pending</SelectItem>
+                          <SelectItem value="under_investigation">Under Investigation</SelectItem>
+                          <SelectItem value="charged">Charged</SelectItem>
+                          <SelectItem value="convicted">Convicted</SelectItem>
+                          <SelectItem value="acquitted">Acquitted</SelectItem>
+                          <SelectItem value="withdrawn">Withdrawn</SelectItem>
+                          <SelectItem value="appeal_pending">Appeal Pending</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -955,11 +962,12 @@ export default function CourtCasesAdmin() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Ongoing">Ongoing</SelectItem>
-                      <SelectItem value="Completed">Completed</SelectItem>
-                      <SelectItem value="Acquitted">Acquitted</SelectItem>
-                      <SelectItem value="Convicted">Convicted</SelectItem>
-                      <SelectItem value="Appeal Pending">Appeal Pending</SelectItem>
+                      <SelectItem value="under_investigation">Under Investigation</SelectItem>
+                      <SelectItem value="charged">Charged</SelectItem>
+                      <SelectItem value="convicted">Convicted</SelectItem>
+                      <SelectItem value="acquitted">Acquitted</SelectItem>
+                      <SelectItem value="withdrawn">Withdrawn</SelectItem>
+                      <SelectItem value="appeal_pending">Appeal Pending</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

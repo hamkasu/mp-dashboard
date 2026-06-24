@@ -12,11 +12,19 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Search, FileText, Calendar, Download, Sparkles, CheckCircle, Users, UserX, MapPin, Trash2, BarChart3, Edit } from "lucide-react";
+import { Search, FileText, Calendar, Download, Sparkles, CheckCircle, Users, UserX, MapPin, Trash2, BarChart3, Edit, MessageSquareText, ChevronLeft, ChevronRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest, getQueryFn } from "@/lib/queryClient";
 import type { HansardRecord } from "@shared/schema";
 import { useLanguage } from "@/i18n/LanguageContext";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 import {
   Dialog,
   DialogContent,
@@ -40,12 +48,14 @@ import { ConstituencyAttendance } from "@/components/ConstituencyAttendance";
 import { HansardAnalysisDialog } from "@/components/HansardAnalysisDialog";
 import { HansardAIInsights } from "@/components/HansardAIInsights";
 import { AttendanceEditor } from "@/components/AttendanceEditor";
+import { HansardQAButton } from "@/components/HansardQAButton";
 
 export default function HansardPage() {
   const { t } = useLanguage();
   const [searchQuery, setSearchQuery] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [page, setPage] = useState(1);
   const [openDialogId, setOpenDialogId] = useState<string | null>(null);
   const [attendanceEditorRecord, setAttendanceEditorRecord] = useState<HansardRecord | null>(null);
   const { toast } = useToast();
@@ -62,14 +72,19 @@ export default function HansardPage() {
     if (searchQuery) params.set("query", searchQuery);
     if (startDate) params.set("startDate", startDate);
     if (endDate) params.set("endDate", endDate);
+    params.set("page", page.toString());
+    params.set("limit", "25");
     const queryString = params.toString();
-    return queryString ? `/api/hansard-records/search?${queryString}` : "/api/hansard-records/search";
-  }, [searchQuery, startDate, endDate]);
+    return `/api/hansard-records/search?${queryString}`;
+  }, [searchQuery, startDate, endDate, page]);
 
-  const { data: filteredRecords, isLoading, isError } = useQuery<HansardRecord[]>({
+  const { data: paginatedData, isLoading, isError } = useQuery<{ data: HansardRecord[], pagination: { page: number, limit: number, totalItems: number, totalPages: number, hasMore: boolean } }>({
     queryKey: [queryUrl],
     staleTime: 0, // Always fetch fresh data to ensure hasPdf field is up-to-date
   });
+
+  const filteredRecords = paginatedData?.data;
+  const pagination = paginatedData?.pagination;
 
   const summarizeMutation = useMutation({
     mutationFn: async (recordId: string) => {
@@ -239,9 +254,47 @@ export default function HansardPage() {
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="text-xl font-semibold">
-            {filteredRecords?.length || 0} {t('hansard.recordsFound')}
+            {pagination?.totalItems || 0} {t('hansard.recordsFound')}
           </h2>
         </div>
+
+        {pagination && pagination.totalPages > 1 && (
+          <div className="flex justify-center my-4">
+            <Pagination>
+              <PaginationContent>
+                <PaginationItem>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setPage(p => Math.max(1, p - 1))}
+                    disabled={page === 1}
+                    className="gap-1 pl-2.5"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                    <span>{t('common.previous')}</span>
+                  </Button>
+                </PaginationItem>
+                
+                <div className="flex items-center px-4 text-sm font-medium">
+                  {t('common.page')} {page} {t('common.of')} {pagination.totalPages}
+                </div>
+
+                <PaginationItem>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setPage(p => Math.min(pagination.totalPages, p + 1))}
+                    disabled={page === pagination.totalPages}
+                    className="gap-1 pr-2.5"
+                  >
+                    <span>{t('common.next')}</span>
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
+          </div>
+        )}
 
         {filteredRecords && filteredRecords.length === 0 && (
           <Card>
@@ -341,6 +394,40 @@ export default function HansardPage() {
                       </Button>
                     }
                   />
+                  {record.transcript?.toUpperCase().includes("WAKTU PERTANYAAN-PERTANYAAN MENTERI") && (
+                    <HansardQAButton
+                      hansardRecord={record as any}
+                      sectionType="menteri"
+                      trigger={
+                        <Button
+                          data-testid={`button-qa-menteri-${record.id}`}
+                          variant="outline"
+                          size="sm"
+                          className="gap-2"
+                        >
+                          <MessageSquareText className="w-4 h-4" />
+                          Waktu Pertanyaan-Pertanyaan Menteri
+                        </Button>
+                      }
+                    />
+                  )}
+                  {record.transcript?.toUpperCase().includes("PERTANYAAN-PERTANYAAN BAGI JAWAB LISAN") && (
+                    <HansardQAButton
+                      hansardRecord={record as any}
+                      sectionType="lisan"
+                      trigger={
+                        <Button
+                          data-testid={`button-qa-lisan-${record.id}`}
+                          variant="outline"
+                          size="sm"
+                          className="gap-2"
+                        >
+                          <MessageSquareText className="w-4 h-4" />
+                          Pertanyaan-Pertanyaan Bagi Jawab Lisan
+                        </Button>
+                      }
+                    />
+                  )}
 
                   {user && user.role === "admin" && (
                     <>

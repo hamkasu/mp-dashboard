@@ -7,15 +7,21 @@ import { createServer } from "http";
 import compression from "compression";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
-import { startHansardCron } from "./hansard-cron";
+import { startHansardCronWithRecovery } from "./hansard-cron";
 import { scheduleParliamentaryAnswersSync } from "./parliamentary-answers-cron";
 import { startReportCardCron } from "./report-card-cron";
+import { initializePollCrons } from "./poll-cron";
+import { startBillsToWatchCron } from "./bills-to-watch-cron";
 import { trackVisitorAnalytics } from "./analytics-middleware";
 import { helmetConfig, readRateLimit } from "./middleware/security";
 import { corsConfig } from "./middleware/cors";
 import { responseSizeLimiter } from "./middleware/response-limiter";
 import { memoryMonitor, startMemoryLogging, getMemoryStatus } from "./middleware/memory-monitor";
 import { setupAuth } from "./simple-auth";
+import { setupGigSocialAuth } from "./gig-social-auth";
+import { setupUserAuth } from "./user-auth";
+import { setupSubscriptionRoutes } from "./subscription-routes";
+import { setupBillingRoutes } from "./billing/billing-routes";
 import { runStartupTasks } from "./startup-tasks";
 import { isDatabaseAvailable } from "./db";
 
@@ -93,6 +99,18 @@ app.use(trackVisitorAnalytics());
 
 // Setup authentication (session, auth routes)
 setupAuth(app);
+
+// Setup GigHalal social authentication (Facebook, Apple, WhatsApp OTP)
+setupGigSocialAuth(app);
+
+// Setup public user authentication (register, login, logout, verify-email)
+setupUserAuth(app);
+
+// Setup subscription management routes (plans, status, admin grant/revoke)
+setupSubscriptionRoutes(app);
+
+// Setup billing abstraction layer (checkout, success/cancel redirects, webhooks)
+setupBillingRoutes(app);
 
 app.use((req, res, next) => {
   const start = Date.now();
@@ -198,14 +216,20 @@ server.listen({
 
   log(`App fully initialized`);
 
-  // Start the daily Hansard sync cron job
-  startHansardCron();
+  // Start the daily Hansard sync cron job with startup recovery
+  await startHansardCronWithRecovery();
 
   // Start the daily Parliamentary Answers sync cron job
   scheduleParliamentaryAnswersSync();
 
   // Start the monthly Report Card update cron job
   startReportCardCron();
+
+  // Start the weekly poll generation and status management cron jobs
+  initializePollCrons();
+
+  // Start the daily Bills to Watch refresh cron job
+  startBillsToWatchCron();
 
   // Start memory monitoring (log every 10 minutes in production)
   if (process.env.NODE_ENV === "production") {

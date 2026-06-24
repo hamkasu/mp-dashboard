@@ -7,11 +7,13 @@
  * - Batch database queries (no N+1 problem - 165x faster!)
  * - Simple percentile calculation
  * - Clear error handling
+ * - Bill counting filters (only "passed" bills, deduplicated)
+ * - No double-counting of co-sponsored bills
  */
 
 import { db } from "../db";
-import { mps, mpReportCards, legislativeProposals, parliamentaryQuestions, courtCases, constituencies, hansardRecords } from "../../shared/schema";
-import { eq, desc, sql, gte } from "drizzle-orm";
+import { mps, mpReportCards, legislativeProposals, parliamentaryQuestions, courtCases, constituencies, hansardRecords, committeeMembers, coalitions } from "../../shared/schema";
+import { eq, desc, sql, gte, and } from "drizzle-orm";
 
 // ============================================================================
 // TYPES
@@ -20,13 +22,127 @@ import { eq, desc, sql, gte } from "drizzle-orm";
 interface MPMetrics {
   mpId: string;
   name: string;
+  state: string;
+  coalition: string | null;
   attendancePercentage: number;
   totalSpeeches: number;
   averageSpeeches: number;
   billsRaised: number;
   questionsAsked: number;
   courtCases: number;
+  courtCaseWeight: number; // Weighted court case impact (0-100+ scale)
   povertyRate: number; // Poverty incidence * 10 (e.g., 57 = 5.7%)
+  committeeBonus: number; // Bonus points for committee participation (0-15)
+}
+
+// Court case status weights for conduct score
+// Higher weight = more serious impact on conduct score
+const CASE_STATUS_WEIGHTS: Record<string, number> = {
+  convicted: 1.0,        // Full impact
+  charged: 0.5,          // 50% impact
+  appeal_pending: 0.5,   // 50% impact
+  under_investigation: 0.25, // 25% impact
+  acquitted: 0,          // No impact
+  withdrawn: 0,          // No impact
+};
+
+// Committee bonus points for higher accountability roles
+// Applied as a modifier to the overall score, not diluting the 40/30/20/10 breakdown
+const COMMITTEE_BONUS_POINTS: Record<string, number> = {
+  'PAC_chair': 15,              // Public Accounts Committee Chair - highest oversight
+  'special_committee_chair': 12, // Special Select Committee Chair
+  'PAC_member': 8,              // PAC Member
+  'committee_chair': 10,        // Regular committee chair
+  'committee_member': 3,        // Regular committee member
+};
+
+// ============================================================================
+// PHASE 5: ALLOWANCE & ROI CALCULATION
+// ============================================================================
+
+/**
+ * Calculate total annual allowance for an MP (RM)
+ * Includes base, minister salary, and all supplements
+ */
+function calculateAnnualAllowance(mp: typeof mps.$inferSelect): number {
+  const base = (mp.mpAllowance || 0) * 12;
+  const minister = (mp.ministerSalary || 0) * 12;
+  const entertainment = (mp.entertainmentAllowance || 0) * 12;
+  const phone = (mp.handphoneAllowance || 0) * 12;
+  const computer = (mp.computerAllowance || 0) * 12;
+  const dress = (mp.dressWearAllowance || 0) * 12;
+
+  // Estimate sitting allowance (assume ~70 sessions per year)
+  const sitting = (mp.parliamentSittingAllowance || 400) * 70;
+
+  return Math.round(base + minister + entertainment + phone + computer + dress + sitting);
+}
+
+/**
+ * Calculate cost ratios: how much allowance per unit of output
+ * Lower is better (fewer ringgits per action)
+ */
+function calculateAllowanceRatios(
+  annualAllowance: number,
+  totalSpeeches: number,
+  billsRaised: number,
+  questionsAsked: number,
+  committeeMemberships: number
+) {
+  return {
+    allowancePerSpeech: totalSpeeches > 0 ? Math.round(annualAllowance / totalSpeeches) : 999999,
+    allowancePerBill: billsRaised > 0 ? Math.round(annualAllowance / billsRaised) : 999999,
+    allowancePerQuestion: questionsAsked > 0 ? Math.round(annualAllowance / questionsAsked) : 999999,
+    allowancePerCommittee: committeeMemberships > 0 ? Math.round(annualAllowance / committeeMemberships) : 999999,
+  };
+}
+
+/**
+ * Calculate ROI Score (0-100) and grade using percentile ranking
+ * High output = High ROI = Good value for taxpayers
+ * Low output = Low ROI = Poor value for taxpayers
+ * Uses percentile-based approach for consistency with other grades
+ */
+function calculateROIScoreUsingPercentile(
+  allMpMetrics: Array<{
+    totalSpeeches: number;
+    billsRaised: number;
+    questionsAsked: number;
+    annualAllowance: number;
+    committeeMemberships?: number;
+  }>,
+  targetMpIndex: number
+): { score: number; grade: string } {
+  const targetMp = allMpMetrics[targetMpIndex];
+
+  // Calculate ROI ratio for each MP: output / allowance
+  // Higher ratio = better ROI (more output per rupiah spent)
+  const roiRatios = allMpMetrics.map(mp => {
+    const outputIndex =
+      (mp.totalSpeeches * 1.0) +           // Speeches (weighted 1.0)
+      (mp.billsRaised * 8.0) +             // Bills (weighted 8.0)
+      (mp.questionsAsked * 0.8) +          // Questions (weighted 0.8)
+      ((mp.committeeMemberships || 0) * 3.0);  // Committees (weighted 3.0)
+
+    // Avoid division by zero
+    if (mp.annualAllowance === 0) return 0;
+    return outputIndex / mp.annualAllowance;
+  });
+
+  const targetRatio = roiRatios[targetMpIndex];
+
+  // Use percentile ranking: higher ROI ratio = higher percentile
+  const score = calculatePercentile(roiRatios, targetRatio, false);
+
+  // Assign grade based on percentile score (equal distribution: each grade ~20%)
+  let grade: string;
+  if (score >= 80) grade = 'A';      // Top 20% (80-100)
+  else if (score >= 60) grade = 'B'; // 60-80 (next 20%)
+  else if (score >= 40) grade = 'C'; // 40-60 (middle 20%)
+  else if (score >= 20) grade = 'D'; // 20-40 (next 20%)
+  else grade = 'F';                  // Bottom 20% (0-20)
+
+  return { score, grade };
 }
 
 interface MPGrade {
@@ -37,6 +153,19 @@ interface MPGrade {
   constituencyScore: number;
   overallScore: number;
   grade: string;
+  // Phase 4: Coalition and state percentiles
+  coalitionAttendanceScore?: number;
+  coalitionParticipationScore?: number;
+  coalitionConductScore?: number;
+  coalitionConstituencyScore?: number;
+  coalitionOverallScore?: number;
+  coalitionGrade?: string;
+  stateAttendanceScore?: number;
+  stateParticipationScore?: number;
+  stateConductScore?: number;
+  stateConstituencyScore?: number;
+  stateOverallScore?: number;
+  stateGrade?: string;
 }
 
 // ============================================================================
@@ -114,17 +243,21 @@ function calculatePercentile(
 async function fetchAllMPMetrics(): Promise<MPMetrics[]> {
   console.log("[Report Cards] Fetching all MP data...");
 
-  // Query 1: Get all MPs with their attendance/speech data
+  // Query 1: Get all MPs with their attendance/speech data and coalition info
   const allMps = await db.select({
     mpId: mps.id,
     name: mps.name,
+    state: mps.state,
+    coalitionId: mps.coalitionId,
+    coalitionCode: coalitions.code,
     parliamentCode: mps.parliamentCode,
     swornInDate: mps.swornInDate,
     daysAttended: mps.daysAttended,
     totalParliamentDays: mps.totalParliamentDays,
     totalSpeechInstances: mps.totalSpeechInstances,
     hansardSessionsSpoke: mps.hansardSessionsSpoke,
-  }).from(mps);
+  }).from(mps)
+  .leftJoin(coalitions, eq(mps.coalitionId, coalitions.id));
 
   console.log(`[Report Cards] Found ${allMps.length} MPs`);
 
@@ -213,15 +346,49 @@ async function fetchAllMPMetrics(): Promise<MPMetrics[]> {
   console.log(`[Report Cards] Found poverty data for ${allConstituencies.filter(c => c.povertyIncidence).length}/${allConstituencies.length} constituencies`);
 
   // Query 3: Count bills per MP (batch)
-  const billCounts = await db
+  // NOTE: Only counts "passed" bills (main sponsor only, not co-sponsors)
+  // Bills are deduplicated by title to catch duplicate entries
+  const allBills = await db
     .select({
       mpId: legislativeProposals.mpId,
-      count: sql<number>`count(*)::int`,
+      title: legislativeProposals.title,
+      dateProposed: legislativeProposals.dateProposed,
+      status: legislativeProposals.status,
     })
     .from(legislativeProposals)
-    .groupBy(legislativeProposals.mpId);
+    .where(eq(legislativeProposals.status, 'passed'));
 
-  const billsMap = new Map(billCounts.map(b => [b.mpId, b.count]));
+  // Deduplicate bills by (mpId, title, dateProposed) to catch duplicates
+  const billDedupeMap = new Map<string, Set<string>>();
+  const uniqueBills = allBills.filter(bill => {
+    const key = `${bill.mpId}`;
+    if (!billDedupeMap.has(key)) {
+      billDedupeMap.set(key, new Set());
+    }
+    const titleKey = `${bill.title.toLowerCase()}_${bill.dateProposed.toISOString().split('T')[0]}`;
+    const set = billDedupeMap.get(key)!;
+    if (set.has(titleKey)) {
+      return false; // Duplicate, skip
+    }
+    set.add(titleKey);
+    return true;
+  });
+
+  // Count unique bills per MP
+  const billCounts = uniqueBills.reduce((acc: Record<string, number>, bill) => {
+    acc[bill.mpId] = (acc[bill.mpId] || 0) + 1;
+    return acc;
+  }, {});
+
+  const billsMap = new Map(Object.entries(billCounts).map(([mpId, count]) => [mpId, count as number]));
+
+  // Log filtering results
+  const totalBillsBeforeFilter = allBills.length;
+  const totalBillsAfterDedup = uniqueBills.length;
+  const billsRemoved = totalBillsBeforeFilter - totalBillsAfterDedup;
+  if (billsRemoved > 0) {
+    console.log(`[Report Cards] Bill deduplication: ${totalBillsBeforeFilter} → ${totalBillsAfterDedup} (removed ${billsRemoved} duplicates)`);
+  }
 
   // Query 4: Count questions per MP (batch)
   const questionCounts = await db
@@ -234,18 +401,72 @@ async function fetchAllMPMetrics(): Promise<MPMetrics[]> {
 
   const questionsMap = new Map(questionCounts.map(q => [q.mpId, q.count]));
 
-  // Query 5: Count court cases per MP (batch)
-  const courtCaseCounts = await db
+  // Query 5: Get all court cases with status for weighted impact calculation
+  const allCourtCases = await db
     .select({
       mpId: courtCases.mpId,
-      count: sql<number>`count(*)::int`,
+      status: courtCases.status,
     })
-    .from(courtCases)
-    .groupBy(courtCases.mpId);
+    .from(courtCases);
 
-  const courtCasesMap = new Map(courtCaseCounts.map(c => [c.mpId, c.count]));
+  // Calculate weighted court case impact per MP
+  const courtCasesMap = new Map<string, { count: number; weight: number }>();
+  for (const courtCase of allCourtCases) {
+    if (!courtCasesMap.has(courtCase.mpId)) {
+      courtCasesMap.set(courtCase.mpId, { count: 0, weight: 0 });
+    }
+    const stats = courtCasesMap.get(courtCase.mpId)!;
+    stats.count++;
+    // Get weight for this status, default to 0.5 if unknown status
+    const weight = CASE_STATUS_WEIGHTS[courtCase.status] ?? 0.5;
+    stats.weight += weight;
+  }
 
-  console.log(`[Report Cards] Fetched aggregates: ${billCounts.length} bill authors, ${questionCounts.length} questioners, ${courtCaseCounts.length} with court cases`);
+  console.log(`[Report Cards] Fetched aggregates: ${billCounts.length} bill authors, ${questionCounts.length} questioners, ${allCourtCases.length} total court cases`);
+
+  // Query 6: Get committee memberships for active MPs (15th Parliament, currently serving)
+  let committeeMap = new Map<string, number>();
+  try {
+    const allCommitteeMemberships = await db
+      .select({
+        mpId: committeeMembers.mpId,
+        committeeAbbr: committeeMembers.committeeAbbr,
+        role: committeeMembers.role,
+      })
+      .from(committeeMembers)
+      .where(
+        and(
+          eq(committeeMembers.parliamentTerm, "15th Parliament"),
+          eq(committeeMembers.endDate, null)
+        )
+      );
+
+    // Calculate committee bonus per MP
+    for (const membership of allCommitteeMemberships) {
+      if (!committeeMap.has(membership.mpId)) {
+        committeeMap.set(membership.mpId, 0);
+      }
+      const currentBonus = committeeMap.get(membership.mpId)!;
+
+      // Determine bonus based on committee and role
+      let bonusPoints = 0;
+      if (membership.committeeAbbr === "PAC") {
+        bonusPoints = membership.role === "chair" ? 15 : 8;
+      } else if (membership.role === "chair") {
+        bonusPoints = 10;
+      } else {
+        bonusPoints = 3;
+      }
+
+      // Set to maximum (don't add if already has higher bonus)
+      committeeMap.set(membership.mpId, Math.max(currentBonus, bonusPoints));
+    }
+
+    console.log(`[Report Cards] Found committee memberships for ${committeeMap.size} MPs`);
+  } catch (error) {
+    console.warn("[Report Cards] Committee memberships table not found or unavailable, skipping committee bonuses");
+    committeeMap = new Map(); // Empty map - no committee bonuses
+  }
 
   // Combine all data into metrics
   const metrics: MPMetrics[] = allMps.map(mp => {
@@ -265,16 +486,22 @@ async function fetchAllMPMetrics(): Promise<MPMetrics[]> {
       ? mp.totalSpeechInstances / mp.hansardSessionsSpoke
       : 0;
 
+    const courtCaseData = courtCasesMap.get(mp.mpId) || { count: 0, weight: 0 };
+
     return {
       mpId: mp.mpId,
       name: mp.name,
+      state: mp.state,
+      coalition: mp.coalitionCode || null,
       attendancePercentage,
       totalSpeeches: mp.totalSpeechInstances,
       averageSpeeches,
       billsRaised: billsMap.get(mp.mpId) || 0,
       questionsAsked: questionsMap.get(mp.mpId) || 0,
-      courtCases: courtCasesMap.get(mp.mpId) || 0,
+      courtCases: courtCaseData.count,
+      courtCaseWeight: courtCaseData.weight,
       povertyRate: povertyMap.get(mp.parliamentCode) || 0,
+      committeeBonus: committeeMap.get(mp.mpId) || 0,
     };
   });
 
@@ -312,8 +539,78 @@ function calculateGrades(metrics: MPMetrics[]): (MPGrade & MPMetrics)[] {
   const allSpeeches = metrics.map(m => m.averageSpeeches);
   const allBills = metrics.map(m => m.billsRaised);
   const allQuestions = metrics.map(m => m.questionsAsked);
-  const allCourtCases = metrics.map(m => m.courtCases);
+  const allCourtCaseWeights = metrics.map(m => m.courtCaseWeight);
   const allPovertyRates = metrics.map(m => m.povertyRate);
+
+  // Group metrics by coalition and state for Phase 4
+  const coalitionGroups = new Map<string, MPMetrics[]>();
+  const stateGroups = new Map<string, MPMetrics[]>();
+
+  for (const mp of metrics) {
+    // Group by coalition
+    if (mp.coalition) {
+      if (!coalitionGroups.has(mp.coalition)) {
+        coalitionGroups.set(mp.coalition, []);
+      }
+      coalitionGroups.get(mp.coalition)!.push(mp);
+    }
+
+    // Group by state
+    if (!stateGroups.has(mp.state)) {
+      stateGroups.set(mp.state, []);
+    }
+    stateGroups.get(mp.state)!.push(mp);
+  }
+
+  // Helper function to calculate scores within a group
+  function calculateGroupScores(group: MPMetrics[], targetMp: MPMetrics, groupName: string): {
+    attendanceScore: number;
+    participationScore: number;
+    conductScore: number;
+    constituencyScore: number;
+    overallScore: number;
+    grade: string;
+  } {
+    if (group.length < 2) {
+      // Not enough members in group, return neutral scores
+      return { attendanceScore: 50, participationScore: 50, conductScore: 50, constituencyScore: 50, overallScore: 50, grade: 'C' };
+    }
+
+    const groupAttendance = group.map(m => m.attendancePercentage);
+    const groupSpeeches = group.map(m => m.averageSpeeches);
+    const groupBills = group.map(m => m.billsRaised);
+    const groupQuestions = group.map(m => m.questionsAsked);
+    const groupCourtCaseWeights = group.map(m => m.courtCaseWeight);
+    const groupPovertyRates = group.map(m => m.povertyRate);
+
+    const attendanceScore = Math.round(calculatePercentile(groupAttendance, targetMp.attendancePercentage, false));
+    const speechPercentile = calculatePercentile(groupSpeeches, targetMp.averageSpeeches);
+    const billPercentile = calculatePercentile(groupBills, targetMp.billsRaised);
+    const questionPercentile = calculatePercentile(groupQuestions, targetMp.questionsAsked);
+    const participationScore = Math.round(
+      (speechPercentile * 0.4) + (billPercentile * 0.3) + (questionPercentile * 0.3)
+    );
+
+    const courtCasePercentile = calculatePercentile(groupCourtCaseWeights, targetMp.courtCaseWeight, true);
+    const conductScore = Math.round(courtCasePercentile);
+
+    const povertyPercentile = calculatePercentile(groupPovertyRates, targetMp.povertyRate, true);
+    const constituencyScore = Math.round(povertyPercentile);
+
+    const baseScore = Math.round(
+      (attendanceScore * 0.40) + (participationScore * 0.30) + (conductScore * 0.20) + (constituencyScore * 0.10)
+    );
+    const overallScore = Math.min(100, baseScore + Math.round(targetMp.committeeBonus));
+
+    let grade: string;
+    if (overallScore >= 80) grade = 'A';      // Top 20% (80-100)
+    else if (overallScore >= 60) grade = 'B'; // 60-80 (next 20%)
+    else if (overallScore >= 40) grade = 'C'; // 40-60 (middle 20%)
+    else if (overallScore >= 20) grade = 'D'; // 20-40 (next 20%)
+    else grade = 'F';                         // Bottom 20% (0-20)
+
+    return { attendanceScore, participationScore, conductScore, constituencyScore, overallScore, grade };
+  }
 
   // Calculate grades for each MP
   const results = metrics.map((mp, index) => {
@@ -333,8 +630,8 @@ function calculateGrades(metrics: MPMetrics[]): (MPGrade & MPMetrics)[] {
     );
 
     // 3. Conduct Score (20% weight)
-    // Fewer court cases is better
-    const courtCasePercentile = calculatePercentile(allCourtCases, mp.courtCases, true);
+    // Lower weighted court case impact is better (inverted)
+    const courtCasePercentile = calculatePercentile(allCourtCaseWeights, mp.courtCaseWeight, true);
     const conductScore = Math.round(courtCasePercentile);
 
     // 4. Constituency Score (10% weight)
@@ -342,25 +639,61 @@ function calculateGrades(metrics: MPMetrics[]): (MPGrade & MPMetrics)[] {
     const povertyPercentile = calculatePercentile(allPovertyRates, mp.povertyRate, true);
     const constituencyScore = Math.round(povertyPercentile);
 
-    // 5. Overall Score (weighted average: 40, 30, 20, 10)
-    const overallScore = Math.round(
+    // 5. Overall Score (weighted average: 40, 30, 20, 10) + committee bonus
+    const baseScore = Math.round(
       (attendanceScore * 0.40) +
       (participationScore * 0.30) +
       (conductScore * 0.20) +
       (constituencyScore * 0.10)
     );
 
-    // 6. Assign letter grade
+    // Apply committee bonus (0-15 points) for higher-accountability roles
+    // Bonus is capped at 100 total
+    const overallScore = Math.min(100, baseScore + Math.round(mp.committeeBonus));
+
+    // 6. Assign letter grade (equal distribution: each grade ~20%)
     let grade: string;
-    if (overallScore >= 90) grade = 'A';
-    else if (overallScore >= 80) grade = 'B';
-    else if (overallScore >= 70) grade = 'C';
-    else if (overallScore >= 60) grade = 'D';
-    else grade = 'F';
+    if (overallScore >= 80) grade = 'A';      // Top 20% (80-100)
+    else if (overallScore >= 60) grade = 'B'; // 60-80 (next 20%)
+    else if (overallScore >= 40) grade = 'C'; // 40-60 (middle 20%)
+    else if (overallScore >= 20) grade = 'D'; // 20-40 (next 20%)
+    else grade = 'F';                         // Bottom 20% (0-20)
+
+    // Phase 4: Calculate coalition percentiles if MP has a coalition
+    let coalitionScores: Partial<MPGrade> = {};
+    if (mp.coalition) {
+      const coalitionGroup = coalitionGroups.get(mp.coalition);
+      if (coalitionGroup) {
+        const cScores = calculateGroupScores(coalitionGroup, mp, mp.coalition);
+        coalitionScores = {
+          coalitionAttendanceScore: cScores.attendanceScore,
+          coalitionParticipationScore: cScores.participationScore,
+          coalitionConductScore: cScores.conductScore,
+          coalitionConstituencyScore: cScores.constituencyScore,
+          coalitionOverallScore: cScores.overallScore,
+          coalitionGrade: cScores.grade,
+        };
+      }
+    }
+
+    // Phase 4: Calculate state percentiles
+    const stateGroup = stateGroups.get(mp.state);
+    let stateScores: Partial<MPGrade> = {};
+    if (stateGroup && stateGroup.length > 1) {
+      const sScores = calculateGroupScores(stateGroup, mp, mp.state);
+      stateScores = {
+        stateAttendanceScore: sScores.attendanceScore,
+        stateParticipationScore: sScores.participationScore,
+        stateConductScore: sScores.conductScore,
+        stateConstituencyScore: sScores.constituencyScore,
+        stateOverallScore: sScores.overallScore,
+        stateGrade: sScores.grade,
+      };
+    }
 
     // Log first 3 MPs for debugging
     if (index < 3) {
-      console.log(`[Report Cards] ${mp.name.substring(0, 25).padEnd(25)} | Overall: ${overallScore} (${grade}) | Att: ${attendanceScore} | Part: ${participationScore}`);
+      console.log(`[Report Cards] ${mp.name.substring(0, 25).padEnd(25)} | Overall: ${overallScore} (${grade}) | Att: ${attendanceScore} | Part: ${participationScore} | Coalition: ${mp.coalition || 'N/A'} | State: ${mp.state}`);
     }
 
     return {
@@ -371,6 +704,8 @@ function calculateGrades(metrics: MPMetrics[]): (MPGrade & MPMetrics)[] {
       constituencyScore,
       overallScore,
       grade,
+      ...coalitionScores,
+      ...stateScores,
     };
   });
 
@@ -400,8 +735,39 @@ export async function updateAllReportCards(): Promise<{ updated: number; created
     let updated = 0;
     let created = 0;
 
+    // Fetch all MPs to get allowance data for Phase 5
+    const allMps = await db.select().from(mps);
+    const mpMap = new Map(allMps.map(mp => [mp.id, mp]));
+
+    // Calculate ROI scores using percentile ranking across all MPs
+    const metricsWithAllowances = metrics.map(m => {
+      const mpData = mpMap.get(m.mpId);
+      return {
+        ...m,
+        annualAllowance: mpData ? calculateAnnualAllowance(mpData) : 0,
+      };
+    });
+
     // Save each MP's grade to database
-    for (const grade of grades) {
+    for (let i = 0; i < grades.length; i++) {
+      const grade = grades[i];
+      const mpData = mpMap.get(grade.mpId);
+      const metricWithAllowance = metricsWithAllowances[i];
+
+      // Phase 5: Calculate allowance and ROI metrics
+      const annualAllowance = metricWithAllowance.annualAllowance;
+      const allowanceRatios = calculateAllowanceRatios(
+        annualAllowance,
+        grade.totalSpeeches,
+        grade.billsRaised,
+        grade.questionsAsked,
+        0 // TODO: Get actual committee count when available
+      );
+      const roiCalc = calculateROIScoreUsingPercentile(
+        metricsWithAllowances,
+        i
+      );
+
       const existing = await db
         .select()
         .from(mpReportCards)
@@ -423,6 +789,14 @@ export async function updateAllReportCards(): Promise<{ updated: number; created
         questionsAsked: grade.questionsAsked,
         inappropriateLanguageCount: 0,
         povertyRate: grade.povertyRate,
+        // Phase 5: Allowance and ROI fields
+        annualAllowance,
+        allowancePerSpeech: allowanceRatios.allowancePerSpeech,
+        allowancePerBill: allowanceRatios.allowancePerBill,
+        allowancePerQuestion: allowanceRatios.allowancePerQuestion,
+        allowancePerCommittee: allowanceRatios.allowancePerCommittee,
+        roiScore: roiCalc.score,
+        roiGrade: roiCalc.grade,
         updatedAt: new Date(),
       };
 
@@ -473,7 +847,23 @@ export async function getReportCardsWithDetails() {
  */
 export async function getAggregateStats() {
   try {
-    const cards = await db.select().from(mpReportCards);
+    // Join with mps table to filter for active MPs only (not deceased or resigned)
+    const now = new Date();
+    const cardsWithMps = await db
+      .select({
+        card: mpReportCards,
+        termEndDate: mps.termEndDate,
+      })
+      .from(mpReportCards)
+      .innerJoin(mps, eq(mpReportCards.mpId, mps.id));
+
+    // Filter to only include active MPs
+    const cards = cardsWithMps
+      .filter(row => {
+        if (!row.termEndDate) return true;
+        return new Date(row.termEndDate) > now;
+      })
+      .map(row => row.card);
 
     if (cards.length === 0) {
       return {
@@ -532,4 +922,36 @@ export async function getAggregateStats() {
 export async function calculateAllGrades() {
   const metrics = await fetchAllMPMetrics();
   return calculateGrades(metrics);
+}
+
+/**
+ * Get report cards with coalition and state percentiles (Phase 4)
+ * Returns all MPs with global, coalition, and state percentile rankings
+ */
+export async function getReportCardsWithCoalitionAndStatePercentiles() {
+  try {
+    const metrics = await fetchAllMPMetrics();
+    const gradesWithPercentiles = calculateGrades(metrics);
+
+    // Join with MP details
+    const result = await Promise.all(
+      gradesWithPercentiles.map(async (grade) => {
+        const mpDetails = await db
+          .select()
+          .from(mps)
+          .where(eq(mps.id, grade.mpId))
+          .limit(1);
+
+        return {
+          ...grade,
+          mp: mpDetails[0] || null,
+        };
+      })
+    );
+
+    return result;
+  } catch (error) {
+    console.error("[Report Cards] Error fetching coalition/state percentiles:", error);
+    throw error;
+  }
 }

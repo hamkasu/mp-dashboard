@@ -67,7 +67,12 @@ export async function setupVite(app: Express, server: Server) {
         `src="/src/main.tsx?v=${nanoid()}"`,
       );
       const page = await vite.transformIndexHtml(url, template);
-      res.status(200).set({ "Content-Type": "text/html" }).end(page);
+      res.status(200).set({ 
+        "Content-Type": "text/html",
+        "Cache-Control": "no-cache, no-store, must-revalidate",
+        "Pragma": "no-cache",
+        "Expires": "0"
+      }).end(page);
     } catch (e) {
       vite.ssrFixStacktrace(e as Error);
       next(e);
@@ -97,15 +102,24 @@ function loadUrlMap(prerenderedPath: string): Record<string, string> {
 }
 
 export function serveStatic(app: Express) {
-  const distPath = path.resolve(import.meta.dirname, "public");
+  const distPath = path.resolve(import.meta.dirname, "..", "dist", "public");
   const prerenderedPath = path.resolve(import.meta.dirname, "..", "dist", "prerendered");
 
   if (!fs.existsSync(distPath)) {
+    // Fallback for different build structures
+    const altPath = path.resolve(import.meta.dirname, "public");
+    if (fs.existsSync(altPath)) {
+      return _serveStatic(app, altPath, prerenderedPath);
+    }
     throw new Error(
       `Could not find the build directory: ${distPath}, make sure to build the client first`,
     );
   }
+  
+  return _serveStatic(app, distPath, prerenderedPath);
+}
 
+function _serveStatic(app: Express, distPath: string, prerenderedPath: string) {
   // Aggressive caching for static assets to reduce bandwidth costs
   app.use(express.static(distPath, {
     maxAge: '1y', // Cache for 1 year (static assets have hashed filenames)
@@ -125,7 +139,9 @@ export function serveStatic(app: Express) {
       }
       // Cache HTML for shorter time (1 hour) to allow updates
       else if (path.endsWith('.html')) {
-        res.setHeader('Cache-Control', 'public, max-age=3600, must-revalidate');
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+        res.setHeader('Pragma', 'no-cache');
+        res.setHeader('Expires', '0');
       }
     }
   }));
@@ -149,11 +165,16 @@ export function serveStatic(app: Express) {
   });
 
   app.use("*", (req, res) => {
+    // Set no-cache headers for index.html to ensure fresh content after deploys
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+
     if (shouldServePrerendered(req) && fs.existsSync(prerenderedPath)) {
       const normalizedPath = normalizePathForPrerender(req.path);
       const urlMap = loadUrlMap(prerenderedPath);
       const filename = urlMap[normalizedPath];
-      
+
       if (filename) {
         const htmlPath = path.join(prerenderedPath, filename);
         if (fs.existsSync(htmlPath)) {
@@ -162,7 +183,7 @@ export function serveStatic(app: Express) {
         }
       }
     }
-    
+
     res.sendFile(path.resolve(distPath, "index.html"));
   });
 }

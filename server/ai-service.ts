@@ -1,16 +1,12 @@
 /**
  * Copyright by Calmic Sdn Bhd
- * AI Service for Hansard Analysis using OpenRouter (Qwen)
+ * AI Service for Hansard Analysis — delegates to multi-provider system
  */
 
-const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
-const OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1";
-
-// Default to Qwen 2.5 72B - good balance of quality and cost
-const DEFAULT_MODEL = "qwen/qwen-2.5-72b-instruct";
+import { callAI as callMultiProviderAI, isDeepSeekConfigured } from "./services/deepseek";
 
 export function isAIConfigured(): boolean {
-  return !!OPENROUTER_API_KEY;
+  return isDeepSeekConfigured();
 }
 
 interface AIResponse {
@@ -20,53 +16,24 @@ interface AIResponse {
 }
 
 /**
- * Send a prompt to the AI model via OpenRouter
+ * Send a prompt to AI using the multi-provider fallback chain
  */
-async function callAI(prompt: string, systemPrompt?: string, model: string = DEFAULT_MODEL): Promise<AIResponse> {
-  if (!OPENROUTER_API_KEY) {
-    return { success: false, error: "OpenRouter API key not configured" };
+async function callAI(prompt: string, systemPrompt?: string): Promise<AIResponse> {
+  if (!isAIConfigured()) {
+    return { success: false, error: "No AI provider configured" };
   }
 
   try {
-    const messages: Array<{ role: string; content: string }> = [];
+    const result = await callMultiProviderAI(
+      systemPrompt || "You are a helpful assistant. Respond with valid JSON only.",
+      prompt
+    );
 
-    if (systemPrompt) {
-      messages.push({ role: "system", content: systemPrompt });
-    }
-    messages.push({ role: "user", content: prompt });
-
-    const response = await fetch(`${OPENROUTER_BASE_URL}/chat/completions`, {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
-        "Content-Type": "application/json",
-        "HTTP-Referer": "https://myparliament.my",
-        "X-Title": "MyParliament Dashboard"
-      },
-      body: JSON.stringify({
-        model,
-        messages,
-        max_tokens: 2000,
-        temperature: 0.3,
-      }),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("[AI] OpenRouter error:", errorText);
-      return { success: false, error: `API error: ${response.status}` };
-    }
-
-    const data = await response.json();
-    const content = data.choices?.[0]?.message?.content;
-
-    if (!content) {
-      return { success: false, error: "No content in AI response" };
-    }
-
+    // The multi-provider callAI returns parsed JSON; stringify for legacy interface
+    const content = typeof result === "string" ? result : JSON.stringify(result);
     return { success: true, content };
   } catch (error: any) {
-    console.error("[AI] Error calling OpenRouter:", error.message);
+    console.error("[AI Legacy] All providers failed:", error.message);
     return { success: false, error: error.message };
   }
 }
@@ -88,7 +55,7 @@ export async function analyzeHansardTranscript(
   transcript: string
 ): Promise<{ success: boolean; analysis?: HansardAnalysisResult; error?: string }> {
 
-  // Truncate transcript if too long (Qwen has 32K context)
+  // Truncate transcript if too long
   const maxChars = 25000;
   const truncatedTranscript = transcript.length > maxChars
     ? transcript.substring(0, maxChars) + "\n\n[Transcript truncated due to length...]"
@@ -158,7 +125,7 @@ export async function analyzeSpeakerContributions(
   speeches: string[]
 ): Promise<{ success: boolean; analysis?: SpeakerAnalysisResult; error?: string }> {
 
-  if (!OPENROUTER_API_KEY) {
+  if (!isAIConfigured()) {
     return { success: false, error: "AI not configured" };
   }
 
@@ -187,7 +154,7 @@ Extract the following in JSON format (respond ONLY with valid JSON):
   "stance": "brief description of their position/stance"
 }
 
-Keep topics concise (2-4 words each). List 2-5 topics and 1-3 key arguments.`;
+Keep topics concise (2-4 words each). List 2-5 topics and 1-3 key arguments. Key arguments should be full sentences summarizing the speaker's main points.`;
 
   const result = await callAI(prompt);
 

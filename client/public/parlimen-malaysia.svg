@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <!-- Outer gold ring -->
+  <circle cx="100" cy="100" r="95" fill="#C4A000" stroke="#C4A000" stroke-width="2"/>
+  <!-- Inner dark blue circle -->
+  <circle cx="100" cy="100" r="85" fill="#1a237e"/>
+
+  <!-- Parliament Building -->
+  <g fill="#C4A000">
+    <!-- Main tower -->
+    <rect x="85" y="50" width="30" height="70" fill="#C4A000"/>
+    <!-- Tower windows/lines -->
+    <rect x="88" y="55" width="24" height="3" fill="#1a237e"/>
+    <rect x="88" y="61" width="24" height="3" fill="#1a237e"/>
+    <rect x="88" y="67" width="24" height="3" fill="#1a237e"/>
+    <rect x="88" y="73" width="24" height="3" fill="#1a237e"/>
+    <rect x="88" y="79" width="24" height="3" fill="#1a237e"/>
+    <rect x="88" y="85" width="24" height="3" fill="#1a237e"/>
+    <rect x="88" y="91" width="24" height="3" fill="#1a237e"/>
+    <rect x="88" y="97" width="24" height="3" fill="#1a237e"/>
+    <rect x="88" y="103" width="24" height="3" fill="#1a237e"/>
+    <rect x="88" y="109" width="24" height="3" fill="#1a237e"/>
+
+    <!-- Pyramid structure -->
+    <polygon points="55,120 100,85 145,120" fill="#C4A000"/>
+    <polygon points="60,120 100,90 140,120" fill="#1a237e"/>
+    <polygon points="65,120 100,95 135,120" fill="#C4A000"/>
+
+    <!-- Small structures on sides -->
+    <rect x="45" y="105" width="15" height="15" fill="#C4A000"/>
+    <rect x="140" y="105" width="15" height="15" fill="#C4A000"/>
+
+    <!-- Base platform -->
+    <rect x="30" y="120" width="140" height="8" fill="#C4A000"/>
+    <line x1="35" y1="124" x2="165" y2="124" stroke="#1a237e" stroke-width="2"/>
+
+    <!-- Lower base -->
+    <rect x="25" y="128" width="150" height="6" fill="#C4A000"/>
+  </g>
+
+  <!-- PARLIMEN text -->
+  <text x="100" y="35" text-anchor="middle" fill="#C4A000" font-family="Arial, sans-serif" font-size="18" font-weight="bold">PARLIMEN</text>
+
+  <!-- MALAYSIA text -->
+  <text x="100" y="165" text-anchor="middle" fill="#C4A000" font-family="Arial, sans-serif" font-size="18" font-weight="bold">MALAYSIA</text>
+</svg>
