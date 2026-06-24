@@ -9,15 +9,21 @@ import { HansardSpeakerParser } from '../server/hansard-speaker-parser';
 import { eq } from 'drizzle-orm';
 
 async function extractSpeechesFromRecords() {
+  const limit = process.argv[2] ? parseInt(process.argv[2], 10) : undefined;
   console.log('🔍 Extracting speech turns from Hansard records...');
 
   // Get all MPs for speaker parsing
   const allMps = await db.select().from(mps);
   const speakerParser = new HansardSpeakerParser(allMps);
 
-  // Get all Hansard records
-  const records = await db.select().from(hansardRecords);
-  console.log(`📚 Found ${records.length} Hansard records`);
+  // Get Hansard records (optionally limited)
+  let records = await db.select().from(hansardRecords);
+  if (limit && limit > 0) {
+    records = records.slice(0, limit);
+    console.log(`📚 Processing ${records.length} Hansard records (limited to ${limit})`);
+  } else {
+    console.log(`📚 Found ${records.length} Hansard records`);
+  }
 
   let totalExtracted = 0;
   let recordsProcessed = 0;
@@ -60,7 +66,8 @@ async function extractSpeechesFromRecords() {
 
       // Insert each speaking instance as a speech record
       const speeches = [];
-      for (const instance of allInstances) {
+      for (let idx = 0; idx < allInstances.length; idx++) {
+        const instance = allInstances[idx];
         const mpId = mpNameMap.get(instance.mpName);
         if (!mpId) {
           console.warn(`⚠️  Could not find MP ID for ${instance.mpName}`);
@@ -72,7 +79,7 @@ async function extractSpeechesFromRecords() {
           mpId,
           speechText: instance.speechText || '',
           instanceNumber: instance.instanceNumber,
-          speakingOrder: instance.speakingOrder,
+          speakingOrder: idx + 1, // Speaking order based on position in session
           characterOffsetStart: instance.headerPosition,
           characterOffsetEnd:
             instance.headerPosition + (instance.headerLength || 0) + (instance.speechText?.length || 0),
