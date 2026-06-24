@@ -685,8 +685,9 @@ export async function callAI(
     }
   }
 
-  // Provider configuration with priority order
+  // Provider configuration with priority order (Anthropic first if configured)
   const providers = [
+    { name: "Anthropic", key: !!ANTHROPIC_API_KEY, fn: callAnthropic },
     { name: "Gemini", key: GEMINI_API_KEYS.length > 0, fn: callGemini },
     { name: "OpenRouter", key: !!OPENROUTER_API_KEY, fn: callOpenRouter },
     { name: "DeepSeek", key: !!DEEPSEEK_API_KEY, fn: callDeepSeek },
@@ -700,7 +701,7 @@ export async function callAI(
   const availableProviders = providers.filter(p => p.key && !excludeProviders.includes(p.name));
 
   if (availableProviders.length === 0) {
-    throw new Error("No AI provider configured. Set at least one of: GEMINI_API_KEY, OPENROUTER_API_KEY, DEEPSEEK_API_KEY, GROQ_API_KEY, CEREBRAS_API_KEY, TOGETHER_API_KEY, SAMBANOVA_API_KEY, or CLOUDFLARE_API_KEY");
+    throw new Error("No AI provider configured. Set at least one of: ANTHROPIC_API_KEY, GEMINI_API_KEY, OPENROUTER_API_KEY, DEEPSEEK_API_KEY, GROQ_API_KEY, CEREBRAS_API_KEY, TOGETHER_API_KEY, SAMBANOVA_API_KEY, or CLOUDFLARE_API_KEY");
   }
 
   // Try each provider in sequence until one succeeds
@@ -1348,7 +1349,7 @@ ${qaText}`;
 }
 
 export function isDeepSeekConfigured(): boolean {
-  return !!(GEMINI_API_KEYS.length > 0 || OPENROUTER_API_KEY || DEEPSEEK_API_KEY || GROQ_API_KEY || CEREBRAS_API_KEY || TOGETHER_API_KEY || SAMBANOVA_API_KEY || (CLOUDFLARE_API_KEY && CLOUDFLARE_ACCOUNT_ID));
+  return !!(ANTHROPIC_API_KEY || GEMINI_API_KEYS.length > 0 || OPENROUTER_API_KEY || DEEPSEEK_API_KEY || GROQ_API_KEY || CEREBRAS_API_KEY || TOGETHER_API_KEY || SAMBANOVA_API_KEY || (CLOUDFLARE_API_KEY && CLOUDFLARE_ACCOUNT_ID));
 }
 
 export function isGeminiConfigured(): boolean {
