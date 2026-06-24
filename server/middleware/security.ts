@@ -8,6 +8,13 @@ import cookieParser from 'cookie-parser';
 import crypto from 'crypto';
 import { Request, Response, NextFunction } from 'express';
 
+// Custom handler for rate limit errors to return JSON instead of HTML
+function rateLimitHandler(req: Request, res: Response, next: NextFunction, options: any) {
+  res.status(options.statusCode || 429).json({
+    error: options.message || 'Too many requests. Please try again later.'
+  });
+}
+
 // Rate Limiting Configuration
 // Aggressive rate limiting for authentication endpoints to prevent brute force attacks
 export const authRateLimit = rateLimit({
@@ -17,6 +24,7 @@ export const authRateLimit = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   skipSuccessfulRequests: true, // Don't count successful logins
+  handler: rateLimitHandler,
 });
 
 // Strict rate limiting for file uploads to prevent abuse
@@ -26,6 +34,7 @@ export const uploadRateLimit = rateLimit({
   message: 'Too many file uploads. Please try again later.',
   standardHeaders: true,
   legacyHeaders: false,
+  handler: rateLimitHandler,
 });
 
 // Moderate rate limiting for all mutation operations
@@ -35,6 +44,7 @@ export const mutationRateLimit = rateLimit({
   message: 'Too many requests. Please slow down.',
   standardHeaders: true,
   legacyHeaders: false,
+  handler: rateLimitHandler,
 });
 
 // Light rate limiting for GET requests
@@ -48,6 +58,7 @@ export const readRateLimit = rateLimit({
     // Skip rate limiting for static assets
     return req.path.startsWith('/assets/') || req.path.startsWith('/public/');
   },
+  handler: rateLimitHandler,
 });
 
 // CSRF Protection using Double Submit Cookie Pattern
