@@ -87,6 +87,10 @@ async function extractSpeechesFromRecords() {
       }
 
       if (speeches.length > 0) {
+        // Debug: log first speech to verify speakingOrder is set
+        if (speeches.length > 0) {
+          console.log(`🔍 Sample speech object:`, JSON.stringify(speeches[0], null, 2));
+        }
         await db.insert(hansardSpeeches).values(speeches);
         totalExtracted += speeches.length;
         console.log(
